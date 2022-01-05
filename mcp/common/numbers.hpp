@@ -134,7 +134,8 @@ using account_state_hash = uint256_union;
 using account = uint256_union;
 /// A hash set of mcp accounts
 using AccountHash = std::unordered_set<account>;
-using public_key = uint256_union;
+// using public_key = uint256_union;
+using public_key = uint512_union;
 using private_key = uint256_union;
 using secret_ciphertext = uint256_union;
 using data_hash = uint256_union;
