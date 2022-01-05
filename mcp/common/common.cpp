@@ -1,6 +1,5 @@
-#include <secp256k1.h>
 #include "common.hpp"
-#include <mcp/common/log.hpp>
+
 std::string mcp::uint64_to_hex (uint64_t value_a)
 {
 	std::stringstream stream;
@@ -88,12 +87,17 @@ bool mcp::hex_to_bytes(std::string const & str , dev::bytes & out)
 
 mcp::key_pair::key_pair(mcp::seed_key const & seed)
 {
-	//create ed-25519(sign) key pair,encryption need trasnsfer to curve-25519
-	int ret = crypto_sign_seed_keypair(m_public.ref().data(), m_secret.ref().data(), seed.ref().data());
+	// create ed-25519(sign) key pair,encryption need trasnsfer to curve-25519
+	// disabled by michael at 1/5
+	// int ret = crypto_sign_seed_keypair(m_public.ref().data(), m_secret.ref().data(), seed.ref().data());
 
-	if (ret == 0)
+	// if (ret == 0)
+	// 	flag = true;
+
+	seed.ref().copyTo(m_secret.ref());
+	if (mcp::encry::generate_public_from_secret(m_secret, m_public)) {
 		flag = true;
-
+	}
 }
 
 mcp::key_pair::~key_pair()
@@ -208,32 +212,42 @@ bool mcp::encry::get_encry_public_key_from_sign_key(public_key & curve, dev::byt
 	return crypto_sign_ed25519_pk_to_curve25519(curve.ref().data(), ed25519.data()) == 0;
 }
 
-bool mcp::encry::generate_public_from_secret(mcp::uint256_union const& _sk, mcp::uint256_union& _pk)
+// modified by michael at 1/5
+bool mcp::encry::generate_public_from_secret(secret_key const& _sk, public_key& _pk)
 {
-	mcp::log m_log_pow = { mcp::log("pow") };
-	static std::unique_ptr<secp256k1_context, decltype(&secp256k1_context_destroy)> s_ctx{
+	// commented by michael at 1/5
+	// secret_key sec;
+	// return crypto_sign_seed_keypair(_pk.ref().data(), sec.ref().data(), _sk.ref().data());
+
+	auto* ctx = get_secp256k1_ctx();
+	secp256k1_pubkey rawPubkey;
+	if (!secp256k1_ec_pubkey_create(ctx, &rawPubkey, _sk.ref().data()))
+        return false;
+	
+	std::array<byte, 65> serializedPubkey;
+    auto serializedPubkeySize = serializedPubkey.size();
+    secp256k1_ec_pubkey_serialize(
+        ctx,
+		serializedPubkey.data(),
+		&serializedPubkeySize,
+		&rawPubkey,
+		SECP256K1_EC_UNCOMPRESSED
+	);
+
+	if (serializedPubkeySize == serializedPubkey.size() && serializedPubkey[0] == 0x04) {
+		dev::bytesRef(&serializedPubkey[1], 64).copyTo(_pk.ref());
+		return true;
+	}
+
+	return false;
+}
+
+// added by michael at 1/5
+secp256k1_context const* mcp::encry::get_secp256k1_ctx()
+{
+    static std::unique_ptr<secp256k1_context, decltype(&secp256k1_context_destroy)> s_ctx{
         secp256k1_context_create(SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY),
         &secp256k1_context_destroy
     };
-	auto* ctx = s_ctx.get();
-    secp256k1_pubkey rawPubkey;
-    // Creation will fail if the secret key is invalid.
-    if (!secp256k1_ec_pubkey_create(ctx, &rawPubkey, _sk.ref().data()))
-        return false;
-
-    std::array<byte, 65> o_serializedPubkey;
-
-    size_t serializedPubkeySize = o_serializedPubkey.size();
-    secp256k1_ec_pubkey_serialize(
-        ctx, o_serializedPubkey.data(), &serializedPubkeySize, &rawPubkey, SECP256K1_EC_UNCOMPRESSED);
-    assert(serializedPubkeySize == o_serializedPubkey.size());
-    assert(o_serializedPubkey[0] == 0x04);
-
-    dev::bytes temp_1(&o_serializedPubkey[1], &o_serializedPubkey[1] + 64);
-    uint256_union pk(bytes_to_hex(temp_1));
-    LOG(m_log_pow.error) << "o_serializedPubkey " << bytes_to_hex(temp_1);
-    LOG(m_log_pow.error) << "address " << pk.to_account();
-    secret_key sec;
-	return crypto_sign_seed_keypair(_pk.ref().data(), sec.ref().data(), _sk.ref().data());
-    return true;
+    return s_ctx.get();
 }

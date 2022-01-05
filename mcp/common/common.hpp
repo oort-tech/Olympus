@@ -19,6 +19,8 @@
 #include <boost/multi_index/hashed_index.hpp>
 #include <boost/multi_index/member.hpp>
 
+#include <secp256k1.h>
+
 #define crypto_cipher_len crypto_box_MACBYTES
 #define crypto_sign_len crypto_sign_BYTES
 
@@ -231,7 +233,12 @@ namespace mcp
 		bool get_encry_public_key_from_sign_key(public_key & curve, public_key const & ed25519);
 		bool get_encry_public_key_from_sign_key(public_key & curve, dev::bytesConstRef ed25519);
 
-		//ed25519 get public key from secret key
-		bool generate_public_from_secret(mcp::uint256_union const& _sk, mcp::uint256_union& _pk);
+		// commented by michael at 1/5
+		// ed25519 get public key from secret key
+		// bool generate_public_from_secret(mcp::uint256_union const& _sk, mcp::uint256_union& _pk);
+		
+		// added by michael at 1/5
+		bool generate_public_from_secret(secret_key const& _sk, public_key& _pk);
+		secp256k1_context const* get_secp256k1_ctx();
 	}
 }

@@ -187,7 +187,12 @@ union uint512_union
 };
 
 using signature = uint512_union;
-using secret_key = uint512_union;	//sign
+
+// commented by michael at 1/5
+// using secret_key = uint512_union;
+
+// added by michael at 1/5
+using secret_key = uint256_union;
 
 mcp::uint512_union sign_message (mcp::raw_key const &, mcp::public_key const &, mcp::uint256_union const &);
 bool validate_message (mcp::public_key const &, mcp::uint256_union const &, mcp::uint512_union const &);
