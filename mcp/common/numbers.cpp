@@ -332,6 +332,55 @@ bool mcp::uint512_union::operator== (mcp::uint512_union const & other_a) const
 	return bytes == other_a.bytes;
 }
 
+// Added by Daniel
+bool mcp::uint512_union::operator< (mcp::uint512_union const & other_a) const
+{
+	for (int i = 0; i < size; i++)
+	{
+		if (bytes[i] < other_a.bytes[i])
+			return true;
+		else if (bytes[i] > other_a.bytes[i])
+			return false;
+	}
+	return false;
+}
+
+bool mcp::uint512_union::operator> (mcp::uint512_union const & other_a) const
+{
+	for (int i = 0; i < size; i++)
+	{
+		if (bytes[i] > other_a.bytes[i])
+			return true;
+		else if (bytes[i] < other_a.bytes[i])
+			return false;
+	}
+	return false;
+}
+
+bool mcp::uint512_union::operator<= (mcp::uint512_union const & other_a) const
+{
+	for (int i = 0; i < size; i++)
+	{
+		if (bytes[i] < other_a.bytes[i])
+			return true;
+		else if (bytes[i] > other_a.bytes[i])
+			return false;
+	}
+	return true;
+}
+
+bool mcp::uint512_union::operator>= (mcp::uint512_union const & other_a) const
+{
+	for (int i = 0; i < size; i++)
+	{
+		if (bytes[i] > other_a.bytes[i])
+			return true;
+		else if (bytes[i] < other_a.bytes[i])
+			return false;
+	}
+	return true;
+}
+
 mcp::uint512_union mcp::uint512_union::operator^ (mcp::uint512_union const & other_a) const
 {
 	mcp::uint512_union result;

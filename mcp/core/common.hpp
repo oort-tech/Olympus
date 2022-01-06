@@ -419,7 +419,9 @@ namespace mcp
 	{
 	public:
 		uint64_t min_wl;
-		std::unordered_set<mcp::account> witnesses;
+
+		// Updated to 512, Daniel
+		std::unordered_set<mcp::account_512> witnesses;
 	};
 
 	class unlink_info
@@ -580,6 +582,10 @@ namespace mcp
 
 	dev::Slice uint256_to_slice(mcp::uint256_union const & value);
 	mcp::uint256_union slice_to_uint256(dev::Slice const & slice);
+
+	// Added by Daniel
+	dev::Slice uint512_to_slice(mcp::uint512_union const & value);
+	mcp::uint512_union slice_to_uint512(dev::Slice const & slice);
 
 	mcp::account toAddress(mcp::account const& _from, u256 const& _nonce);
 
