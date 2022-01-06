@@ -167,6 +167,13 @@ union uint512_union
 	bool operator!= (mcp::uint512_union const &) const;
 	mcp::uint512_union & operator^= (mcp::uint512_union const &);
 	uint512_union operator^ (mcp::uint512_union const &) const;
+
+	// Added by Daniel
+	bool operator< (mcp::uint512_union const &) const;
+	bool operator> (mcp::uint512_union const &) const;
+	bool operator<= (mcp::uint512_union const &) const;
+	bool operator>= (mcp::uint512_union const &) const;
+
 	void encode_hex (std::string &) const;
 	bool decode_hex (std::string const &);
 

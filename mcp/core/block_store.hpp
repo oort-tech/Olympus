@@ -30,8 +30,8 @@ namespace mcp
 		std::shared_ptr<mcp::account_state> account_state_get(mcp::db::db_transaction & transaction_a, mcp::account_state_hash const & hash_a);
 		void account_state_put(mcp::db::db_transaction & transaction_a, mcp::account_state_hash const & hash_a, mcp::account_state const & value_a);
 
-		bool latest_account_state_get(mcp::db::db_transaction & transaction_a, mcp::account const & account_a, mcp::account_state_hash & hash_a);
-		void latest_account_state_put(mcp::db::db_transaction & transaction_a, mcp::account const & account_a, mcp::account_state_hash const & hash_a);
+		bool latest_account_state_get(mcp::db::db_transaction & transaction_a, mcp::account_512 const & account_a, mcp::account_state_hash & hash_a);
+		void latest_account_state_put(mcp::db::db_transaction & transaction_a, mcp::account_512 const & account_a, mcp::account_state_hash const & hash_a);
 
 		bool contract_main_trie_node_get(mcp::db::db_transaction & transaction_a, mcp::code_hash const & hash_a, std::string & value_a);
 		void contract_main_trie_node_put(mcp::db::db_transaction & transaction_a, mcp::code_hash const & hash_a, std::string const & value_a);
@@ -39,8 +39,8 @@ namespace mcp
 		bool contract_aux_state_key_get(mcp::db::db_transaction & transaction_a, dev::bytes const & key_a, dev::bytes & value_a);
 		void contract_aux_state_key_put(mcp::db::db_transaction & transaction_a, dev::bytes const & key_a, dev::bytes const & value_a);
 
-		bool dag_account_get(mcp::db::db_transaction & transaction_a, mcp::account const & account_a, mcp::dag_account_info & info_a);
-		void dag_account_put(mcp::db::db_transaction & transaction_a, mcp::account const & account_a, mcp::dag_account_info const & info_a);
+		bool dag_account_get(mcp::db::db_transaction & transaction_a, mcp::account_512 const & account_a, mcp::dag_account_info & info_a);
+		void dag_account_put(mcp::db::db_transaction & transaction_a, mcp::account_512 const & account_a, mcp::dag_account_info const & info_a);
 
 		std::shared_ptr<mcp::account_info> account_get(mcp::db::db_transaction &, mcp::account const &);
 		void account_put(mcp::db::db_transaction &, mcp::account const &, mcp::account_info & info_a);

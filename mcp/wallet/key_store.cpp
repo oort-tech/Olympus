@@ -117,13 +117,13 @@ mcp::key_store::key_store(bool & error_a, boost::filesystem::path const& _path) 
 //keys
 void mcp::key_store::keys_put(mcp::db::db_transaction& transaction, mcp::public_key const& _k, mcp::key_content const& _v)
 {
-	transaction.put(m_keys, mcp::uint256_to_slice(_k), _v.val());
+	transaction.put(m_keys, mcp::uint512_to_slice(_k), _v.val());
 }
 
 bool mcp::key_store::keys_get(mcp::db::db_transaction& transaction, mcp::public_key const& _k, mcp::key_content& _v)
 {
 	std::string result;
-	bool ret = transaction.get(m_keys, mcp::uint256_to_slice(_k), result);
+	bool ret = transaction.get(m_keys, mcp::uint512_to_slice(_k), result);
 	if (ret)
 		_v = mcp::key_content(dev::Slice(result));
 	return !ret;
@@ -131,12 +131,12 @@ bool mcp::key_store::keys_get(mcp::db::db_transaction& transaction, mcp::public_
 
 void mcp::key_store::keys_del(mcp::db::db_transaction& transaction, mcp::public_key const & _k)
 {
-	transaction.del(m_keys, mcp::uint256_to_slice(_k));
+	transaction.del(m_keys, mcp::uint512_to_slice(_k));
 }
 
 bool mcp::key_store::keys_exists(mcp::db::db_transaction& transaction, mcp::public_key const & _k)
 {
-	return transaction.exists(m_keys, mcp::uint256_to_slice(_k));;
+	return transaction.exists(m_keys, mcp::uint512_to_slice(_k));;
 }
 
 mcp::db::forward_iterator mcp::key_store::keys_begin(mcp::db::db_transaction& transaction)
@@ -146,7 +146,7 @@ mcp::db::forward_iterator mcp::key_store::keys_begin(mcp::db::db_transaction& tr
 
 mcp::db::forward_iterator mcp::key_store::keys_begin(mcp::db::db_transaction& transaction, mcp::public_key const & _k)
 {
-	return transaction.begin(m_keys, mcp::uint256_to_slice(_k));
+	return transaction.begin(m_keys, mcp::uint512_to_slice(_k));
 }
 
 mcp::db::backward_iterator mcp::key_store::keys_rbegin(mcp::db::db_transaction& transaction)
@@ -156,19 +156,19 @@ mcp::db::backward_iterator mcp::key_store::keys_rbegin(mcp::db::db_transaction& 
 
 mcp::db::backward_iterator mcp::key_store::keys_rbegin(mcp::db::db_transaction& transaction, mcp::public_key const & _k)
 {
-	return transaction.rbegin(m_keys, mcp::uint256_to_slice(_k));
+	return transaction.rbegin(m_keys, mcp::uint512_to_slice(_k));
 }
 
 //work
 void mcp::key_store::work_put(mcp::db::db_transaction& transaction, mcp::public_key const & _k, mcp::value_previous_work const & _v)
 {
-	transaction.put(m_work, mcp::uint256_to_slice(_k), _v.val());
+	transaction.put(m_work, mcp::uint512_to_slice(_k), _v.val());
 }
 
 bool mcp::key_store::work_get(mcp::db::db_transaction& transaction, mcp::public_key const & _k, mcp::value_previous_work & _v)
 {
 	std::string result;
-	bool ret = transaction.get(m_work, mcp::uint256_to_slice(_k), result);
+	bool ret = transaction.get(m_work, mcp::uint512_to_slice(_k), result);
 	if (ret)
 		_v = mcp::value_previous_work(dev::Slice(result));
 	return !ret;
@@ -176,12 +176,12 @@ bool mcp::key_store::work_get(mcp::db::db_transaction& transaction, mcp::public_
 
 void mcp::key_store::work_del(mcp::db::db_transaction& transaction, mcp::public_key const & _k)
 {
-	transaction.del(m_work, mcp::uint256_to_slice(_k));
+	transaction.del(m_work, mcp::uint512_to_slice(_k));
 }
 
 bool mcp::key_store::work_exists(mcp::db::db_transaction& transaction, mcp::public_key const & _k)
 {
-	return transaction.exists(m_work, mcp::uint256_to_slice(_k));;
+	return transaction.exists(m_work, mcp::uint512_to_slice(_k));;
 }
 
 mcp::db::forward_iterator mcp::key_store::work_begin(mcp::db::db_transaction& transaction)
@@ -191,7 +191,7 @@ mcp::db::forward_iterator mcp::key_store::work_begin(mcp::db::db_transaction& tr
 
 mcp::db::forward_iterator mcp::key_store::work_begin(mcp::db::db_transaction& transaction, mcp::public_key const & _k)
 {
-	return transaction.begin(m_work, mcp::uint256_to_slice(_k));
+	return transaction.begin(m_work, mcp::uint512_to_slice(_k));
 }
 
 mcp::db::backward_iterator mcp::key_store::work_rbegin(mcp::db::db_transaction& transaction)
@@ -201,7 +201,7 @@ mcp::db::backward_iterator mcp::key_store::work_rbegin(mcp::db::db_transaction& 
 
 mcp::db::backward_iterator mcp::key_store::work_rbegin(mcp::db::db_transaction& transaction, mcp::public_key const & _k)
 {
-	return transaction.rbegin(m_work, mcp::uint256_to_slice(_k));
+	return transaction.rbegin(m_work, mcp::uint512_to_slice(_k));
 }
 
 
