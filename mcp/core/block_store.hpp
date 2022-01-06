@@ -30,7 +30,7 @@ namespace mcp
 		std::shared_ptr<mcp::account_state> account_state_get(mcp::db::db_transaction & transaction_a, mcp::account_state_hash const & hash_a);
 		void account_state_put(mcp::db::db_transaction & transaction_a, mcp::account_state_hash const & hash_a, mcp::account_state const & value_a);
 
-		bool latest_account_state_get(mcp::db::db_transaction & transaction_a, mcp::account const & account_a, mcp::account_state_hash & hash_a);
+		bool latest_account_state_get(mcp::db::db_transaction & transaction_a, mcp::account_512 const & account_a, mcp::account_state_hash & hash_a);
 		void latest_account_state_put(mcp::db::db_transaction & transaction_a, mcp::account_512 const & account_a, mcp::account_state_hash const & hash_a);
 
 		bool contract_main_trie_node_get(mcp::db::db_transaction & transaction_a, mcp::code_hash const & hash_a, std::string & value_a);

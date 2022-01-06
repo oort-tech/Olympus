@@ -273,7 +273,8 @@ bool mcp::ledger::check_stable(mcp::db::db_transaction & transaction_a, std::sha
 					if (branch_witness_check_count == 1)
 						return false;
 
-					std::unordered_set<mcp::block_hash> branch_witnesses;
+					// std::unordered_set<mcp::block_hash> branch_witnesses; changed by Daniel
+					std::unordered_set<mcp::account_512> branch_witnesses;
 					branch_witnesses.insert(block->hashables->from);
 
 					//check block does not include earlier block along best parents
