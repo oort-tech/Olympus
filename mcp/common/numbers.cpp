@@ -332,6 +332,17 @@ bool mcp::uint512_union::operator== (mcp::uint512_union const & other_a) const
 	return bytes == other_a.bytes;
 }
 
+mcp::uint512_union mcp::uint512_union::operator^ (mcp::uint512_union const & other_a) const
+{
+	mcp::uint512_union result;
+	auto k(result.qwords.begin());
+	for (auto i(qwords.begin()), j(other_a.qwords.begin()), n(qwords.end()); i != n; ++i, ++j, ++k)
+	{
+		*k = *i ^ *j;
+	}
+	return result;
+}
+
 mcp::uint512_union::uint512_union(mcp::uint512_t const & number_a)
 {
 	mcp::uint512_t number_l(number_a);
@@ -392,6 +403,11 @@ bool mcp::uint512_union::decode_hex(std::string const & text)
 		}
 	}
 	return error;
+}
+
+bool mcp::uint512_union::is_zero() const
+{
+	return qwords[0] == 0 && qwords[1] == 0 && qwords[2] == 0 && qwords[3] == 0 && qwords[4] == 0 && qwords[5] == 0 && qwords[6] == 0 && qwords[7] == 0;
 }
 
 bool mcp::uint512_union::operator!= (mcp::uint512_union const & other_a) const

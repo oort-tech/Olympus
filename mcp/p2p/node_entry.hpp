@@ -20,7 +20,8 @@ namespace mcp
 
 			static unsigned calc_distance(node_id const & a, node_id const & b)
 			{
-				uint256_t d = (a ^ b).number();
+				// changed from uint256 to uint512, Daniel
+				uint512_t d = (a ^ b).number();
 				unsigned ret;
 				for (ret = 0; d >>= 1; ++ret) {};
 				return ret;

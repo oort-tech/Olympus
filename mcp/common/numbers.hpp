@@ -135,7 +135,6 @@ using account = uint256_union;
 /// A hash set of mcp accounts
 using AccountHash = std::unordered_set<account>;
 // using public_key = uint256_union;
-using public_key = uint512_union;
 using private_key = uint256_union;
 using secret_ciphertext = uint256_union;
 using data_hash = uint256_union;
@@ -145,11 +144,6 @@ using sync_request_hash = uint256_union;
 using seed_key = uint256_union;
 using secret_encry = uint256_union;		//p2p encryption
 
-namespace p2p
-{
-	using node_id = mcp::uint256_union;
-	using hash256 = mcp::uint256_union;
-}
 
 class raw_key
 {
@@ -172,8 +166,12 @@ union uint512_union
 	bool operator== (mcp::uint512_union const &) const;
 	bool operator!= (mcp::uint512_union const &) const;
 	mcp::uint512_union & operator^= (mcp::uint512_union const &);
+	uint512_union operator^ (mcp::uint512_union const &) const;
 	void encode_hex (std::string &) const;
 	bool decode_hex (std::string const &);
+
+	// Daniel Add member functions from uint256_union
+	bool is_zero () const;
 	byte* data() { return bytes.data(); }
 	std::array<uint8_t, 64> bytes;
 	std::array<uint32_t, 16> dwords;
@@ -194,6 +192,14 @@ using signature = uint512_union;
 
 // added by michael at 1/5
 using secret_key = uint256_union;
+using public_key = uint512_union;
+using account_512 = uint512_union;
+namespace p2p
+{
+	// using node_id = mcp::uint256_union;
+	using node_id = mcp::uint512_union;
+	using hash256 = mcp::uint256_union;
+}
 
 mcp::uint512_union sign_message (mcp::raw_key const &, mcp::public_key const &, mcp::uint256_union const &);
 bool validate_message (mcp::public_key const &, mcp::uint256_union const &, mcp::uint512_union const &);

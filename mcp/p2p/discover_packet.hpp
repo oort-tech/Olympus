@@ -126,7 +126,8 @@ namespace mcp
 
 			}
 
-			find_node_packet(node_id const & node_id_a, hash256 const & target_a) :
+			// Daniel, update the target_a's type into node_id from h256
+			find_node_packet(node_id const & node_id_a, node_id const & target_a) :
 				discover_packet(node_id_a),
 				target(target_a)
 			{

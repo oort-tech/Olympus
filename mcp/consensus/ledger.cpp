@@ -56,7 +56,7 @@ uint64_t mcp::ledger::calc_witnessed_level(mcp::witness_param const & witness_pa
 
 //witnessed level: search up along best parents, if meet majority of witnesses, the level is witnessed level
 bool mcp::ledger::check_majority_witness(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::iblock_cache> cache_a,
-	mcp::block_hash const &best_pblock_hash, mcp::account const & block_from, mcp::witness_param const & witness_param_a)
+	mcp::block_hash const &best_pblock_hash, mcp::account_512 const & block_from, mcp::witness_param const & witness_param_a)
 {
 	uint64_t const & majority_of_witnesses(witness_param_a.majority_of_witnesses);
 	assert_x(majority_of_witnesses > 0);
@@ -64,7 +64,7 @@ bool mcp::ledger::check_majority_witness(mcp::db::db_transaction & transaction_a
 	if(majority_of_witnesses == 1)
 		return true;
 
-	std::unordered_set<mcp::account> collected_witnesses;
+	std::unordered_set<mcp::account_512> collected_witnesses;
 	collected_witnesses.insert(block_from);
 	mcp::block_hash mc_block_hash(best_pblock_hash);
 	while (true)
