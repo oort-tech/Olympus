@@ -171,6 +171,10 @@ union uint512_union
 	bool decode_hex (std::string const &);
 
 	// Daniel Add member functions from uint256_union
+	void encode_account (std::string &) const;
+	std::string to_account () const;
+	std::string to_account_split () const;
+	bool decode_account (std::string const &);
 	bool is_zero () const;
 	byte* data() { return bytes.data(); }
 	std::array<uint8_t, 64> bytes;
@@ -222,6 +226,25 @@ struct hash<mcp::uint256_t>
 	size_t operator() (mcp::uint256_t const & number_a) const
 	{
 		return number_a.convert_to<size_t> ();
+	}
+};
+
+// Hash for uint512, Daniel
+template <>
+struct hash<mcp::uint512_t>
+{
+	size_t operator() (mcp::uint512_t const & number_a) const
+	{
+		return number_a.convert_to<size_t> ();
+	}
+};
+template <>
+struct hash<mcp::uint512_union>
+{
+	size_t operator() (mcp::uint512_union const & data_a) const
+	{
+		return *reinterpret_cast<size_t const *> (data_a.bytes.data ());
+		//return XXH64(data_a.bytes.data(), data_a.bytes.size(), 0);
 	}
 };
 }

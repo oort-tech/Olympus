@@ -410,6 +410,70 @@ bool mcp::uint512_union::is_zero() const
 	return qwords[0] == 0 && qwords[1] == 0 && qwords[2] == 0 && qwords[3] == 0 && qwords[4] == 0 && qwords[5] == 0 && qwords[6] == 0 && qwords[7] == 0;
 }
 
+void mcp::uint512_union::encode_account(std::string & destination_a) const
+{
+	if (is_zero())
+	{
+		destination_a = "";
+		return;
+	}
+
+	std::vector<uint8_t> vch;
+	vch.reserve(33);
+	vch.push_back(0x01); //version
+	vch.insert(vch.end(), bytes.begin(), bytes.end());
+	std::string encoded = EncodeBase58Check(vch);
+	destination_a = "mcp" + encoded;
+}
+
+bool mcp::uint512_union::decode_account(std::string const & source_a)
+{
+	bool error(false);
+	if (source_a.empty())
+	{
+		bytes.fill(0);
+	}
+	else if (source_a[0] == 'm' && source_a[1] == 'c' && source_a[2] == 'p')
+	{
+		std::vector<uint8_t> vch;
+		error = !DecodeBase58Check(source_a.substr(3), vch);
+		if (!error)
+		{
+			if (vch.size() == 33) 
+			{
+				if (vch[0] == 0x01) // check version
+					std::copy(vch.begin() + 1, vch.end(), bytes.begin());
+				else
+					error = true;
+			}
+			else
+			{
+				error = true;
+			}
+		}
+	}
+	else
+	{
+		error = true;
+	}
+	return error;
+}
+
+std::string mcp::uint512_union::to_account_split() const
+{
+	auto result(to_account());
+	assert_x(result.size() == 64);
+	result.insert(32, "\n");
+	return result;
+}
+
+std::string mcp::uint512_union::to_account() const
+{
+	std::string result;
+	encode_account(result);
+	return result;
+}
+
 bool mcp::uint512_union::operator!= (mcp::uint512_union const & other_a) const
 {
 	return !(*this == other_a);
