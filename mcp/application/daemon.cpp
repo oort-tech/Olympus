@@ -920,7 +920,7 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 
 		std::shared_ptr<mcp::rpc> rpc = get_rpc(
 			chain_store, chain, cache, key_manager, wallet, host, background,
-			io_service, config.rpc
+			io_service, config.rpc, witness
 		);
 		if (config.rpc.rpc_enable)
 		{

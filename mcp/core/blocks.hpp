@@ -13,7 +13,9 @@ namespace mcp
 	{
 		genesis = 0,
 		dag = 1,
-		light = 2
+		light = 2,
+		staking = 3,
+		unstaking = 4
 	};
 
 	class block_hashables
@@ -47,7 +49,7 @@ namespace mcp
 		mcp::block_hash last_stable_block;
 		uint64_t exec_timestamp;
 
-		//light
+		//light , staking , unstaking
 		mcp::account to;
 		mcp::amount amount;
 		uint256_t gas;   		///< The total gas to convert, paid for from sender's account. Any unused gas gets refunded once the contract is ended.
@@ -93,7 +95,7 @@ namespace mcp
 		mcp::uint64_union block_work() const;
 
 		/// @returns true if transaction is contract-creation.
-		bool isCreation() const { return hashables->to.is_zero(); }
+		bool isCreation() const { return hashables->type == mcp::block_type::light && hashables->to.is_zero(); }
 
 		/// @returns amount of gas required for the basic payment.
 		int64_t baseGasRequired(dev::eth::EVMSchedule const& _es) const { return baseGasRequired(isCreation(), &data, _es); }

@@ -30,7 +30,8 @@ mcp::block_store::block_store(bool & error_a, boost::filesystem::path const & pa
 	next_unlink(0),
 	next_unlink_index(0),
 	head_unlink(0),
-	traces(0)
+	traces(0),
+	validator_list(0)
 {
 	if (error_a)
 		return;
@@ -70,6 +71,7 @@ mcp::block_store::block_store(bool & error_a, boost::filesystem::path const & pa
 	next_unlink = m_db->set_column_family(default_col, "022");
 	next_unlink_index = m_db->set_column_family(default_col, "023");
 	contract_aux = m_db->set_column_family(default_col, "024");
+	validator_list = m_db->set_column_family(default_col, "025");
 
 	//use iterator
 	dag_free = m_db->set_column_family(default_col, "101");
@@ -846,6 +848,35 @@ void mcp::block_store::contract_aux_state_key_put(mcp::db::db_transaction & tran
 	dev::Slice s_value((char *)b_value.data(), b_value.size());
 	transaction_a.put(contract_aux, dev::Slice((char*)key_a.data(), key_a.size()), s_value);
 }
+
+// get validator list
+std::set<mcp::account> mcp::block_store::validator_list_get(mcp::db::db_transaction & transaction_a)
+{
+	std::set<mcp::account> result;
+	mcp::db::forward_iterator it(transaction_a.begin(validator_list));
+	while (true)
+	{
+		if (!it.valid())
+			break;
+		mcp::account account(mcp::slice_to_uint256(it.key()));
+		result.insert(account);
+		++it;
+	}
+	return result;
+}
+
+// write validator 
+void mcp::block_store::validator_list_put(mcp::db::db_transaction & transaction_a, mcp::account const & account_a)
+{
+	transaction_a.put(validator_list, mcp::uint256_to_slice(account_a), dev::Slice());
+}
+
+// delete validator 
+void mcp::block_store::validator_list_del(mcp::db::db_transaction & transaction_a, mcp::account const & account_a)
+{
+	transaction_a.del(validator_list, mcp::uint256_to_slice(account_a));
+}
+
 
 bool mcp::block_store::catchup_index_get(mcp::db::db_transaction & transaction_a, uint64_t & _v)
 {

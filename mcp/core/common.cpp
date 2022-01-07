@@ -397,6 +397,8 @@ mcp::block_state::block_state(bool & error_a, dev::RLP const & r)
 		break;
 	}
 	case mcp::block_type::light:
+	case mcp::block_type::staking:
+	case mcp::block_type::unstaking:
 	{
 		error_a = r.itemCount() != 9;
 		if (error_a)
@@ -572,6 +574,8 @@ void mcp::block_state::stream_RLP(dev::RLPStream & s) const
 		break;
 	}
 	case mcp::block_type::light:
+	case mcp::block_type::staking:
+	case mcp::block_type::unstaking:
 	{
 		assert_x(!is_on_main_chain);
 		assert_x(witnessed_level == 0);
@@ -638,6 +642,8 @@ void mcp::block_state::serialize_json(mcp::json & json_a, mcp::account const & c
 		break;
 	}
 	case mcp::block_type::light:
+	case mcp::block_type::staking:
+	case mcp::block_type::unstaking:
 	{
 		break;
 	}
@@ -685,6 +691,8 @@ void mcp::block_state::serialize_json(mcp::json & json_a, mcp::account const & c
 			break;
 		}
 		case mcp::block_type::light:
+		case mcp::block_type::staking:
+		case mcp::block_type::unstaking:
 		{
 			if (receipt)
 				receipt->serialize_json(stable_content_l);
@@ -799,46 +807,50 @@ mcp::account_state::account_state() :
     account(0),
     block_hash(0),
     previous(0),
-    balance(0)
+    balance(0),
+	staking_balance(0)
 {
 }
 
-mcp::account_state::account_state(mcp::account const & account_a, mcp::block_hash const & block_hash_a, mcp::account_state_hash const & previous_a, u256 nonce_a, mcp::amount const & balance_a, Changedness _c) :
+mcp::account_state::account_state(mcp::account const & account_a, mcp::block_hash const & block_hash_a, mcp::account_state_hash const & previous_a, u256 nonce_a, mcp::amount const & balance_a, mcp::amount const & staking_balance_a, Changedness _c) :
     account(account_a),
     block_hash(block_hash_a),
     previous(previous_a),
     m_isAlive(true),
     m_isUnchanged(_c == Unchanged),
     m_nonce(nonce_a),
-    balance(balance_a)
-{
-}
-
-mcp::account_state::account_state(mcp::account const & account_a, mcp::block_hash const & block_hash_a, mcp::account_state_hash const & previous_a, u256 nonce_a, mcp::amount const & balance_a, h256 storageRoot_a, h256 codeHash_a, Changedness _c) :
-    account(account_a),
-    block_hash(block_hash_a),
-    previous(previous_a),
     balance(balance_a),
-    m_isAlive(true),
-    m_isUnchanged(_c == Unchanged),
-    m_nonce(nonce_a),
-    m_storageRoot(storageRoot_a),
-    m_codeHash(codeHash_a)
+	staking_balance(staking_balance_a)
 {
 }
+
+//mcp::account_state::account_state(mcp::account const & account_a, mcp::block_hash const & block_hash_a, mcp::account_state_hash const & previous_a, u256 nonce_a, mcp::amount const & balance_a, mcp::amount const & staking_balance_a, h256 storageRoot_a, h256 codeHash_a, Changedness _c) :
+//    account(account_a),
+//    block_hash(block_hash_a),
+//    previous(previous_a),
+//    balance(balance_a),
+//	staking_balance(staking_balance_a),
+//    m_isAlive(true),
+//    m_isUnchanged(_c == Unchanged),
+//    m_nonce(nonce_a),
+//    m_storageRoot(storageRoot_a),
+//    m_codeHash(codeHash_a)
+//{
+//}
 
 mcp::account_state::account_state(bool & error_a, dev::RLP const & r, Changedness _c) :
     m_isUnchanged(_c == Unchanged)
 {
-    error_a = r.itemCount() != 8;
+    error_a = r.itemCount() != 9;
     account = (mcp::account)r[0];
     block_hash = (mcp::block_hash)r[1];
     previous = (mcp::account_state_hash)r[2];
     m_nonce = (uint256_t)r[3];
     balance = (uint256_t)r[4];
-    m_storageRoot = (h256)r[5];
-    m_codeHash = (h256)r[6];
-    m_isAlive = r[7].toInt();
+	staking_balance = (uint256_t)r[5];
+    m_storageRoot = (h256)r[6];
+    m_codeHash = (h256)r[7];
+    m_isAlive = r[8].toInt();
 
 	record_init_hash();
 }
@@ -850,8 +862,8 @@ void mcp::account_state::record_init_hash()
 
 void mcp::account_state::stream_RLP(dev::RLPStream & s) const
 {
-    s.appendList(8);
-    s << account << block_hash << previous << m_nonce << balance << m_storageRoot << m_codeHash << m_isAlive;
+    s.appendList(9);
+    s << account << block_hash << previous << m_nonce << balance << staking_balance << m_storageRoot << m_codeHash << m_isAlive;
 }
 
 mcp::account_state_hash mcp::account_state::hash()
@@ -870,6 +882,9 @@ mcp::account_state_hash mcp::account_state::hash()
 
     uint256_union balance_union = uint256_union(balance);
     blake2b_update(&hash_l, balance_union.bytes.data(), sizeof(balance_union.bytes));
+
+	uint256_union staking_balance_union = uint256_union(staking_balance);
+	blake2b_update(&hash_l, staking_balance_union.bytes.data(), sizeof(staking_balance_union.bytes));
     
     blake2b_update(&hash_l, m_storageRoot.data(), m_storageRoot.size);
     blake2b_update(&hash_l, m_codeHash.data(), m_codeHash.size);
@@ -884,6 +899,13 @@ mcp::account_state_hash mcp::account_state::hash()
 void mcp::account_state::addBalance(mcp::amount const& _amount)
 {
 	balance += _amount;
+	changed();
+	return;
+}
+
+void mcp::account_state::addStakingBalance(mcp::amount const& _amount)
+{
+	staking_balance += _amount;
 	changed();
 	return;
 }

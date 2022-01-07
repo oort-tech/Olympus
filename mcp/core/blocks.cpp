@@ -92,7 +92,7 @@ mcp::block_hashables::block_hashables(bool & error_a, dev::RLP const & r)
 	}
 	case mcp::block_type::light:
 	{
-		error_a = r.itemCount() != 8 && r.itemCount() != 9;
+		error_a = r.itemCount() != 9;
 		if (error_a)
 			return;
 
@@ -103,10 +103,28 @@ mcp::block_hashables::block_hashables(bool & error_a, dev::RLP const & r)
 		gas = (uint256_t)r[5];
 		gas_price = (uint256_t)r[6];
 		data_hash = (mcp::data_hash)r[7];
-		if (r.itemCount() == 9)
-			light_version = (uint8_t)r[8];
-		else
-			light_version = 0;
+		light_version = (uint8_t)r[8];
+
+		exec_timestamp = 0;
+		last_summary = 0;
+		last_summary_block = 0;
+		last_stable_block = 0;
+		break;
+	}
+	case mcp::block_type::staking:
+	case mcp::block_type::unstaking:
+	{
+		error_a = r.itemCount() != 8;
+		if (error_a)
+			return;
+
+		from = (mcp::account)r[1];
+		amount = (mcp::amount)r[2];
+		previous = (mcp::block_hash)r[3];
+		gas = (uint256_t)r[4];
+		gas_price = (uint256_t)r[5];
+		data_hash = (mcp::data_hash)r[6];
+		light_version = (uint8_t)r[7];
 
 		exec_timestamp = 0;
 		last_summary = 0;
@@ -210,14 +228,17 @@ void mcp::block_hashables::stream_RLP(dev::RLPStream & s) const
 		assert_x(last_summary_block.is_zero());
 		assert_x(last_stable_block.is_zero());
 
-		if (light_version > 0)
-			s.appendList(9);
-		else
-			s.appendList(8);
+		s.appendList(9);
 		s << (uint8_t)type << from << to << amount << previous
-			<< gas << gas_price << data_hash;
-		if (light_version > 0)
-			s << light_version;
+			<< gas << gas_price << data_hash << light_version;
+		break;
+	}
+	case mcp::block_type::staking:
+	case mcp::block_type::unstaking:
+	{
+		s.appendList(8);
+		s << (uint8_t)type << from << amount << previous
+			<< gas << gas_price << data_hash << light_version;
 		break;
 	}
 	default:
@@ -279,6 +300,17 @@ void mcp::block_hashables::serialize_json(mcp::json & json_a) const
 		content_l["version"] = light_version;
 		break;
 	}
+	case mcp::block_type::staking:
+	case mcp::block_type::unstaking:
+	{
+		content_l["amount"] = amount.str();
+		content_l["previous"] = previous.to_string();
+		content_l["gas"] = (uint64_t)gas;
+		content_l["gas_price"] = gas_price.str();
+		content_l["data_hash"] = data_hash.to_string();
+		content_l["version"] = light_version;
+		break;
+	}
 	default:
 		assert_x_msg(false, "Invalid block type");
 		break;
@@ -329,6 +361,23 @@ void mcp::block_hashables::hash(blake2b_state & hash_a) const
 	case mcp::block_type::light:
 	{
 		blake2b_update(&hash_a, to.bytes.data(), sizeof(to.bytes));
+		mcp::uint256_union amount_u(amount);
+		blake2b_update(&hash_a, amount_u.bytes.data(), sizeof(amount_u.bytes));
+		blake2b_update(&hash_a, previous.bytes.data(), sizeof(previous.bytes));
+		mcp::uint256_union gas_union(gas);
+		blake2b_update(&hash_a, gas_union.bytes.data(), sizeof(gas_union.bytes));
+		if (light_version > 0)
+		{
+			mcp::uint256_union gas_price_union(gas_price);
+			blake2b_update(&hash_a, gas_price_union.bytes.data(), sizeof(gas_price_union.bytes));
+		}
+		blake2b_update(&hash_a, data_hash.bytes.data(), sizeof(data_hash.bytes));
+
+		break;
+	}
+	case mcp::block_type::staking:
+	case mcp::block_type::unstaking:
+	{
 		mcp::uint256_union amount_u(amount);
 		blake2b_update(&hash_a, amount_u.bytes.data(), sizeof(amount_u.bytes));
 		blake2b_update(&hash_a, previous.bytes.data(), sizeof(previous.bytes));
@@ -434,6 +483,14 @@ void mcp::block::stream_RLP(dev::RLPStream & s) const
 		s << signature;
 		break;
 	}
+	case mcp::block_type::staking:
+	case mcp::block_type::unstaking:
+	{
+		s.appendList(3);
+		hashables->stream_RLP(s);
+		s << signature << data;
+		break;
+	}
 	default:
 		assert_x_msg(false, "Invalid block type");
 		break;
@@ -483,6 +540,8 @@ void mcp::block::serialize_json(mcp::json & json_a) const
 	{
 	case mcp::block_type::genesis:
 	case mcp::block_type::light:
+	case mcp::block_type::staking:
+	case mcp::block_type::unstaking:
 	{
 		std::string data_str(mcp::bytes_to_hex(data));
 		json_a["content"]["data"] = data_str;

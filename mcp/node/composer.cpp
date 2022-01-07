@@ -29,7 +29,7 @@ mcp::composer::~composer()
 mcp::compose_result mcp::composer::compose_joint(mcp::db::db_transaction & transaction_a, mcp::block_type const & type_a, 
 													boost::optional<mcp::block_hash> const & previous_a, mcp::account const &from_a, mcp::account const &to_a,
 													mcp::amount const &amount_a, uint256_t const & gas_a, uint256_t const & gas_price_a, std::vector<uint8_t> const &data_a,
-													mcp::raw_key const &prv_a, mcp::public_key const &pub_a, bool generate_work_a)
+													mcp::raw_key const &prv_a, mcp::public_key const &pub_a)
 {
     std::shared_ptr<mcp::block> block;
     mcp::compose_result_codes code(compose_block(transaction_a, type_a, previous_a, from_a, to_a, amount_a, gas_a, gas_price_a, data_a, block));
@@ -38,7 +38,7 @@ mcp::compose_result mcp::composer::compose_joint(mcp::db::db_transaction & trans
 
     mcp::signature sig(mcp::sign_message(prv_a, pub_a, block->hash()));
 
-    return sign_and_compose_joint( block, sig, generate_work_a);
+    return sign_and_compose_joint( block, sig);
 }
 
 mcp::compose_result_codes mcp::composer::compose_block(mcp::db::db_transaction & transaction_a, mcp::block_type const &type_a, 
@@ -83,8 +83,16 @@ mcp::compose_result_codes mcp::composer::compose_block(mcp::db::db_transaction &
 	mcp::chain_state c_state(transaction_a, 0, m_store, m_chain, m_cache);
     mcp::amount balance(c_state.balance(from_a));
 	mcp::amount fee = gas_a * gas_price_a;
-    if (balance < amount_a + fee)
-        return mcp::compose_result_codes::insufficient_balance;
+	if (type_a == mcp::block_type::unstaking)
+	{
+		mcp::amount unstaking_balance = c_state.staking_balance(from_a);
+		if (unstaking_balance < amount_a || balance < fee)// fee from balance
+			return mcp::compose_result_codes::insufficient_balance;
+	}
+	else if (balance < amount_a + fee)
+	{
+		return mcp::compose_result_codes::insufficient_balance;
+	}
 
 	//sichaoy: real gasprice and gas
     block_a = std::make_shared<mcp::block>(type_a, from_a, to_a, amount_a, previous, parents, links, 
@@ -92,7 +100,7 @@ mcp::compose_result_codes mcp::composer::compose_block(mcp::db::db_transaction &
     return mcp::compose_result_codes::ok;
 }
 
-mcp::compose_result mcp::composer::sign_and_compose_joint(std::shared_ptr<mcp::block> block_a, mcp::signature const &signature_a, bool generate_work_a)
+mcp::compose_result mcp::composer::sign_and_compose_joint(std::shared_ptr<mcp::block> block_a, mcp::signature const &signature_a)
 {
 	mcp::stopwatch_guard sw("compose:sign_and_compose_joint");
 
@@ -345,6 +353,8 @@ void mcp::composer::pick_parents_and_last_summary_and_wl_block(mcp::error_messag
 		break;
 	}
 	case mcp::block_type::light:
+	case mcp::block_type::staking:
+	case mcp::block_type::unstaking:
 	{
 		last_summary_block = 0;
 		last_summary = 0;
@@ -390,6 +400,8 @@ mcp::block_hash mcp::composer::get_latest_block(mcp::db::db_transaction &  trans
 		break;
 	}
 	case mcp::block_type::light:
+	case mcp::block_type::staking:
+	case mcp::block_type::unstaking:
 	{
 		std::shared_ptr<mcp::unlink_info> ulk = m_store.unlink_info_get(transaction_a, account_a);
 		if (nullptr != ulk)

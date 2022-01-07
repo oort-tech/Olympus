@@ -174,7 +174,9 @@ mcp::rpc::rpc(mcp::block_store & store_a, std::shared_ptr<mcp::chain> chain_a,
 	std::shared_ptr<mcp::block_cache> cache_a, std::shared_ptr<mcp::key_manager> key_manager_a,
 	std::shared_ptr<mcp::wallet> wallet_a, std::shared_ptr<mcp::p2p::host> host_a,
 	std::shared_ptr<mcp::async_task> background_a,
-	boost::asio::io_service & service_a, mcp::rpc_config const& config_a) :
+	boost::asio::io_service & service_a, mcp::rpc_config const& config_a,
+	std::shared_ptr<mcp::witness> witness_a
+	) :
 	m_store(store_a),
 	m_chain(chain_a),
 	m_cache(cache_a),
@@ -184,7 +186,8 @@ mcp::rpc::rpc(mcp::block_store & store_a, std::shared_ptr<mcp::chain> chain_a,
 	m_background(background_a),
 	io_service(service_a),
 	acceptor(service_a),
-	config(config_a)
+	config(config_a),
+	witness(witness_a)
 {
 }
 
@@ -476,19 +479,17 @@ void mcp::rpc_handler::account_create()
                 {
                     if (mcp::validatePassword(password))
                     {
-                        bool gen_next_work_l(false);
-
 						bool backup_l(true);
 						if (request.count("backup"))
 						{
 							if (!try_get_bool_from_json("backup", backup_l))
 							{
-								error_code_l = mcp::rpc_account_create_error_code::invalid_gen_next_work_value;
+								error_code_l = mcp::rpc_account_create_error_code::invalid_backup_value;
 								error_response(response, int(error_code_l), err.msg(error_code_l));
 								return;
 							}
 						}
-                        mcp::account new_account(m_key_manager->create(password, gen_next_work_l, backup_l));
+                        mcp::account new_account(m_key_manager->create(password, backup_l));
                         mcp::json j_response;
                         j_response["account"] = new_account.to_account();
                         error_code_l = mcp::rpc_account_create_error_code::ok;
@@ -819,10 +820,9 @@ void mcp::rpc_handler::account_import()
         if (request.count("json") && request["json"].is_string())
         {
             std::string json_text = request["json"];
-            bool gen_next_work_l(false);
 
             mcp::key_content kc;
-            auto error(m_key_manager->import(json_text, kc, gen_next_work_l));
+            auto error(m_key_manager->import(json_text, kc));
             if (!error)
             {
                 mcp::json j_response;
@@ -892,10 +892,12 @@ void mcp::rpc_handler::account_balance()
         {
             mcp::db::db_transaction transaction(m_store.create_transaction()); 
 			chain_state c_state(transaction, 0, m_store, m_chain, m_cache);
-            auto balance(c_state.balance(account));
+			auto balance(c_state.balance(account));
+			auto staking_balance(c_state.staking_balance(account));
 
             mcp::json j_response;
             j_response["balance"] = balance.convert_to<std::string>();
+			j_response["staking_balance"] = staking_balance.convert_to<std::string>();
 
             error_code_l = mcp::rpc_account_balance_error_code::ok;
             error_response(response, (int)error_code_l, err.msg(error_code_l), j_response);
@@ -936,7 +938,12 @@ void mcp::rpc_handler::accounts_balances()
 			mcp::db::db_transaction transaction(m_store.create_transaction()); 
 			chain_state c_state(transaction, 0, m_store, m_chain, m_cache);
 			auto balance(c_state.balance(account));
-			j_balances.push_back(balance.convert_to<std::string>());
+			auto staking_balance(c_state.staking_balance(account));
+
+			mcp::json j_response;
+			j_response["balance"] = balance.convert_to<std::string>();
+			j_response["staking_balance"] = staking_balance.convert_to<std::string>();
+			j_balances.push_back(j_response);
 		}
 		else
 		{
@@ -1066,6 +1073,125 @@ void mcp::rpc_handler::account_block_list()
 
 	error_code_l = mcp::rpc_account_block_list_error_code::ok;
     error_response(response, (int)error_code_l, err.msg(error_code_l), resp_l);
+}
+
+void mcp::rpc_handler::account_staking_block_list()
+{
+	mcp::rpc_account_block_list_error_code error_code_l;
+
+	mcp::account account;
+	if (!request.count("account") || (!request["account"].is_string()))
+	{
+		error_code_l = mcp::rpc_account_block_list_error_code::invalid_account;
+		error_response(response, (int)error_code_l, err.msg(error_code_l));
+		return;
+	}
+
+	std::string account_text = request["account"];
+	if (account.decode_account(account_text))
+	{
+		error_code_l = mcp::rpc_account_block_list_error_code::invalid_account;
+		error_response(response, (int)error_code_l, err.msg(error_code_l));
+		return;
+	}
+
+	uint64_t limit_l(0);
+	if (!request.count("limit"))
+	{
+		error_code_l = mcp::rpc_account_block_list_error_code::invalid_limit;
+		error_response(response, (int)error_code_l, err.msg(error_code_l));
+		return;
+	}
+
+	if (!try_get_uint64_t_from_json("limit", limit_l))
+	{
+		error_code_l = mcp::rpc_account_block_list_error_code::invalid_limit;
+		error_response(response, (int)error_code_l, err.msg(error_code_l));
+		return;
+	}
+
+	if (limit_l > list_max_limit)
+	{
+		error_code_l = mcp::rpc_account_block_list_error_code::limit_too_large;
+		error_response(response, (int)error_code_l, err.msg(error_code_l));
+		return;
+	}
+
+	mcp::db::db_transaction transaction(m_store.create_transaction());
+	mcp::account_state_hash search_hash(0);
+
+	if (request.count("index"))
+	{
+		if (request["index"].is_string())
+		{
+			std::string index = request["index"];
+			if (!index.empty())
+			{
+				mcp::account_state_hash last_state_hash;
+				if (last_state_hash.decode_hex(index))
+				{
+					error_code_l = mcp::rpc_account_block_list_error_code::invalid_index;
+					error_response(response, (int)error_code_l, err.msg(error_code_l));
+					return;
+				}
+				std::shared_ptr<mcp::account_state> acc_state(m_store.account_state_get(transaction, last_state_hash));
+				if (!(acc_state && acc_state->account == account))
+				{
+					error_code_l = mcp::rpc_account_block_list_error_code::index_not_exsist;
+					error_response(response, (int)error_code_l, err.msg(error_code_l));
+					return;
+				}
+				search_hash = last_state_hash;
+
+			}
+
+		}
+		else
+		{
+			error_code_l = mcp::rpc_account_block_list_error_code::invalid_index;
+			error_response(response, (int)error_code_l, err.msg(error_code_l));
+			return;
+		}
+
+	}
+	else
+	{
+		std::shared_ptr<mcp::account_state> acc_state(m_cache->latest_account_state_get(transaction, account));
+		if (acc_state)
+			search_hash = acc_state->hash();
+	}
+
+	mcp::json resp_l;
+	mcp::json blocks_l = mcp::json::array();
+
+	int i = 0;
+	while (i < limit_l && !search_hash.is_zero())
+	{
+		std::shared_ptr<mcp::account_state> acc_state(m_store.account_state_get(transaction, search_hash));
+		if (!acc_state)
+			break;
+		mcp::block_hash b_hash(acc_state->block_hash);
+		auto block = m_cache->block_get(transaction, b_hash);
+		assert_x(block);
+		if (block->hashables->type == mcp::block_type::staking || block->hashables->type == mcp::block_type::unstaking)
+		{
+			mcp::json block_l;
+			block->serialize_json(block_l);
+			blocks_l.push_back(block_l);
+			i++;
+		}
+		search_hash = acc_state->previous;
+	}
+	resp_l["blocks"] = blocks_l;
+
+	std::string index;
+	if (!search_hash.is_zero())
+		resp_l["next_index"] = search_hash.to_string();
+	else
+		resp_l["next_index"] = nullptr;
+
+	error_code_l = mcp::rpc_account_block_list_error_code::ok;
+	error_response(response, (int)error_code_l, err.msg(error_code_l), resp_l);
 }
 
 void mcp::rpc_handler::account_state_list()
@@ -1936,6 +2062,344 @@ void mcp::rpc_handler::logs()
 	error_response(response, (int)error_code_l, err.msg(error_code_l), response_l);
 }
 
+void mcp::rpc_handler::staking()
+{
+    mcp::rpc_staking_error_code error_code_l;
+    if (!rpc.config.enable_control)
+    {
+        error_response(response, "RPC control is disabled");
+        return;
+    }
+
+	boost::optional<mcp::block_hash> previous_opt;
+	if (request.count("previous"))
+	{
+		if (!request["previous"].is_string())
+		{
+			error_code_l = mcp::rpc_staking_error_code::invalid_previous;
+			error_response(response, (int)error_code_l, err.msg(error_code_l));
+			return;
+		}
+		std::string previous_text = request["previous"];
+		mcp::block_hash previous;
+		auto error(previous.decode_hex(previous_text));
+		if (error)
+		{
+			error_code_l = mcp::rpc_staking_error_code::invalid_previous;
+			error_response(response, (int)error_code_l, err.msg(error_code_l));
+			return;
+		}
+		previous_opt = previous;
+	}
+
+    if (!request.count("from") || (!request["from"].is_string()))
+    {
+        error_code_l = mcp::rpc_staking_error_code::invalid_account_from;
+        error_response(response, (int)error_code_l, err.msg(error_code_l));
+        return;
+    }
+
+    // sichaoy: remove the "from" field, and to pick it by default
+    std::string from_text = request["from"];
+	mcp::account from;
+	auto error(from.decode_account(from_text));
+	if (error)
+	{
+        error_code_l = mcp::rpc_staking_error_code::invalid_account_from;
+        error_response(response, (int)error_code_l, err.msg(error_code_l));
+		return;
+	}
+
+	if(!m_key_manager->exists(from))
+	{
+        error_code_l = mcp::rpc_staking_error_code::account_not_exisit;
+        error_response(response, (int)error_code_l, err.msg(error_code_l));
+		return;
+	}
+
+    if (!request.count("amount") || (!request["amount"].is_string()))
+    {
+        error_code_l = mcp::rpc_staking_error_code::invalid_amount;
+        error_response(response, (int)error_code_l, err.msg(error_code_l));
+        return;
+    }
+	std::string amount_text = request["amount"];
+	mcp::amount amount;
+	error = !boost::conversion::try_lexical_convert(amount_text, amount);
+	if (error)
+	{
+        error_code_l = mcp::rpc_staking_error_code::invalid_amount;
+        error_response(response, (int)error_code_l, err.msg(error_code_l));
+		return;
+	}
+
+	uint64_t gas_u64;
+	if (!try_get_uint64_t_from_json("gas", gas_u64))
+	{
+        error_code_l = mcp::rpc_staking_error_code::invalid_gas;
+        error_response(response, (int)error_code_l, err.msg(error_code_l));
+        return;
+    }
+	uint256_t gas(gas_u64);
+
+	uint256_t gas_price;
+	if (!request.count("gas_price")
+		|| !request["gas_price"].is_string()
+		|| !boost::conversion::try_lexical_convert(request["gas_price"].get<std::string>(), gas_price))
+	{
+		error_code_l = mcp::rpc_staking_error_code::invalid_gas_price;
+		error_response(response, (int)error_code_l, err.msg(error_code_l));
+		return;
+	}
+
+	boost::optional<std::string> password;
+	if (request.count("password"))
+	{
+		if (!request["password"].is_string())
+		{
+			error_code_l = mcp::rpc_staking_error_code::invalid_password;
+			error_response(response, (int)error_code_l, err.msg(error_code_l));
+			return;
+		}
+		std::string password_str = request["password"];
+		password = password_str;
+	}
+
+	bool async(false);
+	if (request.count("async"))
+	{
+		if (!try_get_bool_from_json("async", async))
+		{
+			error_code_l = mcp::rpc_staking_error_code::invalid_async;
+			error_response(response, (int)error_code_l, err.msg(error_code_l));
+			return;
+		}
+	}
+
+	auto rpc_l(shared_from_this());
+	std::vector<uint8_t> data;
+	m_wallet->send_async(mcp::block_type::staking, previous_opt, from, 0, amount, gas, gas_price, data, password, [from, rpc_l, this](mcp::send_result result)
+	{
+		mcp::rpc_staking_error_code error_code_l;
+		switch (result.code)
+		{
+		case mcp::send_result_codes::ok:
+		{
+			error_code_l = mcp::rpc_staking_error_code::ok;
+			mcp::uint256_union hash(result.block->hash());
+			mcp::json response_value_p;
+			response_value_p["hash"] = hash.to_string();
+			error_response(response, (int)error_code_l, rpc_l->err.msg(error_code_l), response_value_p);
+			break;
+		}
+		case mcp::send_result_codes::from_not_exists:
+			error_code_l = mcp::rpc_staking_error_code::account_not_exisit;
+			error_response(response, (int)error_code_l, rpc_l->err.msg(error_code_l));
+			break;
+		case mcp::send_result_codes::account_locked:
+			error_code_l = mcp::rpc_staking_error_code::account_locked;
+			error_response(response, (int)error_code_l, rpc_l->err.msg(error_code_l));
+			break;
+		case mcp::send_result_codes::wrong_password:
+			error_code_l = mcp::rpc_staking_error_code::wrong_password;
+			error_response(response, (int)error_code_l, rpc_l->err.msg(error_code_l));
+			break;
+		case mcp::send_result_codes::insufficient_balance:
+			error_code_l = mcp::rpc_staking_error_code::insufficient_balance;
+			error_response(response, (int)error_code_l, rpc_l->err.msg(error_code_l));
+			break;
+		//case mcp::send_result_codes::data_size_too_large:
+		//	error_code_l = mcp::rpc_staking_error_code::data_size_too_large;
+		//	error_response(response, (int)error_code_l, rpc_l->err.msg(error_code_l));
+		//	break;
+		case mcp::send_result_codes::validate_error:
+			error_code_l = mcp::rpc_staking_error_code::validate_error;
+			if (result.msg != "")
+				error_response(response, (int)error_code_l, result.msg);
+			else
+				error_response(response, (int)error_code_l, rpc_l->err.msg(error_code_l));
+			break;
+		case mcp::send_result_codes::error:
+			error_code_l = mcp::rpc_staking_error_code::send_block_error;
+			error_response(response, (int)error_code_l, rpc_l->err.msg(error_code_l));
+			break;
+		default:
+			error_code_l = mcp::rpc_staking_error_code::send_unknown_error;
+			error_response(response, (int)error_code_l, rpc_l->err.msg(error_code_l));
+			break;
+		}
+	}, async);
+}
+
+void mcp::rpc_handler::unstaking()
+{
+	mcp::rpc_unstaking_error_code error_code_l;
+	if (!rpc.config.enable_control)
+	{
+		error_response(response, "RPC control is disabled");
+		return;
+	}
+
+	boost::optional<mcp::block_hash> previous_opt;
+	if (request.count("previous"))
+	{
+		if (!request["previous"].is_string())
+		{
+			error_code_l = mcp::rpc_unstaking_error_code::invalid_previous;
+			error_response(response, (int)error_code_l, err.msg(error_code_l));
+			return;
+		}
+		std::string previous_text = request["previous"];
+		mcp::block_hash previous;
+		auto error(previous.decode_hex(previous_text));
+		if (error)
+		{
+			error_code_l = mcp::rpc_unstaking_error_code::invalid_previous;
+			error_response(response, (int)error_code_l, err.msg(error_code_l));
+			return;
+		}
+		previous_opt = previous;
+	}
+
+	if (!request.count("from") || (!request["from"].is_string()))
+	{
+		error_code_l = mcp::rpc_unstaking_error_code::invalid_account_from;
+		error_response(response, (int)error_code_l, err.msg(error_code_l));
+		return;
+	}
+
+	// sichaoy: remove the "from" field, and to pick it by default
+	std::string from_text = request["from"];
+	mcp::account from;
+	auto error(from.decode_account(from_text));
+	if (error)
+	{
+		error_code_l = mcp::rpc_unstaking_error_code::invalid_account_from;
+		error_response(response, (int)error_code_l, err.msg(error_code_l));
+		return;
+	}
+
+	if (!m_key_manager->exists(from))
+	{
+		error_code_l = mcp::rpc_unstaking_error_code::account_not_exisit;
+		error_response(response, (int)error_code_l, err.msg(error_code_l));
+		return;
+	}
+
+	if (!request.count("amount") || (!request["amount"].is_string()))
+	{
+		error_code_l = mcp::rpc_unstaking_error_code::invalid_amount;
+		error_response(response, (int)error_code_l, err.msg(error_code_l));
+		return;
+	}
+	std::string amount_text = request["amount"];
+	mcp::amount amount;
+	error = !boost::conversion::try_lexical_convert(amount_text, amount);
+	if (error)
+	{
+		error_code_l = mcp::rpc_unstaking_error_code::invalid_amount;
+		error_response(response, (int)error_code_l, err.msg(error_code_l));
+		return;
+	}
+
+	uint64_t gas_u64;
+	if (!try_get_uint64_t_from_json("gas", gas_u64))
+	{
+		error_code_l = mcp::rpc_unstaking_error_code::invalid_gas;
+		error_response(response, (int)error_code_l, err.msg(error_code_l));
+		return;
+	}
+	uint256_t gas(gas_u64);
+
+	uint256_t gas_price;
+	if (!request.count("gas_price")
+		|| !request["gas_price"].is_string()
+		|| !boost::conversion::try_lexical_convert(request["gas_price"].get<std::string>(), gas_price))
+	{
+		error_code_l = mcp::rpc_unstaking_error_code::invalid_gas_price;
+		error_response(response, (int)error_code_l, err.msg(error_code_l));
+		return;
+	}
+
+	boost::optional<std::string> password;
+	if (request.count("password"))
+	{
+		if (!request["password"].is_string())
+		{
+			error_code_l = mcp::rpc_unstaking_error_code::invalid_password;
+			error_response(response, (int)error_code_l, err.msg(error_code_l));
+			return;
+		}
+		std::string password_str = request["password"];
+		password = password_str;
+	}
+
+	bool async(false);
+	if (request.count("async"))
+	{
+		if (!try_get_bool_from_json("async", async))
+		{
+			error_code_l = mcp::rpc_unstaking_error_code::invalid_async;
+			error_response(response, (int)error_code_l, err.msg(error_code_l));
+			return;
+		}
+	}
+
+	auto rpc_l(shared_from_this());
+	std::vector<uint8_t> data;
+	m_wallet->send_async(mcp::block_type::unstaking, previous_opt, from, 0, amount, gas, gas_price, data, password, [from, rpc_l, this](mcp::send_result result)
+	{
+		mcp::rpc_unstaking_error_code error_code_l;
+		switch (result.code)
+		{
+		case mcp::send_result_codes::ok:
+		{
+			error_code_l = mcp::rpc_unstaking_error_code::ok;
+			mcp::uint256_union hash(result.block->hash());
+			mcp::json response_value_p;
+			response_value_p["hash"] = hash.to_string();
+			error_response(response, (int)error_code_l, rpc_l->err.msg(error_code_l), response_value_p);
+			break;
+		}
+		case mcp::send_result_codes::from_not_exists:
+			error_code_l = mcp::rpc_unstaking_error_code::account_not_exisit;
+			error_response(response, (int)error_code_l, rpc_l->err.msg(error_code_l));
+			break;
+		case mcp::send_result_codes::account_locked:
+			error_code_l = mcp::rpc_unstaking_error_code::account_locked;
+			error_response(response, (int)error_code_l, rpc_l->err.msg(error_code_l));
+			break;
+		case mcp::send_result_codes::wrong_password:
+			error_code_l = mcp::rpc_unstaking_error_code::wrong_password;
+			error_response(response, (int)error_code_l, rpc_l->err.msg(error_code_l));
+			break;
+		case mcp::send_result_codes::insufficient_balance:
+			error_code_l = mcp::rpc_unstaking_error_code::insufficient_balance;
+			error_response(response, (int)error_code_l, rpc_l->err.msg(error_code_l));
+			break;
+			//case mcp::send_result_codes::data_size_too_large:
+			//	error_code_l = mcp::rpc_unstaking_error_code::data_size_too_large;
+			//	error_response(response, (int)error_code_l, rpc_l->err.msg(error_code_l));
+			//	break;
+		case mcp::send_result_codes::validate_error:
+			error_code_l = mcp::rpc_unstaking_error_code::validate_error;
+			if (result.msg != "")
+				error_response(response, (int)error_code_l, result.msg);
+			else
+				error_response(response, (int)error_code_l, rpc_l->err.msg(error_code_l));
+			break;
+		case mcp::send_result_codes::error:
+			error_code_l = mcp::rpc_unstaking_error_code::send_block_error;
+			error_response(response, (int)error_code_l, rpc_l->err.msg(error_code_l));
+			break;
+		default:
+			error_code_l = mcp::rpc_unstaking_error_code::send_unknown_error;
+			error_response(response, (int)error_code_l, rpc_l->err.msg(error_code_l));
+			break;
+		}
+	}, async);
+}
+
 void mcp::rpc_handler::send_block()
 {
     mcp::rpc_send_error_code error_code_l;
@@ -2074,8 +2538,6 @@ void mcp::rpc_handler::send_block()
 		password = password_str;
 	}
 
-    bool gen_next_work_l(false);
-
 	bool async(false);
 	if (request.count("async"))
 	{
@@ -2138,7 +2600,7 @@ void mcp::rpc_handler::send_block()
 			error_response(response, (int)error_code_l, rpc_l->err.msg(error_code_l));
 			break;
 		}
-	}, gen_next_work_l, async);
+	}, async);
 }
 
 void mcp::rpc_handler::generate_offline_block()
@@ -2471,7 +2933,6 @@ void mcp::rpc_handler::send_offline_block()
 		}
 	}
 
-	bool gen_next_work_l(false);
 	auto rpc_l(shared_from_this());
 	m_wallet->send_async(p_block, signature, [rpc_l, this](mcp::send_result result) {
 		mcp::rpc_send_offline_block_error_code error_code_l;
@@ -2511,7 +2972,7 @@ void mcp::rpc_handler::send_offline_block()
 			error_response(response, (int)error_code_l, rpc_l->err.msg(error_code_l));
 			break;
 		}
-	}, gen_next_work_l, async);
+	}, async);
 }
 
 void mcp::rpc_handler::block_summary()
@@ -3001,6 +3462,116 @@ void mcp::rpc_handler::debug_storage_range_at()
 	}
 }
 
+void mcp::rpc_handler::staking_account_list()
+{
+	mcp::rpc_staking_account_list_error_code error_code_l;
+
+	uint64_t limit_l(0);
+	if (!request.count("limit"))
+	{
+		error_code_l = mcp::rpc_staking_account_list_error_code::invalid_limit;
+		error_response(response, (int)error_code_l, err.msg(error_code_l));
+		return;
+	}
+
+	if (!try_get_uint64_t_from_json("limit", limit_l))
+	{
+		error_code_l = mcp::rpc_staking_account_list_error_code::invalid_limit;
+		error_response(response, (int)error_code_l, err.msg(error_code_l));
+		return;
+	}
+
+	if (limit_l > list_max_limit)
+	{
+		error_code_l = mcp::rpc_staking_account_list_error_code::limit_too_large;
+		error_response(response, (int)error_code_l, err.msg(error_code_l));
+		return;
+	}
+
+	mcp::account index_account(0);
+	if (request.count("index"))
+	{
+		if (request["index"].is_string())
+		{
+			std::string index = request["index"];
+			if (!index.empty())
+			{
+				if (index_account.decode_account(index))
+				{
+					error_code_l = mcp::rpc_staking_account_list_error_code::invalid_index;
+					error_response(response, (int)error_code_l, err.msg(error_code_l));
+					return;
+				}
+			}
+
+		}
+		else
+		{
+			error_code_l = mcp::rpc_staking_account_list_error_code::invalid_index;
+			error_response(response, (int)error_code_l, err.msg(error_code_l));
+			return;
+		}
+
+	}
+
+	auto validators = m_cache->validator_list_get(m_store.create_transaction());
+	auto it = validators.begin();
+	if (!index_account.is_zero())
+	{
+		it = validators.find(index_account);
+		if (it == validators.end())
+		{
+			error_code_l = mcp::rpc_staking_account_list_error_code::invalid_index;
+			error_response(response, (int)error_code_l, err.msg(error_code_l));
+			return;
+		}
+	}
+	mcp::json resp_l;
+	mcp::json staking_accounts = mcp::json::array();
+	mcp::account next(0);
+	for (; it != validators.end(); it++)
+	{
+		if (staking_accounts.size() < limit_l)
+			staking_accounts.push_back(it->to_account());
+		else
+		{
+			next = *it;
+			break;
+		}
+	}
+	resp_l["next_index"] = next.to_account();
+	resp_l["staking_account_list"] = staking_accounts;
+	error_code_l = mcp::rpc_staking_account_list_error_code::ok;
+	error_response(response, (int)error_code_l, err.msg(error_code_l), resp_l);
+}
+
+// test rpc
+void mcp::rpc_handler::dag()
+{
+	auto snapshot = m_store.create_snapshot();
+	mcp::db::db_transaction transaction(m_store.create_transaction());
+	auto dag_free_it = m_store.dag_free_begin(transaction, snapshot);
+	mcp::free_key key(dag_free_it.key());
+	mcp::block_hash free_dag_hash(key.hash_asc);
+
+	mcp::json blocks_l = mcp::json::array();
+	while (!free_dag_hash.is_zero()) {
+		std::shared_ptr<mcp::block> block = m_cache->block_get(transaction, free_dag_hash);
+		if (!block)
+			break;
+		mcp::json block_l;
+		block->serialize_json(block_l);
+		blocks_l.push_back(block_l);
+
+		free_dag_hash = block->previous();
+	}
+
+	mcp::json resp_l;
+	resp_l["blocks"] = blocks_l;
+	auto error_code_l = mcp::rpc_account_block_list_error_code::ok;
+	error_response(response, (int)error_code_l, err.msg(error_code_l), resp_l);
+}
+
 mcp::rpc_connection::rpc_connection(mcp::rpc & rpc_a) :
 	rpc(rpc_a),
 	socket(rpc_a.io_service)
@@ -3121,6 +3692,20 @@ void mcp::rpc_handler::process_request()
 			reprocess_body(body, request);
 			handled = true;
 		}
+		else if (action == "staking")
+		{
+			staking();
+			request.erase("password");
+			reprocess_body(body, request);
+			handled = true;
+		}
+		else if (action == "unstaking")
+		{
+			unstaking();
+			request.erase("password");
+			reprocess_body(body, request);
+			handled = true;
+		}
 		else if (action == "send_block")
 		{
 			send_block();
@@ -3170,6 +3755,10 @@ void mcp::rpc_handler::process_request()
 		else if (action == "account_block_list")
 		{
 			account_block_list();
+		}
+		else if (action == "account_staking_block_list")
+		{
+			account_staking_block_list();
 		}
 		else if (action == "account_state_list")
 		{
@@ -3251,6 +3840,10 @@ void mcp::rpc_handler::process_request()
 		{
 			witness_list();
 		}
+		else if (action == "staking_account_list")
+		{
+			staking_account_list();
+		}
 		else if (action == "debug_trace_transaction")
 		{
 			debug_trace_transaction();
@@ -3263,6 +3856,18 @@ void mcp::rpc_handler::process_request()
 		{
 			error_response(response, mcp::node_sync::get_syncing_status());
 		}
+		//debug command
+#ifdef _DEBUG
+		else if (action == "do_witness")
+		{
+			rpc.witness->check_and_witness();
+			error_response(response, "success");
+		}
+		else if (action == "dag")
+		{
+			dag();
+		}
+#endif // DEBUG
         else
 		{
 			error_response(response, "Unknown command");
@@ -3284,9 +3889,10 @@ std::shared_ptr<mcp::rpc> mcp::get_rpc(mcp::block_store & store_a, std::shared_p
 	std::shared_ptr<mcp::block_cache> cache_a, std::shared_ptr<mcp::key_manager> key_manager_a,
 	std::shared_ptr<mcp::wallet> wallet_a, std::shared_ptr<mcp::p2p::host> host_a,
 	std::shared_ptr<mcp::async_task> background_a,
-	boost::asio::io_service & service_a, mcp::rpc_config const& config_a)
+	boost::asio::io_service & service_a, mcp::rpc_config const& config_a,
+	std::shared_ptr<mcp::witness> witness_a)
 {
-	std::shared_ptr<rpc> impl(new rpc(store_a, chain_a, cache_a, key_manager_a, wallet_a, host_a, background_a, service_a, config_a));
+	std::shared_ptr<rpc> impl(new rpc(store_a, chain_a, cache_a, key_manager_a, wallet_a, host_a, background_a, service_a, config_a, witness_a));
 	return impl;
 }
 
@@ -3307,8 +3913,8 @@ std::string mcp::rpc_error_msg::msg(mcp::rpc_account_create_error_code const & e
     case mcp::rpc_account_create_error_code::invalid_characters_password:
         error_msg = "Invalid password! A valid password must contain characters from letters (a-Z, A-Z), digits (0-9) and special characters (!@#$%^&*)";
         break;
-    case mcp::rpc_account_create_error_code::invalid_gen_next_work_value:
-        error_msg = "Invalid gen_next_work format";
+    case mcp::rpc_account_create_error_code::invalid_backup_value:
+        error_msg = "Invalid backup format";
         break;
     case mcp::rpc_account_create_error_code::invalid_password:
         error_msg = "Invalid password";
@@ -3405,9 +4011,6 @@ std::string mcp::rpc_error_msg::msg(mcp::rpc_account_import_error_code const & e
     {
     case mcp::rpc_account_import_error_code::ok:
         error_msg = "OK";
-        break;
-    case mcp::rpc_account_import_error_code::invalid_gen_next_work_value:
-        error_msg = "Invalid gen_next_work format";
         break;
     case mcp::rpc_account_import_error_code::invalid_json:
         error_msg = "Invalid json";
@@ -3667,9 +4270,6 @@ std::string mcp::rpc_error_msg::msg(mcp::rpc_send_offline_block_error_code const
     case mcp::rpc_send_offline_block_error_code::data_size_too_large:
         error_msg = "Data size too large";
         break;
-    case mcp::rpc_send_offline_block_error_code::invalid_gen_next_work_value:
-        error_msg = "Invalid gen_next_work format";
-        break;
     case mcp::rpc_send_offline_block_error_code::invalid_previous:
         error_msg = "Invalid previous format";
         break;
@@ -3911,6 +4511,114 @@ std::string mcp::rpc_error_msg::msg(mcp::rpc_stop_error_code const & err_a)
     return error_msg;
 }
 
+std::string mcp::rpc_error_msg::msg(mcp::rpc_staking_error_code const & err_a)
+{
+	std::string error_msg;
+	switch (err_a)
+	{
+	case mcp::rpc_staking_error_code::ok:
+		error_msg = "OK";
+		break;
+	case mcp::rpc_staking_error_code::invalid_account_from:
+		error_msg = "Invalid from account";
+		break;
+	case mcp::rpc_staking_error_code::account_not_exisit:
+		error_msg = "From account not found";
+		break;
+	case mcp::rpc_staking_error_code::invalid_amount:
+		error_msg = "Invalid amount format";
+		break;
+	case mcp::rpc_staking_error_code::invalid_gas:
+		error_msg = "Invalid gas format";
+		break;
+	case mcp::rpc_staking_error_code::account_locked:
+		error_msg = "Account locked";
+		break;
+	case mcp::rpc_staking_error_code::wrong_password:
+		error_msg = "Wrong password";
+		break;
+	case mcp::rpc_staking_error_code::insufficient_balance:
+		error_msg = "Insufficient balance";
+		break;
+	case mcp::rpc_staking_error_code::validate_error:
+		error_msg = "Generate block fail, please retry later";
+		break;
+	case mcp::rpc_staking_error_code::send_block_error:
+		error_msg = "Send block error";
+		break;
+	case mcp::rpc_staking_error_code::send_unknown_error:
+		error_msg = "Send block unkonw error";
+		break;
+	case mcp::rpc_staking_error_code::invalid_password:
+		error_msg = "Invalid password";
+		break;
+	case mcp::rpc_staking_error_code::invalid_id:
+		error_msg = "Invalid id";
+		break;
+	case mcp::rpc_staking_error_code::invalid_gas_price:
+		error_msg = "Invalid gas price format";
+		break;
+	default:
+		error_msg = "Unkonw error";
+		break;
+	}
+	return error_msg;
+}
+
+std::string mcp::rpc_error_msg::msg(mcp::rpc_unstaking_error_code const & err_a)
+{
+	std::string error_msg;
+	switch (err_a)
+	{
+	case mcp::rpc_unstaking_error_code::ok:
+		error_msg = "OK";
+		break;
+	case mcp::rpc_unstaking_error_code::invalid_account_from:
+		error_msg = "Invalid from account";
+		break;
+	case mcp::rpc_unstaking_error_code::account_not_exisit:
+		error_msg = "From account not found";
+		break;
+	case mcp::rpc_unstaking_error_code::invalid_amount:
+		error_msg = "Invalid amount format";
+		break;
+	case mcp::rpc_unstaking_error_code::invalid_gas:
+		error_msg = "Invalid gas format";
+		break;
+	case mcp::rpc_unstaking_error_code::account_locked:
+		error_msg = "Account locked";
+		break;
+	case mcp::rpc_unstaking_error_code::wrong_password:
+		error_msg = "Wrong password";
+		break;
+	case mcp::rpc_unstaking_error_code::insufficient_balance:
+		error_msg = "Insufficient balance";
+		break;
+	case mcp::rpc_unstaking_error_code::validate_error:
+		error_msg = "Generate block fail, please retry later";
+		break;
+	case mcp::rpc_unstaking_error_code::send_block_error:
+		error_msg = "Send block error";
+		break;
+	case mcp::rpc_unstaking_error_code::send_unknown_error:
+		error_msg = "Send block unkonw error";
+		break;
+	case mcp::rpc_unstaking_error_code::invalid_password:
+		error_msg = "Invalid password";
+		break;
+	case mcp::rpc_unstaking_error_code::invalid_id:
+		error_msg = "Invalid id";
+		break;
+	case mcp::rpc_unstaking_error_code::invalid_gas_price:
+		error_msg = "Invalid gas price format";
+		break;
+	default:
+		error_msg = "Unkonw error";
+		break;
+	}
+	return error_msg;
+}
+
 std::string mcp::rpc_error_msg::msg(mcp::rpc_send_error_code const & err_a)
 {
     std::string error_msg;
@@ -3940,9 +4648,6 @@ std::string mcp::rpc_error_msg::msg(mcp::rpc_send_error_code const & err_a)
     case mcp::rpc_send_error_code::data_size_too_large:
         error_msg = "Data size too large";
         break;        
-    case mcp::rpc_send_error_code::invalid_gen_next_work_value:
-        error_msg = "Invalid gen_next_work format";
-        break;
     case mcp::rpc_send_error_code::account_locked:
         error_msg = "Account locked";
         break;
@@ -4116,6 +4821,33 @@ std::string mcp::rpc_error_msg::msg(mcp::rpc_debug_storage_range_at_error_code c
 		break;
 	case mcp::rpc_debug_storage_range_at_error_code::invalid_max_results:
 		error_msg = "Invalid value of max results ";
+		break;
+	}
+	return error_msg;
+}
+
+std::string mcp::rpc_error_msg::msg(mcp::rpc_staking_account_list_error_code const & err_a)
+{
+	std::string error_msg;
+	switch (err_a)
+	{
+	case mcp::rpc_staking_account_list_error_code::ok:
+		error_msg = "OK";
+		break;
+	case mcp::rpc_staking_account_list_error_code::invalid_limit:
+		error_msg = "Invalid limit";
+		break;
+	case mcp::rpc_staking_account_list_error_code::limit_too_large:
+		error_msg = "Limit too large, it can not be large than " + std::to_string(mcp::rpc_handler::list_max_limit);
+		break;
+	case mcp::rpc_staking_account_list_error_code::invalid_index:
+		error_msg = "Invalid index";
+		break;
+	case mcp::rpc_staking_account_list_error_code::index_not_exsist:
+		error_msg = "Index not found";
+		break;
+	default:
+		error_msg = "Unkonw error";
 		break;
 	}
 	return error_msg;

@@ -107,32 +107,9 @@ mcp::base_validate_result mcp::validation::base_validate(mcp::db::db_transaction
 		break;
 	}
 	case mcp::block_type::light:
+	case mcp::block_type::staking:
+	case mcp::block_type::unstaking:
 	{
-		//for legacy light block
-		if (block->hashables->light_version == 0)
-		{
-			if (mcp::mcp_network == mcp::mcp_networks::mcp_live_network)
-			{
-				if (block->hashables->gas_price != mcp::uint256_t(20000 * 1000000000ULL))
-				{
-					if (block_hash.to_string() == "8DF9968DDD10CE042AD75A3CD04DFC55BD74DA6846E3930EB09A2FD37A822187"
-						&& block->hashables->gas_price == mcp::uint256_t(24118 * 1000000000ULL))
-					{
-					}
-					else if (block_hash.to_string() == "F6C8E4E81EBBA91684D1D897CCD11E994E83D7636AEA07179069AE18219A738D"
-						&& block->hashables->gas_price == mcp::uint256_t(40135 * 1000000000ULL))
-					{
-					}
-					else
-					{
-						result.code = mcp::base_validate_result_codes::invalid_block;
-						result.err_msg = "invalid leagcy light block";
-						return result;
-					}
-				}
-			}
-		}
-
 		bool exists(false);
 		exists = cache_a->unlink_block_exists(transaction_a, block_hash);
 		if (!exists)
@@ -156,12 +133,25 @@ mcp::base_validate_result mcp::validation::base_validate(mcp::db::db_transaction
 		//data
 		//if (!block->data.empty())
 		//{
-		if (mcp::block::data_hash(block->data) != block->hashables->data_hash)
+		if (block_type == mcp::block_type::light) //light
 		{
-			result.code = mcp::base_validate_result_codes::invalid_block;
-			result.err_msg = "invalid block data hash";
-			return result;
+			if (mcp::block::data_hash(block->data) != block->hashables->data_hash)
+			{
+				result.code = mcp::base_validate_result_codes::invalid_block;
+				result.err_msg = "invalid block data hash";
+				return result;
+			}
 		}
+		else //staking or unstaking
+		{
+			if (block->data.size() != 0)
+			{
+				result.code = mcp::base_validate_result_codes::invalid_block;
+				result.err_msg = "data size must be null";
+				return result;
+			}
+		}
+		
 		//}
 		//else
 		//{
@@ -579,7 +569,7 @@ mcp::light_validate_result mcp::validation::light_validate(mcp::db::db_transacti
 {
 	mcp::light_validate_result result;
 	mcp::block_type const & block_type(block->hashables->type);
-	assert_x(block_type == mcp::block_type::light);
+	assert_x(block_type == mcp::block_type::light || block_type == mcp::block_type::staking || block_type == mcp::block_type::unstaking);
 
 	mcp::block_hash const & block_hash(block->hash());
 	bool exists(false);

@@ -49,6 +49,8 @@ void mcp::chain::init(bool & error_a, mcp::timeout_db_transaction & timeout_tx_a
 
 		mcp::overlay_db db(transaction, m_store);
 		mcp::commit(transaction, precompiled_accounts, &db, cache_a, m_store, 0);
+
+		cache_a->validator_list_get(transaction); //init validators
 	}
 
 	// Setup default precompiled contracts as equal to genesis of Frontier.
@@ -426,7 +428,7 @@ void mcp::chain::write_light_block(mcp::db::db_transaction & transaction_a, std:
 	mcp::block_hash const & previous(block_a->block->previous());
 	mcp::block_hash const & root(block_a->block->root());
 
-	assert_x(block_a->block->hashables->type == mcp::block_type::light);
+	assert_x(block_a->block->hashables->type == mcp::block_type::light || block_a->block->hashables->type == mcp::block_type::staking || block_a->block->hashables->type == mcp::block_type::unstaking);
 
 	uint64_t level;
 	std::shared_ptr<mcp::block_state> previous_state;
@@ -888,7 +890,7 @@ void mcp::chain::set_block_stable(mcp::timeout_db_transaction & timeout_tx_a, st
 				else
 				{
 					cache_a->successor_put(transaction_a, stable_block->root(), stable_block_hash);
-					if (stable_block->hashables->type == mcp::block_type::light)
+					if (stable_block->hashables->type == mcp::block_type::light || stable_block->hashables->type == mcp::block_type::staking || stable_block->hashables->type == mcp::block_type::unstaking)
 					{
 						rebuild_unlink(transaction_a, cache_a, stable_block->hashables->from);
 					}
@@ -911,6 +913,8 @@ void mcp::chain::set_block_stable(mcp::timeout_db_transaction & timeout_tx_a, st
 				break;
 			}
 			case mcp::block_type::light:
+			case mcp::block_type::staking:
+			case mcp::block_type::unstaking:
 			{
 				std::shared_ptr<mcp::account_info> info(cache_a->account_get(transaction_a, account));
 				assert_x(info);
@@ -928,7 +932,7 @@ void mcp::chain::set_block_stable(mcp::timeout_db_transaction & timeout_tx_a, st
 		}
 
 		//only light block will change account state, for example balance
-		if (stable_block->hashables->type == mcp::block_type::light)
+		if (stable_block->hashables->type == mcp::block_type::light || stable_block->hashables->type == mcp::block_type::staking || stable_block->hashables->type == mcp::block_type::unstaking)
 		{
 			//mcp::stopwatch_guard sw("set_block_stable2");
 
@@ -1024,7 +1028,7 @@ void mcp::chain::set_block_stable(mcp::timeout_db_transaction & timeout_tx_a, st
 			m_store.stable_block_put(transaction_a, stable_index, stable_block_hash);
 			m_store.last_stable_index_put(transaction_a, stable_index);
 
-			if (stable_block->hashables->type == mcp::block_type::light)
+			if (stable_block->hashables->type == mcp::block_type::light || stable_block->hashables->type == mcp::block_type::staking || stable_block->hashables->type == mcp::block_type::unstaking)
 				m_store.light_unstable_count_reduce(transaction_a);
 
 #pragma region summary

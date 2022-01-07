@@ -118,7 +118,7 @@ std::list<mcp::public_key> mcp::key_manager::list()
 	return pubs;
 }
 
-mcp::public_key mcp::key_manager::create(std::string const & password_a, bool generate_work_a, bool const & is_backup_a)
+mcp::public_key mcp::key_manager::create(std::string const & password_a, bool const & is_backup_a)
 {
 	mcp::raw_key prv;
 	random_pool.GenerateBlock(prv.data.bytes.data(), prv.data.bytes.size());
@@ -163,7 +163,7 @@ bool mcp::key_manager::remove(mcp::public_key const & pub_a, std::string const &
 	return error;
 }
 
-bool mcp::key_manager::import(std::string const & json_a, key_content & kc_a, bool generate_work_a)
+bool mcp::key_manager::import(std::string const & json_a, key_content & kc_a)
 {
 	bool error(false);
 	mcp::key_content kc(error, json_a);

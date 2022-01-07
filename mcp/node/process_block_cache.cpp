@@ -123,6 +123,22 @@ std::shared_ptr<mcp::account_state> mcp::process_block_cache::latest_account_sta
 
 void mcp::process_block_cache::latest_account_state_put(mcp::db::db_transaction & transaction_a, mcp::account const & account_a, std::shared_ptr<mcp::account_state> account_state_a)
 {
+	if (account_state_a->staking_balance > 0)
+	{
+		if (m_cache->validator_list_put(account_a)) //not existed
+		{
+			m_store.validator_list_put(transaction_a, account_a);
+		}
+	}
+	else if (account_state_a->staking_balance == 0) // must exist ,balance is zero or small with a value ?
+	{
+		m_store.validator_list_del(transaction_a, account_a);
+		m_cache->validator_list_erase(account_a);
+	}
+	else {
+		assert_x(false);
+	}
+
 	mcp::account_state_hash acc_hash(account_state_a->hash());
 	m_store.account_state_put(transaction_a, acc_hash, *account_state_a);
 	m_store.latest_account_state_put(transaction_a, account_a, acc_hash);
@@ -349,6 +365,11 @@ void mcp::process_block_cache::block_summary_put(mcp::db::db_transaction & trans
 			m_block_summary_puts.pop_front();
 		}
 	}
+}
+
+std::set<mcp::account> mcp::process_block_cache::validator_list_get(mcp::db::db_transaction & transaction_a)
+{
+	return m_cache->validator_list_get(transaction_a);
 }
 
 

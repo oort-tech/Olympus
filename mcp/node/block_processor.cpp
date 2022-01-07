@@ -579,6 +579,8 @@ void mcp::block_processor::do_process_one(mcp::timeout_db_transaction & timeout_
 	switch (block->hashables->type)
 	{
 	case mcp::block_type::light:
+	case mcp::block_type::staking:
+	case mcp::block_type::unstaking:
 	{
 		mcp::light_validate_result result(m_validation->light_validate(transaction, m_local_cache, block));
 		switch (result.code)
@@ -854,8 +856,6 @@ void mcp::block_processor::do_process_dag_item(mcp::timeout_db_transaction & tim
 	}
 
 	//save dag block and try advance 
-	//if block from sync ,front hash tree deal completed, delete it
-	//m_sync->deal_exist_catchup_index(block->hash());
 	m_chain->save_dag_block(timeout_tx, m_local_cache, block);
 	m_chain->try_advance(timeout_tx, m_local_cache);
 }

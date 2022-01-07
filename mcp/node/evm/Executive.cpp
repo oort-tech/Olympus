@@ -48,14 +48,29 @@ void mcp::Executive::initialize()
     bigint gasCost = (bigint)m_s.block->hashables->gas * m_s.block->hashables->gas_price;
     bigint totalCost = (bigint)m_s.block->hashables->amount + gasCost;
 
-    if (m_s.balance(m_s.block->hashables->from) < totalCost)
-    {
-		BOOST_LOG(m_log.info) << "Not enough cash: Require > " << totalCost << " = " << m_s.block->hashables->gas
-			<< " * " << m_s.block->hashables->gas_price << " + " << m_s.block->hashables->amount << " Got"
-			<< m_s.balance(m_s.block->hashables->from) << " for sender: " << m_s.block->hashables->from.to_string();
-		m_excepted = TransactionException::NotEnoughCash;
-		BOOST_THROW_EXCEPTION(NotEnoughCash() << RequirementError(totalCost, (bigint)m_s.balance(m_s.block->hashables->from)) << errinfo_comment(m_s.block->hashables->from.to_string()));
+	if (m_s.block->hashables->type == mcp::block_type::unstaking)
+	{
+		if (m_s.staking_balance(m_s.block->hashables->from) < (bigint)m_s.block->hashables->amount || m_s.balance(m_s.block->hashables->from) < gasCost)// amount from staking balance and fee from balance
+		{
+			BOOST_LOG(m_log.info) << "Not enough cash: balance > " << gasCost << ", staking balance > " << (bigint)m_s.block->hashables->amount << " Got balance "
+				<< m_s.balance(m_s.block->hashables->from) << " staking balance: " << m_s.staking_balance(m_s.block->hashables->from) 
+				<< " for sender: " << m_s.block->hashables->from.to_string();
+			m_excepted = TransactionException::NotEnoughCash;
+			BOOST_THROW_EXCEPTION(NotEnoughCash() << RequirementError(totalCost, (bigint)m_s.balance(m_s.block->hashables->from)) << errinfo_comment(m_s.block->hashables->from.to_string()));
+		}
 	}
+	else
+	{
+		if (m_s.balance(m_s.block->hashables->from) < totalCost)
+		{
+			BOOST_LOG(m_log.info) << "Not enough cash: Require > " << totalCost << " = " << m_s.block->hashables->gas
+				<< " * " << m_s.block->hashables->gas_price << " + " << m_s.block->hashables->amount << " Got"
+				<< m_s.balance(m_s.block->hashables->from) << " for sender: " << m_s.block->hashables->from.to_string();
+			m_excepted = TransactionException::NotEnoughCash;
+			BOOST_THROW_EXCEPTION(NotEnoughCash() << RequirementError(totalCost, (bigint)m_s.balance(m_s.block->hashables->from)) << errinfo_comment(m_s.block->hashables->from.to_string()));
+		}
+	}
+    
     m_gasCost = (u256)gasCost;  // Convert back to 256-bit, safe now.
 }
 

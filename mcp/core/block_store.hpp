@@ -39,6 +39,11 @@ namespace mcp
 		bool contract_aux_state_key_get(mcp::db::db_transaction & transaction_a, dev::bytes const & key_a, dev::bytes & value_a);
 		void contract_aux_state_key_put(mcp::db::db_transaction & transaction_a, dev::bytes const & key_a, dev::bytes const & value_a);
 
+		// validator list
+		std::set<mcp::account> validator_list_get(mcp::db::db_transaction & transaction_a);
+		void validator_list_put(mcp::db::db_transaction & transaction_a, mcp::account const & account_a);
+		void validator_list_del(mcp::db::db_transaction & transaction_a, mcp::account const & account_a);
+
 		bool dag_account_get(mcp::db::db_transaction & transaction_a, mcp::account const & account_a, mcp::dag_account_info & info_a);
 		void dag_account_put(mcp::db::db_transaction & transaction_a, mcp::account const & account_a, mcp::dag_account_info const & info_a);
 
@@ -183,6 +188,8 @@ namespace mcp
 		int blocks;
 		// data_hash -> block_data;
 		int blocks_data;
+		// account;
+		int validator_list;
 
 		//block hash -> block state
 		int block_state;

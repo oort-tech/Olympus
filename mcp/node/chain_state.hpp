@@ -102,6 +102,10 @@ public:
     /// @returns 0 if the address has never been used.
     uint256_t balance(mcp::account const& _id) const;
 
+	/// Get an account's staking balance.
+	/// @returns 0 if the address has never been used.
+	uint256_t staking_balance(mcp::account const& _id) const;
+
     /// Add some amount to balance.
     /// Will initialise the address if it has never been used.
     void addBalance(mcp::account const& _id, uint256_t const& _amount);
@@ -110,6 +114,14 @@ public:
     /// @throws NotEnoughCash if the balance of the account is less than the
     /// amount to be subtrackted (also in case the account does not exist).
     void subBalance(mcp::account const& _addr, uint256_t const& _value);
+
+	/// Add some amount to staking balance.
+	/// Will initialise the address if it has never been used.
+	void addStakingBalance(mcp::account const& _id, uint256_t const& _amount);
+	/// Subtract the @p _value amount from the staking balance of @p _addr account.
+	/// @throws NotEnoughCash if the balance of the account is less than the
+	/// amount to be subtrackted (also in case the account does not exist).
+	void subStakingBalance(mcp::account const& _addr, uint256_t const& _value);
 
     /// Set the balance of @p _addr to @p _value.
     /// Will instantiate the address if it has never been used.
@@ -241,6 +253,8 @@ private:
     u256 m_accountStartNonce;
 
     ChangeLog m_changeLog;
+
+	mcp::log m_log = { mcp::log("node") };
 };
 
 template <class DB>

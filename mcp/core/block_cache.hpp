@@ -24,6 +24,7 @@ public:
 	virtual std::shared_ptr<mcp::account_info> account_get(mcp::db::db_transaction & transaction_a, mcp::account const & account_a) = 0;
 	virtual bool successor_get(mcp::db::db_transaction & transaction_a, mcp::block_hash const & root_a, mcp::block_hash & successor_a) = 0;
 	virtual bool block_summary_get(mcp::db::db_transaction & transaction_a, mcp::block_hash const & block_hash_a, mcp::summary_hash & summary_a) = 0;
+	virtual std::set<mcp::account> validator_list_get(mcp::db::db_transaction & transaction_a) = 0;
 };
 
 class block_cache : public mcp::iblock_cache
@@ -75,6 +76,11 @@ class block_cache : public mcp::iblock_cache
 	void mark_block_summary_as_changing(std::unordered_set<mcp::block_hash> const & block_hashs_a);
 	void clear_block_summary_changing();
 
+	//validators
+	std::set<mcp::account> validator_list_get(mcp::db::db_transaction & transaction_a);
+	bool validator_list_put(mcp::account const & account_a);
+	void validator_list_erase(mcp::account const & account_a);
+
 	std::string report_cache_size();
 
 private:
@@ -107,5 +113,9 @@ private:
 	std::mutex m_block_summary_mutex;
 	std::unordered_set<mcp::block_hash> m_block_summary_changings;
 	mcp::Cache<mcp::block_hash, mcp::summary_hash> m_block_summarys;
+
+	//validators
+	std::mutex m_validator_list_mutex;
+	std::set<mcp::account> m_validator_list;	// 100MB = 3495253 validators
 };
 } // namespace mcp

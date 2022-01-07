@@ -151,8 +151,8 @@ namespace mcp
     	};
 	
 		account_state();
-		account_state(mcp::account const & account_a, mcp::block_hash const & block_hash_a, mcp::account_state_hash const & previous_a, u256 nonce_a, mcp::amount const & balance_a, Changedness _c = Changed);
-		account_state(mcp::account const & account_a, mcp::block_hash const & block_hash_a, mcp::account_state_hash const & previous_a, u256 nonce_a, mcp::amount const & balance_a, h256 storageRoot_a, h256 codeHash_a, Changedness _c);
+		account_state(mcp::account const & account_a, mcp::block_hash const & block_hash_a, mcp::account_state_hash const & previous_a, u256 nonce_a, mcp::amount const & balance_a, mcp::amount const & staking_balance_a = 0, Changedness _c = Changed);
+		//account_state(mcp::account const & account_a, mcp::block_hash const & block_hash_a, mcp::account_state_hash const & previous_a, u256 nonce_a, mcp::amount const & balance_a, mcp::amount const & staking_balance_a, h256 storageRoot_a, h256 codeHash_a, Changedness _c);
 		account_state(bool & error_a, dev::RLP const & r, Changedness _c = Unchanged);
 		void stream_RLP(dev::RLPStream & s) const;
 		mcp::account_state_hash hash();
@@ -160,6 +160,7 @@ namespace mcp
 		mcp::block_hash block_hash;
 		mcp::account_state_hash previous;
 		mcp::amount balance;
+		mcp::amount staking_balance;
 
 		mcp::account_state_hash init_hash = 0;
 
@@ -211,6 +212,8 @@ namespace mcp
 		bool hasNewCode() const { return m_hasNewCode; }
 
 		void addBalance(mcp::amount const& _amount);
+
+		void addStakingBalance(mcp::amount const& _amount);
 
 		h256 codeHash() const { return m_codeHash; }
 

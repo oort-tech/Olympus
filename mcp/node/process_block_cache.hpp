@@ -39,6 +39,8 @@ namespace mcp
 		bool block_summary_get(mcp::db::db_transaction & transaction_a, mcp::block_hash const & block_hash_a, mcp::summary_hash & summary_a);
 		void block_summary_put(mcp::db::db_transaction & transaction_a, mcp::block_hash const & block_hash_a, mcp::block_hash const & summary_a);
 
+		std::set<mcp::account> validator_list_get(mcp::db::db_transaction & transaction_a);
+
 		void mark_as_changing();
 		void commit_and_clear_changing();
 

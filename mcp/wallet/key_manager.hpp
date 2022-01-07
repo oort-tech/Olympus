@@ -18,10 +18,10 @@ namespace mcp
 		bool exists(mcp::public_key const & pub_a);
 		bool find(mcp::public_key const & pub_a, mcp::key_content & kc_a);
 		std::list<mcp::public_key> list();
-		mcp::public_key create(std::string const & password_a, bool gen_next_work_a, bool const & is_backup_a = true);
+		mcp::public_key create(std::string const & password_a, bool const & is_backup_a = true);
 		bool change_password(mcp::public_key const & pub_a, std::string const & old_password_a, std::string const & new_password_a);
 		bool remove(mcp::public_key const & pub_a, std::string const & password_a);
-		bool import(std::string const & json_a, key_content & kc_a, bool gen_next_work_a);
+		bool import(std::string const & json_a, key_content & kc_a);
 		bool decrypt_prv(mcp::public_key const & pub_a, std::string const & password_a, mcp::raw_key & prv);
 		bool decrypt_prv(mcp::key_content const & kc, std::string const & password_a, mcp::raw_key & prv);
 		bool is_locked(mcp::public_key const & pub_a);

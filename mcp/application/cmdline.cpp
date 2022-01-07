@@ -59,7 +59,7 @@ bool mcp::handle_node_options(boost::program_options::variables_map & vm)
 
 				vm_instance instance(data_path);
 				mcp::key_content kc;
-				bool error(instance.key_manager->import(contents.str(), kc, true));
+				bool error(instance.key_manager->import(contents.str(), kc));
 				if (!error)
 				{
 					std::cerr << "Import account " << kc.account.to_account() << std::endl;

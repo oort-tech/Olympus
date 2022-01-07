@@ -12,6 +12,7 @@
 #include <mcp/node/chain.hpp>
 #include <mcp/wallet/key_manager.hpp>
 #include <mcp/wallet/wallet.hpp>
+#include <mcp/node/witness.hpp>
 
 namespace mcp
 {
@@ -52,13 +53,15 @@ public:
 		std::shared_ptr<mcp::block_cache> cache_a, std::shared_ptr<mcp::key_manager> key_manager_a,
 		std::shared_ptr<mcp::wallet> wallet_a, std::shared_ptr<mcp::p2p::host> host_a,
 		std::shared_ptr<mcp::async_task> background_a,
-		boost::asio::io_service & service_a, mcp::rpc_config const& config_a);
+		boost::asio::io_service & service_a, mcp::rpc_config const& config_a,
+		std::shared_ptr<mcp::witness> witness_a
+	);
 	void start ();
 	virtual void accept ();
 	void stop ();
 	boost::asio::io_service &io_service;
 	boost::asio::ip::tcp::acceptor acceptor;
-	std::mutex mutex;
+	//std::mutex mutex;
 	mcp::rpc_config config;
 	std::shared_ptr<mcp::chain> m_chain;
 	std::shared_ptr<mcp::block_cache> m_cache;
@@ -67,6 +70,7 @@ public:
 	std::shared_ptr<mcp::p2p::host> m_host;
 	std::shared_ptr<mcp::async_task> m_background;
 	mcp::block_store m_store;
+	std::shared_ptr<mcp::witness> witness;
     mcp::log m_log = { mcp::log("rpc") };
 };
 class rpc_connection : public std::enable_shared_from_this<mcp::rpc_connection>
@@ -91,7 +95,7 @@ enum class rpc_account_create_error_code
     empty_password = 1,
     invalid_length_password = 2,
     invalid_characters_password = 3,
-    invalid_gen_next_work_value = 4,
+    invalid_backup_value = 4,
     invalid_password = 5,
 	invalid_backup = 6,
 };
@@ -124,8 +128,7 @@ enum class rpc_account_lock_error_code
 enum class rpc_account_import_error_code
 {
     ok = 0,
-    invalid_gen_next_work_value = 1,
-    invalid_json = 2
+    invalid_json = 1
 };
 
 enum class rpc_account_export_error_code
@@ -187,6 +190,46 @@ enum class rpc_account_code_error_code
     invalid_account = 1
 };
 
+enum class rpc_staking_error_code
+{
+	ok = 0,
+	invalid_account_from = 1,
+	account_not_exisit = 2,
+	invalid_amount = 3,
+	invalid_gas = 4,
+	account_locked = 5,
+	wrong_password = 6,
+	insufficient_balance = 7,
+	validate_error = 8,
+	send_block_error = 9,
+	send_unknown_error = 10,
+	invalid_password = 11,
+	invalid_id = 12,
+	invalid_async = 13,
+	invalid_gas_price = 14,
+	invalid_previous = 15
+};
+
+enum class rpc_unstaking_error_code
+{
+	ok = 0,
+	invalid_account_from = 1,
+	account_not_exisit = 2,
+	invalid_amount = 3,
+	invalid_gas = 4,
+	account_locked = 5,
+	wrong_password = 6,
+	insufficient_balance = 7,
+	validate_error = 8,
+	send_block_error = 9,
+	send_unknown_error = 10,
+	invalid_password = 11,
+	invalid_id = 12,
+	invalid_async = 13,
+	invalid_gas_price = 14,
+	invalid_previous = 15
+};
+
 enum class rpc_send_error_code
 {
     ok = 0,
@@ -197,18 +240,17 @@ enum class rpc_send_error_code
     invalid_gas = 5,
     invalid_data = 6,
     data_size_too_large = 7,
-    invalid_gen_next_work_value = 8,
-    account_locked = 9,
-    wrong_password = 10,
-    insufficient_balance = 11,
-    validate_error = 12,
-    send_block_error = 13,
-    send_unknown_error = 14,
-    invalid_password = 15,
-    invalid_id = 16,
-	invalid_async = 17,
-	invalid_gas_price = 18,
-	invalid_previous = 19
+    account_locked = 8,
+    wrong_password = 9,
+    insufficient_balance = 10,
+    validate_error = 11,
+    send_block_error = 12,
+    send_unknown_error = 13,
+    invalid_password = 14,
+    invalid_id = 15,
+	invalid_async = 16,
+	invalid_gas_price = 17,
+	invalid_previous = 18
 };
 
 enum class rpc_generate_offline_block_error_code
@@ -237,23 +279,18 @@ enum class rpc_send_offline_block_error_code
     invalid_gas = 5,
     invalid_data = 6,
     data_size_too_large = 7,
-    invalid_gen_next_work_value = 8,
-
-    invalid_previous = 9,
-
-
-    invalid_exec_timestamp = 10,
-    invalid_work = 11,
-    invalid_signature = 12,
-
-    insufficient_balance = 13,
-    validate_error = 14,
-    send_block_error = 15,
-    send_unknown_error = 16,
-    invalid_password = 17,
-    invalid_id = 18,
-	invalid_gas_price = 19,
-	invalid_async = 20
+    invalid_previous = 8,
+    invalid_exec_timestamp = 9,
+    invalid_work = 10,
+    invalid_signature = 11,
+    insufficient_balance = 12,
+    validate_error = 13,
+    send_block_error = 14,
+    send_unknown_error = 15,
+    invalid_password = 16,
+    invalid_id = 17,
+	invalid_gas_price = 18,
+	invalid_async = 19
 };
 
 enum class rpc_sign_msg_error_code
@@ -374,6 +411,14 @@ enum class rpc_stop_error_code
     ok = 0
 };
 
+enum class rpc_staking_account_list_error_code
+{
+	ok = 0,
+	invalid_limit = 1,
+	limit_too_large = 2,
+	invalid_index = 3,
+	index_not_exsist = 4
+};
 
 
 class rpc_error_msg 
@@ -393,6 +438,8 @@ public:
     std::string msg(mcp::rpc_account_balance_error_code const & err_a);
     std::string msg(mcp::rpc_accounts_balances_error_code const & err_a);
     std::string msg(mcp::rpc_account_code_error_code const & err_a);
+	std::string msg(mcp::rpc_staking_error_code const & err_a);
+	std::string msg(mcp::rpc_unstaking_error_code const & err_a);
     std::string msg(mcp::rpc_send_error_code const & err_a);
 	std::string msg(mcp::rpc_estimate_gas_error_code const & err_a);
 	std::string msg(mcp::rpc_call_error_code const & err_a);
@@ -412,6 +459,7 @@ public:
     std::string msg(mcp::rpc_peers_error_code const & err_a);
     std::string msg(mcp::rpc_nodes_error_code const & err_a);
     std::string msg(mcp::rpc_stop_error_code const & err_a);
+	std::string msg(mcp::rpc_staking_account_list_error_code const & err_a);
 };
 
 class rpc_handler : public std::enable_shared_from_this<mcp::rpc_handler>
@@ -433,6 +481,7 @@ public:
 	void account_balance();
 	void accounts_balances();
 	void account_block_list();
+	void account_staking_block_list();
 	void account_state_list();
 
 	void block ();
@@ -442,6 +491,8 @@ public:
 	void block_traces();
 	void stable_blocks();
 
+	void staking();
+	void unstaking();
 	void send_block();
 	void generate_offline_block();
 	void send_offline_block();
@@ -460,6 +511,8 @@ public:
 
 	void debug_trace_transaction();
 	void debug_storage_range_at();
+	void staking_account_list();
+	void dag();// test rpc
 
 	void logs();
 
@@ -492,5 +545,7 @@ std::shared_ptr<mcp::rpc> get_rpc (mcp::block_store & store_a, std::shared_ptr<m
 	std::shared_ptr<mcp::block_cache> cache_a, std::shared_ptr<mcp::key_manager> key_manager_a,
 	std::shared_ptr<mcp::wallet> wallet_a, std::shared_ptr<mcp::p2p::host> host_a,
 	std::shared_ptr<mcp::async_task> background_a,
-	boost::asio::io_service & service_a, mcp::rpc_config const& config_a);
+	boost::asio::io_service & service_a, mcp::rpc_config const& config_a,
+	std::shared_ptr<mcp::witness> witness_a
+);
 }

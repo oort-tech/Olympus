@@ -355,6 +355,31 @@ void mcp::block_cache::clear_block_summary_changing()
 }
 
 
+//validators
+std::set<mcp::account> mcp::block_cache::validator_list_get(mcp::db::db_transaction & transaction_a)
+{
+	std::set<mcp::account> ret;
+	std::lock_guard<std::mutex> lock(m_validator_list_mutex);
+	if (m_validator_list.size() == 0)
+	{
+		m_validator_list = m_store.validator_list_get(transaction_a);
+	}
+	ret = m_validator_list; //copy
+	return ret;
+}
+
+bool mcp::block_cache::validator_list_put(mcp::account const & account_a)
+{
+	std::lock_guard<std::mutex> lock(m_validator_list_mutex);
+	return m_validator_list.insert(account_a).second;
+}
+
+void mcp::block_cache::validator_list_erase(mcp::account const & account_a)
+{
+	std::lock_guard<std::mutex> lock(m_validator_list_mutex);
+	m_validator_list.erase(account_a);
+}
+
 std::string mcp::block_cache::report_cache_size()
 {
 	std::stringstream s;
@@ -364,7 +389,8 @@ std::string mcp::block_cache::report_cache_size()
 		<< " , m_unlink_blocks:" << m_unlink_blocks.size()
 		<< " , m_accounts:" << m_accounts.size()
 		<< " , m_successors:" << m_successors.size()
-		<< " , m_block_summarys:" << m_block_summarys.size();
+		<< " , m_block_summarys:" << m_block_summarys.size()
+		<< " , m_validator_list:" << m_validator_list.size();
 
 	return s.str();
 }
