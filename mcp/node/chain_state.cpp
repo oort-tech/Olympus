@@ -362,28 +362,28 @@ void mcp::chain_state::subBalance(mcp::account const& _id, uint256_t const& _amo
 // add staking balance
 void mcp::chain_state::addStakingBalance(mcp::account const& _id, uint256_t const& _amount)
 {
-	std::shared_ptr<mcp::account_state> a = account(_id);
-	if (a)
-	{
-		// Log empty account being touched. Empty touched accounts are cleared
-		// after the transaction, so this event must be also reverted.
-		// We only log the first touch (not dirty yet), and only for empty
-		// accounts, as other accounts does not matter.
-		// TODO: to save space we can combine this event with Balance by having
-		//       Balance and Balance+Touch events.
-		if (!a->isDirty() && a->isEmpty())
-			m_changeLog.emplace_back(Change::Touch, _id);
+    std::shared_ptr<mcp::account_state> a = account(_id);
+    if (a)
+    {
+        // Log empty account being touched. Empty touched accounts are cleared
+        // after the transaction, so this event must be also reverted.
+        // We only log the first touch (not dirty yet), and only for empty
+        // accounts, as other accounts does not matter.
+        // TODO: to save space we can combine this event with Balance by having
+        //       Balance and Balance+Touch events.
+        if (!a->isDirty() && a->isEmpty())
+            m_changeLog.emplace_back(Change::Touch, _id);
 
-		// Increase the account balance. This also is done for value 0 to mark
-		// the account as dirty. Dirty account are not removed from the cache
-		// and are cleared if empty at the end of the transaction.
-		a->addStakingBalance(_amount);
-	}
-	else
-		createAccount(_id, std::make_shared<mcp::account_state>(_id, block->hash(), 0, requireAccountStartNonce(), _amount));
+        // Increase the account balance. This also is done for value 0 to mark
+        // the account as dirty. Dirty account are not removed from the cache
+        // and are cleared if empty at the end of the transaction.
+        a->addStakingBalance(_amount);
+    }
+    else
+        createAccount(_id, std::make_shared<mcp::account_state>(_id, block->hash(), 0, requireAccountStartNonce(), _amount));
 
-	if (_amount)
-		m_changeLog.emplace_back(Change::Balance, _id, _amount);
+    if (_amount)
+        m_changeLog.emplace_back(Change::Balance, _id, _amount);
 }
 
 void mcp::chain_state::subStakingBalance(mcp::account const& _id, uint256_t const& _amount)

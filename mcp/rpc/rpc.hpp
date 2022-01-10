@@ -248,9 +248,9 @@ enum class rpc_send_error_code
     send_unknown_error = 13,
     invalid_password = 14,
     invalid_id = 15,
-	invalid_async = 16,
-	invalid_gas_price = 17,
-	invalid_previous = 18
+    invalid_async = 16,
+    invalid_gas_price = 17,
+    invalid_previous = 18
 };
 
 enum class rpc_generate_offline_block_error_code

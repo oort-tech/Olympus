@@ -80,19 +80,19 @@ mcp::compose_result_codes mcp::composer::compose_block(mcp::db::db_transaction &
 
 	uint64_t exec_timestamp(type_a == mcp::block_type::light ? 0 : mcp::seconds_since_epoch());
 	//check balance
-	mcp::chain_state c_state(transaction_a, 0, m_store, m_chain, m_cache);
+    mcp::chain_state c_state(transaction_a, 0, m_store, m_chain, m_cache);
     mcp::amount balance(c_state.balance(from_a));
-	mcp::amount fee = gas_a * gas_price_a;
-	if (type_a == mcp::block_type::unstaking)
-	{
-		mcp::amount unstaking_balance = c_state.staking_balance(from_a);
-		if (unstaking_balance < amount_a || balance < fee)// fee from balance
-			return mcp::compose_result_codes::insufficient_balance;
-	}
-	else if (balance < amount_a + fee)
-	{
-		return mcp::compose_result_codes::insufficient_balance;
-	}
+    mcp::amount fee = gas_a * gas_price_a;
+    if (type_a == mcp::block_type::unstaking)
+    {
+        mcp::amount unstaking_balance = c_state.staking_balance(from_a);
+        if (unstaking_balance < amount_a || balance < fee)// fee from balance
+            return mcp::compose_result_codes::insufficient_balance;
+    }
+    else if (balance < amount_a + fee)
+    {
+        return mcp::compose_result_codes::insufficient_balance;
+    }
 
 	//sichaoy: real gasprice and gas
     block_a = std::make_shared<mcp::block>(type_a, from_a, to_a, amount_a, previous, parents, links, 
