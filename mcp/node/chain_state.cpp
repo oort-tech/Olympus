@@ -184,6 +184,9 @@ void mcp::chain_state::rollback(size_t _savepoint)
         case Change::Balance:
             account->addBalance(0 - change.value);
             break;
+        case Change::StakingBalance:
+            account->addStakingBalance(0 - change.value);
+            break;
         case Change::Nonce:
             account->setNonce(change.value);
             break;
@@ -369,8 +372,8 @@ void mcp::chain_state::addStakingBalance(mcp::account const& _id, uint256_t cons
         // after the transaction, so this event must be also reverted.
         // We only log the first touch (not dirty yet), and only for empty
         // accounts, as other accounts does not matter.
-        // TODO: to save space we can combine this event with Balance by having
-        //       Balance and Balance+Touch events.
+        // TODO: to save space we can combine this event with staking Balance by having
+        //       staking Balance and StakingBalance+Touch events.
         if (!a->isDirty() && a->isEmpty())
             m_changeLog.emplace_back(Change::Touch, _id);
 
@@ -383,7 +386,7 @@ void mcp::chain_state::addStakingBalance(mcp::account const& _id, uint256_t cons
         createAccount(_id, std::make_shared<mcp::account_state>(_id, block->hash(), 0, requireAccountStartNonce(), _amount));
 
     if (_amount)
-        m_changeLog.emplace_back(Change::Balance, _id, _amount);
+        m_changeLog.emplace_back(Change::StakingBalance, _id, _amount);
 }
 
 void mcp::chain_state::subStakingBalance(mcp::account const& _id, uint256_t const& _amount)

@@ -26,6 +26,10 @@ struct Change
         /// balance was increased by.
         Balance,
 
+        /// Account staking balance changed. Change::value contains the amount the
+        /// staking balance was increased by.
+        StakingBalance,
+
         /// Account storage was modified. Change::key contains the storage key,
         /// Change::value the storage value.
         Storage,
