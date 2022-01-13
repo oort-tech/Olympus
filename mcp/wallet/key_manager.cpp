@@ -16,8 +16,6 @@ void mcp::kdf::phs(mcp::raw_key & result_a, std::string const & password_a, mcp:
 	(void)success;
 }
 
-
-
 mcp::key_manager::key_manager(boost::filesystem::path const & application_path_a, mcp::key_store& store_a):
 	m_backup_path(application_path_a / "backup"),
 	m_store(store_a)
@@ -33,6 +31,13 @@ mcp::key_manager::key_manager(boost::filesystem::path const & application_path_a
 
 	boost::filesystem::create_directories(m_backup_path);
 }
+// added by michael at 1/12
+bool mcp::key_manager::exists(mcp::account const & account_a)
+{
+	std::lock_guard<std::mutex> lock(m_key_contents_mutex);
+	return m_addr_lookup.count(account_a) > 0;
+}
+//
 
 bool mcp::key_manager::exists(mcp::public_key const & pub_a)
 {
@@ -45,6 +50,11 @@ bool mcp::key_manager::work_account_exisit(mcp::public_key const & pub_a)
 	mcp::db::db_transaction transaction = m_store.create_transaction();
 	auto result(m_store.work_exists(transaction, pub_a));
 	return result;
+}
+
+bool mcp::key_manager::work_account_get(mcp::account const & account_a, mcp::block_hash &  previous_a, mcp::uint64_union & work_a)
+{
+	return work_account_get(m_addr_lookup[account_a], previous_a, work_a);
 }
 
 bool mcp::key_manager::work_account_get(mcp::public_key const & pub_a, mcp::block_hash & previous_a, mcp::uint64_union & work_a)
@@ -93,6 +103,10 @@ void mcp::key_manager::work_put(mcp::public_key const & pub_a, mcp::block_hash c
 	m_store.work_put(transaction, pub_a, previous_work_l);
 }
 
+bool mcp::key_manager::find(mcp::account const & account_a, mcp::key_content & kc_a)
+{
+	return find(m_addr_lookup[account_a], kc_a);
+}
 
 bool mcp::key_manager::find(mcp::public_key const & pub_a, mcp::key_content & kc_a)
 {
@@ -126,8 +140,15 @@ mcp::public_key mcp::key_manager::create(std::string const & password_a, bool ge
 	mcp::key_content kc(gen_key_content(prv, password_a));
 	add_or_update_key(kc, is_backup_a);
 
-	return kc.account;
+	return kc.public_key;
 }
+
+// added by michael at 1/12
+bool mcp::key_manager::change_password(mcp::account const & account_a, std::string const & old_password_a, std::string const & new_password_a)
+{
+	return change_password(m_addr_lookup[account_a], old_password_a, new_password_a);
+}
+//
 
 bool mcp::key_manager::change_password(mcp::public_key const & pub_a,
 	std::string const & old_password_a, std::string const & new_password_a)
@@ -140,6 +161,11 @@ bool mcp::key_manager::change_password(mcp::public_key const & pub_a,
 		add_or_update_key(kc);
 	}
 	return error;
+}
+
+bool mcp::key_manager::remove(mcp::account const & account_a, std::string const & password_a)
+{
+	return remove(m_addr_lookup[account_a], password_a);
 }
 
 bool mcp::key_manager::remove(mcp::public_key const & pub_a, std::string const & password_a)
@@ -230,11 +256,25 @@ bool mcp::key_manager::find_unlocked_prv(mcp::public_key const & pub_a, mcp::raw
 	return exists;
 }
 
+// added by michael at 1/12
+void mcp::key_manager::lock(mcp::account const & account_a)
+{
+	return lock(m_addr_lookup[account_a]);
+}
+//
+
 void mcp::key_manager::lock(mcp::public_key const & pub_a)
 {
 	std::lock_guard<std::mutex> lock(m_unlocked_mutex);
 	m_unlocked.erase(pub_a);
 }
+
+// added by michael at 1/12
+bool mcp::key_manager::unlock(mcp::account const & account_a, std::string const & password_a)
+{
+	return unlock(m_addr_lookup[account_a], password_a);
+}
+//
 
 bool mcp::key_manager::unlock(mcp::public_key const & pub_a, std::string const & password_a)
 {
@@ -285,11 +325,13 @@ void mcp::key_manager::add_or_update_key(mcp::key_content const & kc, bool const
 {
 	{
 		std::lock_guard<std::mutex> lock(m_key_contents_mutex);
-		m_key_contents[kc.account] = kc;
+		m_key_contents[kc.public_key] = kc;
+		// added by michael at 1/12
+		m_addr_lookup[kc.account] = kc.public_key;
 	}
 	mcp::db::db_transaction transaction = m_store.create_transaction();
-	m_store.keys_put(transaction, kc.account, kc);
+	m_store.keys_put(transaction, kc.public_key, kc);
 
 	if(is_backup_a)
-		write_backup(kc.account, kc.to_json());
+		write_backup(kc.public_key, kc.to_json());
 }

@@ -421,7 +421,7 @@ namespace mcp
 		uint64_t min_wl;
 
 		// Updated to 512, Daniel
-		std::unordered_set<mcp::account_512> witnesses;
+		std::unordered_set<mcp::account> witnesses;
 	};
 
 	class unlink_info

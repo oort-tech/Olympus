@@ -6,6 +6,8 @@
 #include <unordered_set>
 
 #include <libdevcore/Common.h>
+#include <libdevcore/SHA3.h>
+
 #include <mcp/common/assert.hpp>
 
 namespace mcp
@@ -107,16 +109,21 @@ union uint256_union
 	bool decode_hex (std::string const &);
 	void encode_dec (std::string &) const;
 	bool decode_dec (std::string const &);
-	void encode_account (std::string &) const;
-	std::string to_account () const;
-	std::string to_account_split () const;
-	bool decode_account (std::string const &);
+	
+	// void encode_account (std::string &) const;
+	// std::string to_account () const;
+	// std::string to_account_split () const;
+	// bool decode_account (std::string const &);
+
 	byte* data() { return bytes.data(); }
+	byte const* data() const { return bytes.data(); }
+
 	std::array<uint8_t, 32> bytes;
 	std::array<char, 32> chars;
 	std::array<uint32_t, 8> dwords;
 	std::array<uint64_t, 4> qwords;
 	std::array<uint128_union, 2> owords;
+
 	void clear ();
 	bool is_zero () const;
 	std::string to_string () const;
@@ -126,12 +133,13 @@ union uint256_union
 	dev::bytesRef ref() { return dev::bytesRef(bytes.data(), 32); }
 	dev::bytesConstRef ref() const { return dev::bytesConstRef(bytes.data(), 32); }
 };
+
 // All keys and hashes are 256 bit.
 using amount = uint256_t;
 using block_hash = uint256_union;
 using summary_hash = uint256_union;
 using account_state_hash = uint256_union;
-using account = uint256_union;
+// using account = uint256_union;
 /// A hash set of mcp accounts
 using AccountHash = std::unordered_set<account>;
 // using public_key = uint256_union;
@@ -143,7 +151,6 @@ using state_root = uint256_union;
 using sync_request_hash = uint256_union;
 using seed_key = uint256_union;
 using secret_encry = uint256_union;		//p2p encryption
-
 
 class raw_key
 {
@@ -159,6 +166,7 @@ public:
 	bool operator!= (mcp::raw_key const &) const;
 	mcp::uint256_union data;
 };
+
 union uint512_union
 {
 	uint512_union () = default;
@@ -176,14 +184,11 @@ union uint512_union
 
 	void encode_hex (std::string &) const;
 	bool decode_hex (std::string const &);
-
-	// Daniel Add member functions from uint256_union
-	void encode_account (std::string &) const;
-	std::string to_account () const;
-	std::string to_account_split () const;
-	bool decode_account (std::string const &);
 	bool is_zero () const;
+
 	byte* data() { return bytes.data(); }
+	byte const* data() const { return bytes.data(); }
+
 	std::array<uint8_t, 64> bytes;
 	std::array<uint32_t, 16> dwords;
 	std::array<uint64_t, 8> qwords;
@@ -196,24 +201,143 @@ union uint512_union
 	dev::bytesConstRef ref() const { return dev::bytesConstRef(bytes.data(), 64); }
 };
 
-using signature = uint512_union;
+// added by michael at 1/7
+struct signature_struct
+{
+    signature_struct() = default;
+    signature_struct(uint256_union const& _r, uint256_union const& _s, byte _v): r(_r), s(_s), v(_v) {}
+    
+    bool is_valid() const noexcept {
+		static const uint256_union s_max("0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141");
+    	static const uint256_union s_zero(0);
+		return (v <= 1 && r > s_zero && s > s_zero && r < s_max && s < s_max);
+	}
 
-// commented by michael at 1/5
-// using secret_key = uint512_union;
+	bool decode_hex(std::string const & hex_a) {
+		bool error(false);
+		if (hex_a.empty() || hex_a.size() != size) {
+			r.clear();
+			s.clear();
+			v = 0;
+		} else {
+			std::stringstream stream(hex_a);
+			stream << std::hex << std::showbase;
+			for (auto i(r.bytes.begin()), n(r.bytes.end()); i != n; ++i){
+				stream >> *i;
+			}
+			for (auto i(s.bytes.begin()), n(s.bytes.end()); i != n; ++i){
+				stream >> *i;
+			}
+			stream >> v;
+		}
+		return error;
+	}
+
+	std::string to_string() {
+		std::stringstream stream;
+		stream << std::hex << std::noshowbase << v;
+		return r.to_string() + s.to_string() + stream.str();
+	}
+
+    uint256_union r;
+    uint256_union s;
+    byte v = 0;
+
+	enum { size = 65 };
+	dev::bytesRef ref() { return dev::bytesRef(r.data(), size); }
+	dev::bytesConstRef ref() const { return dev::bytesConstRef(r.data(), size); }
+};
+
+// added by michael at 1/8
+// using signature = uint512_union;
+using signature = signature_struct;
 
 // added by michael at 1/5
+// using secret_key = uint512_union;
 using secret_key = uint256_union;
 using public_key = uint512_union;
-using account_512 = uint512_union;
+using public_key_comp = uint256_union;
+
+struct account20_struct {
+	account20_struct()  = default;
+	account20_struct(mcp::public_key const& pubkey) {
+		dev::bytesConstRef bRef = sha3(pubkey.ref()).ref();
+		dev::bytesConstRef(bRef.data() + 12, size).copyTo(ref());
+	}
+	account20_struct (mcp::uint256_t const &number_a) {
+		if(number_a == 0) {
+			memset(bytes.data(), 0, bytes.size());
+		} else {
+			mcp::uint256_t number_l(number_a);
+			for (int i = 12; i < bytes.size(); i++) {
+				bytes[i] = ((number_l) & 0xff).convert_to<uint8_t>();
+				number_l >>= 8;
+			}
+		}
+	}
+	
+	bool operator== (account20_struct const& other_a) const {
+		return bytes == other_a.bytes;
+	}
+	bool operator!= (account20_struct const & other_a) const {
+		return !(*this == other_a);
+	}
+
+	std::string to_account() const {
+		std::stringstream stream;
+		stream << std::hex << std::showbase;
+		for (auto i(bytes.begin()), n(bytes.end()); i != n; ++i) {
+			stream << *i;
+		}
+		return stream.str();
+	}
+
+	bool is_zero() const {
+		bool is_zero(true);
+		for (auto i(bytes.begin()), n(bytes.end()); i != n; ++i) {
+			if (*i != 0) {
+				is_zero = false;
+				break;
+			}
+		}
+		return is_zero;
+	}
+
+	bool decode_account(std::string const & source_a) {
+		bool error(false);
+		if (source_a.empty() || source_a.size() != 42) {
+			bytes.fill(0);
+		} else {
+			std::stringstream stream(source_a);
+			stream << std::hex << std::showbase;
+			for (auto i(bytes.begin()), n(bytes.end()); i != n; ++i){
+				stream >> *i;
+			}
+		}
+		return error;
+	}
+
+	byte* data() { return bytes.data(); }
+	byte const* data() const { return bytes.data(); }
+	
+	std::array<uint8_t, 20> bytes;
+	void clear () { bytes.fill(0); }
+
+	enum { size = 20 };
+	dev::bytesRef ref() { return dev::bytesRef(bytes.data(), size); }
+	dev::bytesConstRef ref() const { return dev::bytesConstRef(bytes.data(), size); }
+};
+
+using account = account20_struct;
+
 namespace p2p
 {
-	// using node_id = mcp::uint256_union;
-	using node_id = mcp::uint512_union;
+	using node_id = mcp::uint256_union;
 	using hash256 = mcp::uint256_union;
 }
 
-mcp::uint512_union sign_message (mcp::raw_key const &, mcp::public_key const &, mcp::uint256_union const &);
-bool validate_message (mcp::public_key const &, mcp::uint256_union const &, mcp::uint512_union const &);
+mcp::signature sign_message (mcp::raw_key const &, mcp::public_key const &, mcp::uint256_union const &);
+bool validate_message (mcp::public_key const &, mcp::uint256_union const &, mcp::signature const &);
 }
 
 namespace std
@@ -254,6 +378,15 @@ struct hash<mcp::uint512_union>
 		//return XXH64(data_a.bytes.data(), data_a.bytes.size(), 0);
 	}
 };
+template <>
+struct hash<mcp::account20_struct>
+{
+	size_t operator() (mcp::account20_struct const & data_a) const
+	{
+		return *reinterpret_cast<size_t const *> (data_a.bytes.data ());
+		//return XXH64(data_a.bytes.data(), data_a.bytes.size(), 0);
+	}
+};
 }
 
 namespace boost
@@ -264,6 +397,15 @@ namespace boost
         size_t operator() (mcp::uint256_union const & value_a) const
         {
             std::hash<mcp::uint256_union> hash;
+            return hash(value_a);
+        }
+    };
+	template <>
+    struct hash<mcp::account20_struct>
+    {
+        size_t operator() (mcp::account20_struct const & value_a) const
+        {
+            std::hash<mcp::account20_struct> hash;
             return hash(value_a);
         }
     };

@@ -245,7 +245,7 @@ size_t mcp::block_store::block_count(mcp::db::db_transaction & transaction_a)
 	return transaction_a.count_get("block");
 }
 
-bool mcp::block_store::dag_account_get(mcp::db::db_transaction & transaction_a, mcp::account_512 const & account_a, mcp::dag_account_info & info_a)
+bool mcp::block_store::dag_account_get(mcp::db::db_transaction & transaction_a, mcp::account const & account_a, mcp::dag_account_info & info_a)
 {
 	std::string value;
 	bool exists(transaction_a.get(dag_account_info, mcp::uint512_to_slice(account_a), value));
@@ -259,7 +259,7 @@ bool mcp::block_store::dag_account_get(mcp::db::db_transaction & transaction_a, 
 	return !exists;
 }
 
-void mcp::block_store::dag_account_put(mcp::db::db_transaction & transaction_a, mcp::account_512 const & account_a, mcp::dag_account_info const & info_a)
+void mcp::block_store::dag_account_put(mcp::db::db_transaction & transaction_a, mcp::account const & account_a, mcp::dag_account_info const & info_a)
 {
 	dev::bytes b_value;
 	{
@@ -327,7 +327,7 @@ void mcp::block_store::account_state_put(mcp::db::db_transaction & transaction_a
 }
 
 
-bool mcp::block_store::latest_account_state_get(mcp::db::db_transaction & transaction_a, mcp::account_512 const & account_a, mcp::account_state_hash & hash_a)
+bool mcp::block_store::latest_account_state_get(mcp::db::db_transaction & transaction_a, mcp::account const & account_a, mcp::account_state_hash & hash_a)
 {
 	std::string value;
 	bool exists(transaction_a.get(latest_account_state, mcp::uint512_to_slice(account_a), value));
@@ -338,7 +338,7 @@ bool mcp::block_store::latest_account_state_get(mcp::db::db_transaction & transa
 
 
 // Updated from 256 to 512, Daniel
-void mcp::block_store::latest_account_state_put(mcp::db::db_transaction & transaction_a, mcp::account_512 const & account_a, mcp::account_state_hash const & hash_a)
+void mcp::block_store::latest_account_state_put(mcp::db::db_transaction & transaction_a, mcp::account const & account_a, mcp::account_state_hash const & hash_a)
 {
 	transaction_a.put(latest_account_state, mcp::uint512_to_slice(account_a), mcp::uint512_to_slice(hash_a));
 }

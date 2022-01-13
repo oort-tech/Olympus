@@ -430,9 +430,10 @@ void mcp::rpc_handler::account_list()
 	mcp::json j_response;
     mcp::json j_accounts = mcp::json::array();
 
-	std::list<mcp::account> account_list(m_key_manager->list());
-    for (auto account : account_list)
+	std::list<mcp::public_key> pubkey_list(m_key_manager->list());
+    for (auto pubkey : pubkey_list)
     {
+		mcp::account account(pubkey);
         j_accounts.push_back(account.to_account());
     }
     j_response["accounts"] = j_accounts;
@@ -928,7 +929,7 @@ void mcp::rpc_handler::accounts_balances()
 
 	for (mcp::json const & j_account : request["accounts"])
 	{
-		mcp::uint256_union account;
+		mcp::account account;
         std::string account_text = j_account;
 		auto error(account.decode_account(account_text));
         if (!error)
@@ -1310,7 +1311,7 @@ void mcp::rpc_handler::block_state()
 
 			mcp::json block_state_l;
 			block_state_l["hash"] = hash.to_string();
-			mcp::account contract_account(0);
+			mcp::account contract_account;
 			if (block->hashables->type == mcp::block_type::light 
 				&& block->isCreation() 
 				&& state->is_stable 
@@ -1372,7 +1373,7 @@ void mcp::rpc_handler::block_states()
 				assert_x(block);
 
 				state_l["hash"] = hash.to_string();
-				mcp::account contract_address(0);
+				mcp::account contract_address;
 				if (block->hashables->type == mcp::block_type::light
 					&& block->isCreation()
 					&& state->is_stable
@@ -2646,8 +2647,8 @@ void mcp::rpc_handler::sign_msg()
         return;
     }
 	std::string public_key_text = request["public_key"];
-	mcp::account public_key;
-	auto error(public_key.decode_account(public_key_text));
+	mcp::public_key public_key;
+	auto error(public_key.decode_hex(public_key_text));
 	if (error)
 	{
 		error_code_l = mcp::rpc_sign_msg_error_code::invalid_public_key;

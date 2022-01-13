@@ -104,7 +104,7 @@ bool mcp::genesis::try_initialize(mcp::db::db_transaction & transaction_a, mcp::
 	store_a.dag_free_put(transaction_a, mcp::free_key(block_state.witnessed_level, block_state.level, block_hash));
 
 	//genesis account
-	mcp::account_512 const & genesis_account(block->hashables->from);
+	mcp::account const & genesis_account(block->hashables->from);
 
 	//add dag account info
 	mcp::dag_account_info info;

@@ -163,17 +163,24 @@ namespace mcp
 		// get the secret key.
 		secret_key const& secret() const { return m_secret; }
 
-		/// get the public key.
+		// get the public key.
 		public_key const& pub() const { return m_public; }
+
+		// get the public key compressed
+		public_key_comp const& pub_comp() const { return m_public_comp; }
+
+		// get the account's address
+		account20_struct const& account() const { return m_account; }
 
 		bool operator==(key_pair const& _c) const { return m_public == _c.m_public; }
 		bool operator!=(key_pair const& _c) const { return m_public != _c.m_public; }
 		bool flag = false;
-	private:
 
-		//ed25519 key(sign),encryption need curve 25519 key.
+	private:
 		secret_key m_secret;
 		public_key m_public;
+		public_key_comp m_public_comp;
+		account20_struct m_account;
 	};
 
 	class nonce
@@ -220,12 +227,16 @@ namespace mcp
 
 		/// Returns siganture of message hash.
 		bool sign(secret_key const& _k, dev::bytesConstRef _hash, mcp::signature& sig);
-
+		// this is curious for purpose, right now (commented by michael)
 		bool sign(private_key const& _k, public_key const& _pk, dev::bytesConstRef _hash, mcp::signature& sig);
 
 		/// Verify signature.
+		// commented by michael at 1/10
 		bool verify(public_key const& _k, dev::bytesConstRef const& _s);
 		bool verify(public_key const& _k, mcp::signature const& _s, dev::bytesConstRef const& _o);
+
+		// added by michael at 1/10
+		public_key recover(mcp::signature const& _s, dev::bytesConstRef const& _o);
 
 		//ed25519 secret key to curve25519 secret key
 		bool get_encry_secret_key_from_sign_key(secret_encry & curve, secret_key const & ed25519);
@@ -239,6 +250,7 @@ namespace mcp
 		
 		// added by michael at 1/5
 		bool generate_public_from_secret(secret_key const& _sk, public_key& _pk);
+		bool generate_public_from_secret(secret_key const& _sk, public_key& _pk, public_key_comp& _pk_comp);
 		secp256k1_context const* get_secp256k1_ctx();
 	}
 }

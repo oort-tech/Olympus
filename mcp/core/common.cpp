@@ -1107,7 +1107,7 @@ void mcp::unlink_block::stream_RLP(dev::RLPStream & s) const
 mcp::account mcp::toAddress(mcp::account const& _from, u256 const& _nonce)
 {
     // sichaoy: don't use rlpList here
-    return uint256_union(sha3(rlpList(_from, _nonce)));
+    return mcp::account(sha3(rlpList(_from, _nonce)));
 }
 
 mcp::call_trace_action::call_trace_action(bool & error_a, dev::RLP const & r)

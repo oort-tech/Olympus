@@ -1,5 +1,10 @@
 #include "common.hpp"
 
+#include <secp256k1.h>
+#include <secp256k1_ecdh.h>
+#include <secp256k1_recovery.h>
+#include <secp256k1_sha256.h>
+
 std::string mcp::uint64_to_hex (uint64_t value_a)
 {
 	std::stringstream stream;
@@ -95,7 +100,7 @@ mcp::key_pair::key_pair(mcp::seed_key const & seed)
 	// 	flag = true;
 
 	seed.ref().copyTo(m_secret.ref());
-	if (mcp::encry::generate_public_from_secret(m_secret, m_public)) {
+	if (mcp::encry::generate_public_from_secret(m_secret, m_public, m_public_comp)) {
 		flag = true;
 	}
 }
@@ -104,6 +109,8 @@ mcp::key_pair::~key_pair()
 {
 	m_secret.clear();
 	m_public.clear();
+	m_public_comp.clear();
+	m_account.clear();
 }
 
 mcp::key_pair mcp::key_pair::create()
@@ -139,60 +146,126 @@ int mcp::encry::dencryption(unsigned char * m, const unsigned char * c, unsigned
 	return crypto_secretbox_open_easy(m, c, clen, n, k);
 }
 
+static const mcp::uint256_t c_secp256k1n("115792089237316195423570985008687907852837564279074904382605163141518161494337");
+
 bool mcp::encry::sign(secret_key const& _k, dev::bytesConstRef _hash, mcp::signature& sig)
 {
 	//TODO: sign _hash
-	unsigned long long signed_message_len;
-	int ret = crypto_sign_detached(sig.ref().data(), &signed_message_len,
-		_hash.data(), _hash.size(), _k.ref().data());
+	// unsigned long long signed_message_len;
+	// int ret = crypto_sign_detached(sig.ref().data(), &signed_message_len,
+	// 	_hash.data(), _hash.size(), _k.ref().data());
 
-	if (ret != 0)
-		return false;
+	// if (ret != 0)
+	// 	return false;
 
-	return true;
+	// return true;
+
+	auto* ctx = get_secp256k1_ctx();
+	secp256k1_ecdsa_recoverable_signature rawSig;
+    if (!secp256k1_ecdsa_sign_recoverable(ctx, &rawSig, _hash.data(), _k.ref().data(), nullptr, nullptr))
+        return false;
+	
+	int v = 0;
+    secp256k1_ecdsa_recoverable_signature_serialize_compact(ctx, sig.ref().data(), &v, &rawSig);
+
+	sig.v = static_cast<byte>(v);
+    if (sig.s > c_secp256k1n / 2)
+    {
+        sig.v = static_cast<byte>(sig.v ^ 1);
+		sig.s = c_secp256k1n - sig.s.number();
+    }
+    if (sig.s <= c_secp256k1n / 2) {
+		return true;
+	}
+    return false;
 }
 
 //secret and public key detached
 bool mcp::encry::sign(private_key const& _k, public_key const& _pk, dev::bytesConstRef _hash, mcp::signature& sig)
 {
-	dev::bytes key(secret_key::size);
-	_k.ref().copyTo(dev::bytesRef(&key[0], private_key::size));
-	_pk.ref().copyTo(dev::bytesRef(&key[private_key::size], public_key::size));
+	// commented by michale at 1/8
+	// dev::bytes key(secret_key::size);
+	// _k.ref().copyTo(dev::bytesRef(&key[0], private_key::size));
+	// _pk.ref().copyTo(dev::bytesRef(&key[private_key::size], public_key::size));
 
-	unsigned long long signed_message_len;
-	int ret = crypto_sign_detached(sig.ref().data(), &signed_message_len,
-		_hash.data(), _hash.size(), key.data());
+	// unsigned long long signed_message_len;
+	// int ret = crypto_sign_detached(sig.ref().data(), &signed_message_len,
+	// 	_hash.data(), _hash.size(), key.data());
 
-	if (ret != 0)
-		return false;
+	// if (ret != 0)
+	// 	return false;
 
-	return true;
+	// return true;
+
+	return sign(_k, _hash, sig);
 }
 
 ///input : _s = signature + original data
 bool mcp::encry::verify(public_key const& _p, dev::bytesConstRef const& _s)
 {
+	// commented by michael at 1/10
 	// TODO: Verify w/o recovery (if faster).
-
-	public_key msg;
-	unsigned long long msg_len;
-	if (crypto_sign_open(msg.bytes.data(), &msg_len,
-		_s.data(), _s.size(), _p.ref().data()) == 0) {
-		return true;
-	}
-	else
-		return false;
+	// public_key msg;
+	// unsigned long long msg_len;
+	// if (crypto_sign_open(msg.bytes.data(), &msg_len,
+	// 	_s.data(), _s.size(), _p.ref().data()) == 0) {
+	// 	return true;
+	// }
+	// else
+	// 	return false;
+	mcp::signature sig;
+	dev::bytesConstRef(_s.data(), sig.size).copyTo(sig.ref());
+	return verify(_p, sig, dev::bytesConstRef(_s.data() + sig.ref().size(), _s.size() - sig.ref().size()));
 }
 
+// added by michael at 1/10
+mcp::public_key mcp::encry::recover(mcp::signature const& _s, dev::bytesConstRef const& _o)
+{
+	const byte* _sig = _s.ref().data();
+	int v = _sig[64];
+    if (v > 3)
+        return {};
+	
+	auto* ctx = get_secp256k1_ctx();
+	secp256k1_ecdsa_recoverable_signature rawSig;
+    if (!secp256k1_ecdsa_recoverable_signature_parse_compact(ctx, &rawSig, _sig, v))
+        return {};
+	
+	secp256k1_pubkey rawPubkey;
+    if (!secp256k1_ecdsa_recover(ctx, &rawPubkey, &rawSig, _o.data()))
+        return {};
+
+	std::array<byte, 65> serializedPubkey;
+    size_t serializedPubkeySize = serializedPubkey.size();
+    secp256k1_ec_pubkey_serialize(
+		ctx, serializedPubkey.data(), &serializedPubkeySize,
+		&rawPubkey, SECP256K1_EC_UNCOMPRESSED
+    );
+    assert(serializedPubkeySize == serializedPubkey.size());
+    
+	// Expect single byte header of value 0x04 -- uncompressed public key.
+    assert(serializedPubkey[0] == 0x04);
+
+    // Create the Public skipping the header.
+    public_key pk;
+	dev::bytesRef(&serializedPubkey[1], 64).copyTo(pk.ref());
+	return pk;
+}
+
+// updated by michael at 1/10
 ///input : _s = signature , _o = original data
 bool mcp::encry::verify(public_key const& _k, mcp::signature const& _s, dev::bytesConstRef const& _o)
 {
 	// TODO: Verify w/o recovery (if faster).
-	if (crypto_sign_verify_detached(_s.ref().data(), _o.data(), _o.size(), _k.ref().data()) == 0) {
-		return true;
-	}
-	else
-		return false;
+	// if (crypto_sign_verify_detached(_s.ref().data(), _o.data(), _o.size(), _k.ref().data()) == 0) {
+	// 	return true;
+	// }
+	// else
+	// 	return false;
+
+	if (_k.is_zero())
+        return false;
+    return _k == recover(_s, _o);
 }
 
 //ed25519 secret key to curve25519 secret key
@@ -234,8 +307,51 @@ bool mcp::encry::generate_public_from_secret(secret_key const& _sk, public_key& 
 		SECP256K1_EC_UNCOMPRESSED
 	);
 
-	if (serializedPubkeySize == serializedPubkey.size() && serializedPubkey[0] == 0x04) {
-		dev::bytesRef(&serializedPubkey[1], 64).copyTo(_pk.ref());
+	if (serializedPubkeySize == serializedPubkey.size() &&
+		serializedPubkey[0] == 0x04
+	) {
+		dev::bytesRef(&serializedPubkey[1], _pk.size).copyTo(_pk.ref());
+		return true;
+	}
+
+	return false;
+}
+
+// added by michael at 1/7
+bool mcp::encry::generate_public_from_secret(secret_key const& _sk, public_key& _pk, public_key_comp& _pk_comp)
+{
+	auto* ctx = get_secp256k1_ctx();
+	secp256k1_pubkey rawPubkey;
+	if (!secp256k1_ec_pubkey_create(ctx, &rawPubkey, _sk.ref().data()))
+        return false;
+	
+	std::array<byte, 65> serializedPubkey;
+    auto serializedPubkeySize = serializedPubkey.size();
+    secp256k1_ec_pubkey_serialize(
+        ctx,
+		serializedPubkey.data(),
+		&serializedPubkeySize,
+		&rawPubkey,
+		SECP256K1_EC_UNCOMPRESSED
+	);
+
+	std::array<byte, 33> serializedPubkeyComp;
+	auto serializedPubkeySizeComp = serializedPubkeyComp.size();
+	secp256k1_ec_pubkey_serialize(
+        ctx,
+		serializedPubkeyComp.data(),
+		&serializedPubkeySizeComp,
+		&rawPubkey,
+		SECP256K1_EC_COMPRESSED
+	);
+
+	if (serializedPubkeySize == serializedPubkey.size() &&
+		serializedPubkey[0] == 0x04 &&
+		serializedPubkeySizeComp == serializedPubkeyComp.size() &&
+		(serializedPubkeyComp[0] == 0x02 || serializedPubkeyComp[1] == 0x03)
+	) {
+		dev::bytesRef(&serializedPubkey[1], _pk.size).copyTo(_pk.ref());
+		dev::bytesRef(&serializedPubkeyComp[1], _pk_comp.size).copyTo(_pk_comp.ref());
 		return true;
 	}
 
