@@ -34,15 +34,22 @@ namespace mcp
 		//
 		bool remove(mcp::public_key const & pub_a, std::string const & password_a);
 		bool import(std::string const & json_a, key_content & kc_a, bool gen_next_work_a);
+		// added by michael at 1/13
+		bool decrypt_prv(mcp::account const & account_a, std::string const & password_a, mcp::raw_key & prv);
+		//
 		bool decrypt_prv(mcp::public_key const & pub_a, std::string const & password_a, mcp::raw_key & prv);
 		bool decrypt_prv(mcp::key_content const & kc, std::string const & password_a, mcp::raw_key & prv);
 		bool is_locked(mcp::public_key const & pub_a);
+		// added by michael at 1/13
+		bool find_unlocked_prv(mcp::account const & account_a, mcp::raw_key & prv);
+		//
 		bool find_unlocked_prv(mcp::public_key const & pub_a, mcp::raw_key & prv);
 		// added by michael at 1/12
 		bool unlock(mcp::account const & account_a, std::string const & password_a);
 		//
 		bool unlock(mcp::public_key const & pub_a, std::string const & password_a);
-		void write_backup(mcp::public_key const & account, std::string const & json);
+		// updated by michael at 1/13
+		void write_backup(mcp::account const & account, std::string const & json);
 		// added by michael at 1/12
 		void lock(mcp::account const & account_a);
 		//

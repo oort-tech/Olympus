@@ -587,6 +587,10 @@ namespace mcp
 	dev::Slice uint512_to_slice(mcp::uint512_union const & value);
 	mcp::uint512_union slice_to_uint512(dev::Slice const & slice);
 
+	// added by michael at 1/13
+	dev::Slice account_to_slice(mcp::account const & value);
+	mcp::account slice_to_account(dev::Slice const & slice);
+
 	mcp::account toAddress(mcp::account const& _from, u256 const& _nonce);
 
 	// OS-specific way of finding a path to a home directory.

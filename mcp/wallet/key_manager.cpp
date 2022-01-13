@@ -201,6 +201,11 @@ bool mcp::key_manager::import(std::string const & json_a, key_content & kc_a, bo
 	return error;
 }
 
+bool mcp::key_manager::decrypt_prv(mcp::account const & account, std::string const & password_a, mcp::raw_key & prv)
+{
+	return decrypt_prv(m_addr_lookup[account], password_a, prv);
+}
+
 bool mcp::key_manager::decrypt_prv(mcp::public_key const & pub_a, std::string const & password_a, mcp::raw_key & prv)
 {
 	bool error(false);
@@ -231,7 +236,7 @@ bool mcp::key_manager::decrypt_prv(mcp::key_content const & kc_a, std::string co
 	mcp::public_key compare;
 	mcp::encry::generate_public_from_secret(prv.data, compare);
 
-	if (kc_a.account != compare)
+	if (kc_a.public_key != compare)
 	{
 		error = true;
 	}
@@ -243,6 +248,11 @@ bool mcp::key_manager::is_locked(mcp::public_key const & pub_a)
 {
 	std::lock_guard<std::mutex> lock(m_unlocked_mutex);
 	return m_unlocked.count(pub_a) > 0;
+}
+
+bool mcp::key_manager::find_unlocked_prv(mcp::account const & account_a, mcp::raw_key & prv)
+{
+	return find_unlocked_prv(m_addr_lookup[account_a], prv);
 }
 
 bool mcp::key_manager::find_unlocked_prv(mcp::public_key const & pub_a, mcp::raw_key & prv)
@@ -289,7 +299,7 @@ bool mcp::key_manager::unlock(mcp::public_key const & pub_a, std::string const &
 	return error;
 }
 
-void mcp::key_manager::write_backup(mcp::public_key const & account, std::string const & json)
+void mcp::key_manager::write_backup(mcp::account const & account, std::string const & json)
 {
 	std::ofstream backup_file;
 	std::string file_name((m_backup_path / (account.to_account() + ".json")).string());

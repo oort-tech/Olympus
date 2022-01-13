@@ -43,7 +43,7 @@ mcp::p2p::peer_store::peer_store(bool & error_a, boost::filesystem::path const& 
 bool mcp::p2p::peer_store::peer_get(mcp::db::db_transaction & transaction, node_id const & node_id_a, peers_content & content_a)
 {
 	std::string result;
-	bool ret = transaction.get(m_peers, mcp::uint512_to_slice(node_id_a), result);
+	bool ret = transaction.get(m_peers, mcp::uint256_to_slice(node_id_a), result);
 	if (ret)
 		content_a = peers_content(dev::Slice(result));
 	return ret;
@@ -51,12 +51,12 @@ bool mcp::p2p::peer_store::peer_get(mcp::db::db_transaction & transaction, node_
 
 void mcp::p2p::peer_store::peer_put(mcp::db::db_transaction & transaction, node_id const & node_id_a, peers_content const & content_a)
 {
-	transaction.put(m_peers, mcp::uint512_to_slice(node_id_a), content_a.val());
+	transaction.put(m_peers, mcp::uint256_to_slice(node_id_a), content_a.val());
 }
 
 void mcp::p2p::peer_store::peer_del(mcp::db::db_transaction & transaction, node_id const & node_id_a)
 {
-	transaction.del(m_peers, mcp::uint512_to_slice(node_id_a));
+	transaction.del(m_peers, mcp::uint256_to_slice(node_id_a));
 }
 
 bool mcp::p2p::peer_store::node_get(mcp::db::db_transaction & transaction, std::shared_ptr<node_info> nf_a, node_id & id_a)
@@ -72,7 +72,7 @@ bool mcp::p2p::peer_store::node_get(mcp::db::db_transaction & transaction, std::
 	std::string result;
 	bool ret = transaction.get(m_nodes, key, result);
 	if (ret)
-		id_a = mcp::slice_to_uint512(result);
+		id_a = mcp::slice_to_uint256(result);
 	return ret;
 }
 
@@ -86,7 +86,7 @@ void mcp::p2p::peer_store::node_put(mcp::db::db_transaction & transaction, std::
 	}
 	dev::Slice key((char *)b_value.data(), b_value.size());
 
-	transaction.put(m_nodes, key, mcp::uint512_to_slice(nf_a->id));
+	transaction.put(m_nodes, key, mcp::uint256_to_slice(nf_a->id));
 }
 
 void mcp::p2p::peer_store::node_del(mcp::db::db_transaction & transaction, std::shared_ptr<node_info> nf_a)

@@ -49,7 +49,7 @@ void node_table::start()
 		auto it = m_store.node_begin(transaction);
 		while (it.valid())
 		{
-			mcp::p2p::node_id id(mcp::slice_to_uint512(it.value()));
+			mcp::p2p::node_id id(mcp::slice_to_uint256(it.value()));
 
 			dev::bytes result(it.key().size());
 			std::copy((byte *)it.key().data(), (byte *)it.key().data() + sizeof(result), result.data());
@@ -338,8 +338,9 @@ std::unique_ptr<discover_packet> node_table::interpret_packet(bi::udp::endpoint 
 	node_id_cref.copyTo(from_node_id_ref);
 
 	mcp::signature rlp_sig;
-	dev::bytesRef rlp_sig_ref(rlp_sig.bytes.data(), rlp_sig.bytes.size());
-	rlp_sig_cref.copyTo(rlp_sig_ref);
+	// updated by michael at 1/13
+	// dev::bytesRef rlp_sig_ref(rlp_sig.bytes.data(), rlp_sig.bytes.size());
+	rlp_sig_cref.copyTo(rlp_sig.ref());
 
 	hash256 rlp_hash(mcp::blake2b_hash(rlp_cref));
 

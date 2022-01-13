@@ -317,6 +317,18 @@ struct account20_struct {
 		return error;
 	}
 
+	uint256_t number() const {
+		mcp::uint256_t result;
+		auto shift(0);
+		for (auto i(bytes.begin()), n(bytes.end()); i != n; ++i)
+		{
+			result <<= shift;
+			result |= *i;
+			shift = 8;
+		}
+		return result;
+	}
+
 	byte* data() { return bytes.data(); }
 	byte const* data() const { return bytes.data(); }
 	
