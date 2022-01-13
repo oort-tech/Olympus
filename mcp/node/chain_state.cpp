@@ -382,8 +382,6 @@ void mcp::chain_state::addStakingBalance(mcp::account const& _id, uint256_t cons
         // and are cleared if empty at the end of the transaction.
         a->addStakingBalance(_amount);
     }
-    else
-        createAccount(_id, std::make_shared<mcp::account_state>(_id, block->hash(), 0, requireAccountStartNonce(), _amount));
 
     if (_amount)
         m_changeLog.emplace_back(Change::StakingBalance, _id, _amount);
