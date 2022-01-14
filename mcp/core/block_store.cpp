@@ -248,7 +248,7 @@ size_t mcp::block_store::block_count(mcp::db::db_transaction & transaction_a)
 bool mcp::block_store::dag_account_get(mcp::db::db_transaction & transaction_a, mcp::account const & account_a, mcp::dag_account_info & info_a)
 {
 	std::string value;
-	bool exists(transaction_a.get(dag_account_info, mcp::uint512_to_slice(account_a), value));
+	bool exists(transaction_a.get(dag_account_info, mcp::account_to_slice(account_a), value));
 	if (exists)
 	{
 		dev::RLP r(value);
@@ -269,14 +269,14 @@ void mcp::block_store::dag_account_put(mcp::db::db_transaction & transaction_a, 
 	}
 	dev::Slice s_value((char *)b_value.data(), b_value.size());
 
-	transaction_a.put(dag_account_info, mcp::uint512_to_slice(account_a), s_value);
+	transaction_a.put(dag_account_info, mcp::account_to_slice(account_a), s_value);
 }
 
 std::shared_ptr<mcp::account_info> mcp::block_store::account_get(mcp::db::db_transaction & transaction_a, mcp::account const & account_a)
 {
 	std::shared_ptr<mcp::account_info> info;
 	std::string value;
-	bool exists(transaction_a.get(account_info, mcp::uint256_to_slice(account_a), value));
+	bool exists(transaction_a.get(account_info, mcp::account_to_slice(account_a), value));
 	if (exists)
 	{
 		dev::RLP r(value);
@@ -296,7 +296,7 @@ void mcp::block_store::account_put(mcp::db::db_transaction & transaction_a, mcp:
 		s.swapOut(b_value);
 	}
 	dev::Slice s_value((char *)b_value.data(), b_value.size());
-	transaction_a.put(account_info, mcp::uint256_to_slice(account_a), s_value);
+	transaction_a.put(account_info, mcp::account_to_slice(account_a), s_value);
 }
 
 std::shared_ptr<mcp::account_state> mcp::block_store::account_state_get(mcp::db::db_transaction & transaction_a, mcp::account_state_hash const & hash_a)
@@ -330,19 +330,16 @@ void mcp::block_store::account_state_put(mcp::db::db_transaction & transaction_a
 bool mcp::block_store::latest_account_state_get(mcp::db::db_transaction & transaction_a, mcp::account const & account_a, mcp::account_state_hash & hash_a)
 {
 	std::string value;
-	bool exists(transaction_a.get(latest_account_state, mcp::uint512_to_slice(account_a), value));
+	bool exists(transaction_a.get(latest_account_state, mcp::account_to_slice(account_a), value));
 	if (exists)
 		hash_a = mcp::slice_to_uint256(value);
 	return !exists;
 }
 
-
-// Updated from 256 to 512, Daniel
 void mcp::block_store::latest_account_state_put(mcp::db::db_transaction & transaction_a, mcp::account const & account_a, mcp::account_state_hash const & hash_a)
 {
-	transaction_a.put(latest_account_state, mcp::uint512_to_slice(account_a), mcp::uint512_to_slice(hash_a));
+	transaction_a.put(latest_account_state, mcp::account_to_slice(account_a), mcp::uint256_to_slice(hash_a));
 }
-
 
 bool mcp::block_store::block_summary_get(mcp::db::db_transaction & transaction_a, mcp::block_hash const & block_hash_a, mcp::summary_hash & summary_hash_a)
 {
@@ -953,7 +950,7 @@ size_t mcp::block_store::unlink_block_count(mcp::db::db_transaction & transactio
 std::shared_ptr<mcp::unlink_info> mcp::block_store::unlink_info_get(mcp::db::db_transaction & transaction_a, mcp::account const & account_a)
 {
 	std::string value;
-	bool exists(transaction_a.get(unlink_info, mcp::uint256_to_slice(account_a), value));
+	bool exists(transaction_a.get(unlink_info, mcp::account_to_slice(account_a), value));
 	std::shared_ptr<mcp::unlink_info> result = nullptr;
 	if (exists)
 	{
@@ -967,7 +964,7 @@ std::shared_ptr<mcp::unlink_info> mcp::block_store::unlink_info_get(mcp::db::db_
 bool mcp::block_store::unlink_info_exists(mcp::db::db_transaction & transaction_a, mcp::account const & account_a)
 {
 	std::string result;
-	bool exists(transaction_a.get(unlink_info, mcp::uint256_to_slice(account_a), result));
+	bool exists(transaction_a.get(unlink_info, mcp::account_to_slice(account_a), result));
 	return exists;
 }
 
@@ -984,7 +981,7 @@ void mcp::block_store::unlink_info_put(mcp::db::db_transaction & transaction_a, 
 	if (unlink_info_exists(transaction_a, account_a))
 		exists = true;
 
-	transaction_a.put(unlink_info, mcp::uint256_to_slice(account_a), unlink_a.val());
+	transaction_a.put(unlink_info, mcp::account_to_slice(account_a), unlink_a.val());
 	if (!exists)
 	{
 		transaction_a.count_add("unlink_info", 1);
@@ -1000,7 +997,7 @@ void mcp::block_store::unlink_info_del(mcp::db::db_transaction & transaction_a, 
 	unlink_sametime = false;
 	if (unlink_info_exists(transaction_a, account_a))
 	{
-		transaction_a.del(unlink_info, mcp::uint256_to_slice(account_a));
+		transaction_a.del(unlink_info, mcp::account_to_slice(account_a));
 		transaction_a.count_reduce("unlink_info", 1);
 	}
 	unlink_sametime = true;
@@ -1014,7 +1011,7 @@ mcp::db::forward_iterator mcp::block_store::unlink_info_begin(mcp::db::db_transa
 
 mcp::db::forward_iterator mcp::block_store::unlink_info_begin(mcp::db::db_transaction & transaction_a, mcp::account const & account_a, std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a)
 {
-	mcp::db::forward_iterator result(transaction_a.begin(unlink_info, mcp::uint256_to_slice(account_a), snapshot_a));
+	mcp::db::forward_iterator result(transaction_a.begin(unlink_info, mcp::account_to_slice(account_a), snapshot_a));
 	return result;
 }
 

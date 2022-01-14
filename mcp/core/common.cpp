@@ -1056,6 +1056,21 @@ mcp::uint512_union mcp::slice_to_uint512(dev::Slice const & slice)
 	return result;
 };
 
+// added by michael at 1/13
+dev::Slice mcp::account_to_slice(mcp::account const & value)
+{
+	return dev::Slice((char*)value.bytes.data(), value.bytes.size());
+};
+
+mcp::account mcp::slice_to_account(dev::Slice const & slice)
+{
+	mcp::account result;
+	assert_x(slice.size() == sizeof(result));
+	std::copy((byte *)slice.data(), (byte *)slice.data() + sizeof(result), result.bytes.data());
+	return result;
+};
+//
+
 mcp::unlink_info::unlink_info(dev::Slice const & val_a)
 {
 	assert_x(val_a.size() == sizeof(*this));

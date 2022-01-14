@@ -371,7 +371,7 @@ mcp::block_hash mcp::composer::get_latest_block(mcp::db::db_transaction &  trans
 		previous = account_error ? 0 : info.latest_stable_block;
 
 		mcp::block_hash latest_block_hash(previous);
-		mcp::block_hash root(previous.is_zero() ? account_a : previous);
+		mcp::block_hash root(previous.is_zero() ? account_a.number() : previous);
 
 		//search in chain
 		while (true)
@@ -435,7 +435,7 @@ std::shared_ptr<std::list<mcp::block_hash>> mcp::composer::random_get_links(mcp:
 			if (!it.valid())
 				it = m_store.unlink_info_begin(transaction_a, snapshot_a);
 
-			mcp::account current_account(mcp::slice_to_uint256(it.key()));
+			mcp::account current_account(mcp::slice_to_uint256(it.key()).number());
 			mcp::unlink_info unlink(it.value());
 
 			if (start_account == current_account)  // eq start ,break
@@ -452,7 +452,7 @@ std::shared_ptr<std::list<mcp::block_hash>> mcp::composer::random_get_links(mcp:
 				while (true)
 				{
 					std::shared_ptr<mcp::unlink_block> cur_block = m_store.unlink_block_get(transaction_a, cur_hash, snapshot_a);
-					assert_x_msg(nullptr != cur_block, "unlink_block have no current hash, account:" + current_account.to_string()
+					assert_x_msg(nullptr != cur_block, "unlink_block have no current hash, account:" + current_account.to_account()
 						+ " ,hash: " + cur_hash.to_string());
 					account_blocks++;
 
