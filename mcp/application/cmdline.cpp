@@ -10,7 +10,7 @@ bool mcp::handle_node_options(boost::program_options::variables_map & vm)
 		std::string password = mcp::createPassword("Enter a passphrase with which to secure this account:");
 		vm_instance instance(data_path);
 		auto account(instance.key_manager->create(password, true));
-		std::cout << boost::str(boost::format("\nAccount: %1%\n") % account.to_account());
+		std::cout << boost::str(boost::format("\nAccount: %1%\n") % mcp::account(account).to_account());
 	}
 	else if (vm.count("account_remove"))
 	{
@@ -83,7 +83,7 @@ bool mcp::handle_node_options(boost::program_options::variables_map & vm)
 	else if (vm.count("account_list"))
 	{
 		vm_instance instance(data_path);
-		std::list<mcp::account> account_list(instance.key_manager->list());
+		std::list<mcp::public_key> account_list(instance.key_manager->list());
 		for (mcp::account account : account_list)
 		{
 			std::cout << account.to_account() << '\n';

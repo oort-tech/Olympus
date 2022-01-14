@@ -17,7 +17,7 @@ mcp::p2p::hankshake_msg::hankshake_msg(dev::RLP const & r)
 	if (r.itemCount() != 4)
 		throw std::runtime_error("invalid handshake_message rlp format");
 
-	id = r[0].toHash<mcp::public_key>();
+	id = r[0].toHash<mcp::public_key_comp>();
 	version = (uint16_t)r[1];
 	network = (mcp::mcp_networks)r[2].toInt<uint8_t>();
 	for (auto const & i : r[3])
@@ -269,7 +269,7 @@ void hankshake::writeAck()
 	send(buf_cipher);
 }
 
-void hankshake::setAuthValues(mcp::signature const& _sig, public_key const& _hePubk, public_key const& _remotePubk, mcp::nonce const& _remoteNonce)
+void hankshake::setAuthValues(mcp::signature const& _sig, public_key_comp const& _hePubk, public_key_comp const& _remotePubk, mcp::nonce const& _remoteNonce)
 {
 	bool ret = mcp::encry::verify(_hePubk, _sig, _remotePubk.ref());
 	if (!ret)
@@ -326,14 +326,14 @@ void hankshake::readAuth()
 		signature sig;
 		data.cropped(0, signature::size).copyTo(sig.ref());
 
-		public_key hepubk;
-		data.cropped(signature::size, public_key::size).copyTo(hepubk.ref());
+		public_key_comp hepubk;
+		data.cropped(signature::size, public_key_comp::size).copyTo(hepubk.ref());
 
-		public_key pubk;
-		data.cropped(signature::size + public_key::size, public_key::size).copyTo(pubk.ref());
+		public_key_comp pubk;
+		data.cropped(signature::size + public_key_comp::size, public_key_comp::size).copyTo(pubk.ref());
 
 		mcp::nonce nonce_l;
-		data.cropped(signature::size + public_key::size + public_key::size, nonce::size).copyTo(nonce_l.ref());
+		data.cropped(signature::size + public_key_comp::size + public_key_comp::size, nonce::size).copyTo(nonce_l.ref());
 
 		setAuthValues(sig, hepubk, pubk, nonce_l);
 	}

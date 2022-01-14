@@ -148,7 +148,7 @@ void mcp::block_cache::latest_account_state_earse(std::unordered_set<mcp::accoun
 		m_latest_account_states.remove(account);
 }
 
-void mcp::block_cache::mark_latest_account_state_as_changing(std::unordered_set<mcp::block_hash> const & accounts_a)
+void mcp::block_cache::mark_latest_account_state_as_changing(std::unordered_set<mcp::account> const & accounts_a)
 {
 	std::lock_guard<std::mutex> lock(m_latest_account_state_mutex);
 	for (mcp::account const & account : accounts_a)
@@ -160,7 +160,6 @@ void mcp::block_cache::clear_latest_account_state_changing()
 	std::lock_guard<std::mutex> lock(m_latest_account_state_mutex);
 	m_latest_account_state_changings.clear();
 }
-
 
 bool mcp::block_cache::unlink_block_exists(mcp::db::db_transaction & transaction_a, mcp::block_hash const & block_hash_a)
 {
@@ -288,6 +287,13 @@ void mcp::block_cache::successor_put(mcp::block_hash const & root_a, mcp::block_
 	m_successors.insert(root_a, successor_a);
 }
 
+void mcp::block_cache::successor_earse(std::unordered_set<mcp::account> const & successors_a)
+{
+	std::lock_guard<std::mutex> lock(m_successor_mutex);
+	for (mcp::account const & successor : successors_a)
+		m_successors.remove(successor);
+}
+
 void mcp::block_cache::successor_earse(std::unordered_set<mcp::block_hash> const & successors_a)
 {
 	std::lock_guard<std::mutex> lock(m_successor_mutex);
@@ -295,7 +301,7 @@ void mcp::block_cache::successor_earse(std::unordered_set<mcp::block_hash> const
 		m_successors.remove(successor);
 }
 
-void mcp::block_cache::mark_successor_as_changing(std::unordered_set<mcp::block_hash> const & successors_a)
+void mcp::block_cache::mark_successor_as_changing(std::unordered_set<mcp::account> const & successors_a)
 {
 	std::lock_guard<std::mutex> lock(m_successor_mutex);
 	for (mcp::block_hash const & successor : successors_a)

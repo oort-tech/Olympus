@@ -6,6 +6,9 @@
 #include <mcp/core/block_store.hpp>
 #include <mcp/node/block_processor.hpp>
 
+// added by michael at 1/14
+#include <mcp/wallet/key_manager.hpp>
+
 namespace mcp
 {
 	enum class sync_result {
@@ -70,10 +73,13 @@ namespace mcp
 	class node_sync
 	{
 	public:
-		node_sync(std::shared_ptr<mcp::node_capability> capability_a, mcp::block_store& store_a,
+		node_sync(
+			std::shared_ptr<mcp::node_capability> capability_a, mcp::block_store& store_a,
 			std::shared_ptr<mcp::chain> chain_a, std::shared_ptr<mcp::block_cache> cache_a,
 			std::shared_ptr<mcp::async_task> async_task_a,
-			mcp::fast_steady_clock& steady_clock_a, boost::asio::io_service & io_service_a
+			mcp::fast_steady_clock& steady_clock_a, boost::asio::io_service & io_service_a,
+			// added by michael at 1/14
+			std::shared_ptr<mcp::key_manager> key_manager
 		);
 		~node_sync() { stop(); }
 		void set_processor(std::shared_ptr<mcp::block_processor> block_processor_a) { m_block_processor = block_processor_a; }
@@ -188,5 +194,8 @@ namespace mcp
 		std::atomic<bool> m_task_clear_flag;
 		static std::atomic<sync_status> m_status;
 		bool m_stoped;
+
+		// added by michael at 1/14
+		std::shared_ptr<mcp::key_manager> m_key_manager;
 	};
 }

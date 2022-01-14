@@ -81,7 +81,7 @@ mcp::uint256_union::uint256_union(uint64_t value0)
 
 mcp::uint256_union::uint256_union(mcp::uint256_t const & number_a)
 {
-	if(number_a == 0)
+	if (number_a == 0)
 	{
 		memset(bytes.data(), 0, bytes.size());
 	}
@@ -95,6 +95,12 @@ mcp::uint256_union::uint256_union(mcp::uint256_t const & number_a)
 		}
 	}
 }
+
+// added by michael at 1/14
+mcp::uint256_union::uint256_union(mcp::account20_struct const & account) {
+	*this = account.number();
+}
+//
 
 bool mcp::uint256_union::operator== (mcp::uint256_union const & other_a) const
 {

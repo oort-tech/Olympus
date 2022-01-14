@@ -108,7 +108,7 @@ void test_ed25519()
 	mcp::uint256_union prv;
 	prv.decode_hex("0000000000000000000000000000000000000000000000000000000000000000");
 
-	mcp::uint256_union pub;
+	mcp::public_key pub;
 
 	{
 		std::chrono::time_point<std::chrono::high_resolution_clock> start = std::chrono::high_resolution_clock::now();
@@ -127,7 +127,7 @@ void test_ed25519()
 	mcp::uint256_union message;
 	message.decode_hex("5E844EE4D2E26920F8B0C4B7846929057CFCE48BF40BA269B173648999630053");
 
-	mcp::uint512_union signature;
+	mcp::signature signature;
 
 	{
 		std::chrono::time_point<std::chrono::high_resolution_clock> start = std::chrono::high_resolution_clock::now();

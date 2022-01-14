@@ -316,7 +316,7 @@ void host::connect(std::shared_ptr<node_info> const & ne)
 		}
 	}
 
-	if (ne->id == alias.pub())
+	if (ne->id == alias.pub_comp())
 	{
 		return;
 	}
@@ -456,7 +456,7 @@ void host::try_connect_nodes()
 
 
 // called after successful handshake
-void host::start_peer(mcp::public_key const& _id, dev::RLP const& _rlp, std::unique_ptr<mcp::p2p::frame_coder>&& _io, std::shared_ptr<bi::tcp::socket> const & socket)
+void host::start_peer(mcp::public_key_comp const& _id, dev::RLP const& _rlp, std::unique_ptr<mcp::p2p::frame_coder>&& _io, std::shared_ptr<bi::tcp::socket> const & socket)
 {
 	if (!is_run)
 		return;
@@ -509,7 +509,7 @@ void host::start_peer(mcp::public_key const& _id, dev::RLP const& _rlp, std::uni
 
 		std::shared_ptr<peer> new_peer(std::make_shared<peer>(socket, remote_node_id, m_peer_manager, move(_io)));
 		//check self connect
-		if (remote_node_id == alias.pub())
+		if (remote_node_id == alias.pub_comp())
 		{
 			new_peer->disconnect(disconnect_reason::self_connect);
 			return;

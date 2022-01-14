@@ -52,9 +52,9 @@ void mcp::Executive::initialize()
     {
 		BOOST_LOG(m_log.info) << "Not enough cash: Require > " << totalCost << " = " << m_s.block->hashables->gas
 			<< " * " << m_s.block->hashables->gas_price << " + " << m_s.block->hashables->amount << " Got"
-			<< m_s.balance(m_s.block->hashables->from) << " for sender: " << m_s.block->hashables->from.to_string();
+			<< m_s.balance(m_s.block->hashables->from) << " for sender: " << m_s.block->hashables->from.to_account();
 		m_excepted = TransactionException::NotEnoughCash;
-		BOOST_THROW_EXCEPTION(NotEnoughCash() << RequirementError(totalCost, (bigint)m_s.balance(m_s.block->hashables->from)) << errinfo_comment(m_s.block->hashables->from.to_string()));
+		BOOST_THROW_EXCEPTION(NotEnoughCash() << RequirementError(totalCost, (bigint)m_s.balance(m_s.block->hashables->from)) << errinfo_comment(m_s.block->hashables->from.to_account()));
 	}
     m_gasCost = (u256)gasCost;  // Convert back to 256-bit, safe now.
 }
@@ -241,7 +241,7 @@ bool mcp::Executive::executeCreate(account const & _sender, u256 const& _endowme
     bool accountAlreadyExist = (m_s.addressHasCode(m_newAddress) || m_s.getNonce(m_newAddress) >0);
     if (accountAlreadyExist)
     {
-		BOOST_LOG(m_log.info) << "Address already used: " << m_newAddress.to_string();
+		BOOST_LOG(m_log.info) << "Address already used: " << m_newAddress.to_account();
         m_gas = 0;
         m_excepted = TransactionException::AddressAlreadyUsed;
         revert();

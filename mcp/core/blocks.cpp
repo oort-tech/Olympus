@@ -475,8 +475,7 @@ void mcp::block::serialize_json(mcp::json & json_a) const
 
 	hashables->serialize_json(json_a);
 
-	std::string signature_l;
-	signature.encode_hex(signature_l);
+	std::string signature_l = signature.to_string();
 	json_a["signature"] = signature_l;
 
 	switch (hashables->type)
@@ -527,7 +526,7 @@ bool mcp::block::operator== (mcp::block const & other_a) const
 
 mcp::block_hash mcp::block::root() const
 {
-	return !previous().is_zero() ? previous() : hashables->from;
+	return !previous().is_zero() ? previous() : (const mcp::block_hash) hashables->from;
 }
 
 void mcp::block::set_signature(mcp::signature signature_a)

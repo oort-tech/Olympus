@@ -47,7 +47,7 @@ std::ostream& dev::eth::operator<<(std::ostream& _out, TransactionReceipt const&
 	_out << "Logs: " << _r.log().size() << " entries:" << std::endl;
 	for (mcp::log_entry const& i: _r.log())
 	{
-		_out << "Address " << i.acct.to_string() << ". Topics:" << std::endl;
+		_out << "Address " << i.acct.to_account() << ". Topics:" << std::endl;
 		for (auto const& j: i.topics)
 			_out << "  " << j << std::endl;
 		_out << "  Data: " << toHex(i.data) << std::endl;

@@ -268,6 +268,23 @@ bool mcp::encry::verify(public_key const& _k, mcp::signature const& _s, dev::byt
     return _k == recover(_s, _o);
 }
 
+// added by michael at 1/14
+bool mcp::encry::verify(public_key_comp const& _k, mcp::signature const& _s, dev::bytesConstRef const& _o)
+{
+	auto* ctx = get_secp256k1_ctx();
+
+    secp256k1_ecdsa_signature rawSig;
+    if (!secp256k1_ecdsa_signature_parse_compact(ctx, &rawSig, _s.ref().data()))
+        return false;
+
+    secp256k1_pubkey rawPubkey;
+    if (!secp256k1_ec_pubkey_parse(ctx, &rawPubkey, _k.data(), public_key_comp::size))
+        return false;  // Invalid public key.
+
+    return secp256k1_ecdsa_verify(ctx, &rawSig, _o.data(), &rawPubkey);
+}
+//
+
 //ed25519 secret key to curve25519 secret key
 bool mcp::encry::get_encry_secret_key_from_sign_key(secret_encry & curve, secret_key const & ed25519)
 {
@@ -275,12 +292,12 @@ bool mcp::encry::get_encry_secret_key_from_sign_key(secret_encry & curve, secret
 }
 
 //ed25519 public key to curve25519 public key
-bool mcp::encry::get_encry_public_key_from_sign_key(public_key & curve, public_key const & ed25519)
+bool mcp::encry::get_encry_public_key_from_sign_key(public_key_comp & curve, public_key_comp const & ed25519)
 {
 	return crypto_sign_ed25519_pk_to_curve25519(curve.ref().data(), ed25519.ref().data()) == 0;
 }
 
-bool mcp::encry::get_encry_public_key_from_sign_key(public_key & curve, dev::bytesConstRef ed25519)
+bool mcp::encry::get_encry_public_key_from_sign_key(public_key_comp & curve, dev::bytesConstRef ed25519)
 {
 	return crypto_sign_ed25519_pk_to_curve25519(curve.ref().data(), ed25519.data()) == 0;
 }

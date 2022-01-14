@@ -865,7 +865,7 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 		///chain
 		std::shared_ptr<mcp::chain> chain(std::make_shared<mcp::chain>(chain_store, ledger));
 		///validation
-		std::shared_ptr<mcp::validation> validation(std::make_shared<mcp::validation>(chain_store, ledger, invalid_block_cache, cache));
+		std::shared_ptr<mcp::validation> validation(std::make_shared<mcp::validation>(chain_store, ledger, invalid_block_cache, cache, key_manager));
 
 		///composer
 		std::shared_ptr<mcp::composer> composer(std::make_shared<mcp::composer>(chain_store, cache, ledger, chain, config.witness.gas_price));
@@ -874,7 +874,7 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 		std::shared_ptr<mcp::node_capability> capability(std::make_shared<mcp::node_capability>(io_service, chain_store, steady_clock, cache, sync_async, block_arrival));
 		
 		///sync
-		std::shared_ptr<mcp::node_sync> sync(std::make_shared<mcp::node_sync>(capability, chain_store, chain, cache, sync_async, steady_clock, bg_io_service));
+		std::shared_ptr<mcp::node_sync> sync(std::make_shared<mcp::node_sync>(capability, chain_store, chain, cache, sync_async, steady_clock, bg_io_service, key_manager));
 		capability->set_sync(sync);
 		chain->set_complete_store_notice_func(
 			std::bind(&mcp::node_sync::put_hash_tree_summaries, sync, std::placeholders::_1)

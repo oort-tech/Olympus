@@ -2,14 +2,18 @@
 #include <mcp/core/genesis.hpp>
 #include <mcp/common/stopwatch.hpp>
 
-mcp::validation::validation(mcp::block_store& store_a, mcp::ledger& ledger_a,
-	mcp::mru_list<mcp::block_hash>& invalid_block_cache_a, std::shared_ptr<mcp::block_cache> cache_a
+mcp::validation::validation(
+	mcp::block_store& store_a, mcp::ledger& ledger_a,
+	mcp::mru_list<mcp::block_hash>& invalid_block_cache_a,
+	std::shared_ptr<mcp::block_cache> cache_a,
+	std::shared_ptr<mcp::key_manager> key_manager
 ) :
 	m_store(store_a),
 	m_ledger(ledger_a),
 	m_graph(store_a),
 	m_invalid_block_cache(invalid_block_cache_a),
-	m_cache(cache_a)
+	m_cache(cache_a),
+	m_key_manager(key_manager)
 {
 }
 
@@ -234,7 +238,18 @@ mcp::base_validate_result mcp::validation::base_validate(mcp::db::db_transaction
 	//}
 
 	//validate signature
-	bool sig_error(!validate_message(block->hashables->from, block_hash, block->signature));
+	
+	// added by michael at 1/14
+	mcp::key_content kc;
+	bool sig_error(!m_key_manager->find(block->hashables->from, kc));
+	if (sig_error)
+	{
+		result.code = mcp::base_validate_result_codes::invalid_signature;
+		return result;
+	}
+	//
+
+	sig_error = !validate_message(kc.public_key, block_hash, block->signature);
 	if (sig_error)
 	{
 		result.code = mcp::base_validate_result_codes::invalid_signature;

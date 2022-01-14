@@ -4,7 +4,7 @@ using namespace mcp::p2p;
 using namespace mcp::encry;
 using namespace dev;
 
-void mcp::p2p::encrypt_dh(public_key const & _k, dev::bytesConstRef _plain, dev::bytes & o_cipher)
+void mcp::p2p::encrypt_dh(public_key_comp const & _k, dev::bytesConstRef _plain, dev::bytes & o_cipher)
 {
 	bytes io = _plain.toBytes();
 	dh_x25519::get()->encrypt_x25519(_k, io);
@@ -27,10 +27,10 @@ dh_x25519* dh_x25519::get()
 	return &s_this;
 }
 
-void dh_x25519::encrypt_x25519(public_key const& _k, bytes& io_cipher)
+void dh_x25519::encrypt_x25519(public_key_comp const& _k, bytes& io_cipher)
 {
 	////get encry public key
-	public_key public_encry;
+	public_key_comp public_encry;
 	if (!get_encry_public_key_from_sign_key(public_encry, _k))
 	{
 		LOG(m_log.info) << "encrypt get encry public key error.";
@@ -40,7 +40,7 @@ void dh_x25519::encrypt_x25519(public_key const& _k, bytes& io_cipher)
 	encrypt_x25519(public_encry, bytesConstRef(), io_cipher);
 }
 
-void dh_x25519::encrypt_x25519(public_key const& _k, bytesConstRef _sharedMacData, bytes& io_cipher)
+void dh_x25519::encrypt_x25519(public_key_comp const& _k, bytesConstRef _sharedMacData, bytes& io_cipher)
 {
 	// create key pair
 	auto r = key_pair::create();
@@ -109,7 +109,7 @@ bool dh_x25519::decrypt_x25519(secret_encry const& _k, bytesConstRef _sharedMacD
 
 
 	////get encry public key
-	mcp::public_key encry_pub;
+	mcp::public_key_comp encry_pub;
 	if (!get_encry_public_key_from_sign_key(encry_pub, public_key))
 	{
         LOG(m_log.info) << "decrypt_x25519 to get public key error.";

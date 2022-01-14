@@ -3,13 +3,13 @@ using namespace mcp;
 using namespace mcp::p2p;
 using namespace mcp::encry;
 
-void frame_coder_impl::set_key(bool _originated, public_key const&_pub, key_pair const&_key)
+void frame_coder_impl::set_key(bool _originated, public_key_comp const&_pub, key_pair const&_key)
 {
-	public_key remote_pub, local_pub;
+	public_key_comp remote_pub, local_pub;
 	secret_encry local_sec;
 	if (!get_encry_public_key_from_sign_key(remote_pub, _pub)
 		|| !get_encry_secret_key_from_sign_key(local_sec, _key.secret())
-		|| !get_encry_public_key_from_sign_key(local_pub, _key.pub())
+		|| !get_encry_public_key_from_sign_key(local_pub, _key.pub_comp())
 		)
 	{
 		LOG(m_log.info) << "set_key error.";
@@ -95,13 +95,13 @@ frame_coder::frame_coder(hankshake const& _init) :
 	setup(_init.m_originated, _init.m_ecdheRemote, _init.m_remoteNonce, _init.m_ecdheLocal, _init.m_nonce);
 }
 
-frame_coder::frame_coder(bool _originated, public_key const& _remoteEphemeral, nonce const& _remoteNonce, key_pair const& _ecdheLocal, nonce const& _nonce) :
+frame_coder::frame_coder(bool _originated, public_key_comp const& _remoteEphemeral, nonce const& _remoteNonce, key_pair const& _ecdheLocal, nonce const& _nonce) :
 	m_impl(new frame_coder_impl)
 {
 	setup(_originated, _remoteEphemeral, _remoteNonce, _ecdheLocal, _nonce);
 }
 
-void frame_coder::setup(bool _originated, public_key const& _remoteEphemeral, nonce const& _remoteNonce, key_pair const& _ecdheLocal, nonce const& _nonce)
+void frame_coder::setup(bool _originated, public_key_comp const& _remoteEphemeral, nonce const& _remoteNonce, key_pair const& _ecdheLocal, nonce const& _nonce)
 {
 	m_impl->set_key(_originated,_remoteEphemeral, _ecdheLocal);
 	m_impl->set_nonce(_remoteNonce, _nonce);

@@ -90,12 +90,17 @@ public:
 // Balances are 128 bit.
 
 class raw_key;
+struct account20_struct;
+
 union uint256_union
 {
 	uint256_union () = default;
 	uint256_union (std::string const &);
 	uint256_union (uint64_t);
 	uint256_union (mcp::uint256_t const &);
+	// added by michael at 1/14
+	uint256_union (account20_struct const & account);
+	//
 	void encrypt (mcp::raw_key const &, mcp::raw_key const &, uint128_union const &);
 	uint256_union & operator^= (mcp::uint256_union const &);
 	uint256_union operator^ (mcp::uint256_union const &) const;
@@ -206,11 +211,24 @@ struct signature_struct
 {
     signature_struct() = default;
     signature_struct(uint256_union const& _r, uint256_union const& _s, byte _v): r(_r), s(_s), v(_v) {}
-    
+    signature_struct(uint64_t value0) {
+		if (value0 == 0) {
+			r.clear();
+			s.clear();
+			v = 0;
+		}
+	}
     bool is_valid() const noexcept {
 		static const uint256_union s_max("0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141");
     	static const uint256_union s_zero(0);
 		return (v <= 1 && r > s_zero && s > s_zero && r < s_max && s < s_max);
+	}
+
+	bool operator== (signature_struct const& other_a) const {
+		return r == other_a.r && s == other_a.s && v == other_a.v;
+	}
+	bool operator!= (signature_struct const & other_a) const {
+		return !(*this == other_a);
 	}
 
 	bool decode_hex(std::string const & hex_a) {
@@ -233,7 +251,7 @@ struct signature_struct
 		return error;
 	}
 
-	std::string to_string() {
+	std::string to_string() const {
 		std::stringstream stream;
 		stream << std::hex << std::noshowbase << v;
 		return r.to_string() + s.to_string() + stream.str();
@@ -264,16 +282,22 @@ struct account20_struct {
 		dev::bytesConstRef bRef = sha3(pubkey.ref()).ref();
 		dev::bytesConstRef(bRef.data() + 12, size).copyTo(ref());
 	}
-	account20_struct (mcp::uint256_t const &number_a) {
+	account20_struct(uint64_t value0) {
+		*this = mcp::uint256_t(value0);
+	}
+	account20_struct (mcp::uint256_t const & number_a) {
 		if(number_a == 0) {
 			memset(bytes.data(), 0, bytes.size());
 		} else {
 			mcp::uint256_t number_l(number_a);
-			for (int i = 12; i < bytes.size(); i++) {
-				bytes[i] = ((number_l) & 0xff).convert_to<uint8_t>();
+			for (auto i(bytes.rbegin()), n(bytes.rend()); i != n; ++i) {
+				*i = ((number_l) & 0xff).convert_to<uint8_t>();
 				number_l >>= 8;
 			}
 		}
+	}
+	account20_struct (mcp::uint256_union const & uint256_a) {
+		*this = uint256_a.number();
 	}
 	
 	bool operator== (account20_struct const& other_a) const {
@@ -281,6 +305,51 @@ struct account20_struct {
 	}
 	bool operator!= (account20_struct const & other_a) const {
 		return !(*this == other_a);
+	}
+	bool operator< (account20_struct const & other_a) const
+	{
+		for (int i = 0; i < size; i++)
+		{
+			if (bytes[i] < other_a.bytes[i])
+				return true;
+			else if (bytes[i] > other_a.bytes[i])
+				return false;
+		}
+		return false;
+	}
+	bool operator> (account20_struct const & other_a) const
+	{
+		for (int i = 0; i < size; i++)
+		{
+			if (bytes[i] > other_a.bytes[i])
+				return true;
+			else if (bytes[i] < other_a.bytes[i])
+				return false;
+		}
+		return false;
+	}
+
+	bool operator<= (account20_struct const & other_a) const
+	{
+		for (int i = 0; i < size; i++)
+		{
+			if (bytes[i] < other_a.bytes[i])
+				return true;
+			else if (bytes[i] > other_a.bytes[i])
+				return false;
+		}
+		return true;
+	}
+	bool operator>= (account20_struct const & other_a) const
+	{
+		for (int i = 0; i < size; i++)
+		{
+			if (bytes[i] > other_a.bytes[i])
+				return true;
+			else if (bytes[i] < other_a.bytes[i])
+				return false;
+		}
+		return true;
 	}
 
 	std::string to_account() const {
@@ -317,7 +386,7 @@ struct account20_struct {
 		return error;
 	}
 
-	mcp::uint256_t number() {
+	mcp::uint256_t number() const {
 		mcp::uint256_t result;
 		auto shift(0);
 		for (auto i(bytes.begin()), n(bytes.end()); i != n; ++i)
@@ -334,7 +403,7 @@ struct account20_struct {
 	
 	std::array<uint8_t, 20> bytes;
 	void clear () { bytes.fill(0); }
-
+	
 	enum { size = 20 };
 	dev::bytesRef ref() { return dev::bytesRef(bytes.data(), size); }
 	dev::bytesConstRef ref() const { return dev::bytesConstRef(bytes.data(), size); }

@@ -231,9 +231,11 @@ namespace mcp
 		bool sign(private_key const& _k, public_key const& _pk, dev::bytesConstRef _hash, mcp::signature& sig);
 
 		/// Verify signature.
-		// commented by michael at 1/10
+		// updated by michael at 1/10
 		bool verify(public_key const& _k, dev::bytesConstRef const& _s);
 		bool verify(public_key const& _k, mcp::signature const& _s, dev::bytesConstRef const& _o);
+		//added by michael
+		bool verify(public_key_comp const& _k, mcp::signature const& _s, dev::bytesConstRef const& _o);
 
 		// added by michael at 1/10
 		public_key recover(mcp::signature const& _s, dev::bytesConstRef const& _o);
@@ -241,8 +243,8 @@ namespace mcp
 		//ed25519 secret key to curve25519 secret key
 		bool get_encry_secret_key_from_sign_key(secret_encry & curve, secret_key const & ed25519);
 		//ed25519 public key to curve25519 public key
-		bool get_encry_public_key_from_sign_key(public_key & curve, public_key const & ed25519);
-		bool get_encry_public_key_from_sign_key(public_key & curve, dev::bytesConstRef ed25519);
+		bool get_encry_public_key_from_sign_key(public_key_comp & curve, public_key_comp const & ed25519);
+		bool get_encry_public_key_from_sign_key(public_key_comp & curve, dev::bytesConstRef ed25519);
 
 		// commented by michael at 1/5
 		// ed25519 get public key from secret key

@@ -35,7 +35,7 @@ namespace mcp
 		void block_work_set(mcp::uint64_union const &);
 
 		mcp::block_type type;
-		mcp::account from; // updated to 512 bytes, Daniel
+		mcp::account from;
 		mcp::block_hash previous;
 		mcp::uint64_union work = mcp::uint64_union(0);
 
@@ -48,7 +48,7 @@ namespace mcp
 		uint64_t exec_timestamp;
 
 		//light
-		mcp::account to; // updated to 512 bytes, Daniel
+		mcp::account to;
 		mcp::amount amount;
 		uint256_t gas;   		///< The total gas to convert, paid for from sender's account. Any unused gas gets refunded once the contract is ended.
 		uint256_t gas_price;
