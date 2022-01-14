@@ -141,7 +141,7 @@ using summary_hash = uint256_union;
 using account_state_hash = uint256_union;
 // using account = uint256_union;
 /// A hash set of mcp accounts
-using AccountHash = std::unordered_set<account>;
+// using AccountHash = std::unordered_set<account>;
 // using public_key = uint256_union;
 using private_key = uint256_union;
 using secret_ciphertext = uint256_union;
@@ -317,7 +317,7 @@ struct account20_struct {
 		return error;
 	}
 
-	uint256_t number() const {
+	mcp::uint256_t number() {
 		mcp::uint256_t result;
 		auto shift(0);
 		for (auto i(bytes.begin()), n(bytes.end()); i != n; ++i)
@@ -341,6 +341,7 @@ struct account20_struct {
 };
 
 using account = account20_struct;
+using AccountHash = std::unordered_set<account>;
 
 namespace p2p
 {
