@@ -274,17 +274,22 @@ void test_secp256k1()
 	prv.decode_hex("72A4E26A6EEFB3B91247FC866A0613E48C37546F1E3B212B455FA5D305B4F9BF");
 
 	mcp::public_key pub;
+	mcp::public_key_comp pub_comp;
 
 	{
 		std::chrono::time_point<std::chrono::high_resolution_clock> start = std::chrono::high_resolution_clock::now();
 
-		mcp::encry::generate_public_from_secret(prv, pub);
-		
-		std::chrono::nanoseconds dur = std::chrono::duration_cast<std::chrono::nanoseconds> (std::chrono::high_resolution_clock::now() - start);
-		std::cout << "secp256k1_publickey duration:" << dur.count() << "ns" << std::endl;
+		if (mcp::encry::generate_public_from_secret(prv, pub, pub_comp)) {
+			std::chrono::nanoseconds dur = std::chrono::duration_cast<std::chrono::nanoseconds> (std::chrono::high_resolution_clock::now() - start);
+			std::cout << "secp256k1_publickey duration:" << dur.count() << "ns" << std::endl;
 
-		std::cout << "prv:" << prv.to_string() << std::endl;
-		std::cout << "pub:" << pub.to_string() << std::endl;
+			std::cout << "prv:" << prv.to_string() << std::endl;
+			std::cout << "pub:" << pub.to_string() << std::endl;
+			std::cout << "pub_comp:" << pub_comp.to_string() << std::endl;
+		} else {
+			std::cout << "secp256k1_publickey failed..." << std::endl;
+			return;
+		}
 	}
 
 
@@ -311,7 +316,7 @@ void test_secp256k1()
 	{
 		std::chrono::time_point<std::chrono::high_resolution_clock> start = std::chrono::high_resolution_clock::now();
 
-		bool status = mcp::encry::verify(pub, signature, message.ref());
+		bool status = mcp::encry::verify(pub_comp, signature, message.ref());
 
 		if (status)
 		{
