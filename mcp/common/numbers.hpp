@@ -231,29 +231,24 @@ struct signature_struct
 		return !(*this == other_a);
 	}
 
-	bool decode_hex(std::string const & hex_a) {
-		bool error(false);
-		if (hex_a.empty() || hex_a.size() != size) {
-			r.clear();
-			s.clear();
-			v = 0;
-		} else {
-			std::stringstream stream(hex_a);
-			stream << std::hex << std::showbase;
-			for (auto i(r.bytes.begin()), n(r.bytes.end()); i != n; ++i){
-				stream >> *i;
-			}
-			for (auto i(s.bytes.begin()), n(s.bytes.end()); i != n; ++i){
-				stream >> *i;
-			}
-			stream >> v;
+	bool decode_hex(std::string const & text) {
+		bool error(text.size() != 130 || text.empty());
+		if (!error) {
+			r.decode_hex(text.substr(0, r.size * 2));
+			s.decode_hex(text.substr(r.size * 2, s.size * 2));
+			
+			std::stringstream stream(text.substr((r.size + s.size) * 2, 2));
+			uint v_l;
+			stream << std::hex << std::noshowbase;
+			stream >> v_l;
+			v = static_cast<byte>(v_l);
 		}
 		return error;
 	}
 
 	std::string to_string() const {
 		std::stringstream stream;
-		stream << std::hex << std::noshowbase << v;
+		stream << std::hex << std::uppercase << std::noshowbase << std::setw(2) << std::setfill('0') << (uint) v;
 		return r.to_string() + s.to_string() + stream.str();
 	}
 
@@ -354,10 +349,7 @@ struct account20_struct {
 
 	std::string to_account() const {
 		std::stringstream stream;
-		stream << std::hex << std::showbase;
-		for (auto i(bytes.begin()), n(bytes.end()); i != n; ++i) {
-			stream << *i;
-		}
+		stream << std::hex << std::showbase << number();
 		return stream.str();
 	}
 
@@ -372,15 +364,24 @@ struct account20_struct {
 		return is_zero;
 	}
 
-	bool decode_account(std::string const & source_a) {
-		bool error(false);
-		if (source_a.empty() || source_a.size() != 42) {
-			bytes.fill(0);
-		} else {
-			std::stringstream stream(source_a);
+	bool decode_account(std::string const & text) {
+		auto error(text.size() != 42 || text.empty());
+		if (!error) {
+			std::stringstream stream(text);
 			stream << std::hex << std::showbase;
-			for (auto i(bytes.begin()), n(bytes.end()); i != n; ++i){
-				stream >> *i;
+			mcp::uint256_t number_l;
+			try
+			{
+				stream >> number_l;
+				*this = number_l;
+				if (!stream.eof())
+				{
+					error = true;
+				}
+			}
+			catch (std::runtime_error &)
+			{
+				error = true;
 			}
 		}
 		return error;
@@ -389,8 +390,7 @@ struct account20_struct {
 	mcp::uint256_t number() const {
 		mcp::uint256_t result;
 		auto shift(0);
-		for (auto i(bytes.begin()), n(bytes.end()); i != n; ++i)
-		{
+		for (auto i(bytes.begin()), n(bytes.end()); i != n; ++i) {
 			result <<= shift;
 			result |= *i;
 			shift = 8;

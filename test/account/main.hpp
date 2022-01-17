@@ -9,3 +9,5 @@ void test_create_account();
 void test_account_encoding();
 
 void test_secure_string();
+
+void test_secp256k1();

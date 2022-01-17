@@ -10,6 +10,8 @@
 #include <string>
 #include <vector>
 
+#include <libdevcore/SHA3.h>
+
 void test_argon2()
 {
 	std::cout << "-------------argon2---------------" << std::endl;
@@ -241,6 +243,85 @@ void test_aes()
 		else
 		{
 			std::cout << "Decryption fail" << std::endl;
+		}
+	}
+}
+
+void test_secp256k1()
+{
+	std::cout << "-------------secp256k1---------------" << std::endl;
+
+	// mcp::signature sig;
+	// sig.decode_hex("01635E3763EED1E7C1B7611F5CA8CF90C340BEB79BF7DC674D5146D08D32DA976585E03660DB6008988E3B001F1797B717E31BAC6E8A211F674C4A4D83347129FA");
+	// std::string text = "01635E3763EED1E7C1B7611F5CA8CF90C340BEB79BF7DC674D5146D08D32DA976585E03660DB6008988E3B001F1797B717E31BAC6E8A211F674C4A4D83347129FA";
+
+	// sig.r.decode_hex(text.substr(0, sig.r.size * 2));
+	// sig.s.decode_hex(text.substr(sig.r.size * 2, sig.s.size * 2));
+	
+	// std::stringstream stream(text.substr((sig.r.size + sig.s.size) * 2, 2));
+	// stream << std::hex << std::noshowbase;
+
+	// uint v;
+	// stream >> v;
+	// sig.v = static_cast<byte>(v);
+	
+	// std::cout << "r: " << sig.r.to_string() << std::endl;
+	// std::cout << "s: " << sig.s.to_string() << std::endl;
+	// std::cout << "v: " << std::hex << (uint) sig.v << std::endl;
+	// std::cout << "signature: " << sig.to_string() << std::endl;
+
+	mcp::secret_key prv;
+	prv.decode_hex("72A4E26A6EEFB3B91247FC866A0613E48C37546F1E3B212B455FA5D305B4F9BF");
+
+	mcp::public_key pub;
+
+	{
+		std::chrono::time_point<std::chrono::high_resolution_clock> start = std::chrono::high_resolution_clock::now();
+
+		mcp::encry::generate_public_from_secret(prv, pub);
+		
+		std::chrono::nanoseconds dur = std::chrono::duration_cast<std::chrono::nanoseconds> (std::chrono::high_resolution_clock::now() - start);
+		std::cout << "secp256k1_publickey duration:" << dur.count() << "ns" << std::endl;
+
+		std::cout << "prv:" << prv.to_string() << std::endl;
+		std::cout << "pub:" << pub.to_string() << std::endl;
+	}
+
+
+	mcp::uint256_union message;
+	dev::sha3("msg").ref().copyTo(message.ref());
+
+	mcp::signature signature;
+
+	{
+		std::chrono::time_point<std::chrono::high_resolution_clock> start = std::chrono::high_resolution_clock::now();
+
+		if (mcp::encry::sign(prv, pub, message.ref(), signature)) {
+			std::chrono::nanoseconds dur = std::chrono::duration_cast<std::chrono::nanoseconds> (std::chrono::high_resolution_clock::now() - start);
+			std::cout << "sign duration:" << dur.count() << "ns" << std::endl;
+
+			std::cout << "message:" << message.to_string() << std::endl;
+			std::cout << "signature:" << signature.to_string() << std::endl;
+		} else {
+			std::cout << "secp256k1 sign fail";
+			return;
+		}
+	}
+
+	{
+		std::chrono::time_point<std::chrono::high_resolution_clock> start = std::chrono::high_resolution_clock::now();
+
+		bool status = mcp::encry::verify(pub, signature, message.ref());
+
+		if (status)
+		{
+			std::chrono::nanoseconds dur = std::chrono::duration_cast<std::chrono::nanoseconds> (std::chrono::high_resolution_clock::now() - start);
+			std::cout << "sign_open duration:" << dur.count() << "ns" << std::endl;
+		}
+		else
+		{
+			std::cout << "secp256k1 sign verify fail";
+			return;
 		}
 	}
 }

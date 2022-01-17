@@ -169,12 +169,12 @@ bool mcp::encry::sign(secret_key const& _k, dev::bytesConstRef _hash, mcp::signa
     secp256k1_ecdsa_recoverable_signature_serialize_compact(ctx, sig.ref().data(), &v, &rawSig);
 
 	sig.v = static_cast<byte>(v);
-    if (sig.s > c_secp256k1n / 2)
+    if (sig.s.number() > c_secp256k1n / 2)
     {
         sig.v = static_cast<byte>(sig.v ^ 1);
 		sig.s = c_secp256k1n - sig.s.number();
     }
-    if (sig.s <= c_secp256k1n / 2) {
+    if (sig.s.number() <= c_secp256k1n / 2) {
 		return true;
 	}
     return false;
