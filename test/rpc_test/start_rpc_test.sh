@@ -1,1 +1,1 @@
-python3 -m unittest -v rpc_test.py
+python3 -m unittest -v test_rpc.py
