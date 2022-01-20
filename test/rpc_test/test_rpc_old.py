@@ -4,10 +4,10 @@ import json
 import requests
 import re
 URL = "http://127.0.0.1:8765"
-#0xC98A676DE3E0C539742E3023F7755C57E331E42F
-#Judge account number, mcp_start, remove I, O, l, 0, length equal to 42	
+
+#Judge account number, mcp_start, remove I, O, l, 0, length greater than or equal to 50	
 def is_account(str):
-	if re.findall(r'0x[0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ]{40,}',str):
+	if re.findall(r'mcp_[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{50,}$',str):
 		return True
 	else:
 		return False
@@ -41,7 +41,7 @@ def is_hex(str,is_lens=None):
 		
 #judge signature		
 def is_signature(str):
-	if is_hex(str,130):
+	if is_hex(str,128):
 		return True
 	else:
 		return False
@@ -64,11 +64,9 @@ def try_load_json(jsonstr):
 class Test_rpc(unittest.TestCase):
 	@classmethod
 	def setUpClass(cls):
-		Test_rpc.genesis_account = "0x8E384CDF5147B580B71C92B3D6AA670EA4A4B4C6"
-		Test_rpc.import_account = "0x41A358A4900A0A75BD50304A57E89D455966DC0F"
+		Test_rpc.import_account = "mcp_3bBiY7Tu4cBMYeoC7d3KE657hQrMWYWsmhS3JBCvQaUnAksrVT"
 		Test_rpc.import_password = "1234qwer"
-		Test_rpc.import_public_key = "F16C3C1E3775B13C139038740F976E5E549A41D94E502E3DF4BE118CD81D5310459E5FA7F5A95B7DBC935E30BB55D624DF8F767280D1BAF329EC7E5EF96BF137"
-		Test_rpc.to_account = "0x2B16DD7314C46D0098282E00207A117E4877BAC9"
+		Test_rpc.to_account = "mcp_3dUnMEsuSiUsKGgfft5VDpM2bX9S6T4ppApHRfn1cBmn2znyEv"
 	
 	'''
 	{
@@ -80,7 +78,7 @@ class Test_rpc(unittest.TestCase):
 	def test_account_import(self):
 		data = {
 			"action": "account_import",
-			"json": "{\"account\":\"0x41A358A4900A0A75BD50304A57E89D455966DC0F\",\"public_key\":\"F16C3C1E3775B13C139038740F976E5E549A41D94E502E3DF4BE118CD81D5310459E5FA7F5A95B7DBC935E30BB55D624DF8F767280D1BAF329EC7E5EF96BF137\",\"kdf_salt\":\"F36CA7C846C345960B055C6F10DFD7FD\",\"iv\":\"7B4F5CCB4A201302C1CE8CA7979EDA54\",\"ciphertext\":\"09FD6AEDF849A66AB58C15B12F5F9B901A482521AEB0BD160AF4181D9F14B004\"}"
+			"json": "{\"account\":\"mcp_3bBiY7Tu4cBMYeoC7d3KE657hQrMWYWsmhS3JBCvQaUnAksrVT\",\"kdf_salt\":\"74D7B3B7DE1C4FA03ED29EBC8CADF96C\",\"iv\":\"7E34B68EABFEF7933E305C17D94FA974\",\"ciphertext\":\"F4E7350BBB854CCB5F850D8EC33264A771890D74B3E02331D74D9C9C2A35733F\"}"
 		}
 		response = requests.post(url=URL, data=json.dumps(data))
 		self.assertEqual(response.status_code, 200)
@@ -92,9 +90,6 @@ class Test_rpc(unittest.TestCase):
 		self.assertEqual(json_data['msg'], 'OK', json_data['code'])
 		json_account = json_data['account']
 		self.assertTrue(is_account(json_account),json_account)
-
-		print(json_data)
-		print("\n")
 	
 	'''
 	{
@@ -115,9 +110,6 @@ class Test_rpc(unittest.TestCase):
 		self.assertEqual(json_data['code'], 0, json_data['msg'])
 		json_account = json_data['account']
 		self.assertTrue(is_account(json_account),json_account)
-
-		print(json_data)
-		print("\n")
 	
 	'''
 	{
@@ -183,7 +175,7 @@ class Test_rpc(unittest.TestCase):
 	def test_account_balance(self):
 		data = {
 			"action": "account_balance",
-			"account": "0x8E384CDF5147B580B71C92B3D6AA670EA4A4B4C6"
+			"account": Test_rpc.import_account
 		}
 		response = requests.post(url=URL, data=json.dumps(data))
 		self.assertEqual(response.status_code, 200)
@@ -193,9 +185,6 @@ class Test_rpc(unittest.TestCase):
 		self.assertEqual(json_data['code'], 0, json_data['msg'])
 		json_balance = json_data['balance']
 		self.assertTrue(is_balance(json_balance),json_balance)
-
-		print(json_data)
-		print("\n")
 	
 	'''
 	{
@@ -420,8 +409,8 @@ class Test_rpc(unittest.TestCase):
 	def test_generate_offline_block(self):
 		data = {
 			"action": "generate_offline_block",
-			"from": Test_rpc.import_account,
-			"to": Test_rpc.to_account,
+			"from": "mcp_33EuccjKjcZgwbHYp8eLhoFiaKGARVigZojeHzySD9fQ1ysd7u",
+			"to": "mcp_3w6RT4KJ5CGomcpUqwuxUfUciLggCTAgpccLrMwxqgJuSB2iW6",
 			"amount": "1000000000000000000",
 			"gas": "21000",
 			"gas_price": "1000000000",
@@ -438,8 +427,8 @@ class Test_rpc(unittest.TestCase):
 		data = {
 			"action": "send_offline_block",
 			"previous": "0000000000000000000000000000000000000000000000000000000000000000",
-			"from": Test_rpc.import_account,
-			"to": Test_rpc.to_account,
+			"from": "mcp_33EuccjKjcZgwbHYp8eLhoFiaKGARVigZojeHzySD9fQ1ysd7u",
+			"to": "mcp_3w6RT4KJ5CGomcpUqwuxUfUciLggCTAgpccLrMwxqgJuSB2iW6",
 			"amount": "1000000000000000000",
 			"gas": "21000",
 			"gas_price": "1000000000",
@@ -463,7 +452,7 @@ class Test_rpc(unittest.TestCase):
 	def test_sign_msg(self):
 		data = {
 			"action": "sign_msg",
-			"public_key": Test_rpc.import_public_key,
+			"public_key": Test_rpc.import_account,
 			"password": Test_rpc.import_password,
 			"msg": "CB09A146D83668AE13E951032D2FD94F893C9A0CA0822ED40BBE11DC0F167D1B"
 		}
@@ -475,9 +464,6 @@ class Test_rpc(unittest.TestCase):
 		self.assertEqual(json_data['code'], 0, json_data['msg'])
 		json_sign = json_data['signature']
 		self.assertTrue(is_signature(json_sign),json_sign)
-
-		print(json_data)
-		print("\n")
 
 	def test_block(self):
 		data = {
@@ -656,38 +642,10 @@ class Test_rpc(unittest.TestCase):
 		json_store_version = json_data['store_version']
 		self.assertTrue(is_str(json_store_version),json_store_version)
 
-	'''
-	{
-	"code": 0,
-    "msg": "OK",
-    "hash": ""
-	}
-	'''
-	def test_send_ccn(self):
-		data = {
-			"action": "send_block",
-			"from": Test_rpc.genesis_account,
-    		"to": Test_rpc.to_account,
-			"amount": "1000000000000000000",
-			"password": Test_rpc.import_password,
-			"gas": "21000",
-			"gas_price": "1000000000",
-			"data": ""
-		}
-		response = requests.post(url=URL, data=json.dumps(data))
-		self.assertEqual(response.status_code, 200)
-		is_json,json_data = try_load_json(response.text)
-		self.assertTrue(is_json,response.text)
-		json_data = json.loads(response.text)
-		self.assertEqual(json_data['code'], 0, json_data['msg'])
-		
-		print(json_data)
-		print("\n")
-
 if __name__ == "__main__":
 	suite = unittest.TestSuite()
-	suite.addTest(Test_rpc("test_account_import"))
-	# suite.addTest(Test_rpc("test_account_create"))
+	# suite.addTest(Test_rpc("test_account_import"))
+	suite.addTest(Test_rpc("test_account_create"))
 	# suite.addTest(Test_rpc("test_send_block"))
 	# suite.addTest(Test_rpc("test_accounts_balances"))
 	# suite.addTest(Test_rpc("test_account_balance"))
@@ -697,7 +655,7 @@ if __name__ == "__main__":
 	# suite.addTest(Test_rpc("test_account_unlock"))
 	# suite.addTest(Test_rpc("test_account_export"))
 	# suite.addTest(Test_rpc("test_account_validate"))
-	suite.addTest(Test_rpc("test_account_password_change"))
+	# suite.addTest(Test_rpc("test_account_password_change"))
 	# suite.addTest(Test_rpc("test_account_list"))
 	# suite.addTest(Test_rpc("test_account_block_list"))
 	# suite.addTest(Test_rpc("test_estimate_gas"))
@@ -714,8 +672,6 @@ if __name__ == "__main__":
 	# suite.addTest(Test_rpc("test_witness_list"))
 	# suite.addTest(Test_rpc("test_version"))
 	# suite.addTest(Test_rpc("test_account_remove"))
-	# suite.addTest(Test_rpc("test_send_ccn"))
-
 	result = unittest.TextTestRunner(verbosity=3).run(suite)
 	if result.wasSuccessful():
 		exit(0)

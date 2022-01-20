@@ -169,12 +169,12 @@ bool mcp::encry::sign(secret_key const& _k, dev::bytesConstRef _hash, mcp::signa
     secp256k1_ecdsa_recoverable_signature_serialize_compact(ctx, sig.ref().data(), &v, &rawSig);
 
 	sig.v = static_cast<byte>(v);
-    if (sig.s > c_secp256k1n / 2)
+    if (sig.s.number() > c_secp256k1n / 2)
     {
         sig.v = static_cast<byte>(sig.v ^ 1);
 		sig.s = c_secp256k1n - sig.s.number();
     }
-    if (sig.s <= c_secp256k1n / 2) {
+    if (sig.s.number() <= c_secp256k1n / 2) {
 		return true;
 	}
     return false;
@@ -278,12 +278,25 @@ bool mcp::encry::verify(public_key_comp const& _k, mcp::signature const& _s, dev
         return false;
 
     secp256k1_pubkey rawPubkey;
-    if (!secp256k1_ec_pubkey_parse(ctx, &rawPubkey, _k.data(), public_key_comp::size))
-        return false;  // Invalid public key.
+	byte _k_b[33];
+	_k_b[0] = 0x02;
+	_k.ref().copyTo(dev::bytesRef(&_k_b[1], 32));
+	
+    if (!secp256k1_ec_pubkey_parse(ctx, &rawPubkey, _k_b, 33)) {
+		return false;
+	}
 
-    return secp256k1_ecdsa_verify(ctx, &rawSig, _o.data(), &rawPubkey);
+    if (!secp256k1_ecdsa_verify(ctx, &rawSig, _o.data(), &rawPubkey)) {
+		_k_b[0] = 0x03;
+		if (!secp256k1_ec_pubkey_parse(ctx, &rawPubkey, _k_b, 33)) {
+			return false;
+		}
+		return secp256k1_ecdsa_verify(ctx, &rawSig, _o.data(), &rawPubkey);
+	}
+
+	return true;
 }
-//
+
 
 //ed25519 secret key to curve25519 secret key
 bool mcp::encry::get_encry_secret_key_from_sign_key(secret_encry & curve, secret_key const & ed25519)
@@ -365,7 +378,7 @@ bool mcp::encry::generate_public_from_secret(secret_key const& _sk, public_key& 
 	if (serializedPubkeySize == serializedPubkey.size() &&
 		serializedPubkey[0] == 0x04 &&
 		serializedPubkeySizeComp == serializedPubkeyComp.size() &&
-		(serializedPubkeyComp[0] == 0x02 || serializedPubkeyComp[1] == 0x03)
+		(serializedPubkeyComp[0] == 0x02 || serializedPubkeyComp[0] == 0x03)
 	) {
 		dev::bytesRef(&serializedPubkey[1], _pk.size).copyTo(_pk.ref());
 		dev::bytesRef(&serializedPubkeyComp[1], _pk_comp.size).copyTo(_pk_comp.ref());

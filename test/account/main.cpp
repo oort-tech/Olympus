@@ -99,15 +99,15 @@ int main(int argc, char * const * argv)
 	//}
 	//
 
-	test_argon2();
+	//test_argon2();
 	//test_blake2();
 	//test_sha512();
-	test_ed25519();
-	test_aes();
+	//test_ed25519();
+	//test_aes();
 
-	test_create_account();
-
+	// test_create_account();
 	test_account_encoding();
+	test_secp256k1();
 
 	//test_secure_string();
 
