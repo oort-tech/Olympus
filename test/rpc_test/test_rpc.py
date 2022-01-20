@@ -65,9 +65,9 @@ class Test_rpc(unittest.TestCase):
 	@classmethod
 	def setUpClass(cls):
 		Test_rpc.genesis_account = "0x8E384CDF5147B580B71C92B3D6AA670EA4A4B4C6"
-		Test_rpc.import_account = "0x8E384CDF5147B580B71C92B3D6AA670EA4A4B4C6"
+		Test_rpc.import_account = "0x41A358A4900A0A75BD50304A57E89D455966DC0F"
 		Test_rpc.import_password = "1234qwer"
-		Test_rpc.import_public_key = "0628F5A2755500000100000000000000D01F00CCD47F0000F0B07FFED47F000004000000000000006A736F6E007F0000080E00CCD47F000010B17FFED47F0000"
+		Test_rpc.import_public_key = "F16C3C1E3775B13C139038740F976E5E549A41D94E502E3DF4BE118CD81D5310459E5FA7F5A95B7DBC935E30BB55D624DF8F767280D1BAF329EC7E5EF96BF137"
 		Test_rpc.to_account = "0x2B16DD7314C46D0098282E00207A117E4877BAC9"
 	
 	'''
@@ -80,7 +80,7 @@ class Test_rpc(unittest.TestCase):
 	def test_account_import(self):
 		data = {
 			"action": "account_import",
-			"json": "{\"account\":\"0x2B16DD7314C46D0098282E00207A117E4877BAC9\",\"kdf_salt\":\"A6179BBAB3D7576BF679E90EB8AE773E\",\"iv\":\"926BD799E3D2D67CF37A78B9AB961DBE\",\"ciphertext\":\"3CDAEBE7D87DAF446A23D9E40FF93F9FCDBAFDADFC1C9AF1888ADDB804E11E30\"}"
+			"json": "{\"account\":\"0x41A358A4900A0A75BD50304A57E89D455966DC0F\",\"public_key\":\"F16C3C1E3775B13C139038740F976E5E549A41D94E502E3DF4BE118CD81D5310459E5FA7F5A95B7DBC935E30BB55D624DF8F767280D1BAF329EC7E5EF96BF137\",\"kdf_salt\":\"F36CA7C846C345960B055C6F10DFD7FD\",\"iv\":\"7B4F5CCB4A201302C1CE8CA7979EDA54\",\"ciphertext\":\"09FD6AEDF849A66AB58C15B12F5F9B901A482521AEB0BD160AF4181D9F14B004\"}"
 		}
 		response = requests.post(url=URL, data=json.dumps(data))
 		self.assertEqual(response.status_code, 200)
@@ -93,8 +93,8 @@ class Test_rpc(unittest.TestCase):
 		json_account = json_data['account']
 		self.assertTrue(is_account(json_account),json_account)
 
-		print(json_data);
-		print("\n");
+		print(json_data)
+		print("\n")
 	
 	'''
 	{
@@ -345,7 +345,7 @@ class Test_rpc(unittest.TestCase):
 		new_password = "qwer1234"
 		data = {
 			"action": "account_password_change",
-			"account": "0xAE8E22391452E460CC3ECE0DFBE1E0F9A504B250",
+			"account": Test_rpc.import_account,
 			"old_password": Test_rpc.import_password,
 			"new_password": new_password
 		}
@@ -430,10 +430,6 @@ class Test_rpc(unittest.TestCase):
 		response = requests.post(url=URL, data=json.dumps(data))
 		self.assertEqual(response.status_code, 200)
 		is_json,json_data = try_load_json(response.text)
-		
-		print(json_data)
-		print("\n")
-
 		self.assertTrue(is_json,response.text)
 		json_data = json.loads(response.text)
 		self.assertEqual(json_data['code'], 8, json_data['msg']) #code 8 means insufficient balance
@@ -690,7 +686,7 @@ class Test_rpc(unittest.TestCase):
 
 if __name__ == "__main__":
 	suite = unittest.TestSuite()
-	# suite.addTest(Test_rpc("test_account_import"))
+	suite.addTest(Test_rpc("test_account_import"))
 	# suite.addTest(Test_rpc("test_account_create"))
 	# suite.addTest(Test_rpc("test_send_block"))
 	# suite.addTest(Test_rpc("test_accounts_balances"))
