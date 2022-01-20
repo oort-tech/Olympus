@@ -238,7 +238,7 @@ struct signature_struct
 			s.decode_hex(text.substr(r.size * 2, s.size * 2));
 			
 			std::stringstream stream(text.substr((r.size + s.size) * 2, 2));
-			uint v_l;
+			uint8_t v_l;
 			stream << std::hex << std::noshowbase;
 			stream >> v_l;
 			v = static_cast<byte>(v_l);
@@ -248,7 +248,7 @@ struct signature_struct
 
 	std::string to_string() const {
 		std::stringstream stream;
-		stream << std::hex << std::uppercase << std::noshowbase << std::setw(2) << std::setfill('0') << (uint) v;
+		stream << std::hex << std::uppercase << std::noshowbase << std::setw(2) << std::setfill('0') << (uint8_t) v;
 		return r.to_string() + s.to_string() + stream.str();
 	}
 
