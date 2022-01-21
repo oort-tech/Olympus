@@ -2,34 +2,34 @@
 #include <mcp/common/log.hpp>
 
 std::string const mini_test_genesis_data = R"%%%({
-    "from":"mcp2xw7Js5yqHGLwbURWd25Ed6TXDtiftDd5qbBsuvq1rg9ZkpyC8",
-    "to":"mcp2xw7Js5yqHGLwbURWd25Ed6TXDtiftDd5qbBsuvq1rg9ZkpyC8",
+    "from":"0x38369682E93F5C20A4DA3E374805C9584EA3E2C8",
+    "to":"0x38369682E93F5C20A4DA3E374805C9584EA3E2C8",
     "amount":"1132623791600000000000000000",
     "data":"",
 	"exec_timestamp":"1514764800"
 })%%%";
 
 std::string const test_genesis_data = R"%%%({
-    "from":"mcp2xw7Js5yqHGLwbURWd25Ed6TXDtiftDd5qbBsuvq1rg9ZkpyC8",
-    "to":"mcp2xw7Js5yqHGLwbURWd25Ed6TXDtiftDd5qbBsuvq1rg9ZkpyC8",
+    "from":"0x38369682E93F5C20A4DA3E374805C9584EA3E2C8",
+    "to":"0x38369682E93F5C20A4DA3E374805C9584EA3E2C8",
     "amount":"1132623791600000000000000000",
     "data":"",
 	"exec_timestamp":"1514764800"
 })%%%";
 
 std::string const beta_genesis_data = R"%%%({
-    "from":"mcp3mo5jBbpPpQo1oBmtqNA3KwEqnFWaRWLaWbvjgi3cYGSkERoRJ",
-    "to":"mcp3mo5jBbpPpQo1oBmtqNA3KwEqnFWaRWLaWbvjgi3cYGSkERoRJ",
+    "from":"0x38369682E93F5C20A4DA3E374805C9584EA3E2C8",
+    "to":"0x38369682E93F5C20A4DA3E374805C9584EA3E2C8",
     "amount":"2000000000000000000000000000",
     "data":"",
 	"exec_timestamp":"1514764800"
 })%%%";
 
 std::string const live_genesis_data = R"%%%({
-    "from":"mcp_3BaFPbbHNF6K6MXBHqns44xPz6w9sNX2JbfGGiHUEQF3AjTgb8",
-    "to":"mcp_3BaFPbbHNF6K6MXBHqns44xPz6w9sNX2JbfGGiHUEQF3AjTgb8",
+    "from":"0x38369682E93F5C20A4DA3E374805C9584EA3E2C8",
+    "to":"0x38369682E93F5C20A4DA3E374805C9584EA3E2C8",
     "amount":"1132623791600000000000000000",
-    "data":"546f67657468657220776520676f206265796f6e6420736d6172746e657373202d204120626c6f636b636861696e20736f6c7574696f6e20746f20696e74656c6c6967656e7420496f54",
+    "data":"",
 	"exec_timestamp":"1562288400"
 })%%%";
 
@@ -61,6 +61,7 @@ bool mcp::genesis::try_initialize(mcp::db::db_transaction & transaction_a, mcp::
 	block_hash = block->hash();
 	mcp::block_hash genesis_hash;
 	bool exists(!store_a.genesis_hash_get(transaction_a, genesis_hash));
+
 	if (exists)
 	{
 		if(genesis_hash != block_hash)

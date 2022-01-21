@@ -105,15 +105,17 @@ int main(int argc, char * const * argv)
 	//test_ed25519();
 	//test_aes();
 
-	// test_create_account();
-	test_account_encoding();
-	test_secp256k1();
+	test_create_account();
+	// test_account_encoding();
+	// test_secp256k1();
 
 	//test_secure_string();
 
 	//test_number
 
 	//test_work();
+
+	test_account_decrypt();
 
 	std::cout << std::endl;
 	std::cout << "Press \"Enter\" to exit...";
