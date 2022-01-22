@@ -36,6 +36,11 @@ mcp::key_content::key_content(bool & error_a, std::string const & json_a)
 					{
 						std::string ciphertext_text = js["ciphertext"];
 						error_a = ciphertext.decode_hex(ciphertext_text);
+						// added by michael at 1/19
+						if (!error_a) {
+							std::string public_key_text = js["public_key"];
+							error_a = public_key.decode_hex(public_key_text);
+						}
 					}
 				}
 			}
@@ -67,6 +72,7 @@ std::string mcp::key_content::to_json() const
 {
 	mcp::json js;
 	js["account"] = account.to_account();
+	js["public_key"] = public_key.to_string();
 	js["kdf_salt"] = kdf_salt.to_string();
 	js["iv"] = iv.to_string();
 	js["ciphertext"] = ciphertext.to_string();

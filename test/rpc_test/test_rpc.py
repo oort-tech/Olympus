@@ -64,11 +64,11 @@ def try_load_json(jsonstr):
 class Test_rpc(unittest.TestCase):
 	@classmethod
 	def setUpClass(cls):
-		Test_rpc.genesis_account = "0x8E384CDF5147B580B71C92B3D6AA670EA4A4B4C6"
+		Test_rpc.genesis_account = "0x38369682E93F5C20A4DA3E374805C9584EA3E2C8"
 		Test_rpc.import_account = "0x41A358A4900A0A75BD50304A57E89D455966DC0F"
 		Test_rpc.import_password = "1234qwer"
 		Test_rpc.import_public_key = "F16C3C1E3775B13C139038740F976E5E549A41D94E502E3DF4BE118CD81D5310459E5FA7F5A95B7DBC935E30BB55D624DF8F767280D1BAF329EC7E5EF96BF137"
-		Test_rpc.to_account = "0x2B16DD7314C46D0098282E00207A117E4877BAC9"
+		Test_rpc.to_account = "0xEED0A750EFDCB1809CB10CDEE8F3A803A384F600"
 	
 	'''
 	{
@@ -82,6 +82,10 @@ class Test_rpc(unittest.TestCase):
 			"action": "account_import",
 			"json": "{\"account\":\"0x41A358A4900A0A75BD50304A57E89D455966DC0F\",\"public_key\":\"F16C3C1E3775B13C139038740F976E5E549A41D94E502E3DF4BE118CD81D5310459E5FA7F5A95B7DBC935E30BB55D624DF8F767280D1BAF329EC7E5EF96BF137\",\"kdf_salt\":\"F36CA7C846C345960B055C6F10DFD7FD\",\"iv\":\"7B4F5CCB4A201302C1CE8CA7979EDA54\",\"ciphertext\":\"09FD6AEDF849A66AB58C15B12F5F9B901A482521AEB0BD160AF4181D9F14B004\"}"
 		}
+		# data = {
+		# 	"action": "account_import",
+		# 	"json": "{\"account\":\"0x38369682E93F5C20A4DA3E374805C9584EA3E2C8\",\"public_key\":\"DEC7B77140D9B2AF105D574A18EDB502F938E385371D93176E90D83E570A7A4C66953B05E61330E617E18675CA060E6E81617488876731DFEB472F52703A4DC0\",\"kdf_salt\":\"AC8D68CF817842F70AF83881CCA1FFD6\",\"iv\":\"D32D6D53C5480C1ED6C032439BFBFDCC\",\"ciphertext\":\"8F9C4680CD6818E201455E2EF21C3AC23A6CB2158F21688218723700476CD038\"}"
+		# }
 		response = requests.post(url=URL, data=json.dumps(data))
 		self.assertEqual(response.status_code, 200)
 		
@@ -158,6 +162,7 @@ class Test_rpc(unittest.TestCase):
 		data = {
 			"action": "accounts_balances",
 			"accounts": [
+				Test_rpc.genesis_account,
 				Test_rpc.import_account,
 				Test_rpc.to_account
 			]
@@ -172,6 +177,9 @@ class Test_rpc(unittest.TestCase):
 		self.assertTrue(len(json_balances)>0,json_balances)
 		for i in json_balances:
 			self.assertTrue(is_balance(i),json_balances)
+
+		print(json_data)
+		print("\n")
 	
 	'''
 	{
@@ -183,7 +191,7 @@ class Test_rpc(unittest.TestCase):
 	def test_account_balance(self):
 		data = {
 			"action": "account_balance",
-			"account": "0x8E384CDF5147B580B71C92B3D6AA670EA4A4B4C6"
+			"account": "0x38369682E93F5C20A4DA3E374805C9584EA3E2C8"
 		}
 		response = requests.post(url=URL, data=json.dumps(data))
 		self.assertEqual(response.status_code, 200)
@@ -420,8 +428,8 @@ class Test_rpc(unittest.TestCase):
 	def test_generate_offline_block(self):
 		data = {
 			"action": "generate_offline_block",
-			"from": Test_rpc.import_account,
-			"to": Test_rpc.to_account,
+			"from": Test_rpc.genesis_account,
+			"to": Test_rpc.import_account,
 			"amount": "1000000000000000000",
 			"gas": "21000",
 			"gas_price": "1000000000",
@@ -667,7 +675,7 @@ class Test_rpc(unittest.TestCase):
 		data = {
 			"action": "send_block",
 			"from": Test_rpc.genesis_account,
-    		"to": Test_rpc.to_account,
+    		"to": Test_rpc.import_account,
 			"amount": "1000000000000000000",
 			"password": Test_rpc.import_password,
 			"gas": "21000",
@@ -686,10 +694,10 @@ class Test_rpc(unittest.TestCase):
 
 if __name__ == "__main__":
 	suite = unittest.TestSuite()
-	suite.addTest(Test_rpc("test_account_import"))
+	# suite.addTest(Test_rpc("test_account_import"))
 	# suite.addTest(Test_rpc("test_account_create"))
 	# suite.addTest(Test_rpc("test_send_block"))
-	# suite.addTest(Test_rpc("test_accounts_balances"))
+	suite.addTest(Test_rpc("test_accounts_balances"))
 	# suite.addTest(Test_rpc("test_account_balance"))
 	# suite.addTest(Test_rpc("test_call"))
 	# suite.addTest(Test_rpc("test_account_code"))
@@ -697,11 +705,11 @@ if __name__ == "__main__":
 	# suite.addTest(Test_rpc("test_account_unlock"))
 	# suite.addTest(Test_rpc("test_account_export"))
 	# suite.addTest(Test_rpc("test_account_validate"))
-	suite.addTest(Test_rpc("test_account_password_change"))
+	# suite.addTest(Test_rpc("test_account_password_change"))
 	# suite.addTest(Test_rpc("test_account_list"))
 	# suite.addTest(Test_rpc("test_account_block_list"))
 	# suite.addTest(Test_rpc("test_estimate_gas"))
-	# suite.addTest(Test_rpc("test_generate_offline_block"))
+	suite.addTest(Test_rpc("test_generate_offline_block"))
 	# suite.addTest(Test_rpc("test_send_offline_block"))
 	# suite.addTest(Test_rpc("test_sign_msg"))
 	# suite.addTest(Test_rpc("test_block"))

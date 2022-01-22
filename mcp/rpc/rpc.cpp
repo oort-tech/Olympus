@@ -489,9 +489,13 @@ void mcp::rpc_handler::account_create()
 								return;
 							}
 						}
-                        mcp::account new_account(m_key_manager->create(password, gen_next_work_l, backup_l));
+						mcp::public_key public_key = m_key_manager->create(password, gen_next_work_l, backup_l);
+                        mcp::account new_account(public_key);
                         mcp::json j_response;
                         j_response["account"] = new_account.to_account();
+						// added by michael at 1/18
+						j_response["public_key"] = public_key.to_string();
+						//
                         error_code_l = mcp::rpc_account_create_error_code::ok;
                         error_response(response, int(error_code_l), err.msg(error_code_l), j_response); 
                     }
@@ -828,6 +832,9 @@ void mcp::rpc_handler::account_import()
             {
                 mcp::json j_response;
                 j_response["account"] = kc.account.to_account();
+				// added by michael at 1/18
+				j_response["public_key"] = kc.public_key.to_string();
+				//
                 error_code_l = mcp::rpc_account_import_error_code::ok;
                 error_response(response, (int)error_code_l, err.msg(error_code_l), j_response);
             }

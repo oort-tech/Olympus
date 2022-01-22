@@ -303,8 +303,10 @@ void mcp::block_hashables::hash(blake2b_state & hash_a) const
 
 		mcp::witness_param w_param(mcp::param::witness_param(0));
 		assert_x(w_param.witness_list.size() > 0);
-		for (mcp::account witness : w_param.witness_list)
-			blake2b_update(&hash_a, witness.bytes.data(), sizeof(witness.bytes));
+
+		// commented by michael at 1/19
+		// for (mcp::account witness : w_param.witness_list)
+		// 	blake2b_update(&hash_a, witness.bytes.data(), sizeof(witness.bytes));
 
 		auto big_exec_timestamp = boost::endian::native_to_big(exec_timestamp);
 		blake2b_update(&hash_a, &big_exec_timestamp, sizeof(big_exec_timestamp));

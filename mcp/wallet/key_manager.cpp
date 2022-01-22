@@ -343,5 +343,5 @@ void mcp::key_manager::add_or_update_key(mcp::key_content const & kc, bool const
 	m_store.keys_put(transaction, kc.public_key, kc);
 
 	if(is_backup_a)
-		write_backup(kc.public_key, kc.to_json());
+		write_backup(kc.account, kc.to_json());
 }
