@@ -210,55 +210,22 @@ union uint512_union
 struct signature_struct
 {
     signature_struct() = default;
-    signature_struct(uint256_union const& _r, uint256_union const& _s, byte _v): r(_r), s(_s), v(_v) {}
-    signature_struct(uint64_t value0) {
-		if (value0 == 0) {
-			r.clear();
-			s.clear();
-			v = 0;
-		}
-	}
-    bool is_valid() const noexcept {
-		static const uint256_union s_max("0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141");
-    	static const uint256_union s_zero(0);
-		return (v <= 1 && r > s_zero && s > s_zero && r < s_max && s < s_max);
-	}
+    signature_struct(uint256_union const& _r, uint256_union const& _s, byte _v);
+    signature_struct(uint64_t value0); 
+    bool is_valid() const noexcept;
+	bool operator== (signature_struct const& other_a) const;
+	bool operator!= (signature_struct const & other_a) const;
+	bool decode_hex(std::string const & text);
 
-	bool operator== (signature_struct const& other_a) const {
-		return r == other_a.r && s == other_a.s && v == other_a.v;
-	}
-	bool operator!= (signature_struct const & other_a) const {
-		return !(*this == other_a);
-	}
-
-	bool decode_hex(std::string const & text) {
-		bool error(text.size() != 130 || text.empty());
-		if (!error) {
-			r.decode_hex(text.substr(0, r.size * 2));
-			s.decode_hex(text.substr(r.size * 2, s.size * 2));
-			
-			std::stringstream stream(text.substr((r.size + s.size) * 2, 2));
-			uint8_t v_l;
-			stream << std::hex << std::noshowbase;
-			stream >> v_l;
-			v = static_cast<byte>(v_l);
-		}
-		return error;
-	}
-
-	std::string to_string() const {
-		std::stringstream stream;
-		stream << std::hex << std::uppercase << std::noshowbase << std::setw(2) << std::setfill('0') << (uint8_t) v;
-		return r.to_string() + s.to_string() + stream.str();
-	}
+	std::string to_string() const;
 
     uint256_union r;
     uint256_union s;
     byte v = 0;
 
 	enum { size = 65 };
-	dev::bytesRef ref() { return dev::bytesRef(r.data(), size); }
-	dev::bytesConstRef ref() const { return dev::bytesConstRef(r.data(), size); }
+	dev::bytesRef ref();
+	dev::bytesConstRef ref() const;
 };
 
 // added by michael at 1/8
@@ -273,147 +240,30 @@ using public_key_comp = uint256_union;
 
 struct account20_struct {
 	account20_struct()  = default;
-	account20_struct(mcp::public_key const& pubkey) {
-		dev::bytesConstRef bRef = sha3(pubkey.ref()).ref();
-		dev::bytesConstRef(bRef.data() + 12, size).copyTo(ref());
-	}
-	account20_struct(uint64_t value0) {
-		*this = mcp::uint256_t(value0);
-	}
-	account20_struct (mcp::uint256_t const & number_a) {
-		if(number_a == 0) {
-			memset(bytes.data(), 0, bytes.size());
-		} else {
-			mcp::uint256_t number_l(number_a);
-			for (auto i(bytes.rbegin()), n(bytes.rend()); i != n; ++i) {
-				*i = ((number_l) & 0xff).convert_to<uint8_t>();
-				number_l >>= 8;
-			}
-		}
-	}
-	account20_struct (mcp::uint256_union const & uint256_a) {
-		*this = uint256_a.number();
-	}
-	
-	bool operator== (account20_struct const& other_a) const {
-		return bytes == other_a.bytes;
-	}
-	bool operator!= (account20_struct const & other_a) const {
-		return !(*this == other_a);
-	}
-	bool operator< (account20_struct const & other_a) const
-	{
-		for (int i = 0; i < size; i++)
-		{
-			if (bytes[i] < other_a.bytes[i])
-				return true;
-			else if (bytes[i] > other_a.bytes[i])
-				return false;
-		}
-		return false;
-	}
-	bool operator> (account20_struct const & other_a) const
-	{
-		for (int i = 0; i < size; i++)
-		{
-			if (bytes[i] > other_a.bytes[i])
-				return true;
-			else if (bytes[i] < other_a.bytes[i])
-				return false;
-		}
-		return false;
-	}
+	account20_struct(mcp::public_key const& pubkey);
+	account20_struct(uint64_t value0);
+	account20_struct (mcp::uint256_t const & number_a);
+	account20_struct (mcp::uint256_union const & uint256_a);
+	bool operator== (account20_struct const& other_a) const;
+	bool operator!= (account20_struct const & other_a) const;
+	bool operator< (account20_struct const & other_a) const;
+	bool operator> (account20_struct const & other_a) const;
+	bool operator<= (account20_struct const & other_a) const;
+	bool operator>= (account20_struct const & other_a) const;
 
-	bool operator<= (account20_struct const & other_a) const
-	{
-		for (int i = 0; i < size; i++)
-		{
-			if (bytes[i] < other_a.bytes[i])
-				return true;
-			else if (bytes[i] > other_a.bytes[i])
-				return false;
-		}
-		return true;
-	}
-	bool operator>= (account20_struct const & other_a) const
-	{
-		for (int i = 0; i < size; i++)
-		{
-			if (bytes[i] > other_a.bytes[i])
-				return true;
-			else if (bytes[i] < other_a.bytes[i])
-				return false;
-		}
-		return true;
-	}
-	/*std::string to_account() const {
-		std::stringstream stream;
-		stream << "0x" << std::noshowbase << std::setw(20)  << number();
-		return stream.str();
-	}*/
-
-	bool is_zero() const {
-		bool is_zero(true);
-		for (auto i(bytes.begin()), n(bytes.end()); i != n; ++i) {
-			if (*i != 0) {
-				is_zero = false;
-				break;
-			}
-		}
-		return is_zero;
-	}
-
-	bool decode_account(std::string const & text) {
-		bool error(false);
-		if (text.empty())
-		{
-			bytes.fill(0);
-		}
-		else if (text.size() == 42) {
-			std::stringstream stream(text);
-			stream << std::hex << std::showbase;
-			mcp::uint256_t number_l;
-			try
-			{
-				stream >> number_l;
-				*this = number_l;
-				if (!stream.eof())
-				{
-					error = true;
-				}
-			}
-			catch (std::runtime_error &)
-			{
-				error = true;
-			}
-		}
-		else {
-			error = true;
-		}
-		return error;
-	}
-
-	mcp::uint256_t number() const {
-		mcp::uint256_t result;
-		auto shift(0);
-		for (auto i(bytes.begin()), n(bytes.end()); i != n; ++i) {
-			result <<= shift;
-			result |= *i;
-			shift = 8;
-		}
-		return result;
-	}
-
-	byte* data() { return bytes.data(); }
-	byte const* data() const { return bytes.data(); }
+	std::string to_account() const;
+	bool is_zero() const;
+	bool decode_account(std::string const & text);
+	mcp::uint256_t number() const;
+	byte* data();
+	byte const* data() const;
 	
 	std::array<uint8_t, 20> bytes;
-	void clear () { bytes.fill(0); }
+	void clear();
 	
 	enum { size = 20 };
-	dev::bytesRef ref() { return dev::bytesRef(bytes.data(), size); }
-	dev::bytesConstRef ref() const { return dev::bytesConstRef(bytes.data(), size); }
-	std::string to_account() const;
+	dev::bytesRef ref();
+	dev::bytesConstRef ref() const;
 };
 
 using account = account20_struct;

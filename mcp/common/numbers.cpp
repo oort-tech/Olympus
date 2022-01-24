@@ -8,6 +8,9 @@
 #include <mcp/common/base58.h>
 #include <mcp/common/common.hpp>
 
+// added by michael at 1/24
+#include <libdevcore/CommonData.h>
+
 thread_local CryptoPP::AutoSeededRandomPool mcp::random_pool;
 
 // void mcp::uint256_union::encode_account(std::string & destination_a) const
@@ -904,8 +907,204 @@ std::string mcp::uint64_union::to_string() const
 	return result;
 }
 
+mcp::signature_struct::signature_struct(uint256_union const& _r, uint256_union const& _s, byte _v): r(_r), s(_s), v(_v) {
+
+}
+
+mcp::signature_struct::signature_struct(uint64_t value0) {
+	if (value0 == 0) {
+		r.clear();
+		s.clear();
+		v = 0;
+	}
+}
+
+bool mcp::signature_struct::is_valid() const noexcept {
+	static const uint256_union s_max("0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141");
+	static const uint256_union s_zero(0);
+	return (v <= 1 && r > s_zero && s > s_zero && r < s_max && s < s_max);
+}
+
+bool mcp::signature_struct::operator== (signature_struct const& other_a) const {
+	return r == other_a.r && s == other_a.s && v == other_a.v;
+}
+bool mcp::signature_struct::operator!= (signature_struct const & other_a) const {
+	return !(*this == other_a);
+}
+
+bool mcp::signature_struct::decode_hex(std::string const & text) {
+	bool error(text.size() != 130 || text.empty());
+	if (!error) {
+		r.decode_hex(text.substr(0, r.size * 2));
+		s.decode_hex(text.substr(r.size * 2, s.size * 2));
+		
+		std::stringstream stream(text.substr((r.size + s.size) * 2, 2));
+		uint v_l;
+		stream << std::hex << std::noshowbase;
+		stream >> v_l;
+		v = static_cast<byte>(v_l);
+	}
+	return error;
+}
+
+std::string mcp::signature_struct::to_string() const {
+	std::stringstream stream;
+	stream << std::hex << std::uppercase << std::noshowbase << std::setw(2) << std::setfill('0') << (uint) v;
+	return r.to_string() + s.to_string() + stream.str();
+}
+
+dev::bytesRef mcp::signature_struct::ref() {
+	return dev::bytesRef(r.data(), size);
+}
+
+dev::bytesConstRef mcp::signature_struct::ref() const {
+	return dev::bytesConstRef(r.data(), size);
+}
+
+mcp::account20_struct::account20_struct(mcp::public_key const& pubkey) {
+	dev::bytesConstRef bRef = sha3(pubkey.ref()).ref();
+	dev::bytesConstRef(bRef.data() + 12, size).copyTo(ref());
+}
+
+mcp::account20_struct::account20_struct(uint64_t value0) {
+	*this = mcp::uint256_t(value0);
+}
+
+mcp::account20_struct::account20_struct (mcp::uint256_t const & number_a) {
+	if(number_a == 0) {
+		memset(bytes.data(), 0, bytes.size());
+	} else {
+		mcp::uint256_t number_l(number_a);
+		for (auto i(bytes.rbegin()), n(bytes.rend()); i != n; ++i) {
+			*i = ((number_l) & 0xff).convert_to<uint8_t>();
+			number_l >>= 8;
+		}
+	}
+}
+
+mcp::account20_struct::account20_struct (mcp::uint256_union const & uint256_a) {
+	*this = uint256_a.number();
+}
+
+bool mcp::account20_struct::operator== (account20_struct const& other_a) const {
+	return bytes == other_a.bytes;
+}
+bool mcp::account20_struct::operator!= (account20_struct const & other_a) const {
+	return !(*this == other_a);
+}
+bool mcp::account20_struct::operator< (account20_struct const & other_a) const
+{
+	for (int i = 0; i < size; i++)
+	{
+		if (bytes[i] < other_a.bytes[i])
+			return true;
+		else if (bytes[i] > other_a.bytes[i])
+			return false;
+	}
+	return false;
+}
+bool mcp::account20_struct::operator> (account20_struct const & other_a) const
+{
+	for (int i = 0; i < size; i++)
+	{
+		if (bytes[i] > other_a.bytes[i])
+			return true;
+		else if (bytes[i] < other_a.bytes[i])
+			return false;
+	}
+	return false;
+}
+
+bool mcp::account20_struct::operator<= (account20_struct const & other_a) const
+{
+	for (int i = 0; i < size; i++)
+	{
+		if (bytes[i] < other_a.bytes[i])
+			return true;
+		else if (bytes[i] > other_a.bytes[i])
+			return false;
+	}
+	return true;
+}
+bool mcp::account20_struct::operator>= (account20_struct const & other_a) const
+{
+	for (int i = 0; i < size; i++)
+	{
+		if (bytes[i] > other_a.bytes[i])
+			return true;
+		else if (bytes[i] < other_a.bytes[i])
+			return false;
+	}
+	return true;
+}
+
 std::string mcp::account20_struct::to_account() const {
 	std::stringstream stream;
-	stream << "0x" << std::uppercase << std::setfill('0') << std::setw(40) << std::hex << number();
-	return stream.str();
+	stream << "0x" << std::setw(40) << std::setfill('0') << std::uppercase << std::hex << number();
+	return "0x" + stream.str();
+}
+
+bool mcp::account20_struct::is_zero() const {
+	bool is_zero(true);
+	for (auto i(bytes.begin()), n(bytes.end()); i != n; ++i) {
+		if (*i != 0) {
+			is_zero = false;
+			break;
+		}
+	}
+	return is_zero;
+}
+
+bool mcp::account20_struct::decode_account(std::string const & text) {
+	auto error(text.size() != 42 || text.empty());
+	if (!error) {
+		std::stringstream stream(text);
+		stream << std::hex << std::showbase;
+		mcp::uint256_t number_l;
+		try
+		{
+			stream >> number_l;
+			*this = number_l;
+			if (!stream.eof())
+			{
+				error = true;
+			}
+		}
+		catch (std::runtime_error &)
+		{
+			error = true;
+		}
+	}
+	return error;
+}
+
+mcp::uint256_t mcp::account20_struct::number() const {
+	mcp::uint256_t result;
+	auto shift(0);
+	for (auto i(bytes.begin()), n(bytes.end()); i != n; ++i) {
+		result <<= shift;
+		result |= *i;
+		shift = 8;
+	}
+	return result;
+}
+
+byte* mcp::account20_struct::data() {
+	return bytes.data();
+}
+
+byte const* mcp::account20_struct::data() const {
+	return bytes.data();
+}
+
+void mcp::account20_struct::clear() {
+	bytes.fill(0);
+}
+
+dev::bytesRef mcp::account20_struct::ref() {
+	return dev::bytesRef(bytes.data(), size);
+}
+
+dev::bytesConstRef mcp::account20_struct::ref() const {
+	return dev::bytesConstRef(bytes.data(), size);
 }
