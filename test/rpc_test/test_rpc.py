@@ -7,7 +7,7 @@ URL = "http://127.0.0.1:8765"
 #0xC98A676DE3E0C539742E3023F7755C57E331E42F
 #Judge account number, mcp_start, remove I, O, l, 0, length equal to 42	
 def is_account(str):
-	if re.findall(r'0x[0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ]{40,}',str):
+	if re.findall(r'0x[0123456789ABCDEFabcdef]{40,}',str):
 		return True
 	else:
 		return False
@@ -691,13 +691,13 @@ class Test_rpc(unittest.TestCase):
 		
 		print(json_data)
 		print("\n")
-
+# 0x7C2F3346D0E4D5559B1741DD0107A3C18643B06
 if __name__ == "__main__":
 	suite = unittest.TestSuite()
 	# suite.addTest(Test_rpc("test_account_import"))
-	# suite.addTest(Test_rpc("test_account_create"))
+	suite.addTest(Test_rpc("test_account_create"))
 	# suite.addTest(Test_rpc("test_send_block"))
-	suite.addTest(Test_rpc("test_accounts_balances"))
+	# suite.addTest(Test_rpc("test_accounts_balances"))
 	# suite.addTest(Test_rpc("test_account_balance"))
 	# suite.addTest(Test_rpc("test_call"))
 	# suite.addTest(Test_rpc("test_account_code"))
@@ -709,7 +709,7 @@ if __name__ == "__main__":
 	# suite.addTest(Test_rpc("test_account_list"))
 	# suite.addTest(Test_rpc("test_account_block_list"))
 	# suite.addTest(Test_rpc("test_estimate_gas"))
-	suite.addTest(Test_rpc("test_generate_offline_block"))
+	# suite.addTest(Test_rpc("test_generate_offline_block"))
 	# suite.addTest(Test_rpc("test_send_offline_block"))
 	# suite.addTest(Test_rpc("test_sign_msg"))
 	# suite.addTest(Test_rpc("test_block"))
