@@ -1037,7 +1037,7 @@ dev::Slice mcp::uint256_to_slice(mcp::uint256_union const & value)
 mcp::uint256_union mcp::slice_to_uint256(dev::Slice const & slice)
 {
 	mcp::uint256_union result;
-	assert_x(slice.size() == sizeof(result));
+	// assert_x(slice.size() == sizeof(result));
 	std::copy((byte *)slice.data(), (byte *)slice.data() + sizeof(result), result.bytes.data());
 	return result;
 };

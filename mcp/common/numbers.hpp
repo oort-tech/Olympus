@@ -346,12 +346,11 @@ struct account20_struct {
 		}
 		return true;
 	}
-
-	std::string to_account() const {
+	/*std::string to_account() const {
 		std::stringstream stream;
-		stream << std::hex << std::showbase << number();
+		stream << "0x" << std::noshowbase << std::setw(20)  << number();
 		return stream.str();
-	}
+	}*/
 
 	bool is_zero() const {
 		bool is_zero(true);
@@ -365,8 +364,12 @@ struct account20_struct {
 	}
 
 	bool decode_account(std::string const & text) {
-		auto error(text.size() != 42 || text.empty());
-		if (!error) {
+		bool error(false);
+		if (text.empty())
+		{
+			bytes.fill(0);
+		}
+		else if (text.size() == 42) {
 			std::stringstream stream(text);
 			stream << std::hex << std::showbase;
 			mcp::uint256_t number_l;
@@ -383,6 +386,9 @@ struct account20_struct {
 			{
 				error = true;
 			}
+		}
+		else {
+			error = true;
 		}
 		return error;
 	}
@@ -407,6 +413,7 @@ struct account20_struct {
 	enum { size = 20 };
 	dev::bytesRef ref() { return dev::bytesRef(bytes.data(), size); }
 	dev::bytesConstRef ref() const { return dev::bytesConstRef(bytes.data(), size); }
+	std::string to_account() const;
 };
 
 using account = account20_struct;

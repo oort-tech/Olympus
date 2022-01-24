@@ -120,7 +120,7 @@ private:
 		case mcp::mcp_networks::mcp_mini_test_network:
 		{
 			std::vector<std::string> mini_test_witness_str_list_v0 = {
-				"mcp3cMjWUPrcputvcyqD6XiMz5oSfAwBJF8g8wU65cquAfDAxzci3"
+				"0x5D6DDC1717A32A49CAB87A6BCC3ECFE42675F9AD"
 			};
 			mcp::witness_param w_param_v0;
 			w_param_v0.witness_count = 1;
@@ -134,7 +134,7 @@ private:
 		case mcp::mcp_networks::mcp_test_network:
 		{
 			std::vector<std::string> test_witness_str_list_v0 = {
-				"mcp3cMjWUPrcputvcyqD6XiMz5oSfAwBJF8g8wU65cquAfDAxzci3",
+				"0x5D6DDC1717A32A49CAB87A6BCC3ECFE42675F9AD",
 				"mcp3NKc8iLShwqPHf6teuZGAQacs2JWSKETGrKw7G9paK8HjsaLgw",
 				"mcp3PnmJLSmUAdLLPS1CvvUy4Tu8AHNMxPWbgdpbmGWiWVkRcwGjG",
 				"mcp3Q6B6sv5uFF4cJy5VCh8SFSqo9nKVha9gqeCFKrMCHRRWzRzNc",

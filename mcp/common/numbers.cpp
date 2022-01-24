@@ -903,3 +903,9 @@ std::string mcp::uint64_union::to_string() const
 	encode_hex(result);
 	return result;
 }
+
+std::string mcp::account20_struct::to_account() const {
+	std::stringstream stream;
+	stream << "0x" << std::uppercase << std::setfill('0') << std::setw(40) << std::hex << number();
+	return stream.str();
+}
