@@ -490,25 +490,6 @@ void mcp::rpc_handler::account_create()
 							}
 						}
 						mcp::public_key public_key = m_key_manager->create(password, gen_next_work_l, backup_l);
-						/*mcp::uint512_t a = 0xF85A65FAC842E96C;
-						a *= 0x1000000000000000;
-						a += 0x69B03A15A33C192;
-						a *= 0x1000000000000000;
-						a += 0x897D8C7DF57145C;
-						a *= 0x1000000000000000;
-						a += 0x35C174DE405AB55;
-						a *= 0x1000000000000000;
-						a += 0xAA3D4C8A0A3FFB9;
-						a *= 0x1000000000000000;
-						a += 0x948AEECB6786776;
-						a *= 0x1000000000000000;
-						a += 0x348B87B0ECFC7EF;
-						a *= 0x1000000000000000;
-						a += 0xE2A0684181AAE7F;
-						a *= 0x10000000;
-						a += 0x1EE1FBA;
-						mcp::public_key pk = mcp::public_key(a);
-						mcp::account test_account(pk);*/
                         mcp::account new_account(public_key);
                         mcp::json j_response;
                         j_response["account"] = new_account.to_account();
