@@ -68,3 +68,5 @@ Testing
 # VIM temp files
 *.swp
 /build
+/build_realease
+/build_debug
