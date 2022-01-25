@@ -939,7 +939,7 @@ bool mcp::signature_struct::decode_hex(std::string const & text) {
 		s.decode_hex(text.substr(r.size * 2, s.size * 2));
 		
 		std::stringstream stream(text.substr((r.size + s.size) * 2, 2));
-		uint v_l;
+		uint8_t v_l;
 		stream << std::hex << std::noshowbase;
 		stream >> v_l;
 		v = static_cast<byte>(v_l);
@@ -949,7 +949,7 @@ bool mcp::signature_struct::decode_hex(std::string const & text) {
 
 std::string mcp::signature_struct::to_string() const {
 	std::stringstream stream;
-	stream << std::hex << std::uppercase << std::noshowbase << std::setw(2) << std::setfill('0') << (uint) v;
+	stream << std::hex << std::uppercase << std::noshowbase << std::setw(2) << std::setfill('0') << (uint8_t) v;
 	return r.to_string() + s.to_string() + stream.str();
 }
 
@@ -1040,9 +1040,8 @@ bool mcp::account20_struct::operator>= (account20_struct const & other_a) const
 
 std::string mcp::account20_struct::to_account() const {
 	std::stringstream stream;
-	stream << std::hex << std::setw(40) << std::setfill('0') << std::uppercase;
-	stream << number();
-	return "0x" + stream.str();
+	stream << "0x" << std::setw(40) << std::setfill('0') << std::uppercase << std::hex << number();
+	return stream.str();
 }
 
 bool mcp::account20_struct::is_zero() const {
@@ -1057,8 +1056,11 @@ bool mcp::account20_struct::is_zero() const {
 }
 
 bool mcp::account20_struct::decode_account(std::string const & text) {
-	auto error(text.size() != 42 || text.empty());
-	if (!error) {
+	bool error(false);
+	if (text.empty()) {
+		bytes.fill(0);
+	}
+	else if (text.size() == 42) {
 		std::stringstream stream(text);
 		stream << std::hex << std::showbase;
 		mcp::uint256_t number_l;
@@ -1075,6 +1077,9 @@ bool mcp::account20_struct::decode_account(std::string const & text) {
 		{
 			error = true;
 		}
+	}
+	else {
+		error = true;
 	}
 	return error;
 }
