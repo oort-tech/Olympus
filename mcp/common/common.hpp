@@ -31,6 +31,7 @@ namespace mcp
 {
 	// some utility functions
 	std::string uint64_to_hex(uint64_t);
+	std::string uint64_to_hex_nofill(uint64_t);
 	bool hex_to_uint64(std::string const &, uint64_t &);
 	std::string bytes_to_hex(dev::bytes const & b);
 	int from_hex_char(char c) noexcept;

@@ -3009,6 +3009,401 @@ void mcp::rpc_handler::debug_storage_range_at()
 	}
 }
 
+void mcp::rpc_handler::web3_clientVersion() {
+	mcp::rpc_version_error_code error_code_l = mcp::rpc_version_error_code::ok;
+	mcp::json response_l;
+	response_l["version"] = STR(MCP_VERSION);
+	response_l["rpc_version"] = "1";
+	response_l["store_version"] = std::to_string(m_store.version_get());
+
+	error_response(response, (int)error_code_l, err.msg(error_code_l), response_l);
+}
+
+void mcp::rpc_handler::web3_sha3() {
+	mcp::rpc_web3_sha3_error_code error_code_l = mcp::rpc_web3_sha3_error_code::ok;
+	mcp::json response_l;
+	
+	if (!request.count("params") || (!request["params"].is_array()))
+    {
+        error_code_l = mcp::rpc_web3_sha3_error_code::invalid_params;
+        error_response(response, (int)error_code_l, err.msg(error_code_l));
+        return;
+    }
+    std::string s = request["params"][0].get<std::string>();
+    std::string mHashKey;
+    if (dev::isHex(s) && s.compare(0, 2, "0x") == 0) {
+    	mHashKey = toJS(sha3(jsToBytes(s)));
+    } else {
+    	mHashKey = toJS(dev::sha3(s));
+    }
+    std::uint64_t a;
+    hex_to_uint64(s, a);
+    response_l["a"] = a;
+	response_l["id"] = request["id"];
+    response_l["jsonrpc"] = request["jsonrpc"];
+	response_l["result"] = mHashKey;
+
+	error_response(response, (int)error_code_l, err.msg(error_code_l), response_l);
+}
+
+/**
+ * 
+ * 
+ * 
+ * */
+void mcp::rpc_handler::eth_accounts(){
+	mcp::rpc_account_list_error_code error_code_l;
+
+	mcp::json j_response;
+    mcp::json j_accounts = mcp::json::array();
+	std::list<mcp::public_key> pubkey_list(m_key_manager->list());
+
+	//std::list<mcp::account> account_list(m_key_manager->list());
+    for (auto public_key : pubkey_list)
+    {
+		mcp::account account(public_key);
+        j_accounts.push_back(account.to_account());
+    }
+    j_response["result"] = j_accounts;
+    j_response["id"] = request["id"];
+    j_response["jsonrpc"] = request["jsonrpc"];
+    error_code_l = mcp::rpc_account_list_error_code::ok;
+    error_response(response, (int)error_code_l, err.msg(error_code_l), j_response);
+}
+
+/**
+ *  //Result 
+  	{
+	  	"id":83,
+	  	"jsonrpc": "2.0",
+	  	"result": "0x4b7" // 1207
+	}
+ * 
+ * */
+void mcp::rpc_handler::eth_blockNumber() {
+	//stable_mci
+    mcp::rpc_status_error_code error_code_l;
+    uint64_t last_stable_mci(m_chain->last_stable_mci());
+    uint64_t last_mci(m_chain->last_mci());
+	uint64_t last_stable_index(m_chain->last_stable_index());
+    mcp::json js;
+    js["id"] = request["id"];
+    js["jsonrpc"] = request["jsonrpc"];
+    js["result"] = uint64_to_hex_nofill(last_mci);
+	js["syncing"] = mcp::node_sync::is_syncing() ? 1 : 0;
+    js["last_stable_mci"] = last_stable_mci;
+    js["last_mci"] = last_mci;
+	js["last_stable_block_index"] = last_stable_index;
+    error_code_l = mcp::rpc_status_error_code::ok;
+    error_response(response, (int)error_code_l, err.msg(error_code_l), js);
+}
+
+void mcp::rpc_handler::eth_estimateGas() {
+	mcp::rpc_estimate_gas_error_code error_code_l;
+    if (!rpc.config.enable_control)
+    {
+        error_response(response, "RPC control is disabled");
+        return;
+    }
+
+	if (!request.count("params") || (!request["params"].is_array()))
+    {
+        error_code_l = mcp::rpc_estimate_gas_error_code::invalid_account_from;
+        error_response(response, (int)error_code_l, err.msg(error_code_l) );
+        return;
+    }
+
+	mcp::account from(0);
+	if (!request["params"][0]["from"].is_null() && false)
+	{
+		if (!request["params"][0]["from"].is_string())
+		{
+			error_code_l = mcp::rpc_estimate_gas_error_code::invalid_account_from;
+			error_response(response, (int)error_code_l, err.msg(error_code_l));
+			return;
+		}
+
+		std::string from_text = request["params"][0]["from"];
+		bool error(from.decode_account(from_text));
+		if (error)
+		{
+			error_code_l = mcp::rpc_estimate_gas_error_code::invalid_account_from;
+			error_response(response, (int)error_code_l, err.msg(error_code_l));
+			return;
+		}
+	}
+	
+	mcp::account to(0);
+	if (!request["params"][0]["to"].is_null())
+	{
+		if (!request["params"][0]["to"].is_string())
+		{
+			error_code_l = mcp::rpc_estimate_gas_error_code::invalid_account_to;
+			error_response(response, (int)error_code_l, err.msg(error_code_l));
+			return;
+		}
+
+		std::string to_text = request["params"][0]["to"];
+		bool error = to.decode_account(to_text);
+		if (error)
+		{
+			error_code_l = mcp::rpc_estimate_gas_error_code::invalid_account_to;
+			error_response(response, (int)error_code_l, err.msg(error_code_l));
+			return;
+		}
+	}
+
+	mcp::amount amount(0);
+    if (!request["params"][0]["value"].is_null())
+    {
+		if (!request["params"][0]["value"].is_string())
+		{
+			error_code_l = mcp::rpc_estimate_gas_error_code::invalid_amount;
+			error_response(response, (int)error_code_l, err.msg(error_code_l));
+			return;
+		}
+		std::string amount_text = request["params"][0]["value"];
+		bool error = !boost::conversion::try_lexical_convert(amount_text, amount);
+		if (error)
+		{
+			error_code_l = mcp::rpc_estimate_gas_error_code::invalid_amount;
+			error_response(response, (int)error_code_l, err.msg(error_code_l));
+			return;
+		}
+    }
+
+	uint64_t gas(0);
+	if (!request["params"][0]["gas"].is_null())
+	{
+		if (!try_get_uint64_t_from_json("gas", gas))
+		{
+			error_code_l = mcp::rpc_estimate_gas_error_code::invalid_gas;
+			error_response(response, (int)error_code_l, err.msg(error_code_l));
+			return;
+		}
+	}
+
+	uint64_t gas_price(0);
+	if (!request["params"][0]["gasPrice"].is_null())
+	{
+		// || !boost::conversion::try_lexical_convert(request["params"][0]["gasPrice"].get<std::string>(), gas_price)
+		if (!request["params"][0]["gasPrice"].is_string()
+			)
+		{
+			error_code_l = mcp::rpc_estimate_gas_error_code::invalid_gas_price;
+			error_response(response, (int)error_code_l, err.msg(error_code_l));
+			return;
+		}
+		hex_to_uint64(request["params"][0]["gasPrice"].get<std::string>(), gas_price);
+		LOG(m_log.error) << "LLLLLL OOOOOO GGGGGG" << gas_price;
+	}
+
+	dev::bytes data;
+	if (request.count("data"))
+	{
+		std::string data_text = request["data"];
+        bool error = mcp::hex_to_bytes(data_text, data);
+        if (error)
+        {
+            error_code_l = mcp::rpc_estimate_gas_error_code::invalid_data;
+            error_response(response, (int)error_code_l, err.msg(error_code_l));
+            return;
+        }
+
+		if (data.size() > mcp::max_data_size)
+		{
+			error_code_l = mcp::rpc_estimate_gas_error_code::data_size_too_large;
+			error_response(response, (int)error_code_l, err.msg(error_code_l));
+			return;
+		}
+	}
+
+	dev::eth::McInfo mc_info;
+	if (!try_get_mc_info(mc_info))
+	{
+		error_code_l = mcp::rpc_estimate_gas_error_code::invalid_mci;
+		error_response(response, (int)error_code_l, err.msg(error_code_l));
+		return;
+	}
+
+    mcp::db::db_transaction transaction(m_store.create_transaction());
+    std::pair<u256, bool> result = m_chain->estimate_gas(transaction, m_cache, from, amount, to, data, gas, gas_price, mc_info);
+
+    mcp::json response_l;
+	if (!result.second)
+	{
+		error_code_l = mcp::rpc_estimate_gas_error_code::gas_not_enough_or_fail;
+		error_response(response, (int)error_code_l, err.msg(error_code_l), response_l);
+		return;
+	}
+
+    response_l["result"] = result.first;
+    error_code_l = mcp::rpc_estimate_gas_error_code::ok;
+    error_response(response, (int)error_code_l, err.msg(error_code_l), response_l);
+}
+
+void mcp::rpc_handler::eth_chainId() {
+    mcp::rpc_status_error_code error_code_l;
+    mcp::json js;
+    js["id"] = request["id"];
+    js["jsonrpc"] = request["jsonrpc"];
+    js["result"] = "0x33c";
+    error_code_l = mcp::rpc_status_error_code::ok;
+    error_response(response, (int)error_code_l, err.msg(error_code_l), js);
+}
+
+void mcp::rpc_handler::eth_gasPrice() {
+	mcp::rpc_status_error_code error_code_l;
+    mcp::json js;
+    js["id"] = request["id"];
+    js["jsonrpc"] = request["jsonrpc"];
+    js["result"] = uint64_to_hex_nofill(1000000);
+    error_code_l = mcp::rpc_status_error_code::ok;
+    error_response(response, (int)error_code_l, err.msg(error_code_l), js);
+}
+
+void mcp::rpc_handler::eth_getBlockByNumber() {
+
+    mcp::rpc_block_error_code error_code_l = mcp::rpc_block_error_code::ok;
+    mcp::json response_l;
+  	response_l["id"] = request["id"];
+    response_l["jsonrpc"] = request["jsonrpc"];
+
+	if (!request.count("params") || (!request["params"].is_array()))
+    {
+        error_code_l = mcp::rpc_block_error_code::invalid_hash;
+        error_response(response, (int)error_code_l, err.msg(error_code_l), response_l );
+        return;
+    }
+    uint64_t block_number;
+    if (request["params"][0].is_string()){
+    	dev::eth::McInfo mc_info;
+		if (!try_get_mc_info(mc_info))
+		{
+			error_code_l = mcp::rpc_block_error_code::invalid_hash;
+			error_response(response, (int)error_code_l, err.msg(error_code_l));
+			return;
+		} else{
+			block_number = mc_info.mci;
+		}
+    }else {
+    	block_number = request["params"][0].get<uint64_t>();	
+    }
+    
+    // uint64_t block_number;
+    // std::string s = request["params"][0].get<std::string>();
+    bool full_transaction = request["params"][1];
+    // hex_to_uint64(s, block_number);
+    mcp::db::db_transaction transaction(m_store.create_transaction());
+
+	mcp::block_hash block_hash_l;
+	bool exists(!m_store.stable_block_get(transaction, block_number, block_hash_l));
+	assert_x(exists);
+
+	std::shared_ptr<mcp::block_state> state(m_cache->block_state_get(transaction, block_hash_l));
+	if (state != nullptr)
+	{
+		auto block(m_cache->block_get(transaction, block_hash_l));
+		assert_x(block);
+		mcp::json block_state_l, block_result;
+		
+		block_state_l["hash"] = block_hash_l.to_string();
+		block_result["hash"] = "0x" + block_state_l["hash"].get<std::string>();
+
+		mcp::account contract_account(0);
+		if (block->hashables->type == mcp::block_type::light 
+			&& block->isCreation() 
+			&& state->is_stable 
+			&& (state->status == mcp::block_status::ok))
+		{
+			std::shared_ptr<mcp::account_state> acc_state(m_store.account_state_get(transaction, state->receipt->from_state));
+			assert_x(acc_state);
+			contract_account = toAddress(block->hashables->from, acc_state->nonce() - 1);
+		}
+
+		state->serialize_json(block_state_l, contract_account);
+		if (!block_state_l["stable_content"].is_null()) {
+			block_result["number"] = uint64_to_hex_nofill(block_state_l["stable_content"]["mci"].get<uint64_t>());
+
+			if (!block_state_l["stable_content"]["log_bloom"].is_null()) {
+				block_result["logsBloom"] = block_state_l["stable_content"]["log_bloom"];
+			}
+
+			block_result["gasLimit"] = "0x0";
+			if (!block_state_l["stable_content"]["gas_used"].is_null()) {
+				uint64_t gasUsed;
+				hex_to_uint64(block_state_l["stable_content"]["gas_used"].get<std::string>(), gasUsed);
+				block_result["gasUsed"] = uint64_to_hex_nofill(gasUsed);
+				block_result["gasLimit"] = uint64_to_hex_nofill(gasUsed + 1000); // fake data
+			}
+			block_result["timestamp"] = uint64_to_hex_nofill(block_state_l["stable_content"]["mc_timestamp"].get<uint64_t>());
+		}
+
+
+
+		// Need to update these mockup data
+		block_result["difficulty"] = "0x2";
+		block_result["extraData"] = "0xd983010000846765746889676f312e31322e3137856c696e7578000000000000735424e16996bb366d0247a8c359eba969d3b51f64ab942a6a0e3e632d2e19c933db8b32d62950183a6799f5d6f6ac07bf448086c1bdc7b726a0842863bc807701";
+		
+		
+		
+		block_result["miner"] = "0x980a75ecd1309ea12fa2ed87a8744fbfc9b863d5";
+		block_result["mixHash"] = "0x0000000000000000000000000000000000000000000000000000000000000000";
+		block_result["nonce"] = "0x0000000000000000";
+		
+		block_result["parentHash"] = "0x50f93abc42d5ad0876a0768490ba7858239b6e38c5e066612cab9d7ab72ecfc2";
+		block_result["receiptsRoot"] = "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421";
+		block_result["sha3Uncles"] = "0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347";
+		block_result["size"] = "0x25f";
+		block_result["stateRoot"] = "0x0b9279d6596c22b580a56e87110ab3f78a3dce913ffb7a2b157e2ed7b7146859";
+		block_result["totalDifficulty"] = "0x29";
+		block_result["transactions"] = mcp::json::array();
+		block_result["transactionsRoot"] = "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421";
+		block_result["uncles"] = mcp::json::array();
+
+		response_l["result"] = block_result;
+
+		// response_l["block_state"] = block_state_l;
+		error_code_l = mcp::rpc_block_error_code::ok;
+		error_response(response, (int)error_code_l, err.msg(error_code_l), response_l);
+	}
+	else
+	{
+		response_l["block_state"] = nullptr;
+		error_code_l = mcp::rpc_block_error_code::block_not_exsist;
+		error_response(response, (int)error_code_l, err.msg(error_code_l), response_l);
+	}
+	
+}
+
+
+void mcp::rpc_handler::eth_sendRawTransaction() {
+
+}
+/**
+*	// Result
+*	{
+*	  "id":67,
+*	  "jsonrpc": "2.0",
+*	  "result": "59"
+*	}
+**/
+
+void mcp::rpc_handler::net_version() {
+	mcp::rpc_version_error_code error_code_l = mcp::rpc_version_error_code::ok;
+	mcp::json response_l;
+	response_l["id"] = request["id"];
+	response_l["jsonrpc"] = request["jsonrpc"];
+	response_l["version"] = STR(MCP_VERSION);
+	// response_l["result"] = STR(MCP_VERSION);
+	response_l["result"] = "828";
+	response_l["rpc_version"] = "1";
+	response_l["store_version"] = std::to_string(m_store.version_get());
+
+	error_response(response, (int)error_code_l, err.msg(error_code_l), response_l);
+}
+
+
 mcp::rpc_connection::rpc_connection(mcp::rpc & rpc_a) :
 	rpc(rpc_a),
 	socket(rpc_a.io_service)
@@ -3097,7 +3492,14 @@ void mcp::rpc_handler::process_request()
 	try
 	{
         request = mcp::json::parse(body);
-        std::string action = request["action"];
+		LOG(m_log.error) << "Request Parse" << request;
+        std::string action;
+        if (request["action"].is_string()) {
+        	action = request["action"];
+        }
+        if (request["method"].is_string()) {
+        	action = request["method"];
+        }
 
 		bool handled = false;
 		if (action == "account_create")
@@ -3270,6 +3672,33 @@ void mcp::rpc_handler::process_request()
 		else if (action == "get_sync_status")
 		{
 			error_response(response, mcp::node_sync::get_syncing_status());
+		}
+		else if (action == "web3_clientVersion") {
+			web3_clientVersion();
+		}
+		else if (action == "eth_accounts") {
+			eth_accounts();
+		}
+		else if (action == "eth_blockNumber") {
+			eth_blockNumber();
+		}
+		else if (action == "net_version") {
+			net_version();
+		}
+		else if (action == "web3_sha3") {
+			web3_sha3();
+		}
+		else if (action == "eth_chainId") {
+			eth_chainId();
+		}
+		else if (action == "eth_getBlockByNumber") {
+			eth_getBlockByNumber();
+		}
+		else if (action == "eth_gasPrice") {
+			eth_gasPrice();
+		}
+		else if (action == "eth_estimateGas") {
+			eth_estimateGas();
 		}
         else
 		{
@@ -3917,6 +4346,24 @@ std::string mcp::rpc_error_msg::msg(mcp::rpc_stop_error_code const & err_a)
         break;
     }
     return error_msg;
+}
+
+std::string mcp::rpc_error_msg::msg(mcp::rpc_web3_sha3_error_code const & err_a)
+{
+	std::string error_msg;
+	switch (err_a)
+	{
+	case mcp::rpc_web3_sha3_error_code::ok:
+		error_msg = "OK";
+		break;
+	case mcp::rpc_web3_sha3_error_code::invalid_params:
+		error_msg = "Invalid Params";
+		break;
+	default:
+		error_msg = "Unkonw error";
+		break;
+	}
+	return error_msg;
 }
 
 std::string mcp::rpc_error_msg::msg(mcp::rpc_send_error_code const & err_a)
