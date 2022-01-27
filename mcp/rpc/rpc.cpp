@@ -3236,8 +3236,7 @@ void mcp::rpc_handler::eth_estimateGas() {
 		error_response(response, (int)error_code_l, err.msg(error_code_l), response_l);
 		return;
 	}
-
-    response_l["result"] = result.first;
+    response_l["result"] = uint256_to_hex_nofill(result.first);
     error_code_l = mcp::rpc_estimate_gas_error_code::ok;
     error_response(response, (int)error_code_l, err.msg(error_code_l), response_l);
 }
@@ -3260,6 +3259,16 @@ void mcp::rpc_handler::eth_gasPrice() {
     js["result"] = uint64_to_hex_nofill(1000000);
     error_code_l = mcp::rpc_status_error_code::ok;
     error_response(response, (int)error_code_l, err.msg(error_code_l), js);
+}
+
+void mcp::rpc_handler::eth_getTransactionCount() {
+	mcp::rpc_status_error_code error_code_l;
+	mcp::json js;
+	js["id"] = request["id"];
+	js["jsonrpc"] = request["jsonrpc"];
+	js["result"] = "0x0"; // temp
+	error_code_l = mcp::rpc_status_error_code::ok;
+	error_response(response, (int)error_code_l, err.msg(error_code_l), js);
 }
 
 void mcp::rpc_handler::eth_getBlockByNumber() {
@@ -3699,6 +3708,9 @@ void mcp::rpc_handler::process_request()
 		}
 		else if (action == "eth_estimateGas") {
 			eth_estimateGas();
+		}
+		else if (action == "eth_getTransactionCount") {
+			eth_getTransactionCount();
 		}
         else
 		{

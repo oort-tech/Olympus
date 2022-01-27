@@ -484,6 +484,7 @@ public:
     void eth_estimateGas();
     void eth_getBlockByNumber();
     void eth_gasPrice();
+	void eth_getTransactionCount();
     void eth_sendRawTransaction();
     void net_version();
 

@@ -21,6 +21,14 @@ std::string mcp::uint64_to_hex_nofill(uint64_t value_a)
 	return stream.str();
 }
 
+std::string mcp::uint256_to_hex_nofill(uint256_t value_a)
+{
+	std::stringstream stream;
+	stream << std::hex << std::nouppercase << std::showbase;
+	stream << value_a;
+	return stream.str();
+}
+
 bool mcp::hex_to_uint64(std::string const & value_a, uint64_t & target_a)
 {
 	auto error(value_a.empty());
