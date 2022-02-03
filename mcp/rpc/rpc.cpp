@@ -3066,7 +3066,7 @@ void mcp::rpc_handler::process_request()
 	try
 	{
 		request = mcp::json::parse(body);
-		std::string action = request["action"];
+		std::string action = request.count("action") > 0 ? request["action"] : request["method"];
 
 		bool handled = false;
 		if (action == "account_create")
@@ -4152,7 +4152,7 @@ void mcp::rpc_handler::eth_blockNumber()
 	{
 		return;
 	}
-
+	
 	mcp::uint64_union blockNumber(m_chain->last_stable_index());
 	response_l["result"] = "0x" + blockNumber.to_string();
 
@@ -4181,6 +4181,10 @@ void mcp::rpc_handler::eth_getTransactionCount()
 		{
 			mcp::uint256_union nonce = acc_state->nonce();
 			response_l["result"] = "0x" + nonce.to_string();
+		}
+		else
+		{
+			response_l["result"] = "0x0";
 		}
 
 		response(response_l);
@@ -4225,75 +4229,77 @@ void mcp::rpc_handler::eth_estimateGas()
 		return;
 	}
 
+	mcp::json params = request["params"];
+
 	mcp::account from(0);
-	if (request.count("from"))
+	if (params.count("from"))
 	{
-		if (!request["from"].is_string())
+		if (!params["from"].is_string())
 		{
 			return;
 		}
-		if (from.decode_account(request["from"]))
+		if (from.decode_account(params["from"]))
 		{
 			return;
 		}
 	}
 
 	mcp::account to(0);
-	if (request.count("to"))
+	if (params.count("to"))
 	{
-		if (!request["to"].is_string())
+		if (!params["to"].is_string())
 		{
 			return;
 		}
-		if (to.decode_account(request["to"]))
+		if (to.decode_account(params["to"]))
 		{
 			return;
 		}
 	}
 
 	mcp::uint256_union amount(0);
-	if (request.count("value"))
+	if (params.count("value"))
 	{
-		if (!request["value"].is_string())
+		if (!params["value"].is_string())
 		{
 			return;
 		}
-		if (amount.decode_hex(request["value"], true))
+		if (amount.decode_hex(params["value"], true))
 		{
 			return;
 		}
 	}
 
 	mcp::uint64_union gas(0);
-	if (request.count("gas"))
+	if (params.count("gas"))
 	{
-		if (!request["gas"].is_string())
+		if (!params["gas"].is_string())
 		{
 			return;
 		}
-		if (gas.decode_hex(request["gas"], true))
+		if (gas.decode_hex(params["gas"], true))
 		{
 			return;
 		}
 	}
 
 	mcp::uint256_union gas_price(0);
-	if (request.count("gasPrice"))
+	if (params.count("gasPrice"))
 	{
-		if (!request["gasPrice"].is_string())
+		if (!params["gasPrice"].is_string())
 		{
 			return;
 		}
-		if (gas_price.decode_hex(request["gasPrice"], true))
+		if (gas_price.decode_hex(params["gasPrice"], true))
 		{
 			return;
 		}
 	}
 
 	dev::bytes data;
-	if (request.count("data"))
+	if (params.count("data"))
 	{
-		std::string data_text = request["data"];
+		std::string data_text = params["data"];
 		if (mcp::hex_to_bytes(data_text, data))
 		{
 			return;
@@ -4339,21 +4345,19 @@ void mcp::rpc_handler::eth_getBlockByNumber()
 	}
 
 	mcp::uint64_union block_number;
-	if (!params[0].is_string())
+	if (!params[0].is_string() ||
+		block_number.decode_hex(params[0], true))
 	{
 		return;
 	}
 
-	std::string blockNumber_text = params[0];
-	if (block_number.decode_hex(blockNumber_text, true))
-	{
-		return;
-	}
+	response_l["result"] = "0x" + mcp::block_hash(0).to_string();
 
 	mcp::db::db_transaction transaction(m_store.create_transaction());
 	mcp::block_hash block_hash;
 	if (!m_store.stable_block_get(transaction, block_number.number(), block_hash))
 	{
+		response(response_l);
 		return;
 	}
 
@@ -4378,9 +4382,9 @@ void mcp::rpc_handler::eth_getBlockByNumber()
 		{
 			response_l["result"] = "0x" + block->hash().to_string();
 		}
-
-		response(response_l);
 	}
+
+	response(response_l);
 }
 
 void mcp::rpc_handler::eth_sendTransaction()

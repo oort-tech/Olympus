@@ -237,7 +237,7 @@ bool mcp::uint256_union::decode_hex(std::string const & text, bool show_base)
 	if (!text.empty() && text.size() <= 64)
 	{
 		std::stringstream stream(text);
-		stream << std::hex << show_base ? std::showbase : std::noshowbase;
+		stream << std::hex << (show_base ? std::showbase : std::noshowbase);
 		mcp::uint256_t number_l;
 		try
 		{
@@ -881,7 +881,7 @@ bool mcp::uint64_union::decode_hex(std::string const & text, bool show_base)
 	if (!error)
 	{
 		std::stringstream stream(text);
-		stream << std::hex << show_base ? std::showbase : std::noshowbase;
+		stream << std::hex << (show_base ? std::showbase : std::noshowbase);
 		uint64_t number_l;
 		try
 		{
