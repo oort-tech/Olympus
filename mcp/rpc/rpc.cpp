@@ -3105,12 +3105,7 @@ void mcp::rpc_handler::process_request()
 			reprocess_body(body, request);
 			handled = true;
 		}
-		// added by michael
-		else if (action == "eth_sendTransaction")
-		{
-		}
-		//
-
+		
 		LOG(m_log.debug) << body;
 
 		if (handled)
@@ -3269,6 +3264,10 @@ void mcp::rpc_handler::process_request()
 		else if (action == "eth_getBlockByNumber")
 		{
 			eth_getBlockByNumber();
+		}
+		else if (action == "eth_sendTransaction")
+		{
+			eth_sendTransaction();
 		}
 		//
 		else
@@ -4156,6 +4155,8 @@ void mcp::rpc_handler::eth_blockNumber()
 
 	mcp::uint64_union blockNumber(m_chain->last_stable_index());
 	response_l["result"] = "0x" + blockNumber.to_string();
+
+	response(response_l);
 }
 
 void mcp::rpc_handler::eth_getTransactionCount()
@@ -4181,6 +4182,8 @@ void mcp::rpc_handler::eth_getTransactionCount()
 			mcp::uint256_union nonce = acc_state->nonce();
 			response_l["result"] = "0x" + nonce.to_string();
 		}
+
+		response(response_l);
 	}
 }
 
@@ -4195,6 +4198,8 @@ void mcp::rpc_handler::eth_chainId()
 	std::stringstream chainId;
 	chainId << "0x" << std::hex << int(mcp::mcp_network);
 	response_l["result"] = chainId.str();
+
+	response(response_l);
 }
 
 void mcp::rpc_handler::eth_gasPrice()
@@ -4208,6 +4213,8 @@ void mcp::rpc_handler::eth_gasPrice()
 	std::stringstream chainId;
 	chainId << "0x" << std::hex << 1000000000;
 	response_l["result"] = chainId.str();
+
+	response(response_l);
 }
 
 void mcp::rpc_handler::eth_estimateGas()
@@ -4313,6 +4320,8 @@ void mcp::rpc_handler::eth_estimateGas()
 
 	mcp::uint256_union gasResult = result.first;
 	response_l["result"] = "0x" + gasResult.to_string();
+
+	response(response_l);
 }
 
 void mcp::rpc_handler::eth_getBlockByNumber()
@@ -4369,6 +4378,8 @@ void mcp::rpc_handler::eth_getBlockByNumber()
 		{
 			response_l["result"] = "0x" + block->hash().to_string();
 		}
+
+		response(response_l);
 	}
 }
 
@@ -4447,15 +4458,15 @@ void mcp::rpc_handler::eth_sendTransaction()
 	bool async(false);
 	auto rpc_l(shared_from_this());
 	m_wallet->send_async(
-		mcp::block_type::light, previous_opt, from, to, amount.number(), gas.number(), gas_price.number(), data, password, [from, rpc_l, this](mcp::send_result result)
+		mcp::block_type::light, previous_opt, from, to, amount.number(), gas.number(), gas_price.number(), data, password, [response_l, this](mcp::send_result result)
 		{
 		switch (result.code)
 		{
 		case mcp::send_result_codes::ok:
 		{
-			mcp::uint256_union hash(result.block->hash());
-			mcp::json response_value_p;
-			response_value_p["hash"] = hash.to_string();
+			mcp::json response_j = response_l;
+			response_j["result"] = "0x" + result.block->hash().to_string();
+			response(response_j);
 			break;
 		}
 		case mcp::send_result_codes::from_not_exists:
