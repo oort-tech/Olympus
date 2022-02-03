@@ -3136,6 +3136,12 @@ void mcp::rpc_handler::process_request()
 			reprocess_body(body, request);
 			handled = true;
 		}
+		// added by michael
+		else if (action == "eth_sendTransaction")
+		{
+
+		}
+		//
 
         LOG(m_log.debug) << body;
 
@@ -3271,6 +3277,32 @@ void mcp::rpc_handler::process_request()
 		{
 			error_response(response, mcp::node_sync::get_syncing_status());
 		}
+		// added by michael
+		else if (action == "eth_blockNumber")
+		{
+			eth_blockNumber();
+		}
+		else if (action == "eth_getTransactionCount")
+		{
+			eth_getTransactionCount();
+		}
+		else if (action == "eth_chainId")
+		{
+			eth_chainId();
+		}
+		else if (action == "eth_gasPrice")
+		{
+			eth_gasPrice();
+		}
+		else if (action == "eth_estimateGas")
+		{
+			eth_estimateGas();
+		}
+		else if (action == "eth_getBlockByNumber")
+		{
+			eth_getBlockByNumber();
+		}
+		//
         else
 		{
 			error_response(response, "Unknown command");
@@ -4127,4 +4159,339 @@ std::string mcp::rpc_error_msg::msg(mcp::rpc_debug_storage_range_at_error_code c
 		break;
 	}
 	return error_msg;
+}
+
+// added by michael
+bool mcp::rpc_handler::is_eth_rpc(mcp::json &response)
+{
+	if (!request.count("id") ||
+		!request.count("jsonrpc") ||
+		!request.count("params") ||
+		!request["params"].is_array()) {
+		return false;
+	}
+
+	response["id"] = request["id"];
+	response["jsonrpc"] = request["jsonrpc"];
+
+	return true;
+}
+
+void mcp::rpc_handler::eth_blockNumber()
+{
+	mcp::json response_l;
+	if (!is_eth_rpc(response_l)) {
+		return;
+	}
+
+	mcp::uint64_union blockNumber(m_chain->last_stable_index());
+	response_l["result"] = "0x" + blockNumber.to_string();
+}
+
+void mcp::rpc_handler::eth_getTransactionCount()
+{
+	mcp::json response_l;
+	if (!is_eth_rpc(response_l)) {
+		return;
+	}
+
+	mcp::json params = request["params"];
+	if (params.size() > 0 && params[0].is_string()) {
+		std::string account_text = params[0];
+		mcp::account account;
+		if (account.decode_account(account_text)) {
+			return;
+		}
+		mcp::db::db_transaction transaction(m_store.create_transaction()); 
+		std::shared_ptr<mcp::account_state> acc_state(m_cache->latest_account_state_get(transaction, account));
+		if (acc_state) {
+			mcp::uint256_union nonce = acc_state->nonce();
+			response_l["result"] = "0x" + nonce.to_string();
+		}
+	}
+}
+
+void mcp::rpc_handler::eth_chainId()
+{
+	mcp::json response_l;
+	if (!is_eth_rpc(response_l)) {
+		return;
+	}
+
+	std::stringstream chainId;
+	chainId << "0x" << std::hex << int(mcp::mcp_network);
+	response_l["result"] = chainId.str();
+}
+
+void mcp::rpc_handler::eth_gasPrice()
+{
+	mcp::json response_l;
+	if (!is_eth_rpc(response_l)) {
+		return;
+	}
+
+	std::stringstream chainId;
+	chainId << "0x" << std::hex << 1000000000;
+	response_l["result"] = chainId.str();
+}
+
+void mcp::rpc_handler::eth_estimateGas()
+{
+	mcp::json response_l;
+	if (!is_eth_rpc(response_l)) {
+		return;
+	}
+	
+	mcp::account from(0);
+	if (request.count("from"))
+	{
+		if (!request["from"].is_string())
+		{
+			return;
+		}
+
+		std::string from_text = request["from"];
+		if (from.decode_account(from_text))
+		{
+			return;
+		}
+	}
+
+	mcp::account to(0);
+	if (request.count("to"))
+	{
+		if (!request["to"].is_string())
+		{
+			return;
+		}
+
+		std::string to_text = request["to"];
+		if (to.decode_account(to_text))
+		{
+			return;
+		}
+	}
+
+	mcp::uint256_union amount(0);
+    if (request.count("value"))
+    {
+		if (!request["value"].is_string()) {
+			return;
+		}
+		std::string amount_text = request["value"];
+		if (amount.decode_hex(amount_text, true))
+		{
+			return;
+		}
+    }
+
+	mcp::uint64_union gas(0);
+	if (request.count("gas"))
+	{
+		if (!request["gas"].is_string()) {
+			return;
+		}
+		std::string gas_text = request["gas"];
+		if (gas.decode_hex(gas_text, true))
+		{
+			return;
+		}
+	}
+
+	mcp::uint256_union gas_price(0);
+	if (request.count("gasPrice"))
+	{
+		if (!request["gasPrice"].is_string()) {
+			return;
+		}
+		std::string gas_price_text = request["gasPrice"];
+		if (gas_price.decode_hex(gas_price_text, true))
+		{
+			return;
+		}
+	}
+
+	dev::bytes data;
+	if (request.count("data"))
+	{
+		std::string data_text = request["data"];
+        if (mcp::hex_to_bytes(data_text, data))
+        {
+            return;
+        }
+		if (data.size() > mcp::max_data_size)
+		{
+			return;
+		}
+	}
+
+	dev::eth::McInfo mc_info;
+	if (!try_get_mc_info(mc_info))
+	{
+		return;
+	}
+
+    mcp::db::db_transaction transaction(m_store.create_transaction());
+    std::pair<u256, bool> result = m_chain->estimate_gas(transaction, m_cache, from, amount.number(), to, data, gas.number(), gas_price.number(), mc_info);
+
+    if (!result.second)
+	{
+		return;
+	}
+
+	mcp::uint256_union gasResult = result.first;
+    response_l["result"] = "0x" + gasResult.to_string();
+}
+
+void mcp::rpc_handler::eth_getBlockByNumber()
+{
+	mcp::json response_l;
+	if (!is_eth_rpc(response_l)) {
+		return;
+	}
+
+	mcp::json params = request["params"];
+	if (params.size() != 2)
+    {
+        return;
+    }
+
+	mcp::uint64_union block_number;
+	if (!params.at(0).is_string()) {
+		return;
+	}
+
+	std::string blockNumber_text = params.at(0);
+	if (block_number.decode_hex(blockNumber_text, true)) {
+		return;
+	}
+
+	mcp::db::db_transaction transaction(m_store.create_transaction()); 
+	mcp::block_hash block_hash;
+	if (!m_store.stable_block_get(transaction, block_number.number(), block_hash)) {
+		return;
+	}
+
+	auto block(m_cache->block_get(transaction, block_hash));
+	if (block == nullptr)
+	{
+		auto unlink_block(m_cache->unlink_block_get(transaction, block_hash));
+		if (unlink_block)
+			block = unlink_block->block;
+	}
+
+	if (block != nullptr)
+	{
+		bool is_full = params.at(1);
+		if (is_full) {
+			mcp::json block_l;
+			block->serialize_json(block_l);
+			response_l["result"] = block_l;
+		} else {
+			response_l["result"] = "0x" + block->hash().to_string();
+		}
+	}
+}
+
+void mcp::rpc_handler::eth_sendTransaction()
+{
+	mcp::json response_l;
+	if (!is_eth_rpc(response_l)) {
+		return;
+	}
+
+	mcp::json params = request["params"].at(0);
+	if (!params.is_object()) {
+		return;
+	}
+
+	mcp::account from;
+	if (!params.count("from") ||
+		!params["from"].is_string() ||
+		from.decode_account(params["from"]) ||
+		!m_key_manager->exists(from))
+    {
+        return;
+    }
+
+	mcp::account to;
+    if (!params.count("to") ||
+		!params["to"].is_string() ||
+		to.decode_account(params["to"]))
+    {
+        return;
+    }
+
+	mcp::uint256_union amount;
+    if (!params.count("value") ||
+		!params["value"].is_string() ||
+		amount.decode_hex(params["value"]))
+    {
+        return;
+    }
+
+	mcp::uint256_union gas;
+	if (!params.count("gas") ||
+		!params["gas"].is_string() ||
+		gas.decode_hex(params["gas"]))
+	{
+        return;
+    }
+
+	uint256_union gas_price;
+	if (!params.count("gasPrice") ||
+		!params["gasPrice"].is_string() ||
+		gas_price.decode_hex(request["gasPrice"]))
+	{
+		return;
+	}
+
+    dev::bytes data;
+	if (params.count("data"))
+	{
+		std::string data_text = params["data"];
+        if (mcp::hex_to_bytes(data_text, data))
+        {
+            return;
+        }
+    }
+	if (data.size() > mcp::max_data_size)
+	{
+        return;
+	}
+
+	boost::optional<mcp::block_hash> previous_opt;
+	boost::optional<std::string> password;
+	bool gen_next_work_l(false);
+	bool async(false);
+	auto rpc_l(shared_from_this());
+	m_wallet->send_async(mcp::block_type::light, previous_opt, from, to, amount.number(), gas.number(), gas_price.number(), data, password, [from, rpc_l, this](mcp::send_result result)
+	{
+		switch (result.code)
+		{
+		case mcp::send_result_codes::ok:
+		{
+			mcp::uint256_union hash(result.block->hash());
+			mcp::json response_value_p;
+			response_value_p["hash"] = hash.to_string();
+			break;
+		}
+		case mcp::send_result_codes::from_not_exists:
+			break;
+		case mcp::send_result_codes::account_locked:
+			break;
+		case mcp::send_result_codes::wrong_password:
+			break;
+		case mcp::send_result_codes::insufficient_balance:
+			break;
+		case mcp::send_result_codes::data_size_too_large:
+			break;
+		case mcp::send_result_codes::validate_error:
+			break;
+		case mcp::send_result_codes::error:
+			break;
+		default:
+			break;
+		}
+	}, gen_next_work_l, async);
 }
