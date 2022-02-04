@@ -1,4 +1,5 @@
 # -*-encoding: utf-8-*-
+from pickle import FALSE
 import unittest
 import json
 import requests
@@ -65,10 +66,10 @@ class Test_rpc(unittest.TestCase):
 	@classmethod
 	def setUpClass(cls):
 		Test_rpc.genesis_account = "0x38369682E93F5C20A4DA3E374805C9584EA3E2C8"
-		Test_rpc.import_account = "0x41A358A4900A0A75BD50304A57E89D455966DC0F"
+		Test_rpc.import_account = "0x38369682E93F5C20A4DA3E374805C9584EA3E2C8"
 		Test_rpc.import_password = "1234qwer"
 		Test_rpc.import_public_key = "F16C3C1E3775B13C139038740F976E5E549A41D94E502E3DF4BE118CD81D5310459E5FA7F5A95B7DBC935E30BB55D624DF8F767280D1BAF329EC7E5EF96BF137"
-		Test_rpc.to_account = "0xEED0A750EFDCB1809CB10CDEE8F3A803A384F600"
+		Test_rpc.to_account = "0xC63BE4C25041F761C5E8D9AA73FEFC57E4AA655B"
 	
 	'''
 	{
@@ -133,7 +134,7 @@ class Test_rpc(unittest.TestCase):
 	def test_send_block(self):
 		data = {
 			"action": "send_block",
-			"from": Test_rpc.import_account,
+			"from": Test_rpc.c,
 			"to": Test_rpc.to_account,
 			"amount": "1000000000000000000",
 			"password": Test_rpc.import_password,
@@ -691,11 +692,92 @@ class Test_rpc(unittest.TestCase):
 		
 		print(json_data)
 		print("\n")
-# 0x7C2F3346D0E4D5559B1741DD0107A3C18643B06
+	def test_eth_blockNumber(self):
+		data = {
+			"method": "eth_blockNumber",
+			"params": [],
+			"id": 1,
+			"jsonrpc": "2.0",
+		}
+		response = requests.post(url=URL, data=json.dumps(data))
+		is_json,json_data = try_load_json(response.text)
+
+		print(json_data)
+		print("\n")
+
+	def test_eth_getTransactionCount(self):
+		data = {
+			"method": "eth_getTransactionCount",
+			"params": [Test_rpc.import_account],
+			"id": 1,
+			"jsonrpc": "2.0",
+		}
+		response = requests.post(url=URL, data=json.dumps(data))
+		is_json,json_data = try_load_json(response.text)
+
+		print(json_data)
+		print("\n")
+
+	def test_eth_chainId(self):
+		data = {
+			"method": "eth_chainId",
+			"params": [],
+			"id": 1,
+			"jsonrpc": "2.0",
+		}
+		response = requests.post(url=URL, data=json.dumps(data))
+		is_json,json_data = try_load_json(response.text)
+
+		print(json_data)
+		print("\n")
+
+	def test_eth_gasPrice(self):
+		data = {
+			"method": "eth_gasPrice",
+			"params": [],
+			"id": 1,
+			"jsonrpc": "2.0",
+		}
+		response = requests.post(url=URL, data=json.dumps(data))
+		is_json,json_data = try_load_json(response.text)
+
+		print(json_data)
+		print("\n")
+
+	def test_eth_estimateGas(self):
+		data = {
+			"method": "eth_estimateGas",
+			"params": [{
+				"from": Test_rpc.import_account,
+				"gasPrice": "0x10000",
+				"data": "0x608060405234801561001057600080fd5b50336000806101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff16021790555061019c806100606000396000f3fe608060405234801561001057600080fd5b50600436106100415760003560e01c8063445df0ac146100465780638da5cb5b14610064578063fdacd576146100ae575b600080fd5b61004e6100dc565b6040518082815260200191505060405180910390f35b61006c6100e2565b604051808273ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200191505060405180910390f35b6100da600480360360208110156100c457600080fd5b8101908080359060200190929190505050610107565b005b60015481565b6000809054906101000a900473ffffffffffffffffffffffffffffffffffffffff1681565b6000809054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff163373ffffffffffffffffffffffffffffffffffffffff16141561016457806001819055505b5056fea265627a7a72315820640b8f7dab5237b9f182a064e48817bd2919b73dd07871a4fb27fef8b2092b0264736f6c63430005100032"
+			}],
+			"id": 1,
+			"jsonrpc": "2.0",
+		}
+		response = requests.post(url=URL, data=json.dumps(data))
+		is_json,json_data = try_load_json(response.text)
+
+		print(json_data)
+		print("\n")
+	
+	def test_eth_getBlockByNumber(self):
+		data = {
+			"method": "eth_getBlockByNumber",
+			"params": ["0x0", False],
+			"id": 1,
+			"jsonrpc": "2.0",
+		}
+		response = requests.post(url=URL, data=json.dumps(data))
+		is_json,json_data = try_load_json(response.text)
+
+		print(json_data)
+		print("\n")
+
 if __name__ == "__main__":
 	suite = unittest.TestSuite()
 	# suite.addTest(Test_rpc("test_account_import"))
-	suite.addTest(Test_rpc("test_account_create"))
+	# suite.addTest(Test_rpc("test_account_create"))
 	# suite.addTest(Test_rpc("test_send_block"))
 	# suite.addTest(Test_rpc("test_accounts_balances"))
 	# suite.addTest(Test_rpc("test_account_balance"))
@@ -723,6 +805,12 @@ if __name__ == "__main__":
 	# suite.addTest(Test_rpc("test_version"))
 	# suite.addTest(Test_rpc("test_account_remove"))
 	# suite.addTest(Test_rpc("test_send_ccn"))
+	suite.addTest(Test_rpc("test_eth_blockNumber"))
+	suite.addTest(Test_rpc("test_eth_getTransactionCount"))
+	suite.addTest(Test_rpc("test_eth_chainId"))
+	suite.addTest(Test_rpc("test_eth_gasPrice"))
+	suite.addTest(Test_rpc("test_eth_estimateGas"))
+	suite.addTest(Test_rpc("test_eth_getBlockByNumber"))
 
 	result = unittest.TextTestRunner(verbosity=3).run(suite)
 	if result.wasSuccessful():

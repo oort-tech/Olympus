@@ -231,13 +231,13 @@ void mcp::uint256_union::encode_hex(std::string & text) const
 	text = stream.str();
 }
 
-bool mcp::uint256_union::decode_hex(std::string const & text)
+bool mcp::uint256_union::decode_hex(std::string const & text, bool show_base)
 {
 	auto error(false);
 	if (!text.empty() && text.size() <= 64)
 	{
 		std::stringstream stream(text);
-		stream << std::hex << std::noshowbase;
+		stream << std::hex << (show_base ? std::showbase : std::noshowbase);
 		mcp::uint256_t number_l;
 		try
 		{
@@ -875,13 +875,13 @@ void mcp::uint64_union::encode_hex(std::string & text) const
 	text = stream.str();
 }
 
-bool mcp::uint64_union::decode_hex(std::string const & text)
+bool mcp::uint64_union::decode_hex(std::string const & text, bool show_base)
 {
 	auto error(text.size() > 16);
 	if (!error)
 	{
 		std::stringstream stream(text);
-		stream << std::hex << std::noshowbase;
+		stream << std::hex << (show_base ? std::showbase : std::noshowbase);
 		uint64_t number_l;
 		try
 		{

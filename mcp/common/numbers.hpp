@@ -50,7 +50,7 @@ public:
 	bool operator<= (mcp::uint64_union const &) const;
 	bool operator>= (mcp::uint64_union const &) const;
 	void encode_hex(std::string &) const;
-	bool decode_hex(std::string const &);
+	bool decode_hex(std::string const &, bool show_base = false);
 	std::string to_string() const;
 	uint64_t number() const;
 	enum { size = 8 };
@@ -111,7 +111,7 @@ union uint256_union
 	bool operator<= (mcp::uint256_union const &) const;
 	bool operator>= (mcp::uint256_union const &) const;
 	void encode_hex (std::string &) const;
-	bool decode_hex (std::string const &);
+	bool decode_hex (std::string const &, bool show_base = false);
 	void encode_dec (std::string &) const;
 	bool decode_dec (std::string const &);
 	

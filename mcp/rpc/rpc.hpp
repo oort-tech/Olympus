@@ -471,22 +471,15 @@ public:
 
 	void logs();
 
-    /**
-     *  compatible RPC with Ethereum
-     * 
-     * */
-
-    void web3_clientVersion();
-    void web3_sha3();
-    void eth_accounts();
+    // added by michael
+    bool is_eth_rpc(mcp::json &response);
     void eth_blockNumber();
+    void eth_getTransactionCount();
     void eth_chainId();
+    void eth_gasPrice();
     void eth_estimateGas();
     void eth_getBlockByNumber();
-    void eth_gasPrice();
-	void eth_getTransactionCount();
-    void eth_sendRawTransaction();
-    void net_version();
+    void eth_sendTransaction();
 
 	std::string body;
 	mcp::rpc & rpc;
