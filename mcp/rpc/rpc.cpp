@@ -3066,6 +3066,7 @@ void mcp::rpc_handler::process_request()
 	try
 	{
 		request = mcp::json::parse(body);
+		LOG(m_log.error) << "Request Parse" << request;
 		std::string action = request.count("action") > 0 ? request["action"] : request["method"];
 
 		bool handled = false;
@@ -3268,6 +3269,9 @@ void mcp::rpc_handler::process_request()
 		else if (action == "eth_sendTransaction")
 		{
 			eth_sendTransaction();
+		}
+		else if (action == "net_version") {
+			net_version();
 		}
 		//
 		else
@@ -4333,6 +4337,7 @@ void mcp::rpc_handler::eth_estimateGas()
 void mcp::rpc_handler::eth_getBlockByNumber()
 {
 	mcp::json response_l;
+	mcp::rpc_block_error_code error_code_l = mcp::rpc_block_error_code::ok;
 	if (!is_eth_rpc(response_l))
 	{
 		return;
@@ -4341,6 +4346,8 @@ void mcp::rpc_handler::eth_getBlockByNumber()
 	mcp::json params = request["params"];
 	if (params.size() != 2)
 	{
+		error_code_l = mcp::rpc_block_error_code::invalid_hash;
+		error_response(response, (int)error_code_l, err.msg(error_code_l), response_l);
 		return;
 	}
 
@@ -4348,6 +4355,8 @@ void mcp::rpc_handler::eth_getBlockByNumber()
 	if (!params[0].is_string() ||
 		block_number.decode_hex(params[0], true))
 	{
+		error_code_l = mcp::rpc_block_error_code::invalid_hash;
+		error_response(response, (int)error_code_l, err.msg(error_code_l), response_l);
 		return;
 	}
 
@@ -4491,4 +4500,17 @@ void mcp::rpc_handler::eth_sendTransaction()
 			break;
 		} },
 		gen_next_work_l, async);
+}
+
+void mcp::rpc_handler::net_version() {
+	mcp::json response_l;
+	mcp::rpc_version_error_code error_code_l = mcp::rpc_version_error_code::ok;
+	if (!is_eth_rpc(response_l))
+	{
+		return;
+	}
+	response_l["version"] = STR(MCP_VERSION);
+	response_l["result"] = "828";
+
+	error_response(response, (int)error_code_l, err.msg(error_code_l), response_l);
 }

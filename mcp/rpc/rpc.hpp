@@ -374,6 +374,13 @@ enum class rpc_stop_error_code
     ok = 0
 };
 
+enum class rpc_web3_sha3_error_code
+{
+	ok = 0,
+	invalid_params = 1
+};
+
+
 
 
 class rpc_error_msg 
@@ -412,6 +419,7 @@ public:
     std::string msg(mcp::rpc_peers_error_code const & err_a);
     std::string msg(mcp::rpc_nodes_error_code const & err_a);
     std::string msg(mcp::rpc_stop_error_code const & err_a);
+	std::string msg(mcp::rpc_web3_sha3_error_code const & err_a);
 };
 
 class rpc_handler : public std::enable_shared_from_this<mcp::rpc_handler>
@@ -472,6 +480,7 @@ public:
     void eth_estimateGas();
     void eth_getBlockByNumber();
     void eth_sendTransaction();
+	void net_version();
 
 	std::string body;
 	mcp::rpc & rpc;
