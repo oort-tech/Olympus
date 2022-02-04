@@ -16,7 +16,7 @@ std::string mcp::uint64_to_hex (uint64_t value_a)
 std::string mcp::uint64_to_hex_nofill(uint64_t value_a)
 {
 	std::stringstream stream;
-	stream << std::hex << std::nouppercase << std::showbase;
+	stream << "0x" << std::hex << std::nouppercase;
 	stream << value_a;
 	return stream.str();
 }
@@ -24,7 +24,7 @@ std::string mcp::uint64_to_hex_nofill(uint64_t value_a)
 std::string mcp::uint256_to_hex_nofill(uint256_t value_a)
 {
 	std::stringstream stream;
-	stream << std::hex << std::nouppercase << std::showbase;
+	stream << "0x" << std::hex << std::nouppercase;
 	stream << value_a;
 	return stream.str();
 }
