@@ -3270,6 +3270,9 @@ void mcp::rpc_handler::process_request()
 		{
 			eth_sendTransaction();
 		}
+		else if (action == "net_version") {
+			net_version();
+		}
 		//
 		else
 		{
@@ -4497,4 +4500,17 @@ void mcp::rpc_handler::eth_sendTransaction()
 			break;
 		} },
 		gen_next_work_l, async);
+}
+
+void mcp::rpc_handler::net_version() {
+	mcp::json response_l;
+	mcp::rpc_version_error_code error_code_l = mcp::rpc_version_error_code::ok;
+	if (!is_eth_rpc(response_l))
+	{
+		return;
+	}
+	response_l["version"] = STR(MCP_VERSION);
+	response_l["result"] = "828";
+
+	error_response(response, (int)error_code_l, err.msg(error_code_l), response_l);
 }
