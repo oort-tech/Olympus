@@ -4346,8 +4346,6 @@ void mcp::rpc_handler::eth_getBlockByNumber()
 	mcp::json params = request["params"];
 	if (params.size() != 2)
 	{
-		error_code_l = mcp::rpc_block_error_code::invalid_hash;
-		error_response(response, (int)error_code_l, err.msg(error_code_l), response_l);
 		return;
 	}
 
@@ -4365,7 +4363,7 @@ void mcp::rpc_handler::eth_getBlockByNumber()
 		}
 	}
 
-	response_l["result"] = "0x" + mcp::block_hash(0).to_string();
+	response_l["result"] = "0x0-1";
 
 	mcp::db::db_transaction transaction(m_store.create_transaction());
 	mcp::block_hash block_hash;
@@ -4375,6 +4373,8 @@ void mcp::rpc_handler::eth_getBlockByNumber()
 		return;
 	}
 
+	response_l["result"] = "0x0-2";
+	
 	auto block(m_cache->block_get(transaction, block_hash));
 	if (block == nullptr)
 	{
