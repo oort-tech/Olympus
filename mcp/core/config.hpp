@@ -120,7 +120,7 @@ private:
 		case mcp::mcp_networks::mcp_mini_test_network:
 		{
 			std::vector<std::string> mini_test_witness_str_list_v0 = {
-				"0x1EBEB508001C6F8FC1F87114DAE750D340EB402F"
+				"0x9A58543262C209C0652FE8920747E860669DCBCE"
 			};
 			mcp::witness_param w_param_v0;
 			w_param_v0.witness_count = 1;

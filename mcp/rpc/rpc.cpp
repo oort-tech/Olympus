@@ -4350,26 +4350,31 @@ void mcp::rpc_handler::eth_getBlockByNumber()
 		error_response(response, (int)error_code_l, err.msg(error_code_l), response_l);
 		return;
 	}
-
+	
 	mcp::uint64_union block_number;
 	std::string blockNumberText;
-	if (!params[0].is_string())
+	if (params[0].is_string())
 	{
 		blockNumberText = params[0];
-		if (blockNumberText.find("0x") == 0 && block_number.decode_hex(blockNumberText, true)) {
-			return;
+		if (blockNumberText.find("0x") == 0) {
+			if (block_number.decode_hex(blockNumberText, true)) {
+				return;
+			}
 		} else if (blockNumberText == "latest") {
 			block_number = mcp::uint64_union(m_chain->last_stable_index());
 		} else {
 			return;
 		}
 	}
+	else {
+		return;
+	}
 
 	response_l["result"] = "0x" + mcp::block_hash(0).to_string();
 
 	mcp::db::db_transaction transaction(m_store.create_transaction());
 	mcp::block_hash block_hash;
-	if (!m_store.stable_block_get(transaction, block_number.number(), block_hash))
+	if (m_store.stable_block_get(transaction, block_number.number(), block_hash))
 	{
 		response(response_l);
 		return;

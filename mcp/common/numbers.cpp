@@ -234,7 +234,7 @@ void mcp::uint256_union::encode_hex(std::string & text) const
 bool mcp::uint256_union::decode_hex(std::string const & text, bool show_base)
 {
 	auto error(false);
-	if (!text.empty() && text.size() <= 64)
+	if (!text.empty() && text.size() <= (show_base ? 66 : 64))
 	{
 		std::stringstream stream(text);
 		stream << std::hex << (show_base ? std::showbase : std::noshowbase);
@@ -877,7 +877,7 @@ void mcp::uint64_union::encode_hex(std::string & text) const
 
 bool mcp::uint64_union::decode_hex(std::string const & text, bool show_base)
 {
-	auto error(text.size() > 16);
+	auto error(text.size() > (show_base ? 18 : 16));
 	if (!error)
 	{
 		std::stringstream stream(text);
