@@ -4346,8 +4346,6 @@ void mcp::rpc_handler::eth_getBlockByNumber()
 	mcp::json params = request["params"];
 	if (params.size() != 2)
 	{
-		error_code_l = mcp::rpc_block_error_code::invalid_hash;
-		error_response(response, (int)error_code_l, err.msg(error_code_l), response_l);
 		return;
 	}
 	
@@ -4391,16 +4389,9 @@ void mcp::rpc_handler::eth_getBlockByNumber()
 	if (block != nullptr)
 	{
 		bool is_full = params[1];
-		if (is_full)
-		{
-			mcp::json block_l;
-			block->serialize_json(block_l);
-			response_l["result"] = block_l;
-		}
-		else
-		{
-			response_l["result"] = "0x" + block->hash().to_string();
-		}
+		mcp::json block_l;
+		block->serialize_json_eth(block_l);
+		response_l["result"] = block_l;
 	}
 
 	response(response_l);

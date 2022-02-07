@@ -764,7 +764,7 @@ class Test_rpc(unittest.TestCase):
 	def test_eth_getBlockByNumber(self):
 		data = {
 			"method": "eth_getBlockByNumber",
-			"params": ["0x0", False],
+			"params": ["latest", False],
 			"id": 1,
 			"jsonrpc": "2.0",
 		}
