@@ -29,6 +29,9 @@ namespace mcp
 		void init_from_genesis_json(bool & error_a, mcp::json const & genesis_json_a);
 		void stream_RLP(dev::RLPStream & s) const;
 		void serialize_json(mcp::json & json_a) const;
+		// added by michael at 2/7
+		void serialize_json_eth(mcp::json & json_a) const;
+		//
 		void hash(blake2b_state &) const;
 
 		mcp::uint64_union block_work() const;
@@ -83,6 +86,11 @@ namespace mcp
 		mcp::block_hash root() const;
 		void serialize_json(std::string &) const;
 		void serialize_json(mcp::json & json_a) const;
+
+		// added by michael at 2/7
+		void serialize_json_eth(std::string &) const;
+		void serialize_json_eth(mcp::json & json_a) const;
+		//
 
 		void set_signature(mcp::signature signature_a);
 		void set_signature(mcp::raw_key const & prv_a, mcp::public_key const & pub_a);

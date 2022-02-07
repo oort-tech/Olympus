@@ -4354,8 +4354,10 @@ void mcp::rpc_handler::eth_getBlockByNumber()
 	if (!params[0].is_string())
 	{
 		blockNumberText = params[0];
-		if (blockNumberText.find("0x") == 0 && block_number.decode_hex(blockNumberText, true)) {
-			return;
+		if (blockNumberText.find("0x") == 0) {
+			if (block_number.decode_hex(blockNumberText, true)) {
+				return;
+			}
 		} else if (blockNumberText == "latest") {
 			block_number = mcp::uint64_union(m_chain->last_stable_index());
 		} else {
@@ -4363,18 +4365,16 @@ void mcp::rpc_handler::eth_getBlockByNumber()
 		}
 	}
 
-	response_l["result"] = "0x0-1";
+	response_l["result"] = "0x" + mcp::block_hash(0).to_string();
 
 	mcp::db::db_transaction transaction(m_store.create_transaction());
 	mcp::block_hash block_hash;
-	if (!m_store.stable_block_get(transaction, block_number.number(), block_hash))
+	if (m_store.stable_block_get(transaction, block_number.number(), block_hash))
 	{
 		response(response_l);
 		return;
 	}
 
-	response_l["result"] = "0x0-2";
-	
 	auto block(m_cache->block_get(transaction, block_hash));
 	if (block == nullptr)
 	{
@@ -4386,16 +4386,9 @@ void mcp::rpc_handler::eth_getBlockByNumber()
 	if (block != nullptr)
 	{
 		bool is_full = params[1];
-		if (is_full)
-		{
-			mcp::json block_l;
-			block->serialize_json(block_l);
-			response_l["result"] = block_l;
-		}
-		else
-		{
-			response_l["result"] = "0x" + block->hash().to_string();
-		}
+		mcp::json block_l;
+		block->serialize_json_eth(block_l);
+		response_l["result"] = block_l;
 	}
 
 	response(response_l);
