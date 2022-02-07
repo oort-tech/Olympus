@@ -4345,10 +4345,17 @@ void mcp::rpc_handler::eth_getBlockByNumber()
 	}
 
 	mcp::uint64_union block_number;
-	if (!params[0].is_string() ||
-		block_number.decode_hex(params[0], true))
+	std::string blockNumberText;
+	if (!params[0].is_string())
 	{
-		return;
+		blockNumberText = params[0];
+		if (blockNumberText.find("0x") == 0 && block_number.decode_hex(blockNumberText, true)) {
+			return;
+		} else if (blockNumberText == "latest") {
+			block_number = mcp::uint64_union(m_chain->last_stable_index());
+		} else {
+			return;
+		}
 	}
 
 	response_l["result"] = "0x" + mcp::block_hash(0).to_string();
