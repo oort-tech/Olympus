@@ -16,12 +16,11 @@ namespace mcp
 			{
 			}
 			unsigned distance;	//< Node's distance (xor of _src as integer).
-			bool pending;				//< Node will be ignored until Pong is received
+			bool pending;		//< Node will be ignored until Pong is received
 
 			static unsigned calc_distance(node_id const & a, node_id const & b)
 			{
-				// changed from uint256 to uint512, Daniel
-				uint512_t d = (a ^ b).number();
+				uint256_t d = (a ^ b).number();
 				unsigned ret;
 				for (ret = 0; d >>= 1; ++ret) {};
 				return ret;

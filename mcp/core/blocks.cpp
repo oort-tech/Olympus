@@ -574,7 +574,7 @@ void mcp::block::serialize_json_eth(std::string & string_a) const
 void mcp::block::serialize_json_eth(mcp::json & json_a) const
 {
 	json_a["hash"] = "0x" + hash().to_string();
-	hashables->serialize_json(json_a);
+	hashables->serialize_json_eth(json_a);
 	json_a["transactions"].push_back(json_a["hash"]);
 }
 
