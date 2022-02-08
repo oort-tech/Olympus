@@ -4391,6 +4391,7 @@ void mcp::rpc_handler::eth_getBlockByNumber()
 		bool is_full = params[1];
 		mcp::json block_l;
 		block->serialize_json_eth(block_l);
+		block_l["number"] = "0x" + block_number.to_string();
 		response_l["result"] = block_l;
 	}
 
