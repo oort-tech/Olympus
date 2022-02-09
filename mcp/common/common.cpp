@@ -29,16 +29,16 @@ std::string mcp::uint256_to_hex_nofill(uint256_t value_a)
 	return stream.str();
 }
 
-bool mcp::hex_to_uint64(std::string const & value_a, uint64_t & target_a)
+bool mcp::hex_to_uint64(std::string const & value_a, uint64_t & target_a, bool show_base)
 {
 	auto error(value_a.empty());
 	if (!error)
 	{
-		error = value_a.size() > 16;
+		error = value_a.size() > (show_base ? 18 : 16);
 		if (!error)
 		{
 			std::stringstream stream(value_a);
-			stream << std::hex << std::noshowbase;
+			stream << std::hex << (show_base ? std::showbase : std::noshowbase);
 			try
 			{
 				uint64_t number_l;

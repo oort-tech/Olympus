@@ -33,7 +33,7 @@ namespace mcp
 	std::string uint64_to_hex(uint64_t);
 	std::string uint64_to_hex_nofill(uint64_t);
 	std::string uint256_to_hex_nofill(uint256_t);
-	bool hex_to_uint64(std::string const &, uint64_t &);
+	bool hex_to_uint64(std::string const &, uint64_t &, bool show_base = false);
 	std::string bytes_to_hex(dev::bytes const & b);
 	int from_hex_char(char c) noexcept;
 	bool hex_to_bytes(std::string const & s, dev::bytes & out);

@@ -4181,13 +4181,9 @@ void mcp::rpc_handler::eth_blockNumber()
 		return;
 	}
 	
-	// mcp::uint64_union blockNumber(m_chain->last_stable_index());
-	// response_l["result"] = "0x" + blockNumber.to_string_no_fill();
-
 	response_l["result"] = uint64_to_hex_nofill(m_chain->last_mci());
 
-	error_code_l = mcp::rpc_status_error_code::ok;
-	error_response(response, (int)error_code_l, err.msg(error_code_l), response_l);
+	response(response_l);
 }
 
 void mcp::rpc_handler::eth_getTransactionCount()
@@ -4210,8 +4206,7 @@ void mcp::rpc_handler::eth_getTransactionCount()
 		std::shared_ptr<mcp::account_state> acc_state(m_cache->latest_account_state_get(transaction, account));
 		if (acc_state)
 		{
-			mcp::uint256_union nonce = acc_state->nonce();
-			response_l["result"] = "0x" + nonce.to_string();
+			response_l["result"] = "0x" + uint256_to_hex_nofill(acc_state->nonce());
 		}
 		else
 		{
@@ -4230,9 +4225,7 @@ void mcp::rpc_handler::eth_chainId()
 		return;
 	}
 
-	std::stringstream chainId;
-	chainId << "0x" << std::hex << int(mcp::mcp_network);
-	response_l["result"] = chainId.str();
+	response_l["result"] = uint64_to_hex_nofill((uint64_t) mcp::mcp_network);
 
 	response(response_l);
 }
@@ -4245,9 +4238,7 @@ void mcp::rpc_handler::eth_gasPrice()
 		return;
 	}
 
-	std::stringstream chainId;
-	chainId << "0x" << std::hex << 1000000000;
-	response_l["result"] = chainId.str();
+	response_l["result"] = uint64_to_hex_nofill(1000000000);
 
 	response(response_l);
 }
@@ -4355,8 +4346,7 @@ void mcp::rpc_handler::eth_estimateGas()
 		return;
 	}
 
-	mcp::uint256_union gasResult = result.first;
-	response_l["result"] = "0x" + gasResult.to_string();
+	response_l["result"] = "0x" + uint256_to_hex_nofill(result.first);
 
 	response(response_l);
 }
@@ -4364,7 +4354,6 @@ void mcp::rpc_handler::eth_estimateGas()
 void mcp::rpc_handler::eth_getBlockByNumber()
 {
 	mcp::json response_l;
-	mcp::rpc_block_error_code error_code_l = mcp::rpc_block_error_code::ok;
 	if (!is_eth_rpc(response_l))
 	{
 		return;
@@ -4376,114 +4365,77 @@ void mcp::rpc_handler::eth_getBlockByNumber()
 		return;
 	}
 	
-	// mcp::uint64_union block_number;
-	std::string blockNumberText;
-
 	uint64_t block_number;
-	if (request["params"][0].is_string()) {
-		dev::eth::McInfo mc_info;
-		if (!try_get_mc_info(mc_info))
-		{
-			error_code_l = mcp::rpc_block_error_code::invalid_hash;
-			error_response(response, (int)error_code_l, err.msg(error_code_l));
-			return;
-		}
-		else {
-			block_number = mc_info.mci;
-		}
-	}
-	else {
-		block_number = request["params"][0].get<uint64_t>();
-	}
-
-	/*if (params[0].is_string())
+	if (params[0].is_string())
 	{
-		blockNumberText = params[0];
-		if (blockNumberText.find("0x") == 0) {
-			if (block_number.decode_hex(blockNumberText, true)) {
+		std::string block_numberText = params[0];
+		if (block_numberText == "latest") {
+			block_number = m_chain->last_stable_mci();
+		}
+		else if (block_numberText == "earliest") {
+			block_number = 0;
+		}
+		else if (block_numberText.find("0x") == 0) {
+			if (hex_to_uint64(block_numberText, block_number, true)) {
 				return;
 			}
-		} else if (blockNumberText == "latest") {
-			block_number = mcp::uint64_union(m_chain->last_stable_index());
 		} else {
 			return;
 		}
 	}
 	else {
-		return;
-	}*/
+		block_number = params[0].get<uint64_t>();
+	}
 
-	response_l["result"] = "0x" + mcp::block_hash(0).to_string();
+	response_l["result"] = nullptr;
 
 	mcp::db::db_transaction transaction(m_store.create_transaction());
 	mcp::block_hash block_hash;
-	if (m_store.stable_block_get(transaction, block_number, block_hash))
-	{
-		response(response_l);
+	if (!m_store.main_chain_get(transaction, block_number, block_hash)) {
 		return;
 	}
-
+	
 	std::shared_ptr<mcp::block_state> state(m_cache->block_state_get(transaction, block_hash));
-	if (state != nullptr) {
+	if (block_hash != mcp::genesis::block_hash && state != nullptr) {
 		auto block(m_cache->block_get(transaction, block_hash));
-		mcp::json block_state_l, block_l;
-		if (block == nullptr)
-		{
-			auto unlink_block(m_cache->unlink_block_get(transaction, block_hash));
-			if (unlink_block)
-				block = unlink_block->block;
-		}
-
+		mcp::json block_l;
 		if (block != nullptr)
 		{
 			bool is_full = params[1];
-			// mcp::json block_l;
 			block->serialize_json_eth(block_l);
-			// block_l["number"] = "0x" + block_number.to_string();
 			block_l["number"] = uint64_to_hex_nofill(block_number);
-			// response_l["result"] = block_l;
 		}
 
-		mcp::account contract_account(0);
-		if (block->hashables->type == mcp::block_type::light
-			&& block->isCreation()
-			&& state->is_stable
-			&& (state->status == mcp::block_status::ok))
-		{
-			std::shared_ptr<mcp::account_state> acc_state(m_store.account_state_get(transaction, state->receipt->from_state));
-			assert_x(acc_state);
-			contract_account = toAddress(block->hashables->from, acc_state->nonce() - 1);
-		}
+		// mcp::account contract_account(0);
+		// if (block->hashables->type == mcp::block_type::light
+		// 	&& block->isCreation()
+		// 	&& state->is_stable
+		// 	&& (state->status == mcp::block_status::ok))
+		// {
+		// 	std::shared_ptr<mcp::account_state> acc_state(m_store.account_state_get(transaction, state->receipt->from_state));
+		// 	assert_x(acc_state);
+		// 	contract_account = toAddress(block->hashables->from, acc_state->nonce() - 1);
+		// }
 
-		state->serialize_json(block_state_l, contract_account);
-		if (!block_state_l["stable_content"].is_null()) {
-			// block_l["number"] = uint64_to_hex_nofill(block_state_l["stable_content"]["mci"].get<uint64_t>());
+		// state->serialize_json(block_state_l, contract_account);
+		// if (!block_state_l["stable_content"].is_null()) {
+		// 	if (!block_state_l["stable_content"]["log_bloom"].is_null()) {
+		// 		block_l["logsBloom"] = block_state_l["stable_content"]["log_bloom"];
+		// 	}
 
-			if (!block_state_l["stable_content"]["log_bloom"].is_null()) {
-				block_l["logsBloom"] = block_state_l["stable_content"]["log_bloom"];
-			}
-
-			block_l["gasLimit"] = "0x0";
-			if (!block_state_l["stable_content"]["gas_used"].is_null()) {
-				uint64_t gasUsed;
-				hex_to_uint64(block_state_l["stable_content"]["gas_used"].get<std::string>(), gasUsed);
-				block_l["gasUsed"] = uint64_to_hex_nofill(gasUsed);
-				block_l["gasLimit"] = uint64_to_hex_nofill(gasUsed + 1000); // fake data
-			}
-			block_l["timestamp"] = uint64_to_hex_nofill(block_state_l["stable_content"]["mc_timestamp"].get<uint64_t>());
-		}
-
+		// 	block_l["gasLimit"] = "0x0";
+		// 	if (!block_state_l["stable_content"]["gas_used"].is_null()) {
+		// 		uint64_t gasUsed;
+		// 		hex_to_uint64(block_state_l["stable_content"]["gas_used"].get<std::string>(), gasUsed);
+		// 		block_l["gasUsed"] = uint64_to_hex_nofill(gasUsed);
+		// 		block_l["gasLimit"] = uint64_to_hex_nofill(gasUsed + 1000); // fake data
+		// 	}
+		// 	block_l["timestamp"] = uint64_to_hex_nofill(block_state_l["stable_content"]["mc_timestamp"].get<uint64_t>());
+		// }
 		response_l["result"] = block_l;
-		error_code_l = mcp::rpc_block_error_code::ok;
-		error_response(response, (int)error_code_l, err.msg(error_code_l), response_l);
-	} else {
-		response_l["block_state"] = nullptr;
-		error_code_l = mcp::rpc_block_error_code::block_not_exsist;
-		error_response(response, (int)error_code_l, err.msg(error_code_l), response_l);
 	}
 
-
-	
+	response(response_l);
 }
 
 void mcp::rpc_handler::eth_sendRawTransaction()
@@ -4597,11 +4549,6 @@ void mcp::rpc_handler::eth_sendTransaction()
 		gen_next_work_l, async);
 }
 
-void mcp::rpc_handler::eth_sendRawTransaction()
-{
-	
-}
-
 void mcp::rpc_handler::net_version() {
 	mcp::json response_l;
 	mcp::rpc_version_error_code error_code_l = mcp::rpc_version_error_code::ok;
@@ -4611,8 +4558,8 @@ void mcp::rpc_handler::net_version() {
 	}
 	response_l["version"] = STR(MCP_VERSION);
 	response_l["result"] = "828";
-
-	error_response(response, (int)error_code_l, err.msg(error_code_l), response_l);
+	
+	response(response_l);
 }
 
 void mcp::rpc_handler::web3_clientVersion()
