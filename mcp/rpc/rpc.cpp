@@ -4453,7 +4453,7 @@ void mcp::rpc_handler::eth_sendRawTransaction()
 		return;
 	}
 	
-	// uint256_t nonce = (uint256_t) rlp[0];
+	uint256_t nonce = (uint256_t) rlp[0];
 	uint256_t gas_price = (uint256_t)rlp[1];
 	uint256_t gas = (uint256_t)rlp[2];
 
@@ -4462,7 +4462,7 @@ void mcp::rpc_handler::eth_sendRawTransaction()
 		return;
 	}
 
-	// int type = rlp[3].isEmpty() ? 1 : 2;
+	int type = rlp[3].isEmpty() ? 1 : 2;
 	mcp::account to;
 	if (!rlp[3].isEmpty())
 	{
@@ -4486,9 +4486,10 @@ void mcp::rpc_handler::eth_sendRawTransaction()
 	}
 
 	byte recovery_id;
+	uint256_t chainId = 0;
 	if (v > 36)
 	{
-		auto const chainId = (v - 35) / 2;
+		chainId = (v - 35) / 2;
 		if (chainId > std::numeric_limits<uint64_t>::max())
 		{
 			return;
@@ -4505,8 +4506,21 @@ void mcp::rpc_handler::eth_sendRawTransaction()
 	}
 
 	mcp::signature sig(r, s, recovery_id);
-	uint256_union o;
-	mcp::account from(mcp::encry::recover(sig, o.ref()));
+
+	RLPStream rlpStream;
+	rlpStream.appendList(9);
+	rlpStream << nonce;
+	rlpStream << gas_price;
+	rlpStream << gas;
+	if (type == 1) {
+		rlpStream << "";
+	} else {
+		rlpStream << to;
+	}
+	rlpStream << amount;
+	rlpStream << data;
+	rlpStream << (uint64_t)chainId << 0 << 0;
+	mcp::account from(mcp::encry::recover(sig, dev::sha3(rlpStream.out()).ref()));
 
 	if (!m_key_manager->exists(from))
 	{
