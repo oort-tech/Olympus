@@ -3270,6 +3270,10 @@ void mcp::rpc_handler::process_request()
 		{
 			eth_sendTransaction();
 		}
+		else if (action == "eth_sendRawTransaction")
+		{
+			eth_sendRawTransaction();
+		}
 		else if (action == "net_version") {
 			net_version();
 		}
@@ -4151,16 +4155,20 @@ bool mcp::rpc_handler::is_eth_rpc(mcp::json &response)
 
 void mcp::rpc_handler::eth_blockNumber()
 {
+	mcp::rpc_status_error_code error_code_l;
 	mcp::json response_l;
 	if (!is_eth_rpc(response_l))
 	{
 		return;
 	}
 	
-	mcp::uint64_union blockNumber(m_chain->last_stable_index());
-	response_l["result"] = "0x" + blockNumber.to_string();
+	// mcp::uint64_union blockNumber(m_chain->last_stable_index());
+	// response_l["result"] = "0x" + blockNumber.to_string_no_fill();
 
-	response(response_l);
+	response_l["result"] = uint64_to_hex_nofill(m_chain->last_mci());
+
+	error_code_l = mcp::rpc_status_error_code::ok;
+	error_response(response, (int)error_code_l, err.msg(error_code_l), response_l);
 }
 
 void mcp::rpc_handler::eth_getTransactionCount()
@@ -4349,9 +4357,27 @@ void mcp::rpc_handler::eth_getBlockByNumber()
 		return;
 	}
 	
-	mcp::uint64_union block_number;
+	// mcp::uint64_union block_number;
 	std::string blockNumberText;
-	if (params[0].is_string())
+
+	uint64_t block_number;
+	if (request["params"][0].is_string()) {
+		dev::eth::McInfo mc_info;
+		if (!try_get_mc_info(mc_info))
+		{
+			error_code_l = mcp::rpc_block_error_code::invalid_hash;
+			error_response(response, (int)error_code_l, err.msg(error_code_l));
+			return;
+		}
+		else {
+			block_number = mc_info.mci;
+		}
+	}
+	else {
+		block_number = request["params"][0].get<uint64_t>();
+	}
+
+	/*if (params[0].is_string())
 	{
 		blockNumberText = params[0];
 		if (blockNumberText.find("0x") == 0) {
@@ -4366,36 +4392,79 @@ void mcp::rpc_handler::eth_getBlockByNumber()
 	}
 	else {
 		return;
-	}
+	}*/
 
 	response_l["result"] = "0x" + mcp::block_hash(0).to_string();
 
 	mcp::db::db_transaction transaction(m_store.create_transaction());
 	mcp::block_hash block_hash;
-	if (m_store.stable_block_get(transaction, block_number.number(), block_hash))
+	if (m_store.stable_block_get(transaction, block_number, block_hash))
 	{
 		response(response_l);
 		return;
 	}
 
-	auto block(m_cache->block_get(transaction, block_hash));
-	if (block == nullptr)
-	{
-		auto unlink_block(m_cache->unlink_block_get(transaction, block_hash));
-		if (unlink_block)
-			block = unlink_block->block;
-	}
+	std::shared_ptr<mcp::block_state> state(m_cache->block_state_get(transaction, block_hash));
+	if (state != nullptr) {
+		auto block(m_cache->block_get(transaction, block_hash));
+		mcp::json block_state_l, block_l;
+		if (block == nullptr)
+		{
+			auto unlink_block(m_cache->unlink_block_get(transaction, block_hash));
+			if (unlink_block)
+				block = unlink_block->block;
+		}
 
-	if (block != nullptr)
-	{
-		bool is_full = params[1];
-		mcp::json block_l;
-		block->serialize_json_eth(block_l);
-		block_l["number"] = "0x" + block_number.to_string();
+		if (block != nullptr)
+		{
+			bool is_full = params[1];
+			// mcp::json block_l;
+			block->serialize_json_eth(block_l);
+			// block_l["number"] = "0x" + block_number.to_string();
+			block_l["number"] = uint64_to_hex_nofill(block_number);
+			// response_l["result"] = block_l;
+		}
+
+		mcp::account contract_account(0);
+		if (block->hashables->type == mcp::block_type::light
+			&& block->isCreation()
+			&& state->is_stable
+			&& (state->status == mcp::block_status::ok))
+		{
+			std::shared_ptr<mcp::account_state> acc_state(m_store.account_state_get(transaction, state->receipt->from_state));
+			assert_x(acc_state);
+			contract_account = toAddress(block->hashables->from, acc_state->nonce() - 1);
+		}
+
+		state->serialize_json(block_state_l, contract_account);
+		if (!block_state_l["stable_content"].is_null()) {
+			// block_l["number"] = uint64_to_hex_nofill(block_state_l["stable_content"]["mci"].get<uint64_t>());
+
+			if (!block_state_l["stable_content"]["log_bloom"].is_null()) {
+				block_l["logsBloom"] = block_state_l["stable_content"]["log_bloom"];
+			}
+
+			block_l["gasLimit"] = "0x0";
+			if (!block_state_l["stable_content"]["gas_used"].is_null()) {
+				uint64_t gasUsed;
+				hex_to_uint64(block_state_l["stable_content"]["gas_used"].get<std::string>(), gasUsed);
+				block_l["gasUsed"] = uint64_to_hex_nofill(gasUsed);
+				block_l["gasLimit"] = uint64_to_hex_nofill(gasUsed + 1000); // fake data
+			}
+			block_l["timestamp"] = uint64_to_hex_nofill(block_state_l["stable_content"]["mc_timestamp"].get<uint64_t>());
+		}
+
 		response_l["result"] = block_l;
+		error_code_l = mcp::rpc_block_error_code::ok;
+		error_response(response, (int)error_code_l, err.msg(error_code_l), response_l);
+	} else {
+		response_l["block_state"] = nullptr;
+		error_code_l = mcp::rpc_block_error_code::block_not_exsist;
+		error_response(response, (int)error_code_l, err.msg(error_code_l), response_l);
 	}
 
-	response(response_l);
+
+	
 }
 
 void mcp::rpc_handler::eth_sendTransaction()
@@ -4502,6 +4571,11 @@ void mcp::rpc_handler::eth_sendTransaction()
 			break;
 		} },
 		gen_next_work_l, async);
+}
+
+void mcp::rpc_handler::eth_sendRawTransaction()
+{
+	
 }
 
 void mcp::rpc_handler::net_version() {

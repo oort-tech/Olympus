@@ -480,6 +480,7 @@ public:
     void eth_estimateGas();
     void eth_getBlockByNumber();
     void eth_sendTransaction();
+	void eth_sendRawTransaction();
 	void net_version();
 
 	std::string body;
