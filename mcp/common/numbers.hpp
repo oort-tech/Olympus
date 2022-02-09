@@ -50,8 +50,10 @@ public:
 	bool operator<= (mcp::uint64_union const &) const;
 	bool operator>= (mcp::uint64_union const &) const;
 	void encode_hex(std::string &) const;
+	void encode_hex_no_fill(std::string &) const;
 	bool decode_hex(std::string const &, bool show_base = false);
 	std::string to_string() const;
+	std::string to_string_no_fill() const;
 	uint64_t number() const;
 	enum { size = 8 };
 	std::array<uint8_t, 8> bytes;
@@ -111,6 +113,7 @@ union uint256_union
 	bool operator<= (mcp::uint256_union const &) const;
 	bool operator>= (mcp::uint256_union const &) const;
 	void encode_hex (std::string &) const;
+	void encode_hex_no_fill (std::string &) const;
 	bool decode_hex (std::string const &, bool show_base = false);
 	void encode_dec (std::string &) const;
 	bool decode_dec (std::string const &);
@@ -132,6 +135,7 @@ union uint256_union
 	void clear ();
 	bool is_zero () const;
 	std::string to_string () const;
+	std::string to_string_no_fill() const;
 	std::string to_string_dec () const;
 	mcp::uint256_t number () const;
 	enum { size = 32 };

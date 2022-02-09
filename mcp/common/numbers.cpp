@@ -123,6 +123,14 @@ bool mcp::uint256_union::is_zero() const
 	return qwords[0] == 0 && qwords[1] == 0 && qwords[2] == 0 && qwords[3] == 0;
 }
 
+
+std::string mcp::uint256_union::to_string_no_fill() const
+{
+	std::string result;
+	encode_hex_no_fill(result);
+	return result;
+}
+
 std::string mcp::uint256_union::to_string() const
 {
 	std::string result;
@@ -227,6 +235,15 @@ void mcp::uint256_union::encode_hex(std::string & text) const
 	assert_x(text.empty());
 	std::stringstream stream;
 	stream << std::hex << std::noshowbase << std::setw(64) << std::setfill('0');
+	stream << number();
+	text = stream.str();
+}
+
+void mcp::uint256_union::encode_hex_no_fill(std::string & text) const
+{
+	assert_x(text.empty());
+	std::stringstream stream;
+	stream << std::hex << std::noshowbase << std::uppercase;
 	stream << number();
 	text = stream.str();
 }
@@ -875,6 +892,16 @@ void mcp::uint64_union::encode_hex(std::string & text) const
 	text = stream.str();
 }
 
+void mcp::uint64_union::encode_hex_no_fill(std::string & text) const
+{
+	assert_x(text.empty());
+	std::stringstream stream;
+	stream << std::hex << std::noshowbase  << std::uppercase;
+	stream << number();
+	text = stream.str();
+}
+
+
 bool mcp::uint64_union::decode_hex(std::string const & text, bool show_base)
 {
 	auto error(text.size() > (show_base ? 18 : 16));
@@ -904,6 +931,13 @@ std::string mcp::uint64_union::to_string() const
 {
 	std::string result;
 	encode_hex(result);
+	return result;
+}
+
+std::string mcp::uint64_union::to_string_no_fill() const
+{
+	std::string result;
+	encode_hex_no_fill(result);
 	return result;
 }
 
