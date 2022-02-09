@@ -2,8 +2,8 @@
 #include <mcp/common/log.hpp>
 
 std::string const mini_test_genesis_data = R"%%%({
-    "from":"0x5D6DDC1717A32A49CAB87A6BCC3ECFE42675F9AD",
-    "to":"0x5D6DDC1717A32A49CAB87A6BCC3ECFE42675F9AD",
+    "from":"0x9A58543262C209C0652FE8920747E860669DCBCE",
+    "to":"0x9A58543262C209C0652FE8920747E860669DCBCE",
     "amount":"1132623791600000000000000000",
     "data":"",
 	"exec_timestamp":"1514764800"
