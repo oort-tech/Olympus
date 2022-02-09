@@ -479,8 +479,15 @@ public:
     void eth_gasPrice();
     void eth_estimateGas();
     void eth_getBlockByNumber();
+    void eth_sendRawTransaction();
     void eth_sendTransaction();
-	void net_version();
+    void net_version();
+    // related to the upgrades
+    void web3_clientVersion();
+    void eth_getCode();
+    void eth_getStorageAt();
+    void eth_getTransactionByHash();
+    void eth_getTransactionReceipt();
 
 	std::string body;
 	mcp::rpc & rpc;

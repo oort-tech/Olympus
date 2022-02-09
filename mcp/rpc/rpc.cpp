@@ -3266,12 +3266,31 @@ void mcp::rpc_handler::process_request()
 		{
 			eth_getBlockByNumber();
 		}
+		else if (action == "eth_sendRawTransaction")
+		{
+			eth_sendRawTransaction();
+		}
 		else if (action == "eth_sendTransaction")
 		{
 			eth_sendTransaction();
 		}
 		else if (action == "net_version") {
 			net_version();
+		}
+		else if (action == "web3_clientVersion") {
+			web3_clientVersion();
+		}
+		else if (action == "eth_getCode") {
+			eth_getCode();
+		}
+		else if (action == "eth_getStorageAt") {
+			eth_getStorageAt();
+		}
+		else if (action == "eth_getTransactionByHash") {
+			eth_getTransactionByHash();
+		}
+		else if (action == "eth_getTransactionReceipt") {
+			eth_getTransactionReceipt();
 		}
 		//
 		else
@@ -4395,6 +4414,11 @@ void mcp::rpc_handler::eth_getBlockByNumber()
 	response(response_l);
 }
 
+void mcp::rpc_handler::eth_sendRawTransaction()
+{
+	
+}
+
 void mcp::rpc_handler::eth_sendTransaction()
 {
 	mcp::json response_l;
@@ -4512,4 +4536,29 @@ void mcp::rpc_handler::net_version() {
 	response_l["result"] = "828";
 
 	error_response(response, (int)error_code_l, err.msg(error_code_l), response_l);
+}
+
+void mcp::rpc_handler::web3_clientVersion()
+{
+
+}
+
+void mcp::rpc_handler::eth_getCode()
+{
+	
+}
+
+void mcp::rpc_handler::eth_getStorageAt()
+{
+	
+}
+
+void mcp::rpc_handler::eth_getTransactionByHash()
+{
+	
+}
+
+void mcp::rpc_handler::eth_getTransactionReceipt()
+{
+	
 }
