@@ -3106,7 +3106,7 @@ void mcp::rpc_handler::process_request()
 			reprocess_body(body, request);
 			handled = true;
 		}
-		
+
 		LOG(m_log.debug) << body;
 
 		if (handled)
@@ -3278,22 +3278,28 @@ void mcp::rpc_handler::process_request()
 		{
 			eth_sendRawTransaction();
 		}
-		else if (action == "net_version") {
+		else if (action == "net_version")
+		{
 			net_version();
 		}
-		else if (action == "web3_clientVersion") {
+		else if (action == "web3_clientVersion")
+		{
 			web3_clientVersion();
 		}
-		else if (action == "eth_getCode") {
+		else if (action == "eth_getCode")
+		{
 			eth_getCode();
 		}
-		else if (action == "eth_getStorageAt") {
+		else if (action == "eth_getStorageAt")
+		{
 			eth_getStorageAt();
 		}
-		else if (action == "eth_getTransactionByHash") {
+		else if (action == "eth_getTransactionByHash")
+		{
 			eth_getTransactionByHash();
 		}
-		else if (action == "eth_getTransactionReceipt") {
+		else if (action == "eth_getTransactionReceipt")
+		{
 			eth_getTransactionReceipt();
 		}
 		//
@@ -4180,7 +4186,7 @@ void mcp::rpc_handler::eth_blockNumber()
 	{
 		return;
 	}
-	
+
 	response_l["result"] = uint64_to_hex_nofill(m_chain->last_mci());
 
 	response(response_l);
@@ -4206,7 +4212,7 @@ void mcp::rpc_handler::eth_getTransactionCount()
 		std::shared_ptr<mcp::account_state> acc_state(m_cache->latest_account_state_get(transaction, account));
 		if (acc_state)
 		{
-			response_l["result"] = "0x" + uint256_to_hex_nofill(acc_state->nonce());
+			response_l["result"] = uint256_to_hex_nofill(acc_state->nonce());
 		}
 		else
 		{
@@ -4225,7 +4231,7 @@ void mcp::rpc_handler::eth_chainId()
 		return;
 	}
 
-	response_l["result"] = uint64_to_hex_nofill((uint64_t) mcp::mcp_network);
+	response_l["result"] = uint64_to_hex_nofill((uint64_t)mcp::mcp_network);
 
 	response(response_l);
 }
@@ -4346,7 +4352,7 @@ void mcp::rpc_handler::eth_estimateGas()
 		return;
 	}
 
-	response_l["result"] = "0x" + uint256_to_hex_nofill(result.first);
+	response_l["result"] = uint256_to_hex_nofill(result.first);
 
 	response(response_l);
 }
@@ -4364,26 +4370,33 @@ void mcp::rpc_handler::eth_getBlockByNumber()
 	{
 		return;
 	}
-	
+
 	uint64_t block_number;
 	if (params[0].is_string())
 	{
 		std::string block_numberText = params[0];
-		if (block_numberText == "latest") {
+		if (block_numberText == "latest")
+		{
 			block_number = m_chain->last_stable_mci();
 		}
-		else if (block_numberText == "earliest") {
+		else if (block_numberText == "earliest")
+		{
 			block_number = 0;
 		}
-		else if (block_numberText.find("0x") == 0) {
-			if (hex_to_uint64(block_numberText, block_number, true)) {
+		else if (block_numberText.find("0x") == 0)
+		{
+			if (hex_to_uint64(block_numberText, block_number, true))
+			{
 				return;
 			}
-		} else {
+		}
+		else
+		{
 			return;
 		}
 	}
-	else {
+	else
+	{
 		block_number = params[0].get<uint64_t>();
 	}
 
@@ -4391,12 +4404,14 @@ void mcp::rpc_handler::eth_getBlockByNumber()
 
 	mcp::db::db_transaction transaction(m_store.create_transaction());
 	mcp::block_hash block_hash;
-	if (!m_store.main_chain_get(transaction, block_number, block_hash)) {
+	if (m_store.main_chain_get(transaction, block_number, block_hash))
+	{
 		return;
 	}
-	
+
 	std::shared_ptr<mcp::block_state> state(m_cache->block_state_get(transaction, block_hash));
-	if (block_hash != mcp::genesis::block_hash && state != nullptr) {
+	if (block_hash != mcp::genesis::block_hash && state != nullptr)
+	{
 		auto block(m_cache->block_get(transaction, block_hash));
 		mcp::json block_l;
 		if (block != nullptr)
@@ -4405,33 +4420,6 @@ void mcp::rpc_handler::eth_getBlockByNumber()
 			block->serialize_json_eth(block_l);
 			block_l["number"] = uint64_to_hex_nofill(block_number);
 		}
-
-		// mcp::account contract_account(0);
-		// if (block->hashables->type == mcp::block_type::light
-		// 	&& block->isCreation()
-		// 	&& state->is_stable
-		// 	&& (state->status == mcp::block_status::ok))
-		// {
-		// 	std::shared_ptr<mcp::account_state> acc_state(m_store.account_state_get(transaction, state->receipt->from_state));
-		// 	assert_x(acc_state);
-		// 	contract_account = toAddress(block->hashables->from, acc_state->nonce() - 1);
-		// }
-
-		// state->serialize_json(block_state_l, contract_account);
-		// if (!block_state_l["stable_content"].is_null()) {
-		// 	if (!block_state_l["stable_content"]["log_bloom"].is_null()) {
-		// 		block_l["logsBloom"] = block_state_l["stable_content"]["log_bloom"];
-		// 	}
-
-		// 	block_l["gasLimit"] = "0x0";
-		// 	if (!block_state_l["stable_content"]["gas_used"].is_null()) {
-		// 		uint64_t gasUsed;
-		// 		hex_to_uint64(block_state_l["stable_content"]["gas_used"].get<std::string>(), gasUsed);
-		// 		block_l["gasUsed"] = uint64_to_hex_nofill(gasUsed);
-		// 		block_l["gasLimit"] = uint64_to_hex_nofill(gasUsed + 1000); // fake data
-		// 	}
-		// 	block_l["timestamp"] = uint64_to_hex_nofill(block_state_l["stable_content"]["mc_timestamp"].get<uint64_t>());
-		// }
 		response_l["result"] = block_l;
 	}
 
@@ -4440,7 +4428,126 @@ void mcp::rpc_handler::eth_getBlockByNumber()
 
 void mcp::rpc_handler::eth_sendRawTransaction()
 {
+	mcp::json response_l;
+	if (!is_eth_rpc(response_l))
+	{
+		return;
+	}
+
+	mcp::json params = request["params"];
+	if (!params[0].is_string())
+	{
+		return;
+	}
+
+	std::string rlpText = params[0];
+	dev::bytes rlpBytes;
+	if (hex_to_bytes(rlpText, rlpBytes))
+	{
+		return;
+	}
+
+	RLP const rlp(rlpBytes);
+	if (!rlp.isList() || rlp.itemCount() > 9)
+	{
+		return;
+	}
 	
+	// uint256_t nonce = (uint256_t) rlp[0];
+	uint256_t gas_price = (uint256_t)rlp[1];
+	uint256_t gas = (uint256_t)rlp[2];
+
+	if (!rlp[3].isData())
+	{
+		return;
+	}
+
+	// int type = rlp[3].isEmpty() ? 1 : 2;
+	mcp::account to;
+	if (!rlp[3].isEmpty())
+	{
+		to = (mcp::account)rlp[3];
+	}
+	uint256_t amount = (uint256_t)rlp[4].toInt();
+
+	if (!rlp[5].isData())
+	{
+		return;
+	}
+
+	dev::bytes data = rlp[5].toBytes();
+	uint256_t v = (uint256_t)rlp[6];
+	mcp::uint256_union r = (mcp::uint256_union)rlp[7];
+	mcp::uint256_union s = (mcp::uint256_union)rlp[8];
+
+	if (r.is_zero() && s.is_zero())
+	{
+		return;
+	}
+
+	byte recovery_id;
+	if (v > 36)
+	{
+		auto const chainId = (v - 35) / 2;
+		if (chainId > std::numeric_limits<uint64_t>::max())
+		{
+			return;
+		}
+		recovery_id = byte{v - (chainId * 2 + 35)};
+	}
+	else if (v != 27 && v != 28)
+	{
+		return;
+	}
+	else
+	{
+		recovery_id = byte{v - 27};
+	}
+
+	mcp::signature sig(r, s, recovery_id);
+	uint256_union o;
+	mcp::account from(mcp::encry::recover(sig, o.ref()));
+
+	if (!m_key_manager->exists(from))
+	{
+		return;
+	}
+
+	boost::optional<mcp::block_hash> previous_opt;
+	boost::optional<std::string> password;
+	bool gen_next_work_l(false);
+	bool async(false);
+	auto rpc_l(shared_from_this());
+	m_wallet->send_async(
+		mcp::block_type::light, previous_opt, from, to, amount, gas, gas_price, data, password, [response_l, this](mcp::send_result result)
+		{
+		switch (result.code)
+		{
+		case mcp::send_result_codes::ok:
+		{
+			mcp::json response_j = response_l;
+			response_j["result"] = "0x" + result.block->hash().to_string();
+			response(response_j);
+			break;
+		}
+		case mcp::send_result_codes::from_not_exists:
+			break;
+		case mcp::send_result_codes::account_locked:
+			break;
+		case mcp::send_result_codes::wrong_password:
+			break;
+		case mcp::send_result_codes::insufficient_balance:
+			break;
+		case mcp::send_result_codes::data_size_too_large:
+			break;
+		case mcp::send_result_codes::validate_error:
+			break;
+		case mcp::send_result_codes::error:
+			break;
+		default:
+			break;
+		} },
+		gen_next_work_l, async);
 }
 
 void mcp::rpc_handler::eth_sendTransaction()
@@ -4549,7 +4656,8 @@ void mcp::rpc_handler::eth_sendTransaction()
 		gen_next_work_l, async);
 }
 
-void mcp::rpc_handler::net_version() {
+void mcp::rpc_handler::net_version()
+{
 	mcp::json response_l;
 	mcp::rpc_version_error_code error_code_l = mcp::rpc_version_error_code::ok;
 	if (!is_eth_rpc(response_l))
@@ -4558,31 +4666,26 @@ void mcp::rpc_handler::net_version() {
 	}
 	response_l["version"] = STR(MCP_VERSION);
 	response_l["result"] = "828";
-	
+
 	response(response_l);
 }
 
 void mcp::rpc_handler::web3_clientVersion()
 {
-
 }
 
 void mcp::rpc_handler::eth_getCode()
 {
-	
 }
 
 void mcp::rpc_handler::eth_getStorageAt()
 {
-	
 }
 
 void mcp::rpc_handler::eth_getTransactionByHash()
 {
-	
 }
 
 void mcp::rpc_handler::eth_getTransactionReceipt()
 {
-	
 }
