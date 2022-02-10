@@ -4848,6 +4848,86 @@ void mcp::rpc_handler::web3_clientVersion()
 
 void mcp::rpc_handler::eth_getCode()
 {
+	mcp::json response_l;
+	if (!is_eth_rpc(response_l))
+	{
+		return;
+	}
+
+	mcp::json params = request["params"];
+	if (params.size() != 2)
+	{
+		return;
+	}
+
+	mcp::account account;
+	if (!params[0].is_string() ||
+		account.decode_account(params[0])) {
+		return;
+	}
+
+	uint64_t block_number;
+	if (params[1].is_string())
+	{
+		std::string block_numberText = params[1];
+		if (block_numberText == "latest")
+		{
+			block_number = m_chain->last_stable_mci();
+		}
+		else if (block_numberText == "earliest")
+		{
+			block_number = 0;
+		}
+		else if (block_numberText.find("0x") == 0)
+		{
+			if (hex_to_uint64(block_numberText, block_number, true))
+			{
+				response(response_l);
+				return;
+			}
+		}
+		else
+		{
+			response(response_l);
+			return;
+		}
+	}
+	else
+	{
+		response(response_l);
+		return;
+	}
+
+	mcp::db::db_transaction transaction(m_store.create_transaction());
+	mcp::block_hash block_hash;
+	if (m_store.main_chain_get(transaction, block_number, block_hash))
+	{
+		response(response_l);
+		return;
+	}
+
+	auto state(m_cache->latest_account_state_get(transaction, account));
+	auto acc_state(m_store.account_state_get(transaction, state->hash()));
+	assert_x(acc_state);
+	response_l["result"] = "0x" + bytes_to_hex(acc_state->code());
+
+	/*std::shared_ptr<mcp::block_state> state(m_cache->block_state_get(transaction, block_hash));
+	if (block_hash != mcp::genesis::block_hash && state != nullptr)
+	{
+		auto block(m_cache->block_get(transaction, block_hash));
+		mcp::json block_l;
+		if (block != nullptr)
+		{
+			if (block->hashables->type == mcp::block_type::light && block->isCreation() && state->is_stable && (state->status == mcp::block_status::ok))
+			{
+				std::shared_ptr<mcp::account_state> acc_state(m_store.account_state_get(transaction, account));
+				assert_x(acc_state);
+				response_l["result"] = "0x" + bytes_to_hex(acc_state->code());
+			}
+		}
+	}*/
+
+	response(response_l);
 }
 
 void mcp::rpc_handler::eth_getStorageAt()
