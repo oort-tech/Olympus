@@ -58,6 +58,35 @@ bool mcp::hex_to_uint64(std::string const & value_a, uint64_t & target_a, bool s
 	return error;
 }
 
+bool mcp::hex_to_uint256(std::string const & value_a, uint256_t & target_a, bool show_base)
+{
+	auto error(value_a.empty());
+	if (!error)
+	{
+		error = value_a.size() > (show_base ? 66 : 64);
+		if (!error)
+		{
+			std::stringstream stream(value_a);
+			stream << std::hex << (show_base ? std::showbase : std::noshowbase);
+			try
+			{
+				uint256_t number_l;
+				stream >> number_l;
+				target_a = number_l;
+				if (!stream.eof())
+				{
+					error = true;
+				}
+			}
+			catch (std::runtime_error &)
+			{
+				error = true;
+			}
+		}
+	}
+	return error;
+}
+
 std::string mcp::bytes_to_hex(dev::bytes const & b)
 {
 	static char const* hexdigits = "0123456789ABCDEF";

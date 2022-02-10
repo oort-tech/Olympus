@@ -481,7 +481,9 @@ public:
     void eth_getBlockByNumber();
     void eth_sendRawTransaction();
     void eth_sendTransaction();
+    void eth_call();
     void net_version();
+    bool try_get_mc_info(dev::eth::McInfo &mc_info_a, uint64_t &mci);
     // related to the upgrades
     void web3_clientVersion();
     void eth_getCode();
