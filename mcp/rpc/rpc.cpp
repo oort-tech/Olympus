@@ -4579,7 +4579,7 @@ void mcp::rpc_handler::eth_sendRawTransaction()
 		case mcp::send_result_codes::ok:
 		{
 			mcp::json response_j = response_l;
-			response_j["result"] = "0x" + result.block->hash().to_string();
+			response_j["result"] = result.block->hash().to_string(true);
 			response(response_j);
 			break;
 		}
@@ -4686,7 +4686,7 @@ void mcp::rpc_handler::eth_sendTransaction()
 		case mcp::send_result_codes::ok:
 		{
 			mcp::json response_j = response_l;
-			response_j["result"] = "0x" + result.block->hash().to_string();
+			response_j["result"] = result.block->hash().to_string(true);
 			response(response_j);
 			break;
 		}
@@ -4856,4 +4856,40 @@ void mcp::rpc_handler::eth_getTransactionByHash()
 
 void mcp::rpc_handler::eth_getTransactionReceipt()
 {
+	mcp::json response_l;
+	if (!is_eth_rpc(response_l))
+	{
+		return;
+	}
+
+	mcp::json params = request["params"];
+	if (params.size() != 1) {
+		return;
+	}
+
+	mcp::block_hash block_hash;
+	if (block_hash.decode_hex(params[0], true)) {
+		return;
+	}
+
+	response_l["result"] = nullptr;
+
+	mcp::db::db_transaction transaction(m_store.create_transaction());
+	std::shared_ptr<mcp::block_state> state(m_cache->block_state_get(transaction, block_hash));
+	if (block_hash != mcp::genesis::block_hash && state != nullptr)
+	{
+		auto block(m_cache->block_get(transaction, block_hash));
+		if (block != nullptr && state->receipt != boost::none) {
+			mcp::json json_receipt;
+			json_receipt["blockHash"] = block_hash.to_string(true);
+			json_receipt["blockNumber"] = uint64_to_hex_nofill(state->main_chain_index.get());
+			json_receipt["from"] = block->hashables->from.to_account();
+			json_receipt["to"] = block->hashables->to.to_account();
+			json_receipt["gasUsed"] = uint256_to_hex_nofill(state->receipt->gas_used);
+			json_receipt["transactionHash"] = block_hash.to_string(true);
+			json_receipt["status"] = "0x1";
+		}
+	}
+
+	response(response_l);
 }
