@@ -4179,6 +4179,7 @@ bool mcp::rpc_handler::is_eth_rpc(mcp::json &response)
 
 	response["id"] = request["id"];
 	response["jsonrpc"] = request["jsonrpc"];
+	response["result"] = nullptr;
 
 	return true;
 }
@@ -4191,7 +4192,7 @@ void mcp::rpc_handler::eth_blockNumber()
 		return;
 	}
 
-	response_l["result"] = uint64_to_hex_nofill(m_chain->last_mci());
+	response_l["result"] = uint64_to_hex_nofill(m_chain->last_stable_mci());
 
 	response(response_l);
 }
@@ -4421,16 +4422,19 @@ void mcp::rpc_handler::eth_getBlockByNumber()
 		{
 			if (hex_to_uint64(block_numberText, block_number, true))
 			{
+				response(response_l);
 				return;
 			}
 		}
 		else
 		{
+			response(response_l);
 			return;
 		}
 	}
 	else
 	{
+		response(response_l);
 		return;
 	}
 
@@ -4440,6 +4444,7 @@ void mcp::rpc_handler::eth_getBlockByNumber()
 	mcp::block_hash block_hash;
 	if (m_store.main_chain_get(transaction, block_number, block_hash))
 	{
+		response(response_l);
 		return;
 	}
 
@@ -4452,7 +4457,6 @@ void mcp::rpc_handler::eth_getBlockByNumber()
 		{
 			bool is_full = params[1];
 			block->serialize_json_eth(block_l);
-			block_l["gasLimit"] = uint64_to_hex_nofill(mcp::block_max_gas);
 			block_l["number"] = uint64_to_hex_nofill(block_number);
 		}
 		response_l["result"] = block_l;
@@ -4572,7 +4576,7 @@ void mcp::rpc_handler::eth_sendRawTransaction()
 	auto rpc_l(shared_from_this());
 	
 	m_wallet->send_async(
-		mcp::block_type::light, previous_opt, from, to, amount, gas, gas_price, data, password, [response_l, this](mcp::send_result result)
+		mcp::block_type::light, previous_opt, from, to, amount, gas, gas_price, data, password, [response_l, rpc_l, this](mcp::send_result result)
 		{
 		switch (result.code)
 		{
@@ -4679,7 +4683,7 @@ void mcp::rpc_handler::eth_sendTransaction()
 	bool async(false);
 	auto rpc_l(shared_from_this());
 	m_wallet->send_async(
-		mcp::block_type::light, previous_opt, from, to, amount, gas, gas_price, data, password, [response_l, this](mcp::send_result result)
+		mcp::block_type::light, previous_opt, from, to, amount, gas, gas_price, data, password, [response_l, rpc_l, this](mcp::send_result result)
 		{
 		switch (result.code)
 		{
@@ -4880,14 +4884,24 @@ void mcp::rpc_handler::eth_getTransactionReceipt()
 	{
 		auto block(m_cache->block_get(transaction, block_hash));
 		if (block != nullptr && state->receipt != boost::none) {
-			mcp::json json_receipt;
-			json_receipt["blockHash"] = block_hash.to_string(true);
-			json_receipt["blockNumber"] = uint64_to_hex_nofill(state->main_chain_index.get());
-			json_receipt["from"] = block->hashables->from.to_account();
-			json_receipt["to"] = block->hashables->to.to_account();
-			json_receipt["gasUsed"] = uint256_to_hex_nofill(state->receipt->gas_used);
-			json_receipt["transactionHash"] = block_hash.to_string(true);
-			json_receipt["status"] = "0x1";
+			if (block->hashables->type == mcp::block_type::light && block->isCreation() && state->is_stable && (state->status == mcp::block_status::ok))
+			{
+				std::shared_ptr<mcp::account_state> acc_state(m_store.account_state_get(transaction, state->receipt->from_state));
+				assert_x(acc_state);
+				mcp::json json_receipt;
+				json_receipt["blockHash"] = block_hash.to_string(true);
+				json_receipt["blockNumber"] = uint64_to_hex_nofill(state->main_chain_index.get());
+				json_receipt["from"] = block->hashables->from.to_account();
+				json_receipt["to"] = nullptr;
+				json_receipt["contractAddress"] = toAddress(block->hashables->from, acc_state->nonce() - 1).to_account();
+				json_receipt["gasUsed"] = uint256_to_hex_nofill(state->receipt->gas_used);
+				json_receipt["transactionHash"] = block_hash.to_string(true);
+				json_receipt["logs"] = json::array();
+				json_receipt["logsBloom"] = "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
+				json_receipt["transactionIndex"] = "0x0";
+				json_receipt["status"] = "0x1";
+				response_l["result"] = json_receipt;
+			}
 		}
 	}
 

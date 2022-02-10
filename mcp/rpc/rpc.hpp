@@ -19,7 +19,6 @@ void error_response(std::function<void(mcp::json const &)> response_a, int const
 void error_response(std::function<void(mcp::json const &)> response_a, int const& error_code, std::string const & message_a);
 void error_response(std::function<void(mcp::json const &)> response_a, std::string const & message_a);
 
-
 class rpc_config
 {
 public:
