@@ -805,12 +805,12 @@ if __name__ == "__main__":
 	# suite.addTest(Test_rpc("test_version"))
 	# suite.addTest(Test_rpc("test_account_remove"))
 	# suite.addTest(Test_rpc("test_send_ccn"))
-	suite.addTest(Test_rpc("test_eth_blockNumber"))
-	suite.addTest(Test_rpc("test_eth_getTransactionCount"))
-	suite.addTest(Test_rpc("test_eth_chainId"))
-	suite.addTest(Test_rpc("test_eth_gasPrice"))
-	suite.addTest(Test_rpc("test_eth_estimateGas"))
-	suite.addTest(Test_rpc("test_eth_getBlockByNumber"))
+	# suite.addTest(Test_rpc("test_eth_blockNumber"))
+	# suite.addTest(Test_rpc("test_eth_getTransactionCount"))
+	# suite.addTest(Test_rpc("test_eth_chainId"))
+	# suite.addTest(Test_rpc("test_eth_gasPrice"))
+	# suite.addTest(Test_rpc("test_eth_estimateGas"))
+	# suite.addTest(Test_rpc("test_eth_getBlockByNumber"))
 
 	result = unittest.TextTestRunner(verbosity=3).run(suite)
 	if result.wasSuccessful():
