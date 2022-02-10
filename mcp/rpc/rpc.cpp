@@ -4452,6 +4452,7 @@ void mcp::rpc_handler::eth_getBlockByNumber()
 		{
 			bool is_full = params[1];
 			block->serialize_json_eth(block_l);
+			block_l["gasLimit"] = uint64_to_hex_nofill(mcp::block_max_gas);
 			block_l["number"] = uint64_to_hex_nofill(block_number);
 		}
 		response_l["result"] = block_l;
@@ -4570,9 +4571,6 @@ void mcp::rpc_handler::eth_sendRawTransaction()
 	bool async(false);
 	auto rpc_l(shared_from_this());
 	
-	gas = 0x5b8d80;
-	gas_price = 0x2d79883d200;
-
 	m_wallet->send_async(
 		mcp::block_type::light, previous_opt, from, to, amount, gas, gas_price, data, password, [response_l, this](mcp::send_result result)
 		{
