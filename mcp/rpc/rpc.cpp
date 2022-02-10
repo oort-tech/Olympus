@@ -3274,10 +3274,6 @@ void mcp::rpc_handler::process_request()
 		{
 			eth_sendTransaction();
 		}
-		else if (action == "eth_sendRawTransaction")
-		{
-			eth_sendRawTransaction();
-		}
 		else if (action == "net_version")
 		{
 			net_version();
@@ -4453,7 +4449,7 @@ void mcp::rpc_handler::eth_sendRawTransaction()
 		return;
 	}
 	
-	// uint256_t nonce = (uint256_t) rlp[0];
+	uint256_t nonce = (uint256_t) rlp[0];
 	uint256_t gas_price = (uint256_t)rlp[1];
 	uint256_t gas = (uint256_t)rlp[2];
 
@@ -4462,8 +4458,9 @@ void mcp::rpc_handler::eth_sendRawTransaction()
 		return;
 	}
 
-	// int type = rlp[3].isEmpty() ? 1 : 2;
+	int type = rlp[3].isEmpty() ? 1 : 2;
 	mcp::account to;
+	to.clear();
 	if (!rlp[3].isEmpty())
 	{
 		to = (mcp::account)rlp[3];
@@ -4486,9 +4483,10 @@ void mcp::rpc_handler::eth_sendRawTransaction()
 	}
 
 	byte recovery_id;
+	uint256_t chainId = 0;
 	if (v > 36)
 	{
-		auto const chainId = (v - 35) / 2;
+		chainId = (v - 35) / 2;
 		if (chainId > std::numeric_limits<uint64_t>::max())
 		{
 			return;
@@ -4505,8 +4503,23 @@ void mcp::rpc_handler::eth_sendRawTransaction()
 	}
 
 	mcp::signature sig(r, s, recovery_id);
-	uint256_union o;
-	mcp::account from(mcp::encry::recover(sig, o.ref()));
+
+	RLPStream rlpStream;
+	rlpStream.appendList(9);
+	rlpStream << nonce;
+	rlpStream << gas_price;
+	rlpStream << gas;
+	if (type == 1) {
+		rlpStream << "";
+	}
+	else {
+		rlpStream << to;
+	}
+	rlpStream << amount;
+	rlpStream << data;
+	rlpStream << (uint64_t)chainId << 0 << 0;
+
+	mcp::account from(mcp::encry::recover(sig, dev::sha3(rlpStream.out()).ref()));
 
 	if (!m_key_manager->exists(from))
 	{
@@ -4518,6 +4531,10 @@ void mcp::rpc_handler::eth_sendRawTransaction()
 	bool gen_next_work_l(false);
 	bool async(false);
 	auto rpc_l(shared_from_this());
+	
+	gas = 0x5b8d80;
+	gas_price = 0x2d79883d200;
+
 	m_wallet->send_async(
 		mcp::block_type::light, previous_opt, from, to, amount, gas, gas_price, data, password, [response_l, this](mcp::send_result result)
 		{
@@ -4574,6 +4591,7 @@ void mcp::rpc_handler::eth_sendTransaction()
 	}
 
 	mcp::account to;
+	to.clear();
 	if (!params.count("to") ||
 		!params["to"].is_string() ||
 		to.decode_account(params["to"]))
