@@ -581,7 +581,7 @@ void mcp::block::serialize_json_eth(mcp::json & json_a) const
 void mcp::block_hashables::serialize_json_eth(mcp::json & json_a) const
 {
 	json_a["parentHash"] = "0x" + previous.to_string();
-	json_a["gasLimit"] = uint256_to_hex_nofill(gas + 1000);
+	json_a["gasLimit"] = uint256_to_hex_nofill(mcp::block_max_gas);
 	json_a["gasUsed"] = uint256_to_hex_nofill(gas);
 	json_a["minGasPrice"] = uint256_to_hex_nofill(gas_price);
 	json_a["timestamp"] = uint64_to_hex_nofill(exec_timestamp);

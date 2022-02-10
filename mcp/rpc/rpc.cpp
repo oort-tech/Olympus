@@ -3279,10 +3279,6 @@ void mcp::rpc_handler::process_request()
 		{
 			eth_sendTransaction();
 		}
-		else if (action == "eth_sendRawTransaction")
-		{
-			eth_sendRawTransaction();
-		}
 		else if (action == "eth_call")
 		{
 			eth_call();
