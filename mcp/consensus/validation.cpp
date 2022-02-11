@@ -240,13 +240,13 @@ mcp::base_validate_result mcp::validation::base_validate(mcp::db::db_transaction
 	//validate signature
 	
 	// added by michael at 1/14
-	mcp::key_content kc;
-	bool sig_error(!m_key_manager->find(block->hashables->from, kc));
-	if (sig_error)
-	{
-		result.code = mcp::base_validate_result_codes::invalid_signature;
-		return result;
-	}
+	// mcp::key_content kc;
+	// bool sig_error(!m_key_manager->find(block->hashables->from, kc));
+	// if (sig_error)
+	// {
+	// 	result.code = mcp::base_validate_result_codes::invalid_signature;
+	// 	return result;
+	// }
 	//
 
 	sig_error = !validate_message(kc.public_key, block_hash, block->signature);

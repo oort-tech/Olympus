@@ -37,10 +37,10 @@ mcp::key_content::key_content(bool & error_a, std::string const & json_a)
 						std::string ciphertext_text = js["ciphertext"];
 						error_a = ciphertext.decode_hex(ciphertext_text);
 						// added by michael at 1/19
-						if (!error_a) {
-							std::string public_key_text = js["public_key"];
-							error_a = public_key.decode_hex(public_key_text);
-						}
+						// if (!error_a) {
+						// 	std::string public_key_text = js["public_key"];
+						// 	error_a = public_key.decode_hex(public_key_text);
+						// }
 					}
 				}
 			}
@@ -52,10 +52,10 @@ mcp::key_content::key_content(bool & error_a, std::string const & json_a)
 	}
 }
 
-mcp::key_content::key_content(mcp::public_key const & public_key, mcp::uint128_union const & kdf_salt_a,
+mcp::key_content::key_content(mcp::account const & account, mcp::uint128_union const & kdf_salt_a,
 	mcp::uint128_union const & iv_a, mcp::secret_ciphertext const & ciphertext_a) :
-	account(public_key),
-	public_key(public_key),
+	account(account),
+	// public_key(public_key),
 	kdf_salt(kdf_salt_a),
 	iv(iv_a),
 	ciphertext(ciphertext_a)
@@ -72,7 +72,7 @@ std::string mcp::key_content::to_json() const
 {
 	mcp::json js;
 	js["account"] = account.to_account();
-	js["public_key"] = public_key.to_string();
+	// js["public_key"] = public_key.to_string();
 	js["kdf_salt"] = kdf_salt.to_string();
 	js["iv"] = iv.to_string();
 	js["ciphertext"] = ciphertext.to_string();

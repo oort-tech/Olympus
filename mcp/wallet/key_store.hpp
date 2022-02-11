@@ -11,12 +11,12 @@ namespace mcp
 		key_content();
 		key_content(dev::Slice const & val_a);
 		key_content(bool & error_a, std::string const & json_a);
-		key_content(mcp::public_key const & public_key, mcp::uint128_union const & kdf_salt_a, mcp::uint128_union const & iv_a, mcp::secret_ciphertext const & ciphertext_a);
+		key_content(mcp::account const & account, mcp::uint128_union const & kdf_salt_a, mcp::uint128_union const & iv_a, mcp::secret_ciphertext const & ciphertext_a);
 		dev::Slice val() const;
 		std::string to_json() const;
 
 		mcp::account account;
-		mcp::public_key public_key;
+		// mcp::public_key public_key;
 		mcp::uint128_union kdf_salt;
 		mcp::uint128_union iv;
 		mcp::secret_ciphertext ciphertext;
