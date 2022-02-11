@@ -489,6 +489,7 @@ public:
     void eth_getStorageAt();
     void eth_getTransactionByHash();
     void eth_getTransactionReceipt();
+	void eth_getBalance();
 
 	std::string body;
 	mcp::rpc & rpc;
