@@ -904,12 +904,12 @@ mcp::sync_result mcp::node_sync::process_catchup_chain(mcp::catchup_response_mes
 			{
 				std::shared_ptr<mcp::block> block = joint.block;
 				// added by michael at 1/14
-				mcp::key_content kc;
-				if (!m_key_manager->find(block->hashables->from, kc)) {
-					return  process_catchup_result;
-				}
+				// mcp::key_content kc;
+				// if (!m_key_manager->find(block->hashables->from, kc)) {
+				// 	return  process_catchup_result;
+				// }
 				//
-				if (!validate_message(kc.public_key, block->hash(), block->signature))
+				if (!validate_message(block->hashables->from, block->hash(), block->signature))
 				{
 					LOG(log_sync.info) << "process_catchup_chain_error:invalid signature";
 					process_catchup_result = mcp::sync_result::catchup_chain_summary_check_fail;

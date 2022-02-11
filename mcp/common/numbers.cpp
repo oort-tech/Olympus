@@ -510,9 +510,14 @@ mcp::signature mcp::sign_message(mcp::raw_key const & private_key, mcp::public_k
 	return result;
 }
 
-bool mcp::validate_message(mcp::public_key const & public_key, mcp::uint256_union const & message, mcp::signature const & signature)
+bool mcp::validate_message(mcp::account const & account, mcp::uint256_union const & message, mcp::signature const & signature)
 {
-	return mcp::encry::verify(public_key, signature, message.ref());
+	mcp::public_key pubkey = mcp::encry::recover(signature, message.ref());
+	if (account == mcp::account(pubkey)) {
+		return true;
+	} else {
+		return false;
+	}
 }
 
 mcp::uint128_union::uint128_union(std::string const & string_a)

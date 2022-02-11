@@ -249,7 +249,7 @@ mcp::base_validate_result mcp::validation::base_validate(mcp::db::db_transaction
 	// }
 	//
 
-	sig_error = !validate_message(kc.public_key, block_hash, block->signature);
+	bool sig_error = !validate_message(block->hashables->from, block_hash, block->signature);
 	if (sig_error)
 	{
 		result.code = mcp::base_validate_result_codes::invalid_signature;

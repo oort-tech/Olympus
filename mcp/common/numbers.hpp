@@ -280,7 +280,7 @@ namespace p2p
 }
 
 mcp::signature sign_message (mcp::raw_key const &, mcp::public_key const &, mcp::uint256_union const &);
-bool validate_message (mcp::public_key const &, mcp::uint256_union const &, mcp::signature const &);
+bool validate_message (mcp::account const &, mcp::uint256_union const &, mcp::signature const &);
 }
 
 namespace std
