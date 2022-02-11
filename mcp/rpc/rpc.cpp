@@ -4879,19 +4879,16 @@ void mcp::rpc_handler::eth_getCode()
 		{
 			if (hex_to_uint64(block_numberText, block_number, true))
 			{
-				response(response_l);
 				return;
 			}
 		}
 		else
 		{
-			response(response_l);
 			return;
 		}
 	}
 	else
 	{
-		response(response_l);
 		return;
 	}
 
@@ -4918,6 +4915,63 @@ void mcp::rpc_handler::eth_getCode()
 
 void mcp::rpc_handler::eth_getStorageAt()
 {
+	mcp::json response_l;
+	if (!is_eth_rpc(response_l))
+	{
+		return;
+	}
+
+	mcp::json params = request["params"];
+	if (params.size() < 2 ||
+		!params[0].is_string() ||
+		!params[1].is_string()) {
+		return;
+	}
+
+	mcp::account account;
+	if (account.decode_account(params[0])) {
+		return;
+	}
+
+	uint256_t position;
+	if (hex_to_uint256(params[1], position, true)) {
+		return;
+	}
+	
+	uint64_t block_number;
+	if (params.size() == 3 && params[2].is_string())
+	{
+		std::string block_numberText = params[1];
+		if (block_numberText == "latest")
+		{
+			block_number = m_chain->last_stable_mci();
+		}
+		else if (block_numberText == "earliest")
+		{
+			block_number = 0;
+		}
+		else if (block_numberText.find("0x") == 0)
+		{
+			if (hex_to_uint64(block_numberText, block_number, true))
+			{
+				return;
+			}
+		}
+		else
+		{
+			return;
+		}
+	}
+	else
+	{
+		block_number = m_chain->last_stable_mci();
+	}
+
+	mcp::db::db_transaction transaction(m_store.create_transaction());
+	chain_state c_state(transaction, 0, m_store, m_chain, m_cache);
+	response_l["result"] = uint256_to_hex_nofill(c_state.storage(account, position));
+
+	response(response_l);
 }
 
 void mcp::rpc_handler::eth_getTransactionByHash()
