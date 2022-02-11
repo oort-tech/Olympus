@@ -5015,7 +5015,7 @@ void mcp::rpc_handler::eth_getTransactionByHash()
 				json_receipt["value"] = uint256_to_hex_nofill(block->hashables->amount);
 				json_receipt["gas"] = uint256_to_hex_nofill(block->hashables->gas);
 				json_receipt["input"] = "0x" + bytes_to_hex(block->data);	
-				
+				json_receipt["gasPrice"] = uint64_to_hex_nofill(1000000000);
 				response_l["result"] = json_receipt;
 			}
 		}
