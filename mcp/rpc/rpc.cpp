@@ -4841,6 +4841,13 @@ void mcp::rpc_handler::net_version()
 
 void mcp::rpc_handler::web3_clientVersion()
 {
+	mcp::json response_l;
+	if (!is_eth_rpc(response_l))
+	{
+		return;
+	}
+	response_l["result"] = STR(MCP_VERSION);
+	response(response_l);
 }
 
 void mcp::rpc_handler::eth_getCode()
