@@ -1077,7 +1077,8 @@ bool mcp::account20_struct::operator>= (account20_struct const & other_a) const
 
 std::string mcp::account20_struct::to_account() const {
 	std::stringstream stream;
-	stream << "0x" << std::setw(40) << std::setfill('0') << std::uppercase << std::hex << number();
+	stream << "0x" << std::setw(40) << std::setfill('0') << std::hex << std::nouppercase;
+	stream << number();
 	return stream.str();
 }
 

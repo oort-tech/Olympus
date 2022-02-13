@@ -5021,6 +5021,7 @@ void mcp::rpc_handler::eth_getTransactionByHash()
 				json_receipt["to"] = block->hashables->to.to_account();
 				json_receipt["value"] = uint256_to_hex_nofill(block->hashables->amount);
 				json_receipt["gas"] = uint256_to_hex_nofill(block->hashables->gas);
+				json_receipt["gasPrice"] = uint64_to_hex_nofill(1000000000);
 				json_receipt["input"] = "0x" + bytes_to_hex(block->data);	
 				json_receipt["gasPrice"] = uint64_to_hex_nofill(1000000000);
 				response_l["result"] = json_receipt;
@@ -5039,7 +5040,7 @@ void mcp::rpc_handler::eth_getBalance() {
 	}
 
 	mcp::json params = request["params"];
-	if (params.size() != 1 || !params[0].is_string()) {
+	if (params.size() > 2 || !params[0].is_string()) {
 		return;
 	}
 	
