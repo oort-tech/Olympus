@@ -4927,8 +4927,6 @@ void mcp::rpc_handler::eth_getTransactionByHash()
 		return;
 	}
 
-	response_l["result"] = nullptr;
-
 	mcp::db::db_transaction transaction(m_store.create_transaction());
 	std::shared_ptr<mcp::block_state> state(m_cache->block_state_get(transaction, block_hash));
 	if (block_hash != mcp::genesis::block_hash && state != nullptr)
@@ -4978,8 +4976,6 @@ void mcp::rpc_handler::eth_getBalance() {
 		mcp::db::db_transaction transaction(m_store.create_transaction());
 		chain_state c_state(transaction, 0, m_store, m_chain, m_cache);
 		auto balance(c_state.balance(account));
-
-		mcp::json j_response;
 		response_l["result"] = uint256_to_hex_nofill(balance);
 	}
 
@@ -5003,8 +4999,6 @@ void mcp::rpc_handler::eth_getTransactionReceipt()
 	if (block_hash.decode_hex(params[0], true)) {
 		return;
 	}
-
-	response_l["result"] = nullptr;
 
 	mcp::db::db_transaction transaction(m_store.create_transaction());
 	std::shared_ptr<mcp::block_state> state(m_cache->block_state_get(transaction, block_hash));
