@@ -235,16 +235,20 @@ void mcp::uint256_union::encode_hex(std::string & text, bool show_base) const
 	std::stringstream stream;
 	stream << std::hex << (show_base ? std::showbase : std::noshowbase) << std::setw(64) << std::setfill('0');
 	stream << number();
+
 	text = stream.str();
+	std::transform(text.begin(), text.end(), text.begin(), std::tolower);
 }
 
 void mcp::uint256_union::encode_hex_no_fill(std::string & text, bool show_base) const
 {
 	assert_x(text.empty());
 	std::stringstream stream;
-	stream << std::hex << (show_base ? std::showbase : std::noshowbase) << std::uppercase;
+	stream << std::hex << (show_base ? std::showbase : std::noshowbase);
 	stream << number();
+	
 	text = stream.str();
+	std::transform(text.begin(), text.end(), text.begin(), std::tolower);
 }
 
 bool mcp::uint256_union::decode_hex(std::string const & text, bool show_base)
@@ -891,18 +895,22 @@ void mcp::uint64_union::encode_hex(std::string & text, bool show_base) const
 {
 	assert_x(text.empty());
 	std::stringstream stream;
-	stream << std::hex << (show_base ? std::showbase : std::noshowbase) << std::setw(16) << std::setfill('0') << std::uppercase;
+	stream << std::hex << (show_base ? std::showbase : std::noshowbase) << std::setw(16) << std::setfill('0');
 	stream << number();
+	
 	text = stream.str();
+	std::transform(text.begin(), text.end(), text.begin(), std::tolower);
 }
 
 void mcp::uint64_union::encode_hex_no_fill(std::string & text, bool show_base) const
 {
 	assert_x(text.empty());
 	std::stringstream stream;
-	stream << std::hex << (show_base ? std::showbase : std::noshowbase)  << std::uppercase;
+	stream << std::hex << (show_base ? std::showbase : std::noshowbase);
 	stream << number();
+
 	text = stream.str();
+	std::transform(text.begin(), text.end(), text.begin(), std::tolower);
 }
 
 bool mcp::uint64_union::decode_hex(std::string const & text, bool show_base)
@@ -985,9 +993,9 @@ bool mcp::signature_struct::decode_hex(std::string const & text) {
 }
 
 std::string mcp::signature_struct::to_string() const {
-	std::stringstream stream;
-	stream << std::hex << std::uppercase << std::noshowbase << std::setw(2) << std::setfill('0') << (uint8_t) v;
-	return r.to_string() + s.to_string() + stream.str();
+	dev::bytes b;
+	b.push_back(v);
+	return r.to_string() + s.to_string() + bytes_to_hex(b);
 }
 
 dev::bytesRef mcp::signature_struct::ref() {
@@ -1077,9 +1085,12 @@ bool mcp::account20_struct::operator>= (account20_struct const & other_a) const
 
 std::string mcp::account20_struct::to_account() const {
 	std::stringstream stream;
-	stream << "0x" << std::setw(40) << std::setfill('0') << std::hex << std::nouppercase;
+	stream << "0x" << std::setw(40) << std::setfill('0') << std::hex;
 	stream << number();
-	return stream.str();
+
+	std::string text = stream.str();
+	std::transform(text.begin(), text.end(), text.begin(), std::tolower);
+	return text;
 }
 
 bool mcp::account20_struct::is_zero() const {

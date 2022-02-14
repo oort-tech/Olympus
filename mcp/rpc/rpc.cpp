@@ -4870,52 +4870,9 @@ void mcp::rpc_handler::eth_getCode()
 		return;
 	}
 
-	uint64_t block_number;
-	if (params[1].is_string())
-	{
-		std::string block_numberText = params[1];
-		if (block_numberText == "latest")
-		{
-			block_number = m_chain->last_stable_mci();
-		}
-		else if (block_numberText == "earliest")
-		{
-			block_number = 0;
-		}
-		else if (block_numberText.find("0x") == 0)
-		{
-			if (hex_to_uint64(block_numberText, block_number, true))
-			{
-				return;
-			}
-		}
-		else
-		{
-			return;
-		}
-	}
-	else
-	{
-		return;
-	}
-
 	mcp::db::db_transaction transaction(m_store.create_transaction());
-	mcp::block_hash block_hash;
-	if (m_store.main_chain_get(transaction, block_number, block_hash))
-	{
-		response(response_l);
-		return;
-	}
-
-	std::shared_ptr<mcp::block_state> block_state(m_cache->block_state_get(transaction, block_hash));
-	if (block_hash != mcp::genesis::block_hash && block_state != nullptr)
-	{
-		auto block(m_cache->block_get(transaction, block_hash));
-		if (block != nullptr)
-		{
-			response_l["result"] = "0x" + bytes_to_hex(block->data);
-		}
-	}
+	chain_state c_state(transaction, 0, m_store, m_chain, m_cache);
+	response_l["result"] = "0x" + bytes_to_hex(c_state.code(account));
 
 	response(response_l);
 }
@@ -4943,35 +4900,6 @@ void mcp::rpc_handler::eth_getStorageAt()
 	uint256_t position;
 	if (hex_to_uint256(params[1], position, true)) {
 		return;
-	}
-	
-	uint64_t block_number;
-	if (params.size() == 3 && params[2].is_string())
-	{
-		std::string block_numberText = params[1];
-		if (block_numberText == "latest")
-		{
-			block_number = m_chain->last_stable_mci();
-		}
-		else if (block_numberText == "earliest")
-		{
-			block_number = 0;
-		}
-		else if (block_numberText.find("0x") == 0)
-		{
-			if (hex_to_uint64(block_numberText, block_number, true))
-			{
-				return;
-			}
-		}
-		else
-		{
-			return;
-		}
-	}
-	else
-	{
-		block_number = m_chain->last_stable_mci();
 	}
 
 	mcp::db::db_transaction transaction(m_store.create_transaction());
@@ -5013,7 +4941,7 @@ void mcp::rpc_handler::eth_getTransactionByHash()
 				assert_x(acc_state);
 				mcp::json json_receipt;
 				json_receipt["hash"] = block_hash.to_string(true);
-				json_receipt["nonce"] = uint256_to_hex_nofill(acc_state->nonce());
+				json_receipt["nonce"] = uint256_to_hex_nofill(acc_state->nonce() - 1);
 				json_receipt["blockHash"] = block_hash.to_string(true);
 				json_receipt["blockNumber"] = uint64_to_hex_nofill(state->main_chain_index.get());
 				json_receipt["transactionIndex"] = "0x0";
@@ -5021,7 +4949,6 @@ void mcp::rpc_handler::eth_getTransactionByHash()
 				json_receipt["to"] = block->hashables->to.to_account();
 				json_receipt["value"] = uint256_to_hex_nofill(block->hashables->amount);
 				json_receipt["gas"] = uint256_to_hex_nofill(block->hashables->gas);
-				json_receipt["gasPrice"] = uint64_to_hex_nofill(1000000000);
 				json_receipt["input"] = "0x" + bytes_to_hex(block->data);	
 				json_receipt["gasPrice"] = uint64_to_hex_nofill(1000000000);
 				response_l["result"] = json_receipt;
@@ -5096,6 +5023,7 @@ void mcp::rpc_handler::eth_getTransactionReceipt()
 				json_receipt["to"] = nullptr;
 				json_receipt["contractAddress"] = toAddress(block->hashables->from, acc_state->nonce() - 1).to_account();
 				json_receipt["gasUsed"] = uint256_to_hex_nofill(state->receipt->gas_used);
+				json_receipt["cumulativeGasUsed"] = uint256_to_hex_nofill(block->hashables->gas);
 				json_receipt["gasPrice"] = uint64_to_hex_nofill(1000000000);
 				json_receipt["transactionHash"] = block_hash.to_string(true);
 				json_receipt["logs"] = json::array();

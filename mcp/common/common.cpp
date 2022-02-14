@@ -8,25 +8,34 @@
 std::string mcp::uint64_to_hex (uint64_t value_a)
 {
 	std::stringstream stream;
-	stream << std::hex << std::uppercase << std::noshowbase << std::setw (16) << std::setfill ('0');
+	stream << std::hex << std::noshowbase << std::setw (16) << std::setfill ('0');
 	stream << value_a;
-	return stream.str ();
+	
+	std::string s = stream.str();
+	std::transform(s.begin(), s.end(), s.begin(), std::tolower);
+	return s;
 }
 
 std::string mcp::uint64_to_hex_nofill(uint64_t value_a)
 {
 	std::stringstream stream;
-	stream << "0x" << std::hex << std::nouppercase;
+	stream << "0x" << std::hex;
 	stream << value_a;
-	return stream.str();
+
+	std::string s = stream.str();
+	std::transform(s.begin(), s.end(), s.begin(), std::tolower);
+	return s;
 }
 
 std::string mcp::uint256_to_hex_nofill(uint256_t value_a)
 {
 	std::stringstream stream;
-	stream << "0x" << std::hex << std::nouppercase;
+	stream << "0x" << std::hex;
 	stream << value_a;
-	return stream.str();
+	
+	std::string s = stream.str();
+	std::transform(s.begin(), s.end(), s.begin(), std::tolower);
+	return s;
 }
 
 bool mcp::hex_to_uint64(std::string const & value_a, uint64_t & target_a, bool show_base)
@@ -89,7 +98,7 @@ bool mcp::hex_to_uint256(std::string const & value_a, uint256_t & target_a, bool
 
 std::string mcp::bytes_to_hex(dev::bytes const & b)
 {
-	static char const* hexdigits = "0123456789ABCDEF";
+	static char const* hexdigits = "0123456789abcdef";
 	std::string hex(b.size() * 2, '0');
 	int off = 0;
 	for (auto it(b.begin()); it != b.end(); it++)
