@@ -55,7 +55,7 @@ mcp::key_content::key_content(bool & error_a, std::string const & json_a)
 mcp::key_content::key_content(mcp::public_key const & pubic_key, mcp::uint128_union const & kdf_salt_a,
 	mcp::uint128_union const & iv_a, mcp::secret_ciphertext const & ciphertext_a) :
 	account(pubic_key),
-	public_key(public_key),
+	public_key(pubic_key),
 	kdf_salt(kdf_salt_a),
 	iv(iv_a),
 	ciphertext(ciphertext_a)
