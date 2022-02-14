@@ -12,7 +12,7 @@ std::string mcp::uint64_to_hex (uint64_t value_a)
 	stream << value_a;
 	
 	std::string s = stream.str();
-	std::transform(s.begin(), s.end(), s.begin(), std::tolower);
+	std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c){ return std::tolower(c); });
 	return s;
 }
 
@@ -23,7 +23,7 @@ std::string mcp::uint64_to_hex_nofill(uint64_t value_a)
 	stream << value_a;
 
 	std::string s = stream.str();
-	std::transform(s.begin(), s.end(), s.begin(), std::tolower);
+	std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c){ return std::tolower(c); });
 	return s;
 }
 
@@ -34,7 +34,7 @@ std::string mcp::uint256_to_hex_nofill(uint256_t value_a)
 	stream << value_a;
 	
 	std::string s = stream.str();
-	std::transform(s.begin(), s.end(), s.begin(), std::tolower);
+	std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c){ return std::tolower(c); });
 	return s;
 }
 

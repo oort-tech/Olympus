@@ -237,7 +237,7 @@ void mcp::uint256_union::encode_hex(std::string & text, bool show_base) const
 	stream << number();
 
 	text = stream.str();
-	std::transform(text.begin(), text.end(), text.begin(), std::tolower);
+	std::transform(text.begin(), text.end(), text.begin(), [](unsigned char c){ return std::tolower(c);});
 }
 
 void mcp::uint256_union::encode_hex_no_fill(std::string & text, bool show_base) const
@@ -248,7 +248,7 @@ void mcp::uint256_union::encode_hex_no_fill(std::string & text, bool show_base) 
 	stream << number();
 	
 	text = stream.str();
-	std::transform(text.begin(), text.end(), text.begin(), std::tolower);
+	std::transform(text.begin(), text.end(), text.begin(), [](unsigned char c){ return std::tolower(c); });
 }
 
 bool mcp::uint256_union::decode_hex(std::string const & text, bool show_base)
@@ -899,7 +899,7 @@ void mcp::uint64_union::encode_hex(std::string & text, bool show_base) const
 	stream << number();
 	
 	text = stream.str();
-	std::transform(text.begin(), text.end(), text.begin(), std::tolower);
+	std::transform(text.begin(), text.end(), text.begin(), [](unsigned char c){ return std::tolower(c); });
 }
 
 void mcp::uint64_union::encode_hex_no_fill(std::string & text, bool show_base) const
@@ -910,7 +910,7 @@ void mcp::uint64_union::encode_hex_no_fill(std::string & text, bool show_base) c
 	stream << number();
 
 	text = stream.str();
-	std::transform(text.begin(), text.end(), text.begin(), std::tolower);
+	std::transform(text.begin(), text.end(), text.begin(), [](unsigned char c){ return std::tolower(c); });
 }
 
 bool mcp::uint64_union::decode_hex(std::string const & text, bool show_base)
@@ -1089,7 +1089,7 @@ std::string mcp::account20_struct::to_account() const {
 	stream << number();
 
 	std::string text = stream.str();
-	std::transform(text.begin(), text.end(), text.begin(), std::tolower);
+	std::transform(text.begin(), text.end(), text.begin(), [](unsigned char c){ return std::tolower(c); });
 	return text;
 }
 

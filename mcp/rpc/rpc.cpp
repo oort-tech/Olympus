@@ -4859,7 +4859,7 @@ void mcp::rpc_handler::eth_getCode()
 	}
 
 	mcp::json params = request["params"];
-	if (params.size() != 2)
+	if (params.size() > 2)
 	{
 		return;
 	}
