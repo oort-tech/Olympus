@@ -4531,7 +4531,7 @@ void mcp::rpc_handler::eth_sendRawTransaction()
 		{
 			return;
 		}
-		recovery_id = byte{v - (chainId * 2 + 35)};
+		recovery_id = byte(v - (chainId * 2 + 35));
 	}
 	else if (v != 27 && v != 28)
 	{
@@ -4539,7 +4539,7 @@ void mcp::rpc_handler::eth_sendRawTransaction()
 	}
 	else
 	{
-		recovery_id = byte{v - 27};
+		recovery_id = byte(v - 27);
 	}
 
 	mcp::signature sig(r, s, recovery_id);
