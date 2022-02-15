@@ -12,6 +12,8 @@
 
 #include <libdevcore/SHA3.h>
 
+#include <mcp/p2p/dh_x25519.hpp>
+
 void test_argon2()
 {
 	std::cout << "-------------argon2---------------" << std::endl;
@@ -328,5 +330,30 @@ void test_secp256k1()
 			std::cout << "secp256k1 sign verify fail";
 			return;
 		}
+	}
+}
+
+void test_x25519()
+{
+	mcp::secret_key prv;
+	prv.decode_hex("BC1C100CA9C2B7E2DF6D1F46744AD3F51D0532BF6ACA5063D382EFFF8A5E28C7");
+
+	mcp::uint256_union message;
+	message.decode_hex("AF8460A7D28A396C62D6C51620B87789C862ED8783374EEF7B783145F540EB19");
+
+	mcp::secret_key sec;
+	mcp::public_key_comp pub_comp;
+	if (crypto_sign_seed_keypair(pub_comp.ref().data(), sec.ref().data(), prv.ref().data()) == 0) {
+		std::cout << "crypto_sign_seed_keypair" << std::endl;
+		dev::bytes cipher;
+		mcp::p2p::encrypt_dh(pub_comp, message.ref(), cipher);
+		std::cout << "Encrypted: " << mcp::bytes_to_hex(cipher) << std::endl;
+
+		mcp::seed_key seed;
+		mcp::random_pool.GenerateBlock(seed.ref().data(), seed.ref().size());
+
+		dev::bytes plain;
+		mcp::p2p::dencrypt_dh(seed, dev::bytesConstRef(cipher.data(), cipher.size()), plain);
+		std::cout << "Decrypted: " << mcp::bytes_to_hex(plain) << std::endl;
 	}
 }
