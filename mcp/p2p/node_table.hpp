@@ -139,7 +139,7 @@ namespace mcp
 		class node_table : public std::enable_shared_from_this<node_table>
 		{
 		public:
-			node_table(mcp::p2p::peer_store& store_a, mcp::key_pair const & alias_a, node_endpoint const & endpoint_a);
+			node_table(mcp::p2p::peer_store& store_a, mcp::key_pair_ed const & alias_a, node_endpoint const & endpoint_a);
 			~node_table();
 
 			void start();

@@ -144,7 +144,6 @@ bool mcp::hex_to_bytes(std::string const & str , dev::bytes & out)
 	return error;
 }
 
-
 mcp::key_pair_ed::key_pair_ed(mcp::seed_key const & seed)
 {
 	// create ed-25519(sign) key pair,encryption need trasnsfer to curve-25519
@@ -174,13 +173,6 @@ mcp::key_pair_ed mcp::key_pair_ed::create()
 
 mcp::key_pair::key_pair(mcp::seed_key const & seed)
 {
-	// create ed-25519(sign) key pair,encryption need trasnsfer to curve-25519
-	// disabled by michael at 1/5
-	// int ret = crypto_sign_seed_keypair(m_public.ref().data(), m_secret.ref().data(), seed.ref().data());
-
-	// if (ret == 0)
-	// 	flag = true;
-
 	seed.ref().copyTo(m_secret.ref());
 	if (mcp::encry::generate_public_from_secret(m_secret, m_public, m_public_comp)) {
 		flag = true;

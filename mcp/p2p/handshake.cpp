@@ -24,7 +24,6 @@ mcp::p2p::hankshake_msg::hankshake_msg(dev::RLP const & r)
 		cap_descs.push_back(capability_desc(i));
 }
 
-
 void hankshake_msg::stream_RLP(dev::RLPStream & s)
 {
 	s.appendList(4) << id << version << (uint8_t)network;
@@ -240,13 +239,13 @@ void hankshake::writeAuth()
 
 	// E(remote-pubk, S(ecdhe-random, ecdh-public) || H(ecdhe-random-pubk) || pubk || nonce || 0x0)
 	mcp::signature sig_data;
-	mcp::encry::sign(m_ecdheLocal.secret(), m_host->alias.pub_comp().ref(), sig_data);
+	mcp::encry::sign(m_ecdheLocal.secret(), m_host->alias.pub().ref(), sig_data);
 
 	sig_data.ref().copyTo(sig);
 
 	m_ecdheLocal.pub_comp().ref().copyTo(hepubk);
 
-	m_host->alias.pub_comp().ref().copyTo(pubk);
+	m_host->alias.pub().ref().copyTo(pubk);
 	m_nonce.ref().copyTo(nonce_l);
 	buf[buf.size() - 1] = 0x0;
 	encrypt_dh(m_remote, &buf, buf_cipher);
@@ -261,7 +260,9 @@ void hankshake::writeAck()
 	bytesRef epubk(&buf[0], public_key_comp::size);
 	bytesRef nonce_l(&buf[public_key_comp::size], nonce::size);
 
-	m_ecdheLocal.pub_comp().ref().copyTo(epubk);	//encry public key
+	// m_ecdheLocal.pub_comp().ref().copyTo(epubk);	//encry public key
+	// added by michael at 2/17
+	m_host->alias.pub().ref().copyTo(epubk);
 	m_nonce.ref().copyTo(nonce_l);
 	buf[buf.size() - 1] = 0x0;
 	encrypt_dh(m_remote, &buf, buf_cipher);
@@ -286,8 +287,10 @@ void hankshake::setAuthValues(mcp::signature const& _sig, public_key_comp const&
 		return;
 	}
 
-	_hePubk.ref().copyTo(m_ecdheRemote.ref());
-
+	// _hePubk.ref().copyTo(m_ecdheRemote.ref());
+	// added by michael at 2/17
+	_remotePubk.ref().copyTo(m_ecdheRemote.ref());
+	//
 	_remotePubk.ref().copyTo(m_remote.ref());	///transfer signature public key
 
 	_remoteNonce.ref().copyTo(m_remoteNonce.ref());
