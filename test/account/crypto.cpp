@@ -344,16 +344,12 @@ void test_x25519()
 	mcp::secret_key sec;
 	mcp::public_key_comp pub_comp;
 	if (crypto_sign_seed_keypair(pub_comp.ref().data(), sec.ref().data(), prv.ref().data()) == 0) {
-		std::cout << "crypto_sign_seed_keypair" << std::endl;
 		dev::bytes cipher;
 		mcp::p2p::encrypt_dh(pub_comp, message.ref(), cipher);
 		std::cout << "Encrypted: " << mcp::bytes_to_hex(cipher) << std::endl;
 
-		mcp::seed_key seed;
-		mcp::random_pool.GenerateBlock(seed.ref().data(), seed.ref().size());
-
 		dev::bytes plain;
-		mcp::p2p::dencrypt_dh(seed, dev::bytesConstRef(cipher.data(), cipher.size()), plain);
+		mcp::p2p::dencrypt_dh(sec, dev::bytesConstRef(cipher.data(), cipher.size()), plain);
 		std::cout << "Decrypted: " << mcp::bytes_to_hex(plain) << std::endl;
 	}
 }

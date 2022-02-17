@@ -20,7 +20,6 @@ bool mcp::p2p::dencrypt_dh(secret_key const & _k, dev::bytesConstRef _cipher, de
 	return true;
 }
 
-
 dh_x25519* dh_x25519::get()
 {
 	static dh_x25519 s_this;
@@ -43,14 +42,24 @@ void dh_x25519::encrypt_x25519(public_key_comp const& _k, bytes& io_cipher)
 void dh_x25519::encrypt_x25519(public_key_comp const& _k, bytesConstRef _sharedMacData, bytes& io_cipher)
 {
 	// create key pair
-	auto r = key_pair::create();
+	// auto r = key_pair::create();
+
+	// added by michael at 2/17
+	mcp::seed_key seed;
+	mcp::random_pool.GenerateBlock(seed.ref().data(), seed.ref().size());
+	mcp::secret_key sec;
+	mcp::public_key_comp pub_comp;
+	if (crypto_sign_seed_keypair(pub_comp.ref().data(), sec.ref().data(), seed.ref().data())) {
+		return;
+	}
+	//
 
 	//random nonce
 	auto iv = nonce::get();
 
 	//get encry secret key
 	secret_encry encry_secret;
-	if (!get_encry_secret_key_from_sign_key(encry_secret, r.secret()))
+	if (!get_encry_secret_key_from_sign_key(encry_secret, sec))
 	{
         LOG(m_log.info) << "encrypt get encry secret key error.";
 		return;
@@ -64,14 +73,14 @@ void dh_x25519::encrypt_x25519(public_key_comp const& _k, bytesConstRef _sharedM
 		return;
 	}
 
-	bytes msg(1 + public_key::size + nonce::size + cipherText.size());
+	bytes msg(1 + public_key_comp::size + nonce::size + cipherText.size());
 	msg[0] = 0x04;
 
-	auto pub = bytesConstRef(r.pub().bytes.data(), 32);
-	pub.copyTo(bytesRef(&msg).cropped(1, public_key::size));
+	auto pub = bytesConstRef(pub_comp.bytes.data(), 32);
+	pub.copyTo(bytesRef(&msg).cropped(1, public_key_comp::size));
 
-	iv.ref().copyTo(bytesRef(&msg).cropped(1 + public_key::size, nonce::size));
-	bytesRef msgCipherRef = bytesRef(&msg).cropped(1 + public_key::size + nonce::size, cipherText.size());
+	iv.ref().copyTo(bytesRef(&msg).cropped(1 + public_key_comp::size, nonce::size));
+	bytesRef msgCipherRef = bytesRef(&msg).cropped(1 + public_key_comp::size + nonce::size, cipherText.size());
 	bytesConstRef(&cipherText).copyTo(msgCipherRef);
 
 	io_cipher.resize(msg.size());
@@ -101,11 +110,11 @@ bool dh_x25519::decrypt_x25519(secret_encry const& _k, bytesConstRef _sharedMacD
 		// invalid message: publickey
 		return false;
 
-	if (io_text.size() < (1 + public_key::size + nonce::size))
+	if (io_text.size() < (1 + public_key_comp::size + nonce::size))
 		// invalid message: length
 		return false;
 
-	bytesConstRef public_key(io_text.data() + 1, public_key::size);
+	bytesConstRef public_key(io_text.data() + 1, public_key_comp::size);
 
 
 	////get encry public key
@@ -116,8 +125,8 @@ bool dh_x25519::decrypt_x25519(secret_encry const& _k, bytesConstRef _sharedMacD
 		return false;
 	}
 
-	size_t cipherLen = io_text.size() - 1 - public_key::size - nonce::size;
-	bytesConstRef cipherWithIV(io_text.data() + 1 + public_key::size, nonce::size + cipherLen);
+	size_t cipherLen = io_text.size() - 1 - public_key_comp::size - nonce::size;
+	bytesConstRef cipherWithIV(io_text.data() + 1 + public_key_comp::size, nonce::size + cipherLen);
 	bytesConstRef cipherIV = cipherWithIV.cropped(0, nonce::size);
 	bytesConstRef cipherNoIV = cipherWithIV.cropped(nonce::size, cipherLen);
 	nonce iv(cipherIV.toBytes());

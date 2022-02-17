@@ -231,22 +231,22 @@ void mcp::p2p::hankshake::writeInfo()
 
 void hankshake::writeAuth()
 {
-	dev::bytes buf(signature::size + public_key::size + public_key::size + nonce::size + 1);
+	dev::bytes buf(signature::size + public_key_comp::size + public_key_comp::size + nonce::size + 1);
 	dev::bytes buf_cipher;
 	dev::bytesRef sig(&buf[0], signature::size);
-	dev::bytesRef hepubk(&buf[signature::size], public_key::size);
-	dev::bytesRef pubk(&buf[signature::size + public_key::size], public_key::size);
-	dev::bytesRef nonce_l(&buf[signature::size + public_key::size + public_key::size], nonce::size);
+	dev::bytesRef hepubk(&buf[signature::size], public_key_comp::size);
+	dev::bytesRef pubk(&buf[signature::size + public_key_comp::size], public_key_comp::size);
+	dev::bytesRef nonce_l(&buf[signature::size + public_key_comp::size + public_key_comp::size], nonce::size);
 
 	// E(remote-pubk, S(ecdhe-random, ecdh-public) || H(ecdhe-random-pubk) || pubk || nonce || 0x0)
 	mcp::signature sig_data;
-	mcp::encry::sign(m_ecdheLocal.secret(), m_host->alias.pub().ref(), sig_data);
+	mcp::encry::sign(m_ecdheLocal.secret(), m_host->alias.pub_comp().ref(), sig_data);
 
 	sig_data.ref().copyTo(sig);
 
-	m_ecdheLocal.pub().ref().copyTo(hepubk);
+	m_ecdheLocal.pub_comp().ref().copyTo(hepubk);
 
-	m_host->alias.pub().ref().copyTo(pubk);
+	m_host->alias.pub_comp().ref().copyTo(pubk);
 	m_nonce.ref().copyTo(nonce_l);
 	buf[buf.size() - 1] = 0x0;
 	encrypt_dh(m_remote, &buf, buf_cipher);
@@ -256,12 +256,12 @@ void hankshake::writeAuth()
 
 void hankshake::writeAck()
 {
-	dev::bytes buf(public_key::size + nonce::size + 1);
+	dev::bytes buf(public_key_comp::size + nonce::size + 1);
 	dev::bytes buf_cipher;
-	bytesRef epubk(&buf[0], public_key::size);
-	bytesRef nonce_l(&buf[public_key::size], nonce::size);
+	bytesRef epubk(&buf[0], public_key_comp::size);
+	bytesRef nonce_l(&buf[public_key_comp::size], nonce::size);
 
-	m_ecdheLocal.pub().ref().copyTo(epubk);	//encry public key
+	m_ecdheLocal.pub_comp().ref().copyTo(epubk);	//encry public key
 	m_nonce.ref().copyTo(nonce_l);
 	buf[buf.size() - 1] = 0x0;
 	encrypt_dh(m_remote, &buf, buf_cipher);
@@ -350,9 +350,9 @@ void hankshake::readAck()
 	dev::bytes buf;
 	if (dencrypt_dh(m_host->alias.secret(), bytesConstRef(&m_handshakeInBuffer), buf))
 	{
-		bytesConstRef(&buf).cropped(0, public_key::size).copyTo(m_ecdheRemote.ref());
+		bytesConstRef(&buf).cropped(0, public_key_comp::size).copyTo(m_ecdheRemote.ref());
 
-		bytesConstRef(&buf).cropped(public_key::size, nonce::size).copyTo(m_remoteNonce.ref());
+		bytesConstRef(&buf).cropped(public_key_comp::size, nonce::size).copyTo(m_remoteNonce.ref());
 	}
 	else
 	{
