@@ -156,7 +156,6 @@ bool mcp::rpc_config::parse_old_version_data(mcp::json const &json_a, uint64_t c
 			if (json_a.count("rpc") && json_a["rpc"].is_object())
 			{
 				mcp::json j_rpc_l = json_a["rpc"].get<mcp::json>();
-				;
 				error |= deserialize_json(j_rpc_l);
 			}
 			else
@@ -4239,7 +4238,7 @@ void mcp::rpc_handler::eth_chainId()
 		return;
 	}
 
-	response_l["result"] = uint64_to_hex_nofill((uint64_t)mcp::mcp_network);
+	response_l["result"] = uint64_to_hex_nofill((uint64_t)mcp::mcp_network + 800);
 
 	response(response_l);
 }
