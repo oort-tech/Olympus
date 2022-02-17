@@ -42,24 +42,14 @@ void dh_x25519::encrypt_x25519(public_key_comp const& _k, bytes& io_cipher)
 void dh_x25519::encrypt_x25519(public_key_comp const& _k, bytesConstRef _sharedMacData, bytes& io_cipher)
 {
 	// create key pair
-	// auto r = key_pair::create();
-
-	// added by michael at 2/17
-	mcp::seed_key seed;
-	mcp::random_pool.GenerateBlock(seed.ref().data(), seed.ref().size());
-	mcp::secret_key sec;
-	mcp::public_key_comp pub_comp;
-	if (crypto_sign_seed_keypair(pub_comp.ref().data(), sec.ref().data(), seed.ref().data())) {
-		return;
-	}
-	//
+	auto r = key_pair_ed::create();
 
 	//random nonce
 	auto iv = nonce::get();
 
 	//get encry secret key
 	secret_encry encry_secret;
-	if (!get_encry_secret_key_from_sign_key(encry_secret, sec))
+	if (!get_encry_secret_key_from_sign_key(encry_secret, r.secret()))
 	{
         LOG(m_log.info) << "encrypt get encry secret key error.";
 		return;
@@ -76,7 +66,7 @@ void dh_x25519::encrypt_x25519(public_key_comp const& _k, bytesConstRef _sharedM
 	bytes msg(1 + public_key_comp::size + nonce::size + cipherText.size());
 	msg[0] = 0x04;
 
-	auto pub = bytesConstRef(pub_comp.bytes.data(), 32);
+	auto pub = bytesConstRef(r.pub().bytes.data(), 32);
 	pub.copyTo(bytesRef(&msg).cropped(1, public_key_comp::size));
 
 	iv.ref().copyTo(bytesRef(&msg).cropped(1 + public_key_comp::size, nonce::size));

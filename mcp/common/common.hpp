@@ -155,6 +155,30 @@ namespace mcp
 		std::thread thread;
 	};
 
+	// added by michael at 2/17
+	class key_pair_ed
+	{
+		public:
+			key_pair_ed() = default;
+			key_pair_ed(seed_key const & seed);
+			~key_pair_ed();
+			static key_pair_ed create();
+
+			// get the secret key.
+			secret_key const& secret() const { return m_secret; }
+
+			// get the public key
+			public_key_comp const& pub() const { return m_public; }
+
+			bool operator==(key_pair_ed const& _c) const { return m_public == _c.m_public; }
+			bool operator!=(key_pair_ed const& _c) const { return m_public != _c.m_public; }
+			bool flag = false;
+			
+		private:
+			secret_key m_secret;
+			public_key_comp m_public;
+	};
+
 	class key_pair
 	{
 	public:
