@@ -24,9 +24,9 @@ mcp::key_manager::key_manager(boost::filesystem::path const & application_path_a
 	auto it = m_store.keys_begin(transaction);
 	for (; it.valid(); ++it)
 	{
-		mcp::public_key pub(mcp::slice_to_uint512(it.key()));
+		mcp::account account(mcp::slice_to_account(it.key()));
 		mcp::key_content key_content(it.value());
-		m_key_contents[pub] = key_content;
+		m_key_contents[account] = key_content;
 	}
 
 	boost::filesystem::create_directories(m_backup_path);

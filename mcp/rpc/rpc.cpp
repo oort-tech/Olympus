@@ -13,10 +13,11 @@ mcp::rpc_config::rpc_config() : rpc_config(false)
 {
 }
 
-mcp::rpc_config::rpc_config(bool enable_control_a) : address(boost::asio::ip::address_v4::loopback()),
-													 port(8765),
-													 enable_control(enable_control_a),
-													 rpc_enable(false)
+mcp::rpc_config::rpc_config(bool enable_control_a) :
+	address(boost::asio::ip::address_v4::loopback()),
+	port(8765),
+	enable_control(enable_control_a),
+	rpc_enable(false)
 {
 }
 
@@ -2615,14 +2616,14 @@ void mcp::rpc_handler::sign_msg()
 {
 	mcp::rpc_sign_msg_error_code error_code_l;
 
-	if (!request.count("public_key") || (!request["public_key"].is_string()))
+	if (!request.count("account") || (!request["account"].is_string()))
 	{
 		error_code_l = mcp::rpc_sign_msg_error_code::invalid_public_key;
 		error_response(response, (int)error_code_l, err.msg(error_code_l));
 		return;
 	}
 
-	std::string account_text = request["public_key"];
+	std::string account_text = request["account"];
 	mcp::account account;
 	auto error(account.decode_account(account_text));
 	if (error)
