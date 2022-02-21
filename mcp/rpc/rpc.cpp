@@ -432,10 +432,9 @@ void mcp::rpc_handler::account_list()
 	mcp::json j_response;
 	mcp::json j_accounts = mcp::json::array();
 
-	std::list<mcp::public_key> pubkey_list(m_key_manager->list());
-	for (auto pubkey : pubkey_list)
+	std::list<mcp::account> account_list(m_key_manager->list());
+	for (auto account : account_list)
 	{
-		mcp::account account(pubkey);
 		j_accounts.push_back(account.to_account());
 	}
 	j_response["accounts"] = j_accounts;
@@ -491,13 +490,9 @@ void mcp::rpc_handler::account_create()
 								return;
 							}
 						}
-						mcp::public_key public_key = m_key_manager->create(password, gen_next_work_l, backup_l);
-						mcp::account new_account(public_key);
+						mcp::account new_account = m_key_manager->create(password, gen_next_work_l, backup_l);
 						mcp::json j_response;
 						j_response["account"] = new_account.to_account();
-						// added by michael at 1/18
-						j_response["public_key"] = public_key.to_string();
-						//
 						error_code_l = mcp::rpc_account_create_error_code::ok;
 						error_response(response, int(error_code_l), err.msg(error_code_l), j_response);
 					}
@@ -829,9 +824,6 @@ void mcp::rpc_handler::account_import()
 			{
 				mcp::json j_response;
 				j_response["account"] = kc.account.to_account();
-				// added by michael at 1/18
-				j_response["public_key"] = kc.public_key.to_string();
-				//
 				error_code_l = mcp::rpc_account_import_error_code::ok;
 				error_response(response, (int)error_code_l, err.msg(error_code_l), j_response);
 			}
@@ -2629,9 +2621,10 @@ void mcp::rpc_handler::sign_msg()
 		error_response(response, (int)error_code_l, err.msg(error_code_l));
 		return;
 	}
-	std::string public_key_text = request["public_key"];
-	mcp::public_key public_key;
-	auto error(public_key.decode_hex(public_key_text));
+
+	std::string account_text = request["public_key"];
+	mcp::account account;
+	auto error(account.decode_account(account_text));
 	if (error)
 	{
 		error_code_l = mcp::rpc_sign_msg_error_code::invalid_public_key;
@@ -2665,7 +2658,7 @@ void mcp::rpc_handler::sign_msg()
 	mcp::raw_key prv;
 	if (password_a.empty())
 	{
-		bool exists(m_key_manager->find_unlocked_prv(public_key, prv));
+		bool exists(m_key_manager->find_unlocked_prv(account, prv));
 		if (!exists)
 		{
 			error_code_l = mcp::rpc_sign_msg_error_code::wrong_password;
@@ -2675,7 +2668,7 @@ void mcp::rpc_handler::sign_msg()
 	}
 	else
 	{
-		bool error(m_key_manager->decrypt_prv(public_key, password_a, prv));
+		bool error(m_key_manager->decrypt_prv(account, password_a, prv));
 		if (error)
 		{
 			error_code_l = mcp::rpc_sign_msg_error_code::wrong_password;
@@ -2684,7 +2677,7 @@ void mcp::rpc_handler::sign_msg()
 		}
 	}
 	mcp::json response_l;
-	mcp::signature sig(mcp::sign_message(prv, public_key, sign_msg));
+	mcp::signature sig(mcp::sign_message(prv, sign_msg));
 	response_l["signature"] = sig.to_string();
 	error_code_l = mcp::rpc_sign_msg_error_code::ok;
 	error_response(response, (int)error_code_l, err.msg(error_code_l), response_l);
@@ -3070,7 +3063,6 @@ void mcp::rpc_handler::process_request()
 	try
 	{
 		request = mcp::json::parse(body);
-		LOG(m_log.error) << "Request Parse" << request;
 		std::string action = request.count("action") > 0 ? request["action"] : request["method"];
 
 		bool handled = false;

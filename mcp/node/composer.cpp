@@ -29,14 +29,14 @@ mcp::composer::~composer()
 mcp::compose_result mcp::composer::compose_joint(mcp::db::db_transaction & transaction_a, mcp::block_type const & type_a, 
 													boost::optional<mcp::block_hash> const & previous_a, mcp::account const &from_a, mcp::account const &to_a,
 													mcp::amount const &amount_a, uint256_t const & gas_a, uint256_t const & gas_price_a, std::vector<uint8_t> const &data_a,
-													mcp::raw_key const &prv_a, mcp::public_key const &pub_a, bool generate_work_a)
+													mcp::raw_key const &prv_a, /*mcp::public_key const &pub_a,*/ bool generate_work_a)
 {
     std::shared_ptr<mcp::block> block;
     mcp::compose_result_codes code(compose_block(transaction_a, type_a, previous_a, from_a, to_a, amount_a, gas_a, gas_price_a, data_a, block));
     if (code != mcp::compose_result_codes::ok)
         return mcp::compose_result(code, nullptr);
 
-    mcp::signature sig(mcp::sign_message(prv_a, pub_a, block->hash()));
+    mcp::signature sig(mcp::sign_message(prv_a, block->hash()));
 
     return sign_and_compose_joint( block, sig, generate_work_a);
 }
@@ -435,7 +435,7 @@ std::shared_ptr<std::list<mcp::block_hash>> mcp::composer::random_get_links(mcp:
 			if (!it.valid())
 				it = m_store.unlink_info_begin(transaction_a, snapshot_a);
 
-			mcp::account current_account(mcp::slice_to_uint256(it.key()).number());
+			mcp::account current_account(mcp::slice_to_uint256(it.key()));
 			mcp::unlink_info unlink(it.value());
 
 			if (start_account == current_account)  // eq start ,break

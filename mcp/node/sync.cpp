@@ -55,9 +55,7 @@ mcp::node_sync::node_sync(
 	std::shared_ptr<mcp::node_capability> capability_a, mcp::block_store& store_a,
 	std::shared_ptr<mcp::chain> chain_a, std::shared_ptr<mcp::block_cache> cache_a,
 	std::shared_ptr<mcp::async_task> async_task_a,
-	mcp::fast_steady_clock& steady_clock_a, boost::asio::io_service & io_service_a,
-	// added by michael at 1/14
-	std::shared_ptr<mcp::key_manager> key_manager
+	mcp::fast_steady_clock& steady_clock_a, boost::asio::io_service & io_service_a
 ) :
 	m_capability(capability_a),
 	m_store(store_a),
@@ -66,8 +64,7 @@ mcp::node_sync::node_sync(
 	m_async_task(async_task_a),
 	m_steady_clock(steady_clock_a),
 	m_stoped(false),
-	m_task_clear_flag(false),
-	m_key_manager(key_manager)
+	m_task_clear_flag(false)
 {
 	m_request_joints_thread = std::thread([this]() { this->process_request_joints(); });
 	m_sync_timer = std::make_unique<ba::deadline_timer>(io_service_a);
@@ -903,12 +900,6 @@ mcp::sync_result mcp::node_sync::process_catchup_chain(mcp::catchup_response_mes
 			for (auto joint : arr_witness_joints)
 			{
 				std::shared_ptr<mcp::block> block = joint.block;
-				// added by michael at 1/14
-				// mcp::key_content kc;
-				// if (!m_key_manager->find(block->hashables->from, kc)) {
-				// 	return  process_catchup_result;
-				// }
-				//
 				if (!validate_message(block->hashables->from, block->hash(), block->signature))
 				{
 					LOG(log_sync.info) << "process_catchup_chain_error:invalid signature";

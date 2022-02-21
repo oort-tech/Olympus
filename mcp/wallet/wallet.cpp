@@ -52,12 +52,7 @@ mcp::send_result mcp::wallet::send_action(mcp::block_type const & type_a, boost:
 			return mcp::send_result(mcp::send_result_codes::wrong_password, nullptr);
 	}
 
-	// added by michael at 1/13
-	mcp::key_content kc;
-	m_key_manager->find(from_a, kc);
-	//
-
-	mcp::compose_result compose_result(composer->compose_joint(transaction, type_a, previous_a, from_a, to_a, amount_a, gas_a, gas_price_a, data_a, prv, kc.public_key, gen_next_work_a));
+	mcp::compose_result compose_result(composer->compose_joint(transaction, type_a, previous_a, from_a, to_a, amount_a, gas_a, gas_price_a, data_a, prv, gen_next_work_a));
 	return handle_compose_result(compose_result, async_a);
 }
 

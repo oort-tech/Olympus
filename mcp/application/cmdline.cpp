@@ -83,7 +83,7 @@ bool mcp::handle_node_options(boost::program_options::variables_map & vm)
 	else if (vm.count("account_list"))
 	{
 		vm_instance instance(data_path);
-		std::list<mcp::public_key> account_list(instance.key_manager->list());
+		std::list<mcp::account> account_list(instance.key_manager->list());
 		for (mcp::account account : account_list)
 		{
 			std::cout << account.to_account() << '\n';

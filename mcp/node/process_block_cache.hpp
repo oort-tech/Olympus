@@ -112,12 +112,12 @@ namespace mcp
 			m_account_puts;
 
 		size_t m_max_successor_puts_size = 10000;
-		std::unordered_set<mcp::account> m_successor_puts_flushed;
+		std::unordered_set<mcp::block_hash> m_successor_puts_flushed;
 		boost::multi_index_container<
-			put_item<mcp::account, mcp::block_hash>,
+			put_item<mcp::block_hash, mcp::block_hash>,
 			boost::multi_index::indexed_by<
 			boost::multi_index::sequenced<>,
-			boost::multi_index::hashed_unique<boost::multi_index::member<put_item<mcp::account, mcp::block_hash>, mcp::account, &put_item<mcp::account, mcp::block_hash>::key>>
+			boost::multi_index::hashed_unique<boost::multi_index::member<put_item<mcp::block_hash, mcp::block_hash>, mcp::block_hash, &put_item<mcp::block_hash, mcp::block_hash>::key>>
 			>>
 			m_successor_puts;
 		std::unordered_set<mcp::block_hash> m_successor_dels;

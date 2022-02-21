@@ -536,9 +536,9 @@ void mcp::block::set_signature(mcp::signature signature_a)
 	signature = signature_a;
 }
 
-void mcp::block::set_signature(mcp::raw_key const & prv_a, mcp::public_key const & pub_a)
+void mcp::block::set_signature(mcp::raw_key const & prv_a/*, mcp::public_key const & pub_a*/)
 {
-	signature = mcp::sign_message(prv_a, pub_a, hash());
+	signature = mcp::sign_message(prv_a, hash());
 }
 
 mcp::uint64_union mcp::block::block_work() const

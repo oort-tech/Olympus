@@ -507,10 +507,10 @@ std::string mcp::uint512_union::to_string() const
 	return result;
 }
 
-mcp::signature mcp::sign_message(mcp::raw_key const & private_key, mcp::public_key const & public_key, mcp::uint256_union const & message)
+mcp::signature mcp::sign_message(mcp::raw_key const & private_key, /*mcp::public_key const & public_key,*/ mcp::uint256_union const & message)
 {
 	mcp::signature result;
-	mcp::encry::sign(private_key.data, public_key, message.ref(), result);
+	mcp::encry::sign(private_key.data, /*public_key,*/ message.ref(), result);
 	return result;
 }
 

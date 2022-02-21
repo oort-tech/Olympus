@@ -136,7 +136,7 @@ void test_ed25519()
 	{
 		std::chrono::time_point<std::chrono::high_resolution_clock> start = std::chrono::high_resolution_clock::now();
 
-		mcp::encry::sign(prv, pub, message.ref(), signature);
+		mcp::encry::sign(prv, message.ref(), signature);
 
 		std::chrono::nanoseconds dur = std::chrono::duration_cast<std::chrono::nanoseconds> (std::chrono::high_resolution_clock::now() - start);
 		std::cout << "sign duration:" << dur.count() << "ns" << std::endl;
@@ -303,7 +303,7 @@ void test_secp256k1()
 	{
 		std::chrono::time_point<std::chrono::high_resolution_clock> start = std::chrono::high_resolution_clock::now();
 
-		if (mcp::encry::sign(prv, pub, message.ref(), signature)) {
+		if (mcp::encry::sign(prv, message.ref(), signature)) {
 			std::chrono::nanoseconds dur = std::chrono::duration_cast<std::chrono::nanoseconds> (std::chrono::high_resolution_clock::now() - start);
 			std::cout << "sign duration:" << dur.count() << "ns" << std::endl;
 

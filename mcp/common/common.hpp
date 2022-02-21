@@ -255,7 +255,7 @@ namespace mcp
 		/// Returns siganture of message hash.
 		bool sign(secret_key const& _k, dev::bytesConstRef _hash, mcp::signature& sig);
 		// this is curious for purpose, right now (commented by michael)
-		bool sign(private_key const& _k, public_key const& _pk, dev::bytesConstRef _hash, mcp::signature& sig);
+		// bool sign(private_key const& _k, public_key const& _pk, dev::bytesConstRef _hash, mcp::signature& sig);
 
 		/// Verify signature.
 		// updated by michael at 1/10

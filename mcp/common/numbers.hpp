@@ -279,7 +279,7 @@ namespace p2p
 	using hash256 = mcp::uint256_union;
 }
 
-mcp::signature sign_message (mcp::raw_key const &, mcp::public_key const &, mcp::uint256_union const &);
+mcp::signature sign_message (mcp::raw_key const &, /*mcp::public_key const &,*/ mcp::uint256_union const &);
 bool validate_message (mcp::account const &, mcp::uint256_union const &, mcp::signature const &);
 }
 

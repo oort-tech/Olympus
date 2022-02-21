@@ -286,20 +286,20 @@ void mcp::process_block_cache::successor_put(mcp::db::db_transaction & transacti
 	auto it(m_successor_puts.get<1>().find(root_a));
 	if (it != m_successor_puts.get<1>().end())
 	{
-		m_successor_puts.get<1>().modify(it, [successor_a](put_item<mcp::account, mcp::block_hash> & item_a)
+		m_successor_puts.get<1>().modify(it, [successor_a](put_item<mcp::block_hash, mcp::block_hash> & item_a)
 		{
 			item_a.value = successor_a;
 		});
 	}
 	else
 	{
-		auto r = m_successor_puts.push_back(put_item<mcp::account, mcp::block_hash>(root_a, successor_a));
+		auto r = m_successor_puts.push_back(put_item<mcp::block_hash, mcp::block_hash>(root_a, successor_a));
 		assert_x(r.second);
 		if (m_successor_puts.size() >= m_max_successor_puts_size)
 		{
 			while (m_successor_puts.size() >= m_max_successor_puts_size / 2)
 			{
-				put_item<mcp::account, mcp::block_hash> const & item(m_successor_puts.front());
+				put_item<mcp::block_hash, mcp::block_hash> const & item(m_successor_puts.front());
 				m_successor_puts_flushed.insert(std::move(item.key));
 				m_successor_puts.pop_front();
 			}
@@ -388,8 +388,8 @@ void mcp::process_block_cache::mark_as_changing()
 	m_cache->mark_account_as_changing(account_changings);
 
 	//successor
-	std::unordered_set<mcp::account> successor_changings(m_successor_puts_flushed);
-	for (put_item<mcp::account, mcp::block_hash> const & item : m_successor_puts)
+	std::unordered_set<mcp::block_hash> successor_changings(m_successor_puts_flushed);
+	for (put_item<mcp::block_hash, mcp::block_hash> const & item : m_successor_puts)
 		successor_changings.insert(item.key);
 	for (mcp::block_hash const & hash : m_successor_dels)
 		successor_changings.insert(hash);
@@ -444,7 +444,7 @@ void mcp::process_block_cache::commit_and_clear_changing()
 	//modify successor cache
 	m_cache->successor_earse(m_successor_puts_flushed);
 	m_cache->successor_earse(m_successor_dels);
-	for (put_item<mcp::account, mcp::block_hash> const & item : m_successor_puts)
+	for (put_item<mcp::block_hash, mcp::block_hash> const & item : m_successor_puts)
 		m_cache->successor_put(item.key, item.value);
 	m_successor_puts.clear();
 	m_successor_puts_flushed.clear();
