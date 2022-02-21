@@ -65,7 +65,7 @@ if (BOOST_CUSTOM)
     list(APPEND CMAKE_MODULE_PATH ".\\" ${CMAKE_SOURCE_PATH})
 endif (BOOST_CUSTOM)
 
-find_package (Boost)
+find_package (Boost 1.66.0 REQUIRED COMPONENTS date_time filesystem system log log_setup thread program_options regex chrono atomic)
 include_directories (${Boost_INCLUDE_DIR})
 
 
