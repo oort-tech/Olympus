@@ -4,7 +4,7 @@ import unittest
 import json
 import requests
 import re
-URL = "http://127.0.0.1:8765"
+URL = "http://192.168.85.128:8765"
 #0xC98A676DE3E0C539742E3023F7755C57E331E42F
 #Judge account number, mcp_start, remove I, O, l, 0, length equal to 42	
 def is_account(str):
@@ -777,7 +777,7 @@ class Test_rpc(unittest.TestCase):
 if __name__ == "__main__":
 	suite = unittest.TestSuite()
 	# suite.addTest(Test_rpc("test_account_import"))
-	# suite.addTest(Test_rpc("test_account_create"))
+	suite.addTest(Test_rpc("test_account_create"))
 	# suite.addTest(Test_rpc("test_send_block"))
 	# suite.addTest(Test_rpc("test_accounts_balances"))
 	# suite.addTest(Test_rpc("test_account_balance"))

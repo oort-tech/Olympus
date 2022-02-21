@@ -1,4 +1,5 @@
-#include "dh_x25519.hpp"
+#include "dh_x25519.hpp";
+
 using namespace mcp;
 using namespace mcp::p2p;
 using namespace mcp::encry;
