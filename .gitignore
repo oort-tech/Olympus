@@ -72,4 +72,4 @@ Testing
 /build_debug
 
 # 
-/CMakeLists.txt
+./CMakeLists.txt
