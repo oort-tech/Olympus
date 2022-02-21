@@ -95,26 +95,36 @@ void test_account_encoding()
 
 void test_account_decrypt()
 {
+	std::cout << "-------------test_secp256k1_account_decrypt---------------" << std::endl;
 	mcp::uint128_union kdf_salt;
-	kdf_salt.decode_hex("F36CA7C846C345960B055C6F10DFD7FD");
+	kdf_salt.decode_hex("1FF09EC22EE808C2916D074247C470AC");
 
 	mcp::uint128_union iv;
-	iv.decode_hex("7B4F5CCB4A201302C1CE8CA7979EDA54");
+	iv.decode_hex("D0F8E5F3DFEE661F3FA1895C902B31CB");
 
 	mcp::raw_key prv;
 
-	std::string password_a = "1234qwer";
+	std::string password_a = "12345678";
 
 	mcp::kdf m_kdf;
 	mcp::raw_key derive_pwd;
 	m_kdf.phs(derive_pwd, password_a, kdf_salt);
 
 	mcp::uint256_union ciphertext;
-	ciphertext.decode_hex("09FD6AEDF849A66AB58C15B12F5F9B901A482521AEB0BD160AF4181D9F14B004");
+	ciphertext.decode_hex("571D5152CE55ED6EF42CFB0A42B54C45903BE5F1B4AA7081144F5931D08EAA00");
 	prv.decrypt(ciphertext, derive_pwd, iv);
 
-	mcp::public_key compare;
-	mcp::encry::generate_public_from_secret(prv.data, compare);
+	mcp::public_key pub;
+	mcp::encry::generate_public_from_secret(prv.data, pub);
 
-	std::cout << compare.to_string() << std::endl;
+	// input
+	std::cout << "kdf_salt:" << kdf_salt.to_string() << std::endl;
+	std::cout << "iv:" << iv.to_string() << std::endl;
+	std::cout << "password:" << password_a << std::endl;
+	std::cout << "ciphertext:" << ciphertext.to_string() << std::endl;
+	
+	//out put
+	std::cout << "prv:" << prv.data.to_string() << std::endl;
+	std::cout << "pub:" << pub.to_string() << std::endl;
+	std::cout << "account:" << mcp::account(pub).to_account() << std::endl;
 }

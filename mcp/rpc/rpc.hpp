@@ -346,13 +346,6 @@ enum class rpc_witness_list_error_code
     ok = 0
 };
 
-enum class rpc_work_get_error_code
-{
-    ok = 0,
-    invalid_account = 1,
-    account_not_exisit = 2
-};
-
 enum class rpc_version_error_code
 {
     ok = 0
@@ -413,7 +406,6 @@ public:
     std::string msg(mcp::rpc_stable_blocks_error_code const & err_a);
     std::string msg(mcp::rpc_status_error_code const & err_a);
     std::string msg(mcp::rpc_witness_list_error_code const & err_a);
-    std::string msg(mcp::rpc_work_get_error_code const & err_a);
     std::string msg(mcp::rpc_version_error_code const & err_a);
     std::string msg(mcp::rpc_peers_error_code const & err_a);
     std::string msg(mcp::rpc_nodes_error_code const & err_a);
@@ -459,7 +451,6 @@ public:
 	void status();
 	void peers();
 	void nodes();
-	void work_get();
 	void witness_list();
 
     void estimate_gas();

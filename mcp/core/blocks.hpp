@@ -93,7 +93,7 @@ namespace mcp
 		//
 
 		void set_signature(mcp::signature signature_a);
-		void set_signature(mcp::raw_key const & prv_a, mcp::public_key const & pub_a);
+		void set_signature(mcp::raw_key const & prv_a);
 
 		bool operator== (mcp::block const &) const;
 

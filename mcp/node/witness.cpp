@@ -25,7 +25,7 @@ mcp::witness::witness(mcp::error_message & error_msg,
 	if (error)
 	{
 		mcp::key_content kc;
-		bool error(key_manager_a->import(account_or_file_text, kc, false));
+		bool error(key_manager_a->import(account_or_file_text, kc));
 		if (error)
 		{
 			error_msg.error = true;
@@ -175,7 +175,6 @@ void mcp::witness::do_witness()
 	mcp::uint256_t gas_price(0);
 	std::vector<uint8_t> data;
 	boost::optional<std::string> password = boost::none;
-	bool gen_work = true;
 	bool async = false;
 
 	std::weak_ptr<mcp::witness> this_w(shared_from_this());
@@ -225,7 +224,7 @@ void mcp::witness::do_witness()
 			this_l->m_last_witness_time = std::chrono::steady_clock::now();
 			this_l->m_is_witnessing.clear();
 		}
-	}, gen_work, async);
+	}, async);
 }
 
 std::atomic_flag mcp::witness::m_is_witnessing = ATOMIC_FLAG_INIT;

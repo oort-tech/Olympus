@@ -254,26 +254,6 @@ bool mcp::encry::sign(secret_key const& _k, dev::bytesConstRef _hash, mcp::signa
     return false;
 }
 
-//secret and public key detached
-bool mcp::encry::sign(private_key const& _k, public_key const& _pk, dev::bytesConstRef _hash, mcp::signature& sig)
-{
-	// commented by michale at 1/8
-	// dev::bytes key(secret_key::size);
-	// _k.ref().copyTo(dev::bytesRef(&key[0], private_key::size));
-	// _pk.ref().copyTo(dev::bytesRef(&key[private_key::size], public_key::size));
-
-	// unsigned long long signed_message_len;
-	// int ret = crypto_sign_detached(sig.ref().data(), &signed_message_len,
-	// 	_hash.data(), _hash.size(), key.data());
-
-	// if (ret != 0)
-	// 	return false;
-
-	// return true;
-
-	return sign(_k, _hash, sig);
-}
-
 ///input : _s = signature + original data
 bool mcp::encry::verify(public_key const& _p, dev::bytesConstRef const& _s)
 {

@@ -44,10 +44,10 @@ public:
 		std::shared_ptr<mcp::block_processor> block_processor_a
 	);
 	~wallet() { stop(); }
-	void send_async(mcp::block_type const & type_a, boost::optional<mcp::block_hash> const & previous_a, mcp::account const & from_a, mcp::account const & to_a, mcp::amount const & amount_a, uint256_t const & gas_a, uint256_t const & gas_price_a, std::vector<uint8_t> const & data_a, boost::optional<std::string> const & password_a, std::function<void(mcp::send_result)> const & action_a, bool const & gen_next_work_a, bool const & async_a = false);
-	mcp::send_result send_action(mcp::block_type const & type_a, boost::optional<mcp::block_hash> const & previous_a, mcp::account const & from_a, mcp::account const & to_a, mcp::amount const & amount_a, uint256_t gas_a, uint256_t gas_price_a, std::vector<uint8_t> const & data_a, boost::optional<std::string> const & password_a, bool const & gen_next_work_a, bool const & async_a);
-	void send_async(std::shared_ptr<mcp::block> const p_block, mcp::signature const & signature_a, std::function<void(mcp::send_result)> const & action_a, bool gen_next_work_a, bool const & async_a);
-	mcp::send_result send_action(std::shared_ptr<mcp::block> const p_block, mcp::signature const & signature_a, std::function<void(mcp::send_result)> const & action_a, bool const & gen_next_work_a, bool const & async_a);
+	void send_async(mcp::block_type const & type_a, boost::optional<mcp::block_hash> const & previous_a, mcp::account const & from_a, mcp::account const & to_a, mcp::amount const & amount_a, uint256_t const & gas_a, uint256_t const & gas_price_a, std::vector<uint8_t> const & data_a, boost::optional<std::string> const & password_a, std::function<void(mcp::send_result)> const & action_a, bool const & async_a = false);
+	mcp::send_result send_action(mcp::block_type const & type_a, boost::optional<mcp::block_hash> const & previous_a, mcp::account const & from_a, mcp::account const & to_a, mcp::amount const & amount_a, uint256_t gas_a, uint256_t gas_price_a, std::vector<uint8_t> const & data_a, boost::optional<std::string> const & password_a, bool const & async_a);
+	void send_async(std::shared_ptr<mcp::block> const p_block, mcp::signature const & signature_a, std::function<void(mcp::send_result)> const & action_a, bool const & async_a);
+	mcp::send_result send_action(std::shared_ptr<mcp::block> const p_block, mcp::signature const & signature_a, std::function<void(mcp::send_result)> const & action_a, bool const & async_a);
 	void stop();
 
 	std::shared_ptr<mcp::composer> composer;

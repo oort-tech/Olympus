@@ -432,10 +432,9 @@ void mcp::rpc_handler::account_list()
 	mcp::json j_response;
 	mcp::json j_accounts = mcp::json::array();
 
-	std::list<mcp::public_key> pubkey_list(m_key_manager->list());
-	for (auto pubkey : pubkey_list)
+	std::list<mcp::account> account_list(m_key_manager->list());
+	for (auto account : account_list)
 	{
-		mcp::account account(pubkey);
 		j_accounts.push_back(account.to_account());
 	}
 	j_response["accounts"] = j_accounts;
@@ -479,8 +478,6 @@ void mcp::rpc_handler::account_create()
 				{
 					if (mcp::validatePassword(password))
 					{
-						bool gen_next_work_l(false);
-
 						bool backup_l(true);
 						if (request.count("backup"))
 						{
@@ -491,12 +488,9 @@ void mcp::rpc_handler::account_create()
 								return;
 							}
 						}
-						mcp::public_key public_key = m_key_manager->create(password, gen_next_work_l, backup_l);
-						mcp::account new_account(public_key);
+						mcp::account new_account(m_key_manager->create(password, backup_l));
 						mcp::json j_response;
 						j_response["account"] = new_account.to_account();
-						// added by michael at 1/18
-						j_response["public_key"] = public_key.to_string();
 						//
 						error_code_l = mcp::rpc_account_create_error_code::ok;
 						error_response(response, int(error_code_l), err.msg(error_code_l), j_response);
@@ -821,17 +815,13 @@ void mcp::rpc_handler::account_import()
 		if (request.count("json") && request["json"].is_string())
 		{
 			std::string json_text = request["json"];
-			bool gen_next_work_l(false);
 
 			mcp::key_content kc;
-			auto error(m_key_manager->import(json_text, kc, gen_next_work_l));
+			auto error(m_key_manager->import(json_text, kc));
 			if (!error)
 			{
 				mcp::json j_response;
 				j_response["account"] = kc.account.to_account();
-				// added by michael at 1/18
-				j_response["public_key"] = kc.public_key.to_string();
-				//
 				error_code_l = mcp::rpc_account_import_error_code::ok;
 				error_response(response, (int)error_code_l, err.msg(error_code_l), j_response);
 			}
@@ -2062,8 +2052,6 @@ void mcp::rpc_handler::send_block()
 		password = password_str;
 	}
 
-	bool gen_next_work_l(false);
-
 	bool async(false);
 	if (request.count("async"))
 	{
@@ -2127,7 +2115,7 @@ void mcp::rpc_handler::send_block()
 			error_response(response, (int)error_code_l, rpc_l->err.msg(error_code_l));
 			break;
 		} },
-		gen_next_work_l, async);
+		async);
 }
 
 void mcp::rpc_handler::generate_offline_block()
@@ -2454,7 +2442,6 @@ void mcp::rpc_handler::send_offline_block()
 		}
 	}
 
-	bool gen_next_work_l(false);
 	auto rpc_l(shared_from_this());
 	m_wallet->send_async(
 		p_block, signature, [rpc_l, this](mcp::send_result result)
@@ -2496,7 +2483,7 @@ void mcp::rpc_handler::send_offline_block()
 			error_response(response, (int)error_code_l, rpc_l->err.msg(error_code_l));
 			break;
 		} },
-		gen_next_work_l, async);
+		async);
 }
 
 void mcp::rpc_handler::block_summary()
@@ -2623,15 +2610,15 @@ void mcp::rpc_handler::sign_msg()
 {
 	mcp::rpc_sign_msg_error_code error_code_l;
 
-	if (!request.count("public_key") || (!request["public_key"].is_string()))
+	if (!request.count("account") || (!request["account"].is_string()))
 	{
 		error_code_l = mcp::rpc_sign_msg_error_code::invalid_public_key;
 		error_response(response, (int)error_code_l, err.msg(error_code_l));
 		return;
 	}
-	std::string public_key_text = request["public_key"];
-	mcp::public_key public_key;
-	auto error(public_key.decode_hex(public_key_text));
+	std::string account_text = request["account"];
+	mcp::account account;
+	auto error(account.decode_account(account_text));
 	if (error)
 	{
 		error_code_l = mcp::rpc_sign_msg_error_code::invalid_public_key;
@@ -2665,7 +2652,7 @@ void mcp::rpc_handler::sign_msg()
 	mcp::raw_key prv;
 	if (password_a.empty())
 	{
-		bool exists(m_key_manager->find_unlocked_prv(public_key, prv));
+		bool exists(m_key_manager->find_unlocked_prv(account, prv));
 		if (!exists)
 		{
 			error_code_l = mcp::rpc_sign_msg_error_code::wrong_password;
@@ -2675,7 +2662,7 @@ void mcp::rpc_handler::sign_msg()
 	}
 	else
 	{
-		bool error(m_key_manager->decrypt_prv(public_key, password_a, prv));
+		bool error(m_key_manager->decrypt_prv(account, password_a, prv));
 		if (error)
 		{
 			error_code_l = mcp::rpc_sign_msg_error_code::wrong_password;
@@ -2684,7 +2671,7 @@ void mcp::rpc_handler::sign_msg()
 		}
 	}
 	mcp::json response_l;
-	mcp::signature sig(mcp::sign_message(prv, public_key, sign_msg));
+	mcp::signature sig(mcp::sign_message(prv, sign_msg));
 	response_l["signature"] = sig.to_string();
 	error_code_l = mcp::rpc_sign_msg_error_code::ok;
 	error_response(response, (int)error_code_l, err.msg(error_code_l), response_l);
@@ -2761,52 +2748,6 @@ void mcp::rpc_handler::nodes()
 
 	error_code_l = mcp::rpc_nodes_error_code::ok;
 	error_response(response, (int)error_code_l, err.msg(error_code_l), nodes_l);
-}
-
-void mcp::rpc_handler::work_get()
-{
-	if (rpc.config.enable_control)
-	{
-		mcp::rpc_work_get_error_code error_code_l;
-
-		if (!request.count("account") || (!request["account"].is_string()))
-		{
-			error_code_l = mcp::rpc_work_get_error_code::invalid_account;
-			error_response(response, (int)error_code_l, err.msg(error_code_l));
-			return;
-		}
-		std::string account_text = request["account"];
-		mcp::account account;
-		auto error(account.decode_account(account_text));
-		if (!error)
-		{
-			mcp::uint64_union work(0);
-			mcp::block_hash root_l(0);
-			if (!m_key_manager->work_account_get(account, root_l, work))
-			{
-				mcp::json response_l;
-				response_l["root"] = root_l.to_string();
-				std::string work_text = work.to_string();
-				response_l["work"] = work_text;
-				error_code_l = mcp::rpc_work_get_error_code::ok;
-				error_response(response, (int)error_code_l, err.msg(error_code_l), response_l);
-			}
-			else
-			{
-				error_code_l = mcp::rpc_work_get_error_code::account_not_exisit;
-				error_response(response, (int)error_code_l, err.msg(error_code_l));
-			}
-		}
-		else
-		{
-			error_code_l = mcp::rpc_work_get_error_code::invalid_account;
-			error_response(response, (int)error_code_l, err.msg(error_code_l));
-		}
-	}
-	else
-	{
-		error_response(response, "RPC control is disabled");
-	}
 }
 
 void mcp::rpc_handler::witness_list()
@@ -3224,10 +3165,6 @@ void mcp::rpc_handler::process_request()
 		else if (action == "nodes")
 		{
 			nodes();
-		}
-		else if (action == "work_get")
-		{
-			work_get();
 		}
 		else if (action == "witness_list")
 		{
@@ -3869,27 +3806,6 @@ std::string mcp::rpc_error_msg::msg(mcp::rpc_witness_list_error_code const &err_
 	{
 	case mcp::rpc_witness_list_error_code::ok:
 		error_msg = "OK";
-		break;
-	default:
-		error_msg = "Unkonw error";
-		break;
-	}
-	return error_msg;
-}
-
-std::string mcp::rpc_error_msg::msg(mcp::rpc_work_get_error_code const &err_a)
-{
-	std::string error_msg;
-	switch (err_a)
-	{
-	case mcp::rpc_work_get_error_code::ok:
-		error_msg = "OK";
-		break;
-	case mcp::rpc_work_get_error_code::invalid_account:
-		error_msg = "Invalid account";
-		break;
-	case mcp::rpc_work_get_error_code::account_not_exisit:
-		error_msg = "Account not found";
 		break;
 	default:
 		error_msg = "Unkonw error";
@@ -4567,7 +4483,6 @@ void mcp::rpc_handler::eth_sendRawTransaction()
 
 	boost::optional<mcp::block_hash> previous_opt;
 	boost::optional<std::string> password;
-	bool gen_next_work_l(false);
 	bool async(false);
 	auto rpc_l(shared_from_this());
 	
@@ -4600,7 +4515,7 @@ void mcp::rpc_handler::eth_sendRawTransaction()
 		default:
 			break;
 		} },
-		gen_next_work_l, async);
+		async);
 }
 
 void mcp::rpc_handler::eth_sendTransaction()
@@ -4675,7 +4590,6 @@ void mcp::rpc_handler::eth_sendTransaction()
 
 	boost::optional<mcp::block_hash> previous_opt;
 	boost::optional<std::string> password;
-	bool gen_next_work_l(false);
 	bool async(false);
 	auto rpc_l(shared_from_this());
 	m_wallet->send_async(
@@ -4707,7 +4621,7 @@ void mcp::rpc_handler::eth_sendTransaction()
 		default:
 			break;
 		} },
-		gen_next_work_l, async);
+		async);
 }
 
 void mcp::rpc_handler::eth_call()
