@@ -435,7 +435,7 @@ std::shared_ptr<std::list<mcp::block_hash>> mcp::composer::random_get_links(mcp:
 			if (!it.valid())
 				it = m_store.unlink_info_begin(transaction_a, snapshot_a);
 
-			mcp::account current_account(mcp::slice_to_uint256(it.key()).number());
+			mcp::account current_account(mcp::slice_to_uint256(it.key()));
 			mcp::unlink_info unlink(it.value());
 
 			if (start_account == current_account)  // eq start ,break

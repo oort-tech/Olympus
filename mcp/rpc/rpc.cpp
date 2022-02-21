@@ -3070,7 +3070,7 @@ void mcp::rpc_handler::process_request()
 	try
 	{
 		request = mcp::json::parse(body);
-		LOG(m_log.error) << "Request Parse" << request;
+		LOG(m_log.debug) << "Request Parse" << request;
 		std::string action = request.count("action") > 0 ? request["action"] : request["method"];
 
 		bool handled = false;
