@@ -57,7 +57,6 @@ else ()
 endif (APPLE)
 
 include_directories (${CMAKE_SOURCE_DIR})
-include_directories ("${CMAKE_BINARY_DIR}/deps/include")
 
 set(Boost_USE_STATIC_LIBS        ON)
 set(Boost_USE_MULTITHREADED      ON)
