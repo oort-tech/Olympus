@@ -104,7 +104,7 @@ int main(int argc, char * const * argv)
 	//test_sha512();
 	//test_ed25519();
 	//test_aes();
-	test_x25519();
+	// test_x25519();
 
 	// test_create_account();
 	// test_account_encoding();
@@ -117,6 +117,8 @@ int main(int argc, char * const * argv)
 	//test_work();
 
 	// test_account_decrypt();
+
+	test_signature();
 
 	std::cout << std::endl;
 	std::cout << "Press \"Enter\" to exit...";

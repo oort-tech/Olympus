@@ -353,3 +353,16 @@ void test_x25519()
 		std::cout << "Decrypted: " << mcp::bytes_to_hex(plain) << std::endl;
 	}
 }
+
+void test_signature()
+{
+	std::string sig = "32a203eacdfd2647981dff155082e9d6d1c4c96cd0473de347ff7589c64118c91d84caa88930ce61121e1b160d1a1cd11401896b67380a7fc870d1cc3d6d679401";
+	mcp::signature signature;
+
+	if (signature.decode_hex(sig)) {
+		std::cout << "decode error" << std::endl;
+	}
+	else {
+		std::cout << signature.to_string() << std::endl;
+	}
+}

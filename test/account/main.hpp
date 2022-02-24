@@ -13,3 +13,5 @@ void test_secure_string();
 
 void test_secp256k1();
 void test_account_decrypt();
+
+void test_signature();

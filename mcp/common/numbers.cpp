@@ -980,14 +980,11 @@ bool mcp::signature_struct::operator!= (signature_struct const & other_a) const 
 bool mcp::signature_struct::decode_hex(std::string const & text) {
 	bool error(text.size() != 130 || text.empty());
 	if (!error) {
-		r.decode_hex(text.substr(0, r.size * 2));
-		s.decode_hex(text.substr(r.size * 2, s.size * 2));
-		
-		std::stringstream stream(text.substr((r.size + s.size) * 2, 2));
-		uint8_t v_l;
-		stream << std::hex << std::noshowbase;
-		stream >> v_l;
-		v = static_cast<byte>(v_l);
+		dev::bytes bytes;
+		hex_to_bytes(text, bytes);
+		dev::bytesRef(bytes.data(), r.size).copyTo(r.ref());
+		dev::bytesRef(bytes.data() + r.size, s.size).copyTo(s.ref());
+		v = bytes[bytes.size() - 1];
 	}
 	return error;
 }
