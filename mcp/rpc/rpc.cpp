@@ -3065,7 +3065,6 @@ void mcp::rpc_handler::process_request()
 	{
 		request = mcp::json::parse(body);
 		std::string action = request.count("action") > 0 ? request["action"] : request["method"];
-
 		bool handled = false;
 		if (action == "account_create")
 		{
@@ -4497,7 +4496,7 @@ void mcp::rpc_handler::eth_sendRawTransaction()
 	{
 		to = (mcp::account)rlp[3];
 	}
-	uint256_t amount = (uint256_t)rlp[4].toInt();
+	uint256_t amount = (uint256_t)rlp[4];
 
 	if (!rlp[5].isData())
 	{
@@ -4813,7 +4812,7 @@ void mcp::rpc_handler::eth_call()
 	mcp::db::db_transaction transaction(m_store.create_transaction());
 	std::pair<mcp::ExecutionResult, dev::eth::TransactionReceipt> result = m_chain->execute(transaction, m_cache, block, mc_info, Permanence::Reverted, dev::eth::OnOpFunc());
 
-	response_l["result"] = bytes_to_hex(result.first.output);
+	response_l["result"] = "0x" + bytes_to_hex(result.first.output);
 
 	response(response_l);
 }
@@ -4925,8 +4924,8 @@ void mcp::rpc_handler::eth_getTransactionByHash()
 	{
 		auto block(m_cache->block_get(transaction, block_hash));
 		if (block != nullptr && state->receipt != boost::none) {
-			if (block->hashables->type == mcp::block_type::light && block->isCreation() && state->is_stable && (state->status == mcp::block_status::ok))
-			{
+			//if (block->hashables->type == mcp::block_type::light && block->isCreation() && state->is_stable && (state->status == mcp::block_status::ok))
+			//{
 				std::shared_ptr<mcp::account_state> acc_state(m_store.account_state_get(transaction, state->receipt->from_state));
 				assert_x(acc_state);
 				mcp::json json_receipt;
@@ -4942,7 +4941,7 @@ void mcp::rpc_handler::eth_getTransactionByHash()
 				json_receipt["input"] = "0x" + bytes_to_hex(block->data);	
 				json_receipt["gasPrice"] = uint64_to_hex_nofill(1000000000);
 				response_l["result"] = json_receipt;
-			}
+			//}
 		}
 	}
 
