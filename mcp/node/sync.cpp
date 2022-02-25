@@ -1680,7 +1680,7 @@ void mcp::node_sync::peer_info_request_handler(p2p::node_id const &id)
 				if (!it.valid())
 					it = m_store.unlink_info_begin(transaction, snap);
 
-				mcp::account current_account(mcp::slice_to_uint256(it.key()));
+				mcp::account current_account(mcp::slice_to_account(it.key()));
 				if (start_account == current_account)  // eq start ,break
 					break;
 				if (start_account.is_zero())
