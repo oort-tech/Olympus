@@ -233,10 +233,9 @@ void mcp::uint256_union::encode_hex(std::string & text, bool show_base) const
 {
 	assert_x(text.empty());
 	std::stringstream stream;
-	stream << std::hex << (show_base ? std::showbase : std::noshowbase) << std::setw(64) << std::setfill('0');
+	stream << std::setw(64) << std::setfill('0') << std::hex;
 	stream << number();
-
-	text = stream.str();
+	text = (show_base ? "0x" : "" ) + stream.str();
 	std::transform(text.begin(), text.end(), text.begin(), [](unsigned char c){ return std::tolower(c);});
 }
 
