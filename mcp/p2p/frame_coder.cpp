@@ -94,9 +94,7 @@ frame_coder::~frame_coder()
 frame_coder::frame_coder(hankshake const& _init) :
 	m_impl(new frame_coder_impl)
 {
-	// setup(_init.m_originated, _init.m_ecdheRemote, _init.m_remoteNonce, _init.m_ecdheLocal, _init.m_nonce);
-	// added by michael at 2/17
-	setup(_init.m_originated, _init.m_ecdheRemote, _init.m_remoteNonce, _init.m_host->alias, _init.m_nonce);
+	setup(_init.m_originated, _init.m_ecdheRemote, _init.m_remoteNonce, _init.m_ecdheLocal, _init.m_nonce);
 }
 
 frame_coder::frame_coder(bool _originated, public_key_comp const& _remoteEphemeral, nonce const& _remoteNonce, key_pair_ed const& _ecdheLocal, nonce const& _nonce) :

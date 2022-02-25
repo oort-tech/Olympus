@@ -136,7 +136,7 @@ namespace mcp
 
 			bool m_originated = false;	//True if connection is outbound.
 
-			mcp::key_pair m_ecdheLocal = mcp::key_pair::create();
+			mcp::key_pair_ed m_ecdheLocal = mcp::key_pair_ed::create();
 			mcp::nonce m_nonce;
 
 			mcp::public_key_comp m_ecdheRemote;			///< Remote ephemeral public key.

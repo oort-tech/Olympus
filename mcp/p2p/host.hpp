@@ -52,12 +52,12 @@ namespace mcp
             std::unordered_map<node_id, bi::tcp::endpoint> peers() const;
             std::list<node_info> nodes() const;
 
-			node_id id() const { return alias.pub(); }
+			node_id id() const { return alias.pub_comp(); }
 
 			std::list<capability_desc> caps() const { std::list<capability_desc> ret; for (auto const& i : capabilities) ret.push_back(i.first); return ret; }
 			void start_peer(mcp::public_key_comp const& _id, dev::RLP const& _hello, std::unique_ptr<mcp::p2p::frame_coder>&& _io, std::shared_ptr<bi::tcp::socket> const & socket);
 
-			mcp::key_pair_ed alias;
+			mcp::key_pair alias;
 			
             std::map<std::string,uint64_t> get_peers_write_queue_size();
             std::map<std::string, std::shared_ptr<mcp::p2p::peer_metrics> > get_peers_metrics();

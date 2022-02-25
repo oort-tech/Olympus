@@ -245,7 +245,6 @@ void mcp::uint256_union::encode_hex_no_fill(std::string & text, bool show_base) 
 	std::stringstream stream;
 	stream << std::hex << (show_base ? std::showbase : std::noshowbase);
 	stream << number();
-	
 	text = stream.str();
 	std::transform(text.begin(), text.end(), text.begin(), [](unsigned char c){ return std::tolower(c); });
 }
@@ -455,6 +454,7 @@ void mcp::uint512_union::encode_hex(std::string & text) const
 	stream << std::hex << std::noshowbase << std::setw(128) << std::setfill('0');
 	stream << number();
 	text = stream.str();
+	std::transform(text.begin(), text.end(), text.begin(), [](unsigned char c) { return std::tolower(c); });
 }
 
 bool mcp::uint512_union::decode_hex(std::string const & text)
@@ -597,6 +597,7 @@ void mcp::uint128_union::encode_hex(std::string & text) const
 	stream << std::hex << std::noshowbase << std::setw(32) << std::setfill('0');
 	stream << number();
 	text = stream.str();
+	std::transform(text.begin(), text.end(), text.begin(), [](unsigned char c) { return std::tolower(c); });
 }
 
 bool mcp::uint128_union::decode_hex(std::string const & text)
@@ -894,10 +895,10 @@ void mcp::uint64_union::encode_hex(std::string & text, bool show_base) const
 {
 	assert_x(text.empty());
 	std::stringstream stream;
-	stream << std::hex << (show_base ? std::showbase : std::noshowbase) << std::setw(16) << std::setfill('0');
+	stream << std::hex << std::setw(16) << std::setfill('0');
 	stream << number();
 	
-	text = stream.str();
+	text = (show_base ? "0x" : "") + stream.str();
 	std::transform(text.begin(), text.end(), text.begin(), [](unsigned char c){ return std::tolower(c); });
 }
 
