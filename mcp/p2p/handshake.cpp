@@ -191,7 +191,7 @@ uint32_t mcp::p2p::hankshake::packet_size()
 {
 	uint32_t size = 0;
 	if (State::ExchgPublic == m_curState || State::AckExchgPublic == m_curState)
-		size = 69;
+		size = 71;
 	else if (State::New == m_curState)
 		size = 227;
 	else if (State::AckAuth == m_curState)
@@ -247,8 +247,8 @@ void hankshake::writeAuth()
 	mcp::encry::sign(m_host->alias.secret(), m_ecdheLocal.pub().ref(), sig_data);
 	sig_data.ref().copyTo(sig);
 
-	m_ecdheLocal.pub().ref().copyTo(hepubk);
-	m_host->alias.pub_comp().ref().copyTo(pubk);
+	m_host->alias.pub_comp().ref().copyTo(hepubk);
+	m_ecdheLocal.pub().ref().copyTo(pubk);
 
 	m_nonce.ref().copyTo(nonce_l);
 	buf[buf.size() - 1] = 0x0;
@@ -282,15 +282,15 @@ void hankshake::setAuthValues(mcp::signature const& _sig, public_key_comp const&
 		return;
 	}
 
-	if (m_remote != _remotePubk && !m_remote.is_zero())
+	if (m_remote != _hePubk && !m_remote.is_zero())
 	{
-		LOG(m_log.info) << "remote key error: " << m_remote.to_string() << " :" << _remotePubk.to_string();
+		LOG(m_log.info) << "remote key error: " << m_remote.to_string() << " :" << _hePubk.to_string();
 		m_nextState = Error;
 		return;
 	}
 
-	_hePubk.ref().copyTo(m_ecdheRemote.ref());	/// transfer encrypt public key
-	_remotePubk.ref().copyTo(m_remote.ref());	/// transfer signature public key
+	_remotePubk.ref().copyTo(m_ecdheRemote.ref());	/// transfer encrypt public key
+	_hePubk.ref().copyTo(m_remote.ref());	/// transfer signature public key
 
 	_remoteNonce.ref().copyTo(m_remoteNonce.ref());
 }
