@@ -13,7 +13,7 @@ namespace mcp
 		class hankshake_msg
 		{
 		public:
-			hankshake_msg(node_id const & node_id_a, uint16_t const & version_a, mcp::mcp_networks const & network_a, std::list<capability_desc> const & cap_descs_a);
+			hankshake_msg(node_id const & node_id_a, uint16_t const & version_a, mcp::mcp_networks const & network_a, std::list<capability_desc> const & cap_descs_a, mcp::public_key_comp const & enckey_a);
 			hankshake_msg(dev::RLP const & r);
 			void stream_RLP(dev::RLPStream & s);
 
@@ -21,6 +21,8 @@ namespace mcp
 			uint16_t version;
 			mcp::mcp_networks network;
 			std::list<capability_desc> cap_descs;
+			// added by michael at 2/26
+			mcp::public_key_comp enckey;
 		};
 
 		class host;

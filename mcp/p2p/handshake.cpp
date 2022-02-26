@@ -4,29 +4,34 @@ using namespace mcp;
 using namespace mcp::p2p;
 using namespace dev;
 
-mcp::p2p::hankshake_msg::hankshake_msg(node_id const & node_id_a, uint16_t const & version_a, mcp::mcp_networks const & network_a, std::list<capability_desc> const & cap_descs_a) : 
+mcp::p2p::hankshake_msg::hankshake_msg(node_id const & node_id_a, uint16_t const & version_a, mcp::mcp_networks const & network_a, std::list<capability_desc> const & cap_descs_a, mcp::public_key_comp const & enckey_a) :
 	id(node_id_a),
 	version(version_a),
 	network(network_a),
-	cap_descs(cap_descs_a)
+	cap_descs(cap_descs_a),
+	enckey(enckey_a)
 {
 }
 
 mcp::p2p::hankshake_msg::hankshake_msg(dev::RLP const & r)
 {
-	if (r.itemCount() != 4)
+	if (r.itemCount() != 5)
 		throw std::runtime_error("invalid handshake_message rlp format");
 
 	id = r[0].toHash<mcp::public_key_comp>();
 	version = (uint16_t)r[1];
 	network = (mcp::mcp_networks)r[2].toInt<uint8_t>();
-	for (auto const & i : r[3])
+
+	// added by michael at 2/26
+	enckey = (mcp::public_key_comp) r[3];
+
+	for (auto const & i : r[4])
 		cap_descs.push_back(capability_desc(i));
 }
 
 void hankshake_msg::stream_RLP(dev::RLPStream & s)
 {
-	s.appendList(4) << id << version << (uint8_t)network;
+	s.appendList(5) << id << version << (uint8_t)network << enckey;
 	s.appendList(cap_descs.size());
 	for (auto & desc : cap_descs)
 		desc.stream_RLP(s);
@@ -186,7 +191,7 @@ uint32_t mcp::p2p::hankshake::packet_size()
 {
 	uint32_t size = 0;
 	if (State::ExchgPublic == m_curState || State::AckExchgPublic == m_curState)
-		size = 37;
+		size = 69;
 	else if (State::New == m_curState)
 		size = 227;
 	else if (State::AckAuth == m_curState)
@@ -218,7 +223,7 @@ void mcp::p2p::hankshake::do_process()
 void mcp::p2p::hankshake::writeInfo()
 {
 	std::list<capability_desc> caps;
-	hankshake_msg handmsg(m_host->id(), mcp::p2p::version, mcp::mcp_network, caps);
+	hankshake_msg handmsg(m_host->id(), mcp::p2p::version, mcp::mcp_network, caps, m_ecdheLocal.pub());
 	RLPStream s;
 
 	handmsg.stream_RLP(s);
@@ -304,6 +309,8 @@ void mcp::p2p::hankshake::readInfo()
 	m_transferVersion = mcp::p2p::version < msg.version ? mcp::p2p::version : msg.version;
 	m_remoteVersion = msg.version;
 	m_remote = msg.id;
+	// added by michael at 2/26
+	m_ecdheRemote = msg.enckey;
 
 	if (msg.network != mcp::mcp_network)
 	{
@@ -472,7 +479,7 @@ void hankshake::transition(boost::system::error_code _ech)
 		/// it will be passed to Host which will take ownership.
 		m_io.reset(new frame_coder(*this));
 
-		hankshake_msg handmsg(m_host->id(), mcp::p2p::version, mcp::mcp_network, m_host->caps());
+		hankshake_msg handmsg(m_host->id(), mcp::p2p::version, mcp::mcp_network, m_host->caps(), m_ecdheLocal.pub());
 		RLPStream s;
 		s.append((unsigned)packet_type::ack);
 		handmsg.stream_RLP(s);
