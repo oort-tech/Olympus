@@ -3023,7 +3023,7 @@ void mcp::rpc_connection::read()
 					try
 					{
                         std::string body = js.dump();
-						LOG(this_l->m_log.error) << "RESPONSE" << body;
+						// LOG(this_l->m_log.error) << "RESPONSE" << body;
 						this_l->write_result(body, version);
 						boost::beast::http::async_write(this_l->socket, this_l->res, [this_l](boost::system::error_code const & e, size_t size)
 						{
@@ -3065,7 +3065,7 @@ void mcp::rpc_handler::process_request()
 	try
 	{
 		request = mcp::json::parse(body);
-		LOG(m_log.error) << "REQUEST:" << request;
+		// LOG(m_log.error) << "REQUEST:" << request;
 		std::string action = request.count("action") > 0 ? request["action"] : request["method"];
 		bool handled = false;
 		if (action == "account_create")
@@ -4439,7 +4439,7 @@ void mcp::rpc_handler::eth_getBlockByNumber()
 	}
 
 	std::shared_ptr<mcp::block_state> state(m_cache->block_state_get(transaction, block_hash));
-	if (block_hash != mcp::genesis::block_hash && state != nullptr)
+	if (/*block_hash != mcp::genesis::block_hash &&*/state != nullptr)
 	{
 		auto block(m_cache->block_get(transaction, block_hash));
 		mcp::json block_l;
