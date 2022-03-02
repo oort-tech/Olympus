@@ -359,12 +359,16 @@ bool mcp::Executive::go(dev::eth::OnOpFunc const& _onOp)
         }
         catch (RevertInstruction& _e)
         {
+            if (m_depth != 0)
+                throw;
             revert();
             m_output = _e.output();
             m_excepted = TransactionException::RevertInstruction;
         }
         catch (VMException const& _e)
         {
+            if (m_depth != 0)
+                throw;
             BOOST_LOG(m_log.info) << "Safe VM Exception. " << diagnostic_information(_e);
             m_gas = 0;
             m_excepted = toTransactionException(_e);
@@ -372,6 +376,8 @@ bool mcp::Executive::go(dev::eth::OnOpFunc const& _onOp)
         }
         catch (InternalVMError const& _e)
         {
+            if (m_depth != 0)
+                throw;
             cerror << "Internal VM Error (EVMC status code: "
                  << *boost::get_error_info<errinfo_evmcStatusCode>(_e) << ")";
             revert();
@@ -379,6 +385,8 @@ bool mcp::Executive::go(dev::eth::OnOpFunc const& _onOp)
         }
         catch (Exception const& _e)
         {
+            if (m_depth != 0)
+                throw;
             // TODO: AUDIT: check that this can never reasonably happen. Consider what to do if it does.
             cerror << "Unexpected exception in VM. There may be a bug in this implementation. "
                  << diagnostic_information(_e);
@@ -388,6 +396,8 @@ bool mcp::Executive::go(dev::eth::OnOpFunc const& _onOp)
         }
         catch (std::exception const& _e)
         {
+            if (m_depth != 0)
+                throw;
             // TODO: AUDIT: check that this can never reasonably happen. Consider what to do if it does.
             cerror << "Unexpected std::exception in VM. Not enough RAM? " << _e.what();
             exit(1);
