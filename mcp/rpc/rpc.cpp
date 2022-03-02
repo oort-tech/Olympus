@@ -1301,7 +1301,7 @@ void mcp::rpc_handler::block_state()
 
 			mcp::json block_state_l;
 			block_state_l["hash"] = hash.to_string();
-			mcp::account contract_account;
+			mcp::account contract_account(0);
 			if (block->hashables->type == mcp::block_type::light && block->isCreation() && state->is_stable && (state->status == mcp::block_status::ok))
 			{
 				std::shared_ptr<mcp::account_state> acc_state(m_store.account_state_get(transaction, state->receipt->from_state));
