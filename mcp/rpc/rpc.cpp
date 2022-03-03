@@ -1869,7 +1869,7 @@ void mcp::rpc_handler::logs()
 		if (!block_state->receipt)
 			continue;
 
-		if (search_account && !block_state->receipt->contains_bloom(dev::h256(search_account->ref())))
+		if (search_account && !block_state->receipt->contains_bloom(search_account->ref()))
 			continue;
 
 		std::unordered_set<dev::h256> existed_topics;

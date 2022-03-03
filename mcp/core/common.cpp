@@ -234,6 +234,11 @@ bool mcp::transaction_receipt::contains_bloom(dev::h256 const & h_a)
 	return bloom.containsBloom<3>(sha3(h_a));
 }
 
+bool mcp::transaction_receipt::contains_bloom(dev::bytesConstRef const & h_a)
+{
+	return bloom.containsBloom<3>(sha3(h_a));
+}
+
 mcp::block_state::block_state() :
     status(mcp::block_status::unknown),
     is_free(false),
