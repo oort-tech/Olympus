@@ -379,8 +379,22 @@ enum class rpc_web3_sha3_error_code
 	invalid_params = 1
 };
 
-
-
+enum class rpc_eth_error_code
+{
+	ok = 0,
+	invalid_params = 1,
+	invalid_account = 2,
+	locked_account = 3,
+	invalid_signature = 4,
+	invalid_value = 5,
+	invalid_gas = 6,
+	invalid_gas_price = 7,
+	invalid_data = 8,
+	invalid_block_number = 9,
+	invalid_from_account = 10,
+	invalid_to_account = 11,
+	invalid_hash = 12
+};
 
 class rpc_error_msg 
 {
@@ -419,6 +433,7 @@ public:
     std::string msg(mcp::rpc_nodes_error_code const & err_a);
     std::string msg(mcp::rpc_stop_error_code const & err_a);
 	std::string msg(mcp::rpc_web3_sha3_error_code const & err_a);
+	std::string msg(mcp::rpc_eth_error_code const & err_a);
 };
 
 class rpc_handler : public std::enable_shared_from_this<mcp::rpc_handler>
