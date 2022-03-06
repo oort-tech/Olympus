@@ -331,6 +331,7 @@ namespace mcp
 		void serialize_json(mcp::json & json_a);
 		void hash(blake2b_state &) const;
 		bool contains_bloom(dev::h256 const & h_a);
+		bool contains_bloom(dev::bytesConstRef const & h_a);
 		static void serialize_null_json(mcp::json & json_a);
 
 		mcp::account_state_hash from_state;
