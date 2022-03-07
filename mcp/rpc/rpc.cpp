@@ -3023,7 +3023,7 @@ void mcp::rpc_connection::read()
 					try
 					{
                         std::string body = js.dump();
-						LOG(this_l->m_log.error) << "RESPONSE" << body;
+						// LOG(this_l->m_log.error) << "RESPONSE" << body;
 						this_l->write_result(body, version);
 						boost::beast::http::async_write(this_l->socket, this_l->res, [this_l](boost::system::error_code const & e, size_t size)
 						{
@@ -3065,7 +3065,7 @@ void mcp::rpc_handler::process_request()
 	try
 	{
 		request = mcp::json::parse(body);
-		LOG(m_log.error) << "REQUEST:" << request;
+		// LOG(m_log.error) << "REQUEST:" << request;
 		std::string action = request.count("action") > 0 ? request["action"] : request["method"];
 		bool handled = false;
 		if (action == "account_create")
@@ -5238,7 +5238,7 @@ void mcp::rpc_handler::eth_getTransactionReceipt()
 	{
 		auto block(m_cache->block_get(transaction, block_hash));
 		if (block != nullptr && state->receipt != boost::none) {
-			if (block->hashables->type == mcp::block_type::light /*&& block->isCreation()*/ && state->is_stable)
+			if (block->hashables->type == mcp::block_type::light && state->is_stable)
 			{
 				if (state->status == mcp::block_status::ok) {
 					std::shared_ptr<mcp::account_state> acc_state(m_store.account_state_get(transaction, state->receipt->from_state));
@@ -5247,6 +5247,12 @@ void mcp::rpc_handler::eth_getTransactionReceipt()
 					json_receipt["blockHash"] = block_hash.to_string(true);
 					json_receipt["blockNumber"] = uint64_to_hex_nofill(state->main_chain_index.get());
 					json_receipt["from"] = block->hashables->from.to_account();
+					if (block->isCreation()) {
+						json_receipt["to"] = nullptr;
+					}
+					else {
+						json_receipt["to"] = block->hashables->to.to_account();;
+					}
 					json_receipt["to"] = nullptr;
 					json_receipt["contractAddress"] = toAddress(block->hashables->from, acc_state->nonce() - 1).to_account();
 					json_receipt["gasUsed"] = uint256_to_hex_nofill(state->receipt->gas_used);

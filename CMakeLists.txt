@@ -57,7 +57,9 @@ else ()
 endif (APPLE)
 
 include_directories (${CMAKE_SOURCE_DIR})
-include_directories ("${CMAKE_BINARY_DIR}/deps/include")
+if (WIN32)
+	include_directories ("${CMAKE_BINARY_DIR}/deps/include")
+endif (WIN32)
 
 set(Boost_USE_STATIC_LIBS        ON)
 set(Boost_USE_MULTITHREADED      ON)
