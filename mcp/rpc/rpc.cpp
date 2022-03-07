@@ -5165,7 +5165,12 @@ void mcp::rpc_handler::eth_getTransactionByHash()
 					json_receipt["blockNumber"] = uint64_to_hex_nofill(state->main_chain_index.get());
 					json_receipt["transactionIndex"] = "0x0";
 					json_receipt["from"] = block->hashables->from.to_account();
-					json_receipt["to"] = block->hashables->to.to_account();
+					if (block->isCreation()) {
+						json_receipt["to"] = nullptr;
+					}
+					else {
+						json_receipt["to"] = block->hashables->to.to_account();;
+					}
 					json_receipt["value"] = uint256_to_hex_nofill(block->hashables->amount);
 					json_receipt["gas"] = uint256_to_hex_nofill(block->hashables->gas);
 					json_receipt["input"] = "0x" + bytes_to_hex(block->data);
