@@ -5154,7 +5154,12 @@ void mcp::rpc_handler::eth_getTransactionReceipt()
 				json_receipt["blockHash"] = block_hash.to_string(true);
 				json_receipt["blockNumber"] = uint64_to_hex_nofill(state->main_chain_index.get());
 				json_receipt["from"] = block->hashables->from.to_account();
-				json_receipt["to"] = nullptr;
+				if (block->isCreation()) {
+					json_receipt["to"] = nullptr;
+				}
+				else {
+					json_receipt["to"] = block->hashables->to.to_account();;
+				}
 				json_receipt["contractAddress"] = toAddress(block->hashables->from, acc_state->nonce() - 1).to_account();
 				json_receipt["gasUsed"] = uint256_to_hex_nofill(state->receipt->gas_used);
 				json_receipt["cumulativeGasUsed"] = uint256_to_hex_nofill(block->hashables->gas);
