@@ -22,6 +22,9 @@ struct log_entry
 
 	void streamRLP(RLPStream& _s) const;
 	void serialize_json(mcp::json & json_a) const;
+	// added by michael at 3/6
+	void serialize_json_eth(mcp::json & json_a) const;
+	//
 	void hash(blake2b_state &) const;
 
 	log_bloom bloom() const;

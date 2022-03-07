@@ -4177,6 +4177,9 @@ std::string mcp::rpc_error_msg::msg(mcp::rpc_eth_error_code const &err_a)
 	case mcp::rpc_eth_error_code::invalid_account:
 		error_msg = "Invalid account";
 		break;
+	case mcp::rpc_eth_error_code::invalid_password:
+		error_msg = "Invalid password";
+		break;
 	case mcp::rpc_eth_error_code::locked_account:
 		error_msg = "Locked account";
 		break;
@@ -4206,6 +4209,21 @@ std::string mcp::rpc_error_msg::msg(mcp::rpc_eth_error_code const &err_a)
 		break;
 	case mcp::rpc_eth_error_code::invalid_hash:
 		error_msg = "Invalid hash";
+		break;
+	case mcp::rpc_eth_error_code::insufficient_balance:
+		error_msg = "Insufficient balance";
+		break;
+	case mcp::rpc_eth_error_code::data_size_too_large:
+		error_msg = "Data size is too large";
+		break;
+	case mcp::rpc_eth_error_code::validate_error:
+		error_msg = "Validation error";
+		break;
+	case mcp::rpc_eth_error_code::block_error:
+		error_msg = "Block error";
+		break;
+	default:
+		error_msg = "Unknown error";
 		break;
 	}
 	return error_msg;
@@ -4641,20 +4659,67 @@ void mcp::rpc_handler::eth_sendRawTransaction()
 	rlpStream << data;
 	rlpStream << (uint64_t)chainId << 0 << 0;
 
+	mcp::block_hash previous;
 	mcp::account from(mcp::encry::recover(sig, dev::sha3(rlpStream.out()).ref()));
+	
+	/*
+	std::vector<mcp::block_hash> parents;
+	std::shared_ptr<std::list<mcp::block_hash>> links = std::make_shared<std::list<mcp::block_hash>>();
+	mcp::block_hash last_summary(0);
+	mcp::block_hash last_summary_block(0);
+	mcp::block_hash last_stable_block(0);
+	uint64_t exec_timestamp(0);
+	mcp::uint64_union work(0);
+
+	std::shared_ptr<mcp::block> block = std::make_shared<mcp::block>(mcp::block_type::light, from, to, amount, previous, parents, links,
+		last_summary, last_summary_block, last_stable_block, gas, gas_price, mcp::block::data_hash(data), data, exec_timestamp, work);
+
+	auto rpc_l(shared_from_this());
+	bool gen_next_work_l(false);
+	bool async(false);
+
+	m_wallet->send_async(
+		block, sig, [response_l, rpc_l, this](mcp::send_result result)
+	{
+		mcp::json response_j = response_l;
+		switch (result.code)
+		{
+		case mcp::send_result_codes::ok:
+		{
+			response_j["result"] = result.block->hash().to_string(true);
+			response(response_j);
+			break;
+		}
+		case mcp::send_result_codes::insufficient_balance:
+			error_response(response, (int)rpc_eth_error_code::insufficient_balance, err.msg(rpc_eth_error_code::insufficient_balance), response_j);
+			break;
+		case mcp::send_result_codes::data_size_too_large:
+			error_response(response, (int)rpc_eth_error_code::data_size_too_large, err.msg(rpc_eth_error_code::data_size_too_large), response_j);
+			break;
+		case mcp::send_result_codes::validate_error:
+			error_response(response, (int)rpc_eth_error_code::validate_error, err.msg(rpc_eth_error_code::validate_error), response_j);
+			break;
+		case mcp::send_result_codes::error:
+			error_response(response, (int)rpc_eth_error_code::block_error, err.msg(rpc_eth_error_code::block_error), response_j);
+			break;
+		default:
+			error_response(response, (int)rpc_eth_error_code::unknown_error, err.msg(rpc_eth_error_code::unknown_error), response_j);
+			break;
+		} },
+		gen_next_work_l, async);
+	*/
 
 	if (!m_key_manager->exists(from))
 	{
 		error_response(response, (int)rpc_eth_error_code::invalid_account, err.msg(rpc_eth_error_code::invalid_account), response_l);
 		return;
 	}
-
+	
 	boost::optional<mcp::block_hash> previous_opt;
 	boost::optional<std::string> password;
 	bool gen_next_work_l(false);
 	bool async(false);
 	auto rpc_l(shared_from_this());
-	
 	m_wallet->send_async(
 		mcp::block_type::light, previous_opt, from, to, amount, gas, gas_price, data, password, [response_l, rpc_l, this](mcp::send_result result)
 		{
@@ -4668,28 +4733,28 @@ void mcp::rpc_handler::eth_sendRawTransaction()
 			break;
 		}
 		case mcp::send_result_codes::from_not_exists:
-			error_response(response, (int)rpc_send_error_code::account_not_exisit, rpc_l->err.msg(rpc_send_error_code::account_not_exisit), response_j);
+			error_response(response, (int)rpc_eth_error_code::invalid_from_account, rpc_l->err.msg(rpc_eth_error_code::invalid_from_account), response_j);
 			break;
 		case mcp::send_result_codes::account_locked:
-			error_response(response, (int)rpc_send_error_code::account_locked, rpc_l->err.msg(rpc_send_error_code::account_locked), response_j);
+			error_response(response, (int)rpc_eth_error_code::locked_account, rpc_l->err.msg(rpc_eth_error_code::locked_account), response_j);
 			break;
 		case mcp::send_result_codes::wrong_password:
-			error_response(response, (int)rpc_send_error_code::wrong_password, rpc_l->err.msg(rpc_send_error_code::wrong_password), response_j);
+			error_response(response, (int)rpc_eth_error_code::invalid_password, rpc_l->err.msg(rpc_eth_error_code::invalid_password), response_j);
 			break;
 		case mcp::send_result_codes::insufficient_balance:
-			error_response(response, (int)rpc_send_error_code::insufficient_balance, rpc_l->err.msg(rpc_send_error_code::insufficient_balance), response_j);
+			error_response(response, (int)rpc_eth_error_code::insufficient_balance, rpc_l->err.msg(rpc_eth_error_code::insufficient_balance), response_j);
 			break;
 		case mcp::send_result_codes::data_size_too_large:
-			error_response(response, (int)rpc_send_error_code::data_size_too_large, rpc_l->err.msg(rpc_send_error_code::data_size_too_large), response_j);
+			error_response(response, (int)rpc_eth_error_code::data_size_too_large, rpc_l->err.msg(rpc_eth_error_code::data_size_too_large), response_j);
 			break;
 		case mcp::send_result_codes::validate_error:
-			error_response(response, (int)rpc_send_error_code::validate_error, rpc_l->err.msg(rpc_send_error_code::validate_error), response_j);
+			error_response(response, (int)rpc_eth_error_code::validate_error, rpc_l->err.msg(rpc_eth_error_code::validate_error), response_j);
 			break;
 		case mcp::send_result_codes::error:
-			error_response(response, (int)rpc_send_error_code::send_block_error, rpc_l->err.msg(rpc_send_error_code::send_block_error), response_j);
+			error_response(response, (int)rpc_eth_error_code::block_error, rpc_l->err.msg(rpc_eth_error_code::block_error), response_j);
 			break;
 		default:
-			error_response(response, (int)rpc_send_error_code::send_unknown_error, rpc_l->err.msg(rpc_send_error_code::send_unknown_error), response_j);
+			error_response(response, (int)rpc_eth_error_code::unknown_error, rpc_l->err.msg(rpc_eth_error_code::unknown_error), response_j);
 			break;
 		} },
 		gen_next_work_l, async);
@@ -4792,28 +4857,28 @@ void mcp::rpc_handler::eth_sendTransaction()
 			break;
 		}
 		case mcp::send_result_codes::from_not_exists:
-			error_response(response, (int)rpc_send_error_code::account_not_exisit, rpc_l->err.msg(rpc_send_error_code::account_not_exisit), response_j);
+			error_response(response, (int)rpc_eth_error_code::invalid_from_account, rpc_l->err.msg(rpc_eth_error_code::invalid_from_account), response_j);
 			break;
 		case mcp::send_result_codes::account_locked:
-			error_response(response, (int)rpc_send_error_code::account_locked, rpc_l->err.msg(rpc_send_error_code::account_locked), response_j);
+			error_response(response, (int)rpc_eth_error_code::locked_account, rpc_l->err.msg(rpc_eth_error_code::locked_account), response_j);
 			break;
 		case mcp::send_result_codes::wrong_password:
-			error_response(response, (int)rpc_send_error_code::wrong_password, rpc_l->err.msg(rpc_send_error_code::wrong_password), response_j);
+			error_response(response, (int)rpc_eth_error_code::invalid_password, rpc_l->err.msg(rpc_eth_error_code::invalid_password), response_j);
 			break;
 		case mcp::send_result_codes::insufficient_balance:
-			error_response(response, (int)rpc_send_error_code::insufficient_balance, rpc_l->err.msg(rpc_send_error_code::insufficient_balance), response_j);
+			error_response(response, (int)rpc_eth_error_code::insufficient_balance, rpc_l->err.msg(rpc_eth_error_code::insufficient_balance), response_j);
 			break;
 		case mcp::send_result_codes::data_size_too_large:
-			error_response(response, (int)rpc_send_error_code::data_size_too_large, rpc_l->err.msg(rpc_send_error_code::data_size_too_large), response_j);
+			error_response(response, (int)rpc_eth_error_code::data_size_too_large, rpc_l->err.msg(rpc_eth_error_code::data_size_too_large), response_j);
 			break;
 		case mcp::send_result_codes::validate_error:
-			error_response(response, (int)rpc_send_error_code::validate_error, rpc_l->err.msg(rpc_send_error_code::validate_error), response_j);
+			error_response(response, (int)rpc_eth_error_code::validate_error, rpc_l->err.msg(rpc_eth_error_code::validate_error), response_j);
 			break;
 		case mcp::send_result_codes::error:
-			error_response(response, (int)rpc_send_error_code::send_block_error, rpc_l->err.msg(rpc_send_error_code::send_block_error), response_j);
+			error_response(response, (int)rpc_eth_error_code::block_error, rpc_l->err.msg(rpc_eth_error_code::block_error), response_j);
 			break;
 		default:
-			error_response(response, (int)rpc_send_error_code::send_unknown_error, rpc_l->err.msg(rpc_send_error_code::send_unknown_error), response_j);
+			error_response(response, (int)rpc_eth_error_code::unknown_error, rpc_l->err.msg(rpc_eth_error_code::unknown_error), response_j);
 			break;
 		} },
 		gen_next_work_l, async);
@@ -5065,8 +5130,8 @@ void mcp::rpc_handler::eth_getTransactionByHash()
 	{
 		auto block(m_cache->block_get(transaction, block_hash));
 		if (block != nullptr && state->receipt != boost::none) {
-			//if (block->hashables->type == mcp::block_type::light && block->isCreation() && state->is_stable && (state->status == mcp::block_status::ok))
-			//{
+			if (block->hashables->type == mcp::block_type::light /*&& block->isCreation()*/ && state->is_stable && (state->status == mcp::block_status::ok))
+			{
 				std::shared_ptr<mcp::account_state> acc_state(m_store.account_state_get(transaction, state->receipt->from_state));
 				assert_x(acc_state);
 				mcp::json json_receipt;
@@ -5082,7 +5147,7 @@ void mcp::rpc_handler::eth_getTransactionByHash()
 				json_receipt["input"] = "0x" + bytes_to_hex(block->data);
 				json_receipt["gasPrice"] = uint64_to_hex_nofill(1000000000);
 				response_l["result"] = json_receipt;
-			//}
+			}
 		}
 	}
 
@@ -5160,8 +5225,21 @@ void mcp::rpc_handler::eth_getTransactionReceipt()
 				json_receipt["cumulativeGasUsed"] = uint256_to_hex_nofill(block->hashables->gas);
 				json_receipt["gasPrice"] = uint64_to_hex_nofill(1000000000);
 				json_receipt["transactionHash"] = block_hash.to_string(true);
-				json_receipt["logs"] = json::array();
-				json_receipt["logsBloom"] = "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
+				mcp::json logs = json::array();
+				int logi = 0;
+				for(auto const& l: state->receipt->log) {
+					mcp::json log;
+					log["transactionIndex"] = "0x0";
+					log["blockNumber"] = uint64_to_hex_nofill(state->main_chain_index.get());
+					log["transactionHash"] = block_hash.to_string(true);
+					logi++;
+					log["logIndex"] = logi;
+					log["blockHash"] = block_hash.to_string(true);
+					l.serialize_json_eth(log);
+					logs.push_back(log);
+				}
+				json_receipt["logs"] = logs;
+				json_receipt["logsBloom"] = "0x" + state->receipt->bloom.hex();
 				json_receipt["transactionIndex"] = "0x0";
 				json_receipt["status"] = "0x1";
 				response_l["result"] = json_receipt;
