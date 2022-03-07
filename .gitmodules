@@ -13,7 +13,7 @@
 	branch = mcp_dev
 [submodule "libdevcore"]
 	path = libdevcore
-	url = git@github.com:computecoin-network/libdevcore.git
+	url = https://github.com/computecoin-network/libdevcore.git
 	branch = dev
 [submodule "libdevcrypto"]
 	path = libdevcrypto
