@@ -33,6 +33,19 @@ void log_entry::serialize_json(mcp::json & json_a) const
 	json_a["topics"] = topics_l;
 }
 
+void log_entry::serialize_json_eth(mcp::json & json_a) const
+{
+	json_a["address"] = acct.to_account();
+	json_a["data"] = "0x" + mcp::bytes_to_hex(data);
+
+	mcp::json topics_l = mcp::json::array();
+	for (auto t : topics)
+	{
+		topics_l.push_back("0x" + t.hex());
+	}
+	json_a["topics"] = topics_l;
+}
+
 void log_entry::hash(blake2b_state & hash_a) const
 {
 	blake2b_update(&hash_a, acct.bytes.data(), sizeof(acct.bytes));
