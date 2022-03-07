@@ -57,9 +57,7 @@ else ()
 endif (APPLE)
 
 include_directories (${CMAKE_SOURCE_DIR})
-if (WIN32)
-	include_directories ("${CMAKE_BINARY_DIR}/deps/include")
-endif (WIN32)
+include_directories ("${CMAKE_BINARY_DIR}/deps/include")
 
 set(Boost_USE_STATIC_LIBS        ON)
 set(Boost_USE_MULTITHREADED      ON)
@@ -68,7 +66,7 @@ if (BOOST_CUSTOM)
     list(APPEND CMAKE_MODULE_PATH ".\\" ${CMAKE_SOURCE_PATH})
 endif (BOOST_CUSTOM)
 
-find_package (Boost)
+find_package (Boost 1.66.0 REQUIRED COMPONENTS date_time filesystem system log log_setup thread program_options regex chrono atomic)
 include_directories (${Boost_INCLUDE_DIR})
 
 
