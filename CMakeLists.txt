@@ -57,6 +57,9 @@ else ()
 endif (APPLE)
 
 include_directories (${CMAKE_SOURCE_DIR})
+if (WIN32)
+	include_directories ("${CMAKE_BINARY_DIR}/deps/include")
+endif (WIN32)
 
 set(Boost_USE_STATIC_LIBS        ON)
 set(Boost_USE_MULTITHREADED      ON)
@@ -67,8 +70,6 @@ endif (BOOST_CUSTOM)
 
 find_package (Boost 1.66.0 REQUIRED COMPONENTS date_time filesystem system log log_setup thread program_options regex chrono atomic)
 include_directories (${Boost_INCLUDE_DIR})
-include_directories ("${CMAKE_BINARY_DIR}/deps/include")
-
 
 
 set(sodium_INCLUDE_DIR "" CACHE PATH "sodium include directory")
