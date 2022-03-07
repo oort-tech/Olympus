@@ -397,10 +397,23 @@ enum class rpc_eth_error_code
 	invalid_hash = 13,
 	insufficient_balance = 14,
 	data_size_too_large = 15,
+
 	validate_error = 16,
 	block_error = 17,
 	unknown_error = 18,
+
+	PARSE_ERROR = -32700,
+	INVALID_REQUEST = -32600,
+	METHOD_NOT_FOUND = -32601,
+	INVALID_PARAMS = -32602,
+	INTERNAL_ERROR = -32603,
+	METHOD_NOT_SUPPORTED = -32004,
+	INVALID_INPUT = -32000,
+	TRANSACTION_REJECTED = -32003,
 };
+// added by michael at 3/7
+void error_eth_response(std::function<void(mcp::json const &)> response_a, mcp::rpc_eth_error_code error_code, mcp::json& json_a);
+//
 
 class rpc_error_msg 
 {
@@ -439,7 +452,6 @@ public:
     std::string msg(mcp::rpc_nodes_error_code const & err_a);
     std::string msg(mcp::rpc_stop_error_code const & err_a);
 	std::string msg(mcp::rpc_web3_sha3_error_code const & err_a);
-	std::string msg(mcp::rpc_eth_error_code const & err_a);
 };
 
 class rpc_handler : public std::enable_shared_from_this<mcp::rpc_handler>
