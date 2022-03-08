@@ -4166,97 +4166,44 @@ std::string mcp::rpc_error_msg::msg(mcp::rpc_debug_storage_range_at_error_code c
 void mcp::error_eth_response(std::function<void(mcp::json const &)> response_a, mcp::rpc_eth_error_code error_code, mcp::json& json_a)
 {
 	std::string error_msg;
-	switch (error_code)
-	{
-	case mcp::rpc_eth_error_code::ok:
-		error_msg = "OK";
-		break;
-	case mcp::rpc_eth_error_code::invalid_params:
-		error_msg = "Invalid parameter";
-		break;
-	case mcp::rpc_eth_error_code::invalid_account:
-		error_msg = "Invalid account";
-		break;
-	case mcp::rpc_eth_error_code::invalid_password:
-		error_msg = "Invalid password";
-		break;
-	case mcp::rpc_eth_error_code::locked_account:
-		error_msg = "Locked account";
-		break;
-	case mcp::rpc_eth_error_code::invalid_signature:
-		error_msg = "Invalid signature";
-		break;
-	case mcp::rpc_eth_error_code::invalid_value:
-		error_msg = "Invalid value";
-		break;
-	case mcp::rpc_eth_error_code::invalid_gas:
-		error_msg = "Invalid gas price";
-		break;
-	case mcp::rpc_eth_error_code::invalid_gas_price:
-		error_msg = "Invalid signature";
-		break;
-	case mcp::rpc_eth_error_code::invalid_data:
-		error_msg = "Invalid data";
-		break;
-	case mcp::rpc_eth_error_code::invalid_block_number:
-		error_msg = "Invalid block number";
-		break;
-	case mcp::rpc_eth_error_code::invalid_from_account:
-		error_msg = "Invalid from account";
-		break;
-	case mcp::rpc_eth_error_code::invalid_to_account:
-		error_msg = "Invalid to account";
-		break;
-	case mcp::rpc_eth_error_code::invalid_hash:
-		error_msg = "Invalid hash";
-		break;
-	case mcp::rpc_eth_error_code::insufficient_balance:
-		error_msg = "Insufficient balance";
-		break;
-	case mcp::rpc_eth_error_code::data_size_too_large:
-		error_msg = "Data size is too large";
-		break;
-	case mcp::rpc_eth_error_code::validate_error:
-		error_msg = "Validation error";
-		break;
-	case mcp::rpc_eth_error_code::block_error:
-		error_msg = "Block error";
-		break;
-	case mcp::rpc_eth_error_code::PARSE_ERROR:
-		error_msg = "Block error";
-		break;
-	case mcp::rpc_eth_error_code::INVALID_REQUEST:
-		error_msg = "Invalid request";
-		break;
-	case mcp::rpc_eth_error_code::METHOD_NOT_FOUND:
-		error_msg = "Method not found";
-		break;
-	case mcp::rpc_eth_error_code::INVALID_PARAMS:
-		error_msg = "Invalid parameters";
-		break;
-	case mcp::rpc_eth_error_code::INTERNAL_ERROR:
-		error_msg = "Internal error";
-		break;
-	case mcp::rpc_eth_error_code::METHOD_NOT_SUPPORTED:
-		error_msg = "Method mot supported";
-		break;
-	case mcp::rpc_eth_error_code::INVALID_INPUT:
-		error_msg = "Invalid input";
-		break;
-	case mcp::rpc_eth_error_code::TRANSACTION_REJECTED:
-		error_msg = "Transaction is rejected";
-		break;
-	default:
-		error_msg = "Unknown error";
-		break;
-	}
-
+	
 	mcp::json error;
 	if (error_code >= mcp::rpc_eth_error_code::invalid_params && error_code <= mcp::rpc_eth_error_code::data_size_too_large) {
 		error_code = mcp::rpc_eth_error_code::INVALID_PARAMS;
 	}
 	else if (error_code >= mcp::rpc_eth_error_code::validate_error && error_code <= mcp::rpc_eth_error_code::unknown_error) {
 		error_code = mcp::rpc_eth_error_code::INTERNAL_ERROR;
+	}
+	// https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1474.md#error-codes
+	switch (error_code)
+	{
+	case mcp::rpc_eth_error_code::PARSE_ERROR:
+		error_msg = "Parse error.";
+		break;
+	case mcp::rpc_eth_error_code::INVALID_REQUEST:
+		error_msg = "Invalid request.";
+		break;
+	case mcp::rpc_eth_error_code::METHOD_NOT_FOUND:
+		error_msg = "Method not found.";
+		break;
+	case mcp::rpc_eth_error_code::INVALID_PARAMS:
+		error_msg = "Invalid params.";
+		break;
+	case mcp::rpc_eth_error_code::INTERNAL_ERROR:
+		error_msg = "Internal error.";
+		break;
+	case mcp::rpc_eth_error_code::METHOD_NOT_SUPPORTED:
+		error_msg = "Method not supported.";
+		break;
+	case mcp::rpc_eth_error_code::INVALID_INPUT:
+		error_msg = "Invalid input.";
+		break;
+	case mcp::rpc_eth_error_code::TRANSACTION_REJECTED:
+		error_msg = "Transaction rejected.";
+		break;
+	default:
+		error_msg = "Unknown error";
+		break;
 	}
 
 	error["code"] = error_code;
