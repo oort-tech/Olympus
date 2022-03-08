@@ -11,9 +11,6 @@
 #
 # Copy CFLAGS from Makefile to COMPILE_OPTIONS.
 
-cmake_minimum_required(VERSION 3.4)
-project(secp256k1 LANGUAGES C)
-
 set(COMMON_COMPILE_FLAGS ENABLE_MODULE_RECOVERY ENABLE_MODULE_ECDH USE_ECMULT_STATIC_PRECOMPUTATION USE_FIELD_INV_BUILTIN USE_NUM_NONE USE_SCALAR_INV_BUILTIN)
 if (MSVC)
 	set(COMPILE_FLAGS USE_FIELD_10X26 USE_SCALAR_8X32)
@@ -24,15 +21,14 @@ else()
 endif()
 
 add_executable(gen_context src/gen_context.c)
-target_include_directories(gen_context PRIVATE ${CMAKE_SOURCE_DIR})
+target_include_directories(gen_context PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
-add_custom_target(ecmult_static_context gen_context WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+add_custom_target(ecmult_static_context gen_context WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
 add_library(secp256k1 STATIC src/secp256k1.c)
+
 target_compile_definitions(secp256k1 PRIVATE ${COMMON_COMPILE_FLAGS} ${COMPILE_FLAGS})
-target_include_directories(secp256k1 PRIVATE ${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/src)
+target_include_directories(secp256k1 PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_compile_options(secp256k1 PRIVATE ${COMPILE_OPTIONS})
 add_dependencies(secp256k1 ecmult_static_context)
 
-install(TARGETS secp256k1 ARCHIVE DESTINATION lib)
-install(DIRECTORY include/ DESTINATION include)
