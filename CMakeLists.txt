@@ -11,6 +11,9 @@ set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 set (BOOST_CUSTOM OFF CACHE BOOL "")
 
+set(MCP_CMAKE_DIR "${CMAKE_CURRENT_LIST_DIR}/cmake" CACHE PATH "The path to the cmake directory")
+list(APPEND CMAKE_MODULE_PATH ${MCP_CMAKE_DIR})
+
 if(NOT CMAKE_BUILD_TYPE)
 	set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel." FORCE)
 endif(NOT CMAKE_BUILD_TYPE)
@@ -56,8 +59,9 @@ else ()
 	set (PLATFORM_LINK_FLAGS "-static-libgcc -static-libstdc++")
 endif (APPLE)
 
+include(ProjectLibFF)
+
 include_directories (${CMAKE_SOURCE_DIR})
-include_directories ("${CMAKE_BINARY_DIR}/deps/include")
 
 set(Boost_USE_STATIC_LIBS        ON)
 set(Boost_USE_MULTITHREADED      ON)
@@ -217,20 +221,19 @@ include_directories("${CMAKE_SOURCE_DIR}/mcp/p2p")
 include_directories("${CMAKE_SOURCE_DIR}/miniupnp")
 include_directories("${CMAKE_SOURCE_DIR}/lz4/lib")
 include_directories("${CMAKE_SOURCE_DIR}/evmc/include")
+include_directories("${CMAKE_SOURCE_DIR}/secp256k1/include")
 
 set (CRYPTOPP_LIBRARY cryptopp-static)
 set (BUILD_SHARED OFF CACHE BOOL "")
 set (BUILD_TESTING OFF CACHE BOOL "")
 set (USE_INTERMEDIATE_OBJECTS_TARGET OFF CACHE BOOL "")
 set (DISABLE_NATIVE_ARCH ON CACHE BOOL "")
-add_subdirectory (cryptopp)
 
+add_subdirectory (secp256k1)
+add_subdirectory (cryptopp)
 add_subdirectory(evmc)
 add_subdirectory(libevm)
 add_subdirectory(libdevcore)
-
-include(cmake/ProjectLibFF.cmake)
-include(cmake/ProjectSecp256k1.cmake)
 add_subdirectory(libdevcrypto)
 
 add_library (blake2
@@ -470,6 +473,8 @@ else ()
     set (DEPENDENCE_LIBS ${DEPENDENCE_LIBS} ${ZLIB_LIBRARY})
 endif()
 
-target_link_libraries (mcp rpc wallet consensus node p2p core db common devcrypto devcore evm blake2 libminiupnpc-static lz4_static ${CRYPTOPP_LIBRARY} ${Boost_ATOMIC_LIBRARY} ${Boost_CHRONO_LIBRARY} ${Boost_REGEX_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_LOG_LIBRARY} ${Boost_PROGRAM_OPTIONS_LIBRARY} ${Boost_LOG_SETUP_LIBRARY} ${Boost_THREAD_LIBRARY} ${PLATFORM_LIBS}  ${DEPENDENCE_LIBS})
+target_link_libraries (mcp rpc wallet consensus node p2p core db common devcrypto devcore evm blake2 libminiupnpc-static secp256k1 lz4_static ${CRYPTOPP_LIBRARY} ${Boost_ATOMIC_LIBRARY} ${Boost_CHRONO_LIBRARY} ${Boost_REGEX_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_LOG_LIBRARY} ${Boost_PROGRAM_OPTIONS_LIBRARY} ${Boost_LOG_SETUP_LIBRARY} ${Boost_THREAD_LIBRARY} ${PLATFORM_LIBS}  ${DEPENDENCE_LIBS})
 
-target_link_libraries (test_account rpc wallet consensus node p2p core db common devcrypto devcore evm blake2 libminiupnpc-static lz4_static ${CRYPTOPP_LIBRARY} ${Boost_ATOMIC_LIBRARY} ${Boost_CHRONO_LIBRARY} ${Boost_REGEX_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_LOG_LIBRARY} ${Boost_PROGRAM_OPTIONS_LIBRARY} ${Boost_LOG_SETUP_LIBRARY} ${Boost_THREAD_LIBRARY} ${PLATFORM_LIBS} ${DEPENDENCE_LIBS})
+target_link_libraries (test_account rpc wallet consensus node p2p core db common devcrypto devcore evm blake2 libminiupnpc-static secp256k1 lz4_static ${CRYPTOPP_LIBRARY} ${Boost_ATOMIC_LIBRARY} ${Boost_CHRONO_LIBRARY} ${Boost_REGEX_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_LOG_LIBRARY} ${Boost_PROGRAM_OPTIONS_LIBRARY} ${Boost_LOG_SETUP_LIBRARY} ${Boost_THREAD_LIBRARY} ${PLATFORM_LIBS} ${DEPENDENCE_LIBS})
+
+
