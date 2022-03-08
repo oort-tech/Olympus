@@ -1,12 +1,15 @@
 [submodule "cryptopp"]
 	path = cryptopp
 	url = https://github.com/computecoin-network/cryptopp.git
+	branch = master
 [submodule "miniupnp"]
 	path = miniupnp
 	url = https://github.com/computecoin-network/miniupnp.git
+	branch = master
 [submodule "evmc"]
 	path = evmc
 	url = https://github.com/computecoin-network/evmc.git
+	branch = mcp
 [submodule "libevm"]
 	path = libevm
 	url = https://github.com/computecoin-network/libevm.git
@@ -18,3 +21,4 @@
 [submodule "libdevcrypto"]
 	path = libdevcrypto
 	url = https://github.com/computecoin-network/libdevcrypto.git
+	branch = mcp
