@@ -303,6 +303,8 @@ void mcp::block_processor::mt_process_blocks()
 								{
 									ok = false;
 									err_msg = "Invalid signature, hash:" + block_hash.to_string() + ",from:" + block->hashables->from.to_account() + ",signature:" + block->signature.to_string();
+									LOG(m_log.debug) << err_msg;
+
 									break;
 								}
 								case base_validate_result_codes::invalid_block:

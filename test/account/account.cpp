@@ -10,18 +10,18 @@ void test_create_account()
 	std::cout << "-------------test_create_account---------------" << std::endl;
 
 	mcp::uint128_union kdf_salt;
-	// mcp::random_pool.GenerateBlock(kdf_salt.bytes.data(), kdf_salt.bytes.size());
-	kdf_salt.decode_hex("F36CA7C846C345960B055C6F10DFD7FD");
+	mcp::random_pool.GenerateBlock(kdf_salt.bytes.data(), kdf_salt.bytes.size());
+	// kdf_salt.decode_hex("F36CA7C846C345960B055C6F10DFD7FD");
 
 	mcp::uint128_union iv;
-	// mcp::random_pool.GenerateBlock(iv.bytes.data(), iv.bytes.size());
-	iv.decode_hex("7B4F5CCB4A201302C1CE8CA7979EDA54");
+	mcp::random_pool.GenerateBlock(iv.bytes.data(), iv.bytes.size());
+	// iv.decode_hex("7B4F5CCB4A201302C1CE8CA7979EDA54");
 
 	mcp::raw_key prv;
-	// mcp::random_pool.GenerateBlock(prv.data.bytes.data(), prv.data.bytes.size());
-	prv.data.decode_hex("BC1C100CA9C2B7E2DF6D1F46744AD3F51D0532BF6ACA5063D382EFFF8A5E28C7");
+	mcp::random_pool.GenerateBlock(prv.data.bytes.data(), prv.data.bytes.size());
+	// prv.data.decode_hex("BC1C100CA9C2B7E2DF6D1F46744AD3F51D0532BF6ACA5063D382EFFF8A5E28C7");
 
-	std::string password = "1234qwer";
+	std::string password = "12345678";
 
 	std::chrono::time_point<std::chrono::high_resolution_clock> start = std::chrono::high_resolution_clock::now();
 

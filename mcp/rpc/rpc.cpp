@@ -3023,7 +3023,7 @@ void mcp::rpc_connection::read()
 					try
 					{
                         std::string body = js.dump();
-						// LOG(this_l->m_log.error) << "RESPONSE" << body;
+						LOG(this_l->m_log.error) << "RESPONSE" << body;
 						this_l->write_result(body, version);
 						boost::beast::http::async_write(this_l->socket, this_l->res, [this_l](boost::system::error_code const & e, size_t size)
 						{
@@ -3065,7 +3065,7 @@ void mcp::rpc_handler::process_request()
 	try
 	{
 		request = mcp::json::parse(body);
-		// LOG(m_log.error) << "REQUEST:" << request;
+		LOG(m_log.error) << "REQUEST:" << request;
 		std::string action = request.count("action") > 0 ? request["action"] : request["method"];
 		bool handled = false;
 		if (action == "account_create")
@@ -4165,8 +4165,68 @@ std::string mcp::rpc_error_msg::msg(mcp::rpc_debug_storage_range_at_error_code c
 // added by michael
 void mcp::error_eth_response(std::function<void(mcp::json const &)> response_a, mcp::rpc_eth_error_code error_code, mcp::json& json_a)
 {
-	std::string error_msg;
-	
+	std::string sub_error_msg;
+	switch (error_code)
+	{
+	case mcp::rpc_eth_error_code::ok:
+		sub_error_msg = "";
+		break;
+	case mcp::rpc_eth_error_code::invalid_params:
+		sub_error_msg = "";
+		break;
+	case mcp::rpc_eth_error_code::invalid_account:
+		sub_error_msg = "Invalid account";
+		break;
+	case mcp::rpc_eth_error_code::invalid_password:
+		sub_error_msg = "Invalid password";
+		break;
+	case mcp::rpc_eth_error_code::locked_account:
+		sub_error_msg = "Locked account";
+		break;
+	case mcp::rpc_eth_error_code::invalid_signature:
+		sub_error_msg = "Invalid signature";
+		break;
+	case mcp::rpc_eth_error_code::invalid_value:
+		sub_error_msg = "Invalid value";
+		break;
+	case mcp::rpc_eth_error_code::invalid_gas:
+		sub_error_msg = "Invalid gas amount";
+		break;
+	case mcp::rpc_eth_error_code::invalid_gas_price:
+		sub_error_msg = "Invalid gas price";
+		break;
+	case mcp::rpc_eth_error_code::invalid_data:
+		sub_error_msg = "Invalid data";
+		break;
+	case mcp::rpc_eth_error_code::invalid_block_number:
+		sub_error_msg = "Invalid block number";
+		break;
+	case mcp::rpc_eth_error_code::invalid_from_account:
+		sub_error_msg = "Invalid sender account";
+		break;
+	case mcp::rpc_eth_error_code::invalid_to_account:
+		sub_error_msg = "Invalid receiver account";
+		break;
+	case mcp::rpc_eth_error_code::invalid_hash:
+		sub_error_msg = "Invalid hash";
+		break;
+	case mcp::rpc_eth_error_code::insufficient_balance:
+		sub_error_msg = "Insufficient balance";
+		break;
+	case mcp::rpc_eth_error_code::data_size_too_large:
+		sub_error_msg = "Data size is too large";
+		break;
+	case mcp::rpc_eth_error_code::validate_error:
+		sub_error_msg = "Validation error";
+		break;
+	case mcp::rpc_eth_error_code::block_error:
+		sub_error_msg = "Block error";
+		break;
+	default:
+		sub_error_msg = "Unknown error";
+		break;
+	}
+
 	mcp::json error;
 	if (error_code >= mcp::rpc_eth_error_code::invalid_params && error_code <= mcp::rpc_eth_error_code::data_size_too_large) {
 		error_code = mcp::rpc_eth_error_code::INVALID_PARAMS;
@@ -4174,32 +4234,34 @@ void mcp::error_eth_response(std::function<void(mcp::json const &)> response_a, 
 	else if (error_code >= mcp::rpc_eth_error_code::validate_error && error_code <= mcp::rpc_eth_error_code::unknown_error) {
 		error_code = mcp::rpc_eth_error_code::INTERNAL_ERROR;
 	}
+
+	std::string error_msg;
 	// https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1474.md#error-codes
 	switch (error_code)
 	{
 	case mcp::rpc_eth_error_code::PARSE_ERROR:
-		error_msg = "Parse error.";
+		error_msg = "Parse error";
 		break;
 	case mcp::rpc_eth_error_code::INVALID_REQUEST:
-		error_msg = "Invalid request.";
+		error_msg = "Invalid request";
 		break;
 	case mcp::rpc_eth_error_code::METHOD_NOT_FOUND:
-		error_msg = "Method not found.";
+		error_msg = "Method not found";
 		break;
 	case mcp::rpc_eth_error_code::INVALID_PARAMS:
-		error_msg = "Invalid params.";
+		error_msg = "Invalid params";
 		break;
 	case mcp::rpc_eth_error_code::INTERNAL_ERROR:
-		error_msg = "Internal error.";
+		error_msg = "Internal error";
 		break;
 	case mcp::rpc_eth_error_code::METHOD_NOT_SUPPORTED:
 		error_msg = "Method not supported.";
 		break;
 	case mcp::rpc_eth_error_code::INVALID_INPUT:
-		error_msg = "Invalid input.";
+		error_msg = "Invalid input";
 		break;
 	case mcp::rpc_eth_error_code::TRANSACTION_REJECTED:
-		error_msg = "Transaction rejected.";
+		error_msg = "Transaction rejected";
 		break;
 	default:
 		error_msg = "Unknown error";
@@ -4207,7 +4269,7 @@ void mcp::error_eth_response(std::function<void(mcp::json const &)> response_a, 
 	}
 
 	error["code"] = error_code;
-	error["message"] = error_msg;
+	error["message"] = error_msg + (sub_error_msg.empty() ? "" : (" (" + sub_error_msg + ")"));
 	json_a["error"] = error;
 	response_a(json_a);
 }
