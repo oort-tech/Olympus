@@ -1,13 +1,14 @@
 # -*-encoding: utf-8-*-
+from pickle import FALSE
 import unittest
 import json
 import requests
 import re
-URL = "http://127.0.0.1:8765"
-
-#Judge account number, mcp_start, remove I, O, l, 0, length greater than or equal to 50	
+URL = "http://192.168.85.128:8765"
+#0xC98A676DE3E0C539742E3023F7755C57E331E42F
+#Judge account number, mcp_start, remove I, O, l, 0, length equal to 42	
 def is_account(str):
-	if re.findall(r'mcp_[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{50,}$',str):
+	if re.findall(r'0x[0123456789ABCDEFabcdef]{40,}',str):
 		return True
 	else:
 		return False
@@ -41,7 +42,7 @@ def is_hex(str,is_lens=None):
 		
 #judge signature		
 def is_signature(str):
-	if is_hex(str,128):
+	if is_hex(str,130):
 		return True
 	else:
 		return False
@@ -64,9 +65,11 @@ def try_load_json(jsonstr):
 class Test_rpc(unittest.TestCase):
 	@classmethod
 	def setUpClass(cls):
-		Test_rpc.import_account = "mcp_3bBiY7Tu4cBMYeoC7d3KE657hQrMWYWsmhS3JBCvQaUnAksrVT"
+		Test_rpc.genesis_account = "0x38369682E93F5C20A4DA3E374805C9584EA3E2C8"
+		Test_rpc.import_account = "0x38369682E93F5C20A4DA3E374805C9584EA3E2C8"
 		Test_rpc.import_password = "1234qwer"
-		Test_rpc.to_account = "mcp_3dUnMEsuSiUsKGgfft5VDpM2bX9S6T4ppApHRfn1cBmn2znyEv"
+		Test_rpc.import_public_key = "F16C3C1E3775B13C139038740F976E5E549A41D94E502E3DF4BE118CD81D5310459E5FA7F5A95B7DBC935E30BB55D624DF8F767280D1BAF329EC7E5EF96BF137"
+		Test_rpc.to_account = "0xC63BE4C25041F761C5E8D9AA73FEFC57E4AA655B"
 	
 	'''
 	{
@@ -76,9 +79,13 @@ class Test_rpc(unittest.TestCase):
 	}
 	'''
 	def test_account_import(self):
+		# data = {
+		# 	"action": "account_import",
+		# 	"json": "{\"account\":\"0x41A358A4900A0A75BD50304A57E89D455966DC0F\",\"public_key\":\"F16C3C1E3775B13C139038740F976E5E549A41D94E502E3DF4BE118CD81D5310459E5FA7F5A95B7DBC935E30BB55D624DF8F767280D1BAF329EC7E5EF96BF137\",\"kdf_salt\":\"F36CA7C846C345960B055C6F10DFD7FD\",\"iv\":\"7B4F5CCB4A201302C1CE8CA7979EDA54\",\"ciphertext\":\"09FD6AEDF849A66AB58C15B12F5F9B901A482521AEB0BD160AF4181D9F14B004\"}"
+		# }
 		data = {
 			"action": "account_import",
-			"json": "{\"account\":\"mcp_3bBiY7Tu4cBMYeoC7d3KE657hQrMWYWsmhS3JBCvQaUnAksrVT\",\"kdf_salt\":\"74D7B3B7DE1C4FA03ED29EBC8CADF96C\",\"iv\":\"7E34B68EABFEF7933E305C17D94FA974\",\"ciphertext\":\"F4E7350BBB854CCB5F850D8EC33264A771890D74B3E02331D74D9C9C2A35733F\"}"
+			"json": "{\"account\":\"0x38369682E93F5C20A4DA3E374805C9584EA3E2C8\",\"public_key\":\"DEC7B77140D9B2AF105D574A18EDB502F938E385371D93176E90D83E570A7A4C66953B05E61330E617E18675CA060E6E81617488876731DFEB472F52703A4DC0\",\"kdf_salt\":\"AC8D68CF817842F70AF83881CCA1FFD6\",\"iv\":\"D32D6D53C5480C1ED6C032439BFBFDCC\",\"ciphertext\":\"8F9C4680CD6818E201455E2EF21C3AC23A6CB2158F21688218723700476CD038\"}"
 		}
 		response = requests.post(url=URL, data=json.dumps(data))
 		self.assertEqual(response.status_code, 200)
@@ -90,6 +97,9 @@ class Test_rpc(unittest.TestCase):
 		self.assertEqual(json_data['msg'], 'OK', json_data['code'])
 		json_account = json_data['account']
 		self.assertTrue(is_account(json_account),json_account)
+
+		print(json_data)
+		print("\n")
 	
 	'''
 	{
@@ -110,6 +120,9 @@ class Test_rpc(unittest.TestCase):
 		self.assertEqual(json_data['code'], 0, json_data['msg'])
 		json_account = json_data['account']
 		self.assertTrue(is_account(json_account),json_account)
+
+		print(json_data)
+		print("\n")
 	
 	'''
 	{
@@ -121,7 +134,7 @@ class Test_rpc(unittest.TestCase):
 	def test_send_block(self):
 		data = {
 			"action": "send_block",
-			"from": Test_rpc.import_account,
+			"from": Test_rpc.c,
 			"to": Test_rpc.to_account,
 			"amount": "1000000000000000000",
 			"password": Test_rpc.import_password,
@@ -150,6 +163,7 @@ class Test_rpc(unittest.TestCase):
 		data = {
 			"action": "accounts_balances",
 			"accounts": [
+				Test_rpc.genesis_account,
 				Test_rpc.import_account,
 				Test_rpc.to_account
 			]
@@ -164,6 +178,9 @@ class Test_rpc(unittest.TestCase):
 		self.assertTrue(len(json_balances)>0,json_balances)
 		for i in json_balances:
 			self.assertTrue(is_balance(i),json_balances)
+
+		print(json_data)
+		print("\n")
 	
 	'''
 	{
@@ -175,7 +192,7 @@ class Test_rpc(unittest.TestCase):
 	def test_account_balance(self):
 		data = {
 			"action": "account_balance",
-			"account": Test_rpc.import_account
+			"account": "0x38369682E93F5C20A4DA3E374805C9584EA3E2C8"
 		}
 		response = requests.post(url=URL, data=json.dumps(data))
 		self.assertEqual(response.status_code, 200)
@@ -185,6 +202,9 @@ class Test_rpc(unittest.TestCase):
 		self.assertEqual(json_data['code'], 0, json_data['msg'])
 		json_balance = json_data['balance']
 		self.assertTrue(is_balance(json_balance),json_balance)
+
+		print(json_data)
+		print("\n")
 	
 	'''
 	{
@@ -409,8 +429,8 @@ class Test_rpc(unittest.TestCase):
 	def test_generate_offline_block(self):
 		data = {
 			"action": "generate_offline_block",
-			"from": "mcp_33EuccjKjcZgwbHYp8eLhoFiaKGARVigZojeHzySD9fQ1ysd7u",
-			"to": "mcp_3w6RT4KJ5CGomcpUqwuxUfUciLggCTAgpccLrMwxqgJuSB2iW6",
+			"from": Test_rpc.genesis_account,
+			"to": Test_rpc.import_account,
 			"amount": "1000000000000000000",
 			"gas": "21000",
 			"gas_price": "1000000000",
@@ -427,8 +447,8 @@ class Test_rpc(unittest.TestCase):
 		data = {
 			"action": "send_offline_block",
 			"previous": "0000000000000000000000000000000000000000000000000000000000000000",
-			"from": "mcp_33EuccjKjcZgwbHYp8eLhoFiaKGARVigZojeHzySD9fQ1ysd7u",
-			"to": "mcp_3w6RT4KJ5CGomcpUqwuxUfUciLggCTAgpccLrMwxqgJuSB2iW6",
+			"from": Test_rpc.import_account,
+			"to": Test_rpc.to_account,
 			"amount": "1000000000000000000",
 			"gas": "21000",
 			"gas_price": "1000000000",
@@ -452,7 +472,7 @@ class Test_rpc(unittest.TestCase):
 	def test_sign_msg(self):
 		data = {
 			"action": "sign_msg",
-			"public_key": Test_rpc.import_account,
+			"public_key": Test_rpc.import_public_key,
 			"password": Test_rpc.import_password,
 			"msg": "CB09A146D83668AE13E951032D2FD94F893C9A0CA0822ED40BBE11DC0F167D1B"
 		}
@@ -464,6 +484,9 @@ class Test_rpc(unittest.TestCase):
 		self.assertEqual(json_data['code'], 0, json_data['msg'])
 		json_sign = json_data['signature']
 		self.assertTrue(is_signature(json_sign),json_sign)
+
+		print(json_data)
+		print("\n")
 
 	def test_block(self):
 		data = {
@@ -642,36 +665,153 @@ class Test_rpc(unittest.TestCase):
 		json_store_version = json_data['store_version']
 		self.assertTrue(is_str(json_store_version),json_store_version)
 
+	'''
+	{
+	"code": 0,
+    "msg": "OK",
+    "hash": ""
+	}
+	'''
+	def test_send_ccn(self):
+		data = {
+			"action": "send_block",
+			"from": Test_rpc.genesis_account,
+    		"to": Test_rpc.import_account,
+			"amount": "1000000000000000000",
+			"password": Test_rpc.import_password,
+			"gas": "21000",
+			"gas_price": "1000000000",
+			"data": ""
+		}
+		response = requests.post(url=URL, data=json.dumps(data))
+		self.assertEqual(response.status_code, 200)
+		is_json,json_data = try_load_json(response.text)
+		self.assertTrue(is_json,response.text)
+		json_data = json.loads(response.text)
+		self.assertEqual(json_data['code'], 0, json_data['msg'])
+		
+		print(json_data)
+		print("\n")
+	def test_eth_blockNumber(self):
+		data = {
+			"method": "eth_blockNumber",
+			"params": [],
+			"id": 1,
+			"jsonrpc": "2.0",
+		}
+		response = requests.post(url=URL, data=json.dumps(data))
+		is_json,json_data = try_load_json(response.text)
+
+		print(json_data)
+		print("\n")
+
+	def test_eth_getTransactionCount(self):
+		data = {
+			"method": "eth_getTransactionCount",
+			"params": [Test_rpc.import_account],
+			"id": 1,
+			"jsonrpc": "2.0",
+		}
+		response = requests.post(url=URL, data=json.dumps(data))
+		is_json,json_data = try_load_json(response.text)
+
+		print(json_data)
+		print("\n")
+
+	def test_eth_chainId(self):
+		data = {
+			"method": "eth_chainId",
+			"params": [],
+			"id": 1,
+			"jsonrpc": "2.0",
+		}
+		response = requests.post(url=URL, data=json.dumps(data))
+		is_json,json_data = try_load_json(response.text)
+
+		print(json_data)
+		print("\n")
+
+	def test_eth_gasPrice(self):
+		data = {
+			"method": "eth_gasPrice",
+			"params": [],
+			"id": 1,
+			"jsonrpc": "2.0",
+		}
+		response = requests.post(url=URL, data=json.dumps(data))
+		is_json,json_data = try_load_json(response.text)
+
+		print(json_data)
+		print("\n")
+
+	def test_eth_estimateGas(self):
+		data = {
+			"method": "eth_estimateGas",
+			"params": [{
+				"from": Test_rpc.import_account,
+				"gasPrice": "0x10000",
+				"data": "0x608060405234801561001057600080fd5b50336000806101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff16021790555061019c806100606000396000f3fe608060405234801561001057600080fd5b50600436106100415760003560e01c8063445df0ac146100465780638da5cb5b14610064578063fdacd576146100ae575b600080fd5b61004e6100dc565b6040518082815260200191505060405180910390f35b61006c6100e2565b604051808273ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200191505060405180910390f35b6100da600480360360208110156100c457600080fd5b8101908080359060200190929190505050610107565b005b60015481565b6000809054906101000a900473ffffffffffffffffffffffffffffffffffffffff1681565b6000809054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff163373ffffffffffffffffffffffffffffffffffffffff16141561016457806001819055505b5056fea265627a7a72315820640b8f7dab5237b9f182a064e48817bd2919b73dd07871a4fb27fef8b2092b0264736f6c63430005100032"
+			}],
+			"id": 1,
+			"jsonrpc": "2.0",
+		}
+		response = requests.post(url=URL, data=json.dumps(data))
+		is_json,json_data = try_load_json(response.text)
+
+		print(json_data)
+		print("\n")
+	
+	def test_eth_getBlockByNumber(self):
+		data = {
+			"method": "eth_getBlockByNumber",
+			"params": ["latest", False],
+			"id": 1,
+			"jsonrpc": "2.0",
+		}
+		response = requests.post(url=URL, data=json.dumps(data))
+		is_json,json_data = try_load_json(response.text)
+
+		print(json_data)
+		print("\n")
+
 if __name__ == "__main__":
 	suite = unittest.TestSuite()
-	suite.addTest(Test_rpc("test_account_import"))
+	# suite.addTest(Test_rpc("test_account_import"))
 	suite.addTest(Test_rpc("test_account_create"))
-	suite.addTest(Test_rpc("test_send_block"))
-	suite.addTest(Test_rpc("test_accounts_balances"))
-	suite.addTest(Test_rpc("test_account_balance"))
-	suite.addTest(Test_rpc("test_call"))
-	suite.addTest(Test_rpc("test_account_code"))
-	suite.addTest(Test_rpc("test_account_lock"))
-	suite.addTest(Test_rpc("test_account_unlock"))
-	suite.addTest(Test_rpc("test_account_export"))
-	suite.addTest(Test_rpc("test_account_validate"))
-	suite.addTest(Test_rpc("test_account_password_change"))
-	suite.addTest(Test_rpc("test_account_list"))
-	suite.addTest(Test_rpc("test_account_block_list"))
-	suite.addTest(Test_rpc("test_estimate_gas"))
-	suite.addTest(Test_rpc("test_generate_offline_block"))
-	suite.addTest(Test_rpc("test_send_offline_block"))
-	suite.addTest(Test_rpc("test_sign_msg"))
-	suite.addTest(Test_rpc("test_block"))
-	suite.addTest(Test_rpc("test_blocks"))
-	suite.addTest(Test_rpc("test_block_state"))
-	suite.addTest(Test_rpc("test_block_states"))
-	suite.addTest(Test_rpc("test_block_traces"))
-	suite.addTest(Test_rpc("test_stable_blocks"))
-	suite.addTest(Test_rpc("test_status"))
-	suite.addTest(Test_rpc("test_witness_list"))
-	suite.addTest(Test_rpc("test_version"))
-	suite.addTest(Test_rpc("test_account_remove"))
+	# suite.addTest(Test_rpc("test_send_block"))
+	# suite.addTest(Test_rpc("test_accounts_balances"))
+	# suite.addTest(Test_rpc("test_account_balance"))
+	# suite.addTest(Test_rpc("test_call"))
+	# suite.addTest(Test_rpc("test_account_code"))
+	# suite.addTest(Test_rpc("test_account_lock"))
+	# suite.addTest(Test_rpc("test_account_unlock"))
+	# suite.addTest(Test_rpc("test_account_export"))
+	# suite.addTest(Test_rpc("test_account_validate"))
+	# suite.addTest(Test_rpc("test_account_password_change"))
+	# suite.addTest(Test_rpc("test_account_list"))
+	# suite.addTest(Test_rpc("test_account_block_list"))
+	# suite.addTest(Test_rpc("test_estimate_gas"))
+	# suite.addTest(Test_rpc("test_generate_offline_block"))
+	# suite.addTest(Test_rpc("test_send_offline_block"))
+	# suite.addTest(Test_rpc("test_sign_msg"))
+	# suite.addTest(Test_rpc("test_block"))
+	# suite.addTest(Test_rpc("test_blocks"))
+	# suite.addTest(Test_rpc("test_block_state"))
+	# suite.addTest(Test_rpc("test_block_states"))
+	# suite.addTest(Test_rpc("test_block_traces"))
+	# suite.addTest(Test_rpc("test_stable_blocks"))
+	# suite.addTest(Test_rpc("test_status"))
+	# suite.addTest(Test_rpc("test_witness_list"))
+	# suite.addTest(Test_rpc("test_version"))
+	# suite.addTest(Test_rpc("test_account_remove"))
+	# suite.addTest(Test_rpc("test_send_ccn"))
+	# suite.addTest(Test_rpc("test_eth_blockNumber"))
+	# suite.addTest(Test_rpc("test_eth_getTransactionCount"))
+	# suite.addTest(Test_rpc("test_eth_chainId"))
+	# suite.addTest(Test_rpc("test_eth_gasPrice"))
+	# suite.addTest(Test_rpc("test_eth_estimateGas"))
+	# suite.addTest(Test_rpc("test_eth_getBlockByNumber"))
+
 	result = unittest.TextTestRunner(verbosity=3).run(suite)
 	if result.wasSuccessful():
 		exit(0)

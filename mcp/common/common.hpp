@@ -19,6 +19,8 @@
 #include <boost/multi_index/hashed_index.hpp>
 #include <boost/multi_index/member.hpp>
 
+#include <secp256k1.h>
+
 #define crypto_cipher_len crypto_box_MACBYTES
 #define crypto_sign_len crypto_sign_BYTES
 
@@ -29,7 +31,10 @@ namespace mcp
 {
 	// some utility functions
 	std::string uint64_to_hex(uint64_t);
-	bool hex_to_uint64(std::string const &, uint64_t &);
+	std::string uint64_to_hex_nofill(uint64_t);
+	std::string uint256_to_hex_nofill(uint256_t);
+	bool hex_to_uint64(std::string const &, uint64_t &, bool show_base = false);
+	bool hex_to_uint256(std::string const & value_a, uint256_t & target_a, bool show_base = false);
 	std::string bytes_to_hex(dev::bytes const & b);
 	int from_hex_char(char c) noexcept;
 	bool hex_to_bytes(std::string const & s, dev::bytes & out);
@@ -150,6 +155,30 @@ namespace mcp
 		std::thread thread;
 	};
 
+	// added by michael at 2/17
+	class key_pair_ed
+	{
+		public:
+			key_pair_ed() = default;
+			key_pair_ed(seed_key const & seed);
+			~key_pair_ed();
+			static key_pair_ed create();
+
+			// get the secret key.
+			secret_key const& secret() const { return m_secret; }
+
+			// get the public key
+			public_key_comp const& pub() const { return m_public; }
+
+			bool operator==(key_pair_ed const& _c) const { return m_public == _c.m_public; }
+			bool operator!=(key_pair_ed const& _c) const { return m_public != _c.m_public; }
+			bool flag = false;
+			
+		private:
+			secret_key m_secret;
+			public_key_comp m_public;
+	};
+
 	class key_pair
 	{
 	public:
@@ -161,17 +190,24 @@ namespace mcp
 		// get the secret key.
 		secret_key const& secret() const { return m_secret; }
 
-		/// get the public key.
+		// get the public key.
 		public_key const& pub() const { return m_public; }
+
+		// get the public key compressed
+		public_key_comp const& pub_comp() const { return m_public_comp; }
+
+		// get the account's address
+		account20_struct const& account() const { return m_account; }
 
 		bool operator==(key_pair const& _c) const { return m_public == _c.m_public; }
 		bool operator!=(key_pair const& _c) const { return m_public != _c.m_public; }
 		bool flag = false;
-	private:
 
-		//ed25519 key(sign),encryption need curve 25519 key.
+	private:
 		secret_key m_secret;
 		public_key m_public;
+		public_key_comp m_public_comp;
+		account20_struct m_account;
 	};
 
 	class nonce
@@ -218,20 +254,32 @@ namespace mcp
 
 		/// Returns siganture of message hash.
 		bool sign(secret_key const& _k, dev::bytesConstRef _hash, mcp::signature& sig);
-
-		bool sign(private_key const& _k, public_key const& _pk, dev::bytesConstRef _hash, mcp::signature& sig);
+		// this is curious for purpose, right now (commented by michael)
+		// bool sign(private_key const& _k, public_key const& _pk, dev::bytesConstRef _hash, mcp::signature& sig);
 
 		/// Verify signature.
+		// updated by michael at 1/10
 		bool verify(public_key const& _k, dev::bytesConstRef const& _s);
 		bool verify(public_key const& _k, mcp::signature const& _s, dev::bytesConstRef const& _o);
+		//added by michael
+		bool verify(public_key_comp const& _k, mcp::signature const& _s, dev::bytesConstRef const& _o);
+
+		// added by michael at 1/10
+		public_key recover(mcp::signature const& _s, dev::bytesConstRef const& _o);
 
 		//ed25519 secret key to curve25519 secret key
 		bool get_encry_secret_key_from_sign_key(secret_encry & curve, secret_key const & ed25519);
 		//ed25519 public key to curve25519 public key
-		bool get_encry_public_key_from_sign_key(public_key & curve, public_key const & ed25519);
-		bool get_encry_public_key_from_sign_key(public_key & curve, dev::bytesConstRef ed25519);
+		bool get_encry_public_key_from_sign_key(public_key_comp & curve, public_key_comp const & ed25519);
+		bool get_encry_public_key_from_sign_key(public_key_comp & curve, dev::bytesConstRef ed25519);
 
-		//ed25519 get public key from secret key
-		bool generate_public_from_secret(mcp::uint256_union const& _sk, mcp::uint256_union& _pk);
+		// commented by michael at 1/5
+		// ed25519 get public key from secret key
+		// bool generate_public_from_secret(mcp::uint256_union const& _sk, mcp::uint256_union& _pk);
+		
+		// added by michael at 1/5
+		bool generate_public_from_secret(secret_key const& _sk, public_key& _pk);
+		bool generate_public_from_secret(secret_key const& _sk, public_key& _pk, public_key_comp& _pk_comp);
+		secp256k1_context const* get_secp256k1_ctx();
 	}
 }

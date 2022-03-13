@@ -52,9 +52,9 @@ void mcp::Executive::initialize()
     {
 		BOOST_LOG(m_log.info) << "Not enough cash: Require > " << totalCost << " = " << m_s.block->hashables->gas
 			<< " * " << m_s.block->hashables->gas_price << " + " << m_s.block->hashables->amount << " Got"
-			<< m_s.balance(m_s.block->hashables->from) << " for sender: " << m_s.block->hashables->from.to_string();
+			<< m_s.balance(m_s.block->hashables->from) << " for sender: " << m_s.block->hashables->from.to_account();
 		m_excepted = TransactionException::NotEnoughCash;
-		BOOST_THROW_EXCEPTION(NotEnoughCash() << RequirementError(totalCost, (bigint)m_s.balance(m_s.block->hashables->from)) << errinfo_comment(m_s.block->hashables->from.to_string()));
+		BOOST_THROW_EXCEPTION(NotEnoughCash() << RequirementError(totalCost, (bigint)m_s.balance(m_s.block->hashables->from)) << errinfo_comment(m_s.block->hashables->from.to_account()));
 	}
     m_gasCost = (u256)gasCost;  // Convert back to 256-bit, safe now.
 }
@@ -241,7 +241,7 @@ bool mcp::Executive::executeCreate(account const & _sender, u256 const& _endowme
     bool accountAlreadyExist = (m_s.addressHasCode(m_newAddress) || m_s.getNonce(m_newAddress) >0);
     if (accountAlreadyExist)
     {
-		BOOST_LOG(m_log.info) << "Address already used: " << m_newAddress.to_string();
+		BOOST_LOG(m_log.info) << "Address already used: " << m_newAddress.to_account();
         m_gas = 0;
         m_excepted = TransactionException::AddressAlreadyUsed;
         revert();
@@ -359,12 +359,16 @@ bool mcp::Executive::go(dev::eth::OnOpFunc const& _onOp)
         }
         catch (RevertInstruction& _e)
         {
+            if (m_depth != 0)
+                throw;
             revert();
             m_output = _e.output();
             m_excepted = TransactionException::RevertInstruction;
         }
         catch (VMException const& _e)
         {
+            if (m_depth != 0)
+                throw;
             BOOST_LOG(m_log.info) << "Safe VM Exception. " << diagnostic_information(_e);
             m_gas = 0;
             m_excepted = toTransactionException(_e);
@@ -372,6 +376,8 @@ bool mcp::Executive::go(dev::eth::OnOpFunc const& _onOp)
         }
         catch (InternalVMError const& _e)
         {
+            if (m_depth != 0)
+                throw;
             cerror << "Internal VM Error (EVMC status code: "
                  << *boost::get_error_info<errinfo_evmcStatusCode>(_e) << ")";
             revert();
@@ -379,6 +385,8 @@ bool mcp::Executive::go(dev::eth::OnOpFunc const& _onOp)
         }
         catch (Exception const& _e)
         {
+            if (m_depth != 0)
+                throw;
             // TODO: AUDIT: check that this can never reasonably happen. Consider what to do if it does.
             cerror << "Unexpected exception in VM. There may be a bug in this implementation. "
                  << diagnostic_information(_e);
@@ -388,6 +396,8 @@ bool mcp::Executive::go(dev::eth::OnOpFunc const& _onOp)
         }
         catch (std::exception const& _e)
         {
+            if (m_depth != 0)
+                throw;
             // TODO: AUDIT: check that this can never reasonably happen. Consider what to do if it does.
             cerror << "Unexpected std::exception in VM. Not enough RAM? " << _e.what();
             exit(1);

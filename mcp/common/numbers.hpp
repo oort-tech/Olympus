@@ -6,6 +6,8 @@
 #include <unordered_set>
 
 #include <libdevcore/Common.h>
+#include <libdevcore/SHA3.h>
+
 #include <mcp/common/assert.hpp>
 
 namespace mcp
@@ -47,9 +49,11 @@ public:
 	bool operator> (mcp::uint64_union const &) const;
 	bool operator<= (mcp::uint64_union const &) const;
 	bool operator>= (mcp::uint64_union const &) const;
-	void encode_hex(std::string &) const;
-	bool decode_hex(std::string const &);
-	std::string to_string() const;
+	void encode_hex(std::string &, bool show_base = false) const;
+	void encode_hex_no_fill(std::string &, bool show_base = false) const;
+	bool decode_hex(std::string const &, bool show_base = false);
+	std::string to_string(bool show_base = false) const;
+	std::string to_string_no_fill(bool show_base = false) const;
 	uint64_t number() const;
 	enum { size = 8 };
 	std::array<uint8_t, 8> bytes;
@@ -88,12 +92,17 @@ public:
 // Balances are 128 bit.
 
 class raw_key;
+struct account20_struct;
+
 union uint256_union
 {
 	uint256_union () = default;
 	uint256_union (std::string const &);
 	uint256_union (uint64_t);
 	uint256_union (mcp::uint256_t const &);
+	// added by michael at 1/14
+	uint256_union (account20_struct const & account);
+	//
 	void encrypt (mcp::raw_key const &, mcp::raw_key const &, uint128_union const &);
 	uint256_union & operator^= (mcp::uint256_union const &);
 	uint256_union operator^ (mcp::uint256_union const &) const;
@@ -103,38 +112,46 @@ union uint256_union
 	bool operator> (mcp::uint256_union const &) const;
 	bool operator<= (mcp::uint256_union const &) const;
 	bool operator>= (mcp::uint256_union const &) const;
-	void encode_hex (std::string &) const;
-	bool decode_hex (std::string const &);
+	void encode_hex (std::string &, bool show_base = false) const;
+	void encode_hex_no_fill (std::string &, bool show_base = false) const;
+	bool decode_hex (std::string const &, bool show_base = false);
 	void encode_dec (std::string &) const;
 	bool decode_dec (std::string const &);
-	void encode_account (std::string &) const;
-	std::string to_account () const;
-	std::string to_account_split () const;
-	bool decode_account (std::string const &);
+	
+	// void encode_account (std::string &) const;
+	// std::string to_account () const;
+	// std::string to_account_split () const;
+	// bool decode_account (std::string const &);
+
 	byte* data() { return bytes.data(); }
+	byte const* data() const { return bytes.data(); }
+
 	std::array<uint8_t, 32> bytes;
 	std::array<char, 32> chars;
 	std::array<uint32_t, 8> dwords;
 	std::array<uint64_t, 4> qwords;
 	std::array<uint128_union, 2> owords;
+
 	void clear ();
 	bool is_zero () const;
-	std::string to_string () const;
+	std::string to_string (bool show_base = false) const;
+	std::string to_string_no_fill(bool show_base = false) const;
 	std::string to_string_dec () const;
 	mcp::uint256_t number () const;
 	enum { size = 32 };
 	dev::bytesRef ref() { return dev::bytesRef(bytes.data(), 32); }
 	dev::bytesConstRef ref() const { return dev::bytesConstRef(bytes.data(), 32); }
 };
+
 // All keys and hashes are 256 bit.
 using amount = uint256_t;
 using block_hash = uint256_union;
 using summary_hash = uint256_union;
 using account_state_hash = uint256_union;
-using account = uint256_union;
+// using account = uint256_union;
 /// A hash set of mcp accounts
-using AccountHash = std::unordered_set<account>;
-using public_key = uint256_union;
+// using AccountHash = std::unordered_set<account>;
+// using public_key = uint256_union;
 using private_key = uint256_union;
 using secret_ciphertext = uint256_union;
 using data_hash = uint256_union;
@@ -143,12 +160,6 @@ using state_root = uint256_union;
 using sync_request_hash = uint256_union;
 using seed_key = uint256_union;
 using secret_encry = uint256_union;		//p2p encryption
-
-namespace p2p
-{
-	using node_id = mcp::uint256_union;
-	using hash256 = mcp::uint256_union;
-}
 
 class raw_key
 {
@@ -164,6 +175,7 @@ public:
 	bool operator!= (mcp::raw_key const &) const;
 	mcp::uint256_union data;
 };
+
 union uint512_union
 {
 	uint512_union () = default;
@@ -171,9 +183,21 @@ union uint512_union
 	bool operator== (mcp::uint512_union const &) const;
 	bool operator!= (mcp::uint512_union const &) const;
 	mcp::uint512_union & operator^= (mcp::uint512_union const &);
+	uint512_union operator^ (mcp::uint512_union const &) const;
+
+	// Added by Daniel
+	bool operator< (mcp::uint512_union const &) const;
+	bool operator> (mcp::uint512_union const &) const;
+	bool operator<= (mcp::uint512_union const &) const;
+	bool operator>= (mcp::uint512_union const &) const;
+
 	void encode_hex (std::string &) const;
 	bool decode_hex (std::string const &);
+	bool is_zero () const;
+
 	byte* data() { return bytes.data(); }
+	byte const* data() const { return bytes.data(); }
+
 	std::array<uint8_t, 64> bytes;
 	std::array<uint32_t, 16> dwords;
 	std::array<uint64_t, 8> qwords;
@@ -186,11 +210,77 @@ union uint512_union
 	dev::bytesConstRef ref() const { return dev::bytesConstRef(bytes.data(), 64); }
 };
 
-using signature = uint512_union;
-using secret_key = uint512_union;	//sign
+// added by michael at 1/7
+struct signature_struct
+{
+    signature_struct() = default;
+    signature_struct(uint256_union const& _r, uint256_union const& _s, byte _v);
+    signature_struct(uint64_t value0); 
+    bool is_valid() const noexcept;
+	bool operator== (signature_struct const& other_a) const;
+	bool operator!= (signature_struct const & other_a) const;
+	bool decode_hex(std::string const & text);
 
-mcp::uint512_union sign_message (mcp::raw_key const &, mcp::public_key const &, mcp::uint256_union const &);
-bool validate_message (mcp::public_key const &, mcp::uint256_union const &, mcp::uint512_union const &);
+	std::string to_string() const;
+
+    uint256_union r;
+    uint256_union s;
+    byte v = 0;
+
+	enum { size = 65 };
+	dev::bytesRef ref();
+	dev::bytesConstRef ref() const;
+};
+
+// added by michael at 1/8
+// using signature = uint512_union;
+using signature = signature_struct;
+
+// added by michael at 1/5
+// using secret_key = uint512_union;
+using secret_key = uint256_union;
+using public_key = uint512_union;
+using public_key_comp = uint256_union;
+
+struct account20_struct {
+	account20_struct()  = default;
+	account20_struct(mcp::public_key const& pubkey);
+	account20_struct(uint64_t value0);
+	account20_struct (mcp::uint256_t const & number_a);
+	account20_struct (mcp::uint256_union const & uint256_a);
+	bool operator== (account20_struct const& other_a) const;
+	bool operator!= (account20_struct const & other_a) const;
+	bool operator< (account20_struct const & other_a) const;
+	bool operator> (account20_struct const & other_a) const;
+	bool operator<= (account20_struct const & other_a) const;
+	bool operator>= (account20_struct const & other_a) const;
+
+	std::string to_account() const;
+	bool is_zero() const;
+	bool decode_account(std::string const & text);
+	mcp::uint256_t number() const;
+	byte* data();
+	byte const* data() const;
+	
+	std::array<uint8_t, 20> bytes;
+	void clear();
+	
+	enum { size = 20 };
+	dev::bytesRef ref();
+	dev::bytesConstRef ref() const;
+};
+
+using account = account20_struct;
+using AccountHash = std::unordered_set<account>;
+
+namespace p2p
+{
+	using node_id = mcp::uint256_union;
+	using hash256 = mcp::uint256_union;
+}
+
+mcp::signature sign_message (mcp::raw_key const &, /*mcp::public_key const &,*/ mcp::uint256_union const &);
+bool validate_message (mcp::account const &, mcp::uint256_union const &, mcp::signature const &);
 }
 
 namespace std
@@ -212,6 +302,34 @@ struct hash<mcp::uint256_t>
 		return number_a.convert_to<size_t> ();
 	}
 };
+
+// Hash for uint512, Daniel
+template <>
+struct hash<mcp::uint512_t>
+{
+	size_t operator() (mcp::uint512_t const & number_a) const
+	{
+		return number_a.convert_to<size_t> ();
+	}
+};
+template <>
+struct hash<mcp::uint512_union>
+{
+	size_t operator() (mcp::uint512_union const & data_a) const
+	{
+		return *reinterpret_cast<size_t const *> (data_a.bytes.data ());
+		//return XXH64(data_a.bytes.data(), data_a.bytes.size(), 0);
+	}
+};
+template <>
+struct hash<mcp::account20_struct>
+{
+	size_t operator() (mcp::account20_struct const & data_a) const
+	{
+		return *reinterpret_cast<size_t const *> (data_a.bytes.data ());
+		//return XXH64(data_a.bytes.data(), data_a.bytes.size(), 0);
+	}
+};
 }
 
 namespace boost
@@ -222,6 +340,15 @@ namespace boost
         size_t operator() (mcp::uint256_union const & value_a) const
         {
             std::hash<mcp::uint256_union> hash;
+            return hash(value_a);
+        }
+    };
+	template <>
+    struct hash<mcp::account20_struct>
+    {
+        size_t operator() (mcp::account20_struct const & value_a) const
+        {
+            std::hash<mcp::account20_struct> hash;
             return hash(value_a);
         }
     };

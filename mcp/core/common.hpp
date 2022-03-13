@@ -331,6 +331,7 @@ namespace mcp
 		void serialize_json(mcp::json & json_a);
 		void hash(blake2b_state &) const;
 		bool contains_bloom(dev::h256 const & h_a);
+		bool contains_bloom(dev::bytesConstRef const & h_a);
 		static void serialize_null_json(mcp::json & json_a);
 
 		mcp::account_state_hash from_state;
@@ -419,6 +420,8 @@ namespace mcp
 	{
 	public:
 		uint64_t min_wl;
+
+		// Updated to 512, Daniel
 		std::unordered_set<mcp::account> witnesses;
 	};
 
@@ -580,6 +583,14 @@ namespace mcp
 
 	dev::Slice uint256_to_slice(mcp::uint256_union const & value);
 	mcp::uint256_union slice_to_uint256(dev::Slice const & slice);
+
+	// Added by Daniel
+	dev::Slice uint512_to_slice(mcp::uint512_union const & value);
+	mcp::uint512_union slice_to_uint512(dev::Slice const & slice);
+
+	// added by michael at 1/13
+	dev::Slice account_to_slice(mcp::account const & value);
+	mcp::account slice_to_account(dev::Slice const & slice);
 
 	mcp::account toAddress(mcp::account const& _from, u256 const& _nonce);
 

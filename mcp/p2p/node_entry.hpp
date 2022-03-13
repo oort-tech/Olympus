@@ -16,7 +16,7 @@ namespace mcp
 			{
 			}
 			unsigned distance;	//< Node's distance (xor of _src as integer).
-			bool pending;				//< Node will be ignored until Pong is received
+			bool pending;		//< Node will be ignored until Pong is received
 
 			static unsigned calc_distance(node_id const & a, node_id const & b)
 			{

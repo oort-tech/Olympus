@@ -1161,7 +1161,7 @@ void mcp::chain::rebuild_unlink(mcp::db::db_transaction & transaction_a, std::sh
 	std::shared_ptr<mcp::account_info> info(cache_a->account_get(transaction_a, account_a));
 	std::shared_ptr<mcp::account_info> info_copy(info ? std::make_shared<mcp::account_info>(*info) : std::make_shared<mcp::account_info>());
 	mcp::block_hash latest_block_hash = info ? info_copy->latest_stable_block : 0;
-	mcp::block_hash root(latest_block_hash.is_zero() ? account_a : latest_block_hash);
+	mcp::block_hash root(latest_block_hash.is_zero() ? account_a.number() : latest_block_hash);
 	mcp::unlink_info unlink;
 	bool rebuild = false;
 

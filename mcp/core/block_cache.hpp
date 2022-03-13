@@ -66,7 +66,7 @@ class block_cache : public mcp::iblock_cache
 	bool successor_get(mcp::db::db_transaction & transaction_a, mcp::block_hash const & root_a, mcp::block_hash & successor_a);
 	void successor_put(mcp::block_hash const & root_a, mcp::block_hash const & summary_a);
 	void successor_earse(std::unordered_set<mcp::block_hash> const & roots_a);
-	void mark_successor_as_changing(std::unordered_set<mcp::account> const & roots_a);
+	void mark_successor_as_changing(std::unordered_set<mcp::block_hash> const & roots_a);
 	void clear_successor_changing();
 
 	bool block_summary_get(mcp::db::db_transaction & transaction_a, mcp::block_hash const & block_hash_a, mcp::summary_hash & summary_a);

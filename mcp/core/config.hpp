@@ -120,7 +120,7 @@ private:
 		case mcp::mcp_networks::mcp_mini_test_network:
 		{
 			std::vector<std::string> mini_test_witness_str_list_v0 = {
-				"mcp3cMjWUPrcputvcyqD6XiMz5oSfAwBJF8g8wU65cquAfDAxzci3"
+				"0x1144B522F45265C2DFDBAEE8E324719E63A1694C"
 			};
 			mcp::witness_param w_param_v0;
 			w_param_v0.witness_count = 1;
@@ -134,20 +134,20 @@ private:
 		case mcp::mcp_networks::mcp_test_network:
 		{
 			std::vector<std::string> test_witness_str_list_v0 = {
-				"mcp3cMjWUPrcputvcyqD6XiMz5oSfAwBJF8g8wU65cquAfDAxzci3",
-				"mcp3NKc8iLShwqPHf6teuZGAQacs2JWSKETGrKw7G9paK8HjsaLgw",
-				"mcp3PnmJLSmUAdLLPS1CvvUy4Tu8AHNMxPWbgdpbmGWiWVkRcwGjG",
-				"mcp3Q6B6sv5uFF4cJy5VCh8SFSqo9nKVha9gqeCFKrMCHRRWzRzNc",
-				"mcp3tQcdUztFjAjggZjgZJ97PH3Z7p4M8tEFhE2NKubLFV1Nk87nv",
-				"mcp3vD3tncqz4RMoUcoqD5z6DwAobjX9AKAabcpYtGnCWPAnzDfyX",
-				"mcp3Yk4HcWeg9HnVChvEzfFQ4sjx5YzkPxHif4wtfUgwQo3AWTXfH",
-				"mcp3zpaqYbySCA1nKadrrRhU2W2d4eJzCRx6DhvgjybRBYHJP1yvT",
-				"mcp4eTWbCGM3Dsrr5LehSNEREZkodTFUnuTyC3a25SKa6vq4giRMp",
-				"mcp4fAnePQiimjUusbXU11Qx6VQosYWLGRto6NzDTUnyfaXfDCYiA",
-				"mcp4iEexeAyLWmURo8Hy4dSj8jaC5igFxErpyA8VpKy2qKGHQAZQ4",
-				"mcp4n3nPwym2VfAkJoKrLQGj1WnsUEi7oUkCR8tEsYLssVQemY4QS",
-				"mcp46EaBCqezG5o41zDoXTjEtq1UhCqzsx6gYLzdmtoBtfB7Zc3Sc",
-				"mcp48kUDucgzpUszYXF45n6SLV5D8oGbTRxmvdjTJ9Bw18gjKMQJi"
+				"0x3d8d441841880c414d1058a086d9eaa73eb8065c",
+				"0x3e7d22a76c48d70a50a7904da5e3164f41cb364b",
+				"0x6eca9f91be315bf7a62d06563e3b55b1d0754a9a",
+				"0x25d00bd210dd30e3cff40019e7195b3e91cceea5",
+				"0x42dacf7e05001e9671248a9bd616557fe209931d",
+				"0x86b44128420418ad07a3fec60327c22911f4825d",
+				"0x588b2f316a7f8680b406dbbbae128f28a72ff86e",
+				"0x0856a2d4a0cbb93d9b6d3dbe1af67fe2c4219cf7",
+				"0x1144B522F45265C2DFDBAEE8E324719E63A1694C",
+				"0xc086b09411e4c16b90e1b4b32a7f5d34f0f8eee4",
+				"0xc24760dd2def86397323ac048b7392fe71d92bcc",
+				"0xd11c69cf2a766bee0d7b5186687e70e0ca0530db",
+				"0xdb06ba6181c94d4b30ad8f3d8c29737e4222d7e7",
+				"0xde70e5bb7c626b34167f144efbe57fef09d6fc6d"
 			};
 			mcp::witness_param w_param_v0;
 			w_param_v0.witness_count = 14;
@@ -161,20 +161,20 @@ private:
 		case mcp::mcp_networks::mcp_beta_network:
 		{
 			std::vector<std::string> beta_witness_str_list_v0 = {
-				"mcp3apDZkSoF6z3xz5ZtWBYH2k89gGB8SaganyWP2V13ro7rB86Tu",
-				"mcp3HXbkSR2BmHgi83f8YQVxQHTGLxHTGaYatdDQ7DouxPgFJ9zTA",
-				"mcp3kAn315vAn41vU9KzykzVwSik8oHWkfXixEJokiTpiQramWajo",
-				"mcp3n61711SRRCZpLHLH3qn1xLCkx7sZpR67kDL2fp3BadGU54RLn",
-				"mcp4aziSEw4MvpPQh46iYbBSwksHGwezXDRLBTH5hxFhrewgTYdaM",
-				"mcp4cLfkPfkiYRC67QmqpDaRqGcqQFSa65kxToV5fQqX5ZyWkEUei",
-				"mcp4peN6FqSL2kCNnGnPpJt3DzmTVT1j798i3zVfgMtJQ2cNHPWkA",
-				"mcp4THWHNGvFezLZGkWZ76ZWgeaw1mZTWXqt8nRtV3iEdNzGRecgt",
-				"mcp4WNsbSp9k2WkBcYfWgDdiH5F9Sgdh6HfirfxwXUM6a6yGn2uha",
-				"mcp4XbkA9m25jsW1JuSb2Z6zqL1n1RnrzVhx3KUvFqXxuatEM52qk",
-				"mcp33qM3kGTmTabC9rgjSg6Ai39msuxdgppJ1m453zMvK2at1JCs9",
-				"mcp49AdeQG1FN4gteyPhQCueGctZdDihS8nLcNUddyLDAXA5EC7mv",
-				"mcp314J3dULRWfyMS853GvhDcLcdB379Q87w9yG9ZYj7WPtTTxKrE",
-				"mcp353iC6Z1pjnAPY7VkSeXgaB5EcEcVD2vGPsiLvoGGiZoNerwxS"
+				"0x6d76b7de9fa746bdfe2d5462ff46778a06bb2c35",
+				"0x7f4f900abde901c79c1fe91a81ccd876595eceac",
+				"0x94ab8f03fffc515d332894ea4be45df8aeacff4e",
+				"0x545c6ddf180635303a27d92954da916dde931006",
+				"0xa5356ce9415722e6c71a66c31cea172c2ccd7d90",
+				"0xac8720f7149e200b479cf0325d7d36e491c410c4",
+				"0xae8b58cc95649df86ed4583c57d136ee6c057f74",
+				"0xb3cb7476c6241a6a72809727ebe0cf2db5bec98d",
+				"0xb5bb1e0e692d8e7cfd2b17d220318dded1f34eb4",
+				"0xb62e7871da077799a5c834565d8c162da3ee334e",
+				"0xb75bfe4aa1e9aa99a1d87017d68d023e2cca48ae",
+				"0xc757c14c4e20d604227c27935cd9f37150d27626",
+				"0xd4c19e0c6a219e3a0e0b7249667cea21a69a6fdc",
+				"0xdf691895cf79f2ca139b3e5d0714280877971eea"
 			};
 			mcp::witness_param w_param_v0;
 			w_param_v0.witness_count = 14;
@@ -188,20 +188,20 @@ private:
 		case mcp::mcp_networks::mcp_live_network:
 		{
 			std::vector<std::string> live_witness_str_list_v0 = {
-				"mcp_3BtHMM4eq77KHBcELK8HLpttpotpQ5HAVHFnZ7wPM8nJtjJPwF",
-				"mcp_3CaNZSDM1fcvepTdk9qa2WiVJRXE4PqUJDbtTsAh7j5pSABv8Z",
-				"mcp_3CsaNBrc7dniUYbBYaiv5zqFdyShoaGC7y7dA2w63wdkJQoALC",
-				"mcp_3eS7sHXD94LmCemy9yC2w5JQd95PyWod68irjxfWJKGqmxNoNu",
-				"mcp_3hzJ8c8t5nwbFwfCS1sgZcfD2uTHcUqZwSpD6jtuDW8sH8KPwA",
-				"mcp_3kHxSg4ksGoUMJAStwHAFoeVR9FbV3XPKHNn6K5VzMeuJ3nbGC",
-				"mcp_3mBqrJmexoXcgzvg1XnjyLb4e2Yn37sgTkU8J1xsBSxuQ681fj",
-				"mcp_3Q9Mfa4FvksCQKdnLEdDnNpk2jdMwxCRbU6xaPWcuAwHQKTmmT",
-				"mcp_3QVjBEedsMa7ZznPc5j6RikwCEDPiBQeeaSxZDegKjpY3jFeMg",
-				"mcp_3Uh9XTs5oewuLP1Z5GT7uShHbayv4CVA81qUddyS5TuTAZ3g5M",
-				"mcp_3uXQTK2TSe14YMcJKpng3x6EfZqft9yoccSX6hfYEyCMZWSJaS",
-				"mcp_4QcrnPUoWTMydJsdTeYstUTWfzH4rvs89pb8MP3dtD7Jd9oqWY",
-				"mcp_4QzjDVm2pqwhwVanNwPaRPmfpKFsBgLcGLn6gynkdMLL5ARZ73",
-				"mcp_496PALNxdsG6maAnwofNevVJs4kzmoeg3ATQY4KorNbxSis4TP"
+				"0x1EBEB508001C6F8FC1F87114DAE750D340EB402F",
+				"0x2E308F70360D93307AF7EF8360B6AB5C521855BF",
+				"0x3EA5BB9580A34DD866B2C831A3A6C277392BC18C",
+				"0x9CABCF9D976EFACF73D8D03ABDF1C04E9911F00A",
+				"0x31BAD08FE6B8E595763970F7D4CC219DE447C98C",
+				"0x88F76825F13A98D0BBB32B2AC70AAADD2ECE4B67",
+				"0x299F85C02DB107FF870E7085FE4FDFEEAB23D745",
+				"0x389E1CCDE77191F42FD935A29EFF787B76BD6C0E",
+				"0x424CEF3F560CD5ECF8EBB5BEE2D85F266452C49C",
+				"0x0485E42D1C146E6A2E5C902A739E8BCB0603C141",
+				"0x713F1D0BA5CD198BE4C539B2EB6C9A450479451D",
+				"0x89146AB369D9F8C3699C2B9B061CDBF312052528",
+				"0x381170D03819F5F1EB41FF6FE5D403470D13DB92",
+				"0x474360B9DA0ADD7E598D6711B0E89BC7A952FC6C"
 			};
 			mcp::witness_param w_param_v0;
 			w_param_v0.witness_count = 14;

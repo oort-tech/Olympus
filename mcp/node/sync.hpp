@@ -70,7 +70,8 @@ namespace mcp
 	class node_sync
 	{
 	public:
-		node_sync(std::shared_ptr<mcp::node_capability> capability_a, mcp::block_store& store_a,
+		node_sync(
+			std::shared_ptr<mcp::node_capability> capability_a, mcp::block_store& store_a,
 			std::shared_ptr<mcp::chain> chain_a, std::shared_ptr<mcp::block_cache> cache_a,
 			std::shared_ptr<mcp::async_task> async_task_a,
 			mcp::fast_steady_clock& steady_clock_a, boost::asio::io_service & io_service_a

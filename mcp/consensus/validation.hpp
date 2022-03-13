@@ -14,8 +14,10 @@ namespace mcp
 	class validation
 	{
 	public:
-		validation(mcp::block_store& store_a, mcp::ledger& ledger_a,
-			mcp::mru_list<mcp::block_hash>& invalid_block_cache_a, std::shared_ptr<mcp::block_cache> cache_a
+		validation(
+			mcp::block_store& store_a, mcp::ledger& ledger_a,
+			mcp::mru_list<mcp::block_hash>& invalid_block_cache_a,
+			std::shared_ptr<mcp::block_cache> cache_a
 		);
 		~validation();
 

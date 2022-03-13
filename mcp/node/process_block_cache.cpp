@@ -129,20 +129,20 @@ void mcp::process_block_cache::latest_account_state_put(mcp::db::db_transaction 
 	auto it(m_latest_account_state_puts.get<1>().find(account_a));
 	if (it != m_latest_account_state_puts.get<1>().end())
 	{
-		m_latest_account_state_puts.get<1>().modify(it, [account_state_a](put_item<mcp::block_hash, std::shared_ptr<mcp::account_state>> & item_a)
+		m_latest_account_state_puts.get<1>().modify(it, [account_state_a](put_item<mcp::account, std::shared_ptr<mcp::account_state>> & item_a)
 		{
 			item_a.value = account_state_a;
 		});
 	}
 	else
 	{
-		auto r = m_latest_account_state_puts.push_back(put_item<mcp::block_hash, std::shared_ptr<mcp::account_state>>(account_a, account_state_a));
+		auto r = m_latest_account_state_puts.push_back(put_item<mcp::account, std::shared_ptr<mcp::account_state>>(account_a, account_state_a));
 		assert_x(r.second);
 		if (m_latest_account_state_puts.size() >= m_max_latest_account_state_puts_size)
 		{
 			while (m_latest_account_state_puts.size() >= m_max_latest_account_state_puts_size / 2)
 			{
-				put_item<mcp::block_hash, std::shared_ptr<account_state>> const & item(m_latest_account_state_puts.front());
+				put_item<mcp::account, std::shared_ptr<account_state>> const & item(m_latest_account_state_puts.front());
 				m_latest_account_state_puts_flushed.insert(std::move(item.key));
 				m_latest_account_state_puts.pop_front();
 			}
@@ -231,7 +231,7 @@ void mcp::process_block_cache::account_put(mcp::db::db_transaction & transaction
 	auto it(m_account_puts.get<1>().find(account_a));
 	if (it != m_account_puts.get<1>().end())
 	{
-		m_account_puts.get<1>().modify(it, [account_info_a](put_item<mcp::block_hash, std::shared_ptr<mcp::account_info>> & item_a)
+		m_account_puts.get<1>().modify(it, [account_info_a](put_item<mcp::account, std::shared_ptr<mcp::account_info>> & item_a)
 		{
 			item_a.value = account_info_a;
 		});
@@ -436,7 +436,7 @@ void mcp::process_block_cache::commit_and_clear_changing()
 
 	//modify account cache
 	m_cache->account_earse(m_account_puts_flushed);
-	for (put_item<mcp::block_hash, std::shared_ptr<mcp::account_info>> const & item : m_account_puts)
+	for (put_item<mcp::account, std::shared_ptr<mcp::account_info>> const & item : m_account_puts)
 		m_cache->account_put(item.key, item.value);
 	m_account_puts.clear();
 	m_account_puts_flushed.clear();

@@ -19,7 +19,6 @@ void error_response(std::function<void(mcp::json const &)> response_a, int const
 void error_response(std::function<void(mcp::json const &)> response_a, int const& error_code, std::string const & message_a);
 void error_response(std::function<void(mcp::json const &)> response_a, std::string const & message_a);
 
-
 class rpc_config
 {
 public:
@@ -374,7 +373,47 @@ enum class rpc_stop_error_code
     ok = 0
 };
 
+enum class rpc_web3_sha3_error_code
+{
+	ok = 0,
+	invalid_params = 1
+};
 
+enum class rpc_eth_error_code
+{
+	ok = 0,
+	invalid_params = 1,
+	invalid_account = 2,
+	locked_account = 3,
+	invalid_password = 4,
+	invalid_signature = 5,
+	invalid_value = 6,
+	invalid_gas = 7,
+	invalid_gas_price = 8,
+	invalid_data = 9,
+	invalid_block_number = 10,
+	invalid_from_account = 11,
+	invalid_to_account = 12,
+	invalid_hash = 13,
+	insufficient_balance = 14,
+	data_size_too_large = 15,
+
+	validate_error = 16,
+	block_error = 17,
+	unknown_error = 18,
+
+	PARSE_ERROR = -32700,
+	INVALID_REQUEST = -32600,
+	METHOD_NOT_FOUND = -32601,
+	INVALID_PARAMS = -32602,
+	INTERNAL_ERROR = -32603,
+	METHOD_NOT_SUPPORTED = -32004,
+	INVALID_INPUT = -32000,
+	TRANSACTION_REJECTED = -32003,
+};
+// added by michael at 3/7
+void error_eth_response(std::function<void(mcp::json const &)> response_a, mcp::rpc_eth_error_code error_code, mcp::json& json_a);
+//
 
 class rpc_error_msg 
 {
@@ -412,6 +451,7 @@ public:
     std::string msg(mcp::rpc_peers_error_code const & err_a);
     std::string msg(mcp::rpc_nodes_error_code const & err_a);
     std::string msg(mcp::rpc_stop_error_code const & err_a);
+	std::string msg(mcp::rpc_web3_sha3_error_code const & err_a);
 };
 
 class rpc_handler : public std::enable_shared_from_this<mcp::rpc_handler>
@@ -462,6 +502,27 @@ public:
 	void debug_storage_range_at();
 
 	void logs();
+
+    // added by michael
+    bool is_eth_rpc(mcp::json &response);
+    void eth_blockNumber();
+    void eth_getTransactionCount();
+    void eth_chainId();
+    void eth_gasPrice();
+    void eth_estimateGas();
+    void eth_getBlockByNumber();
+    void eth_sendRawTransaction();
+    void eth_sendTransaction();
+    void eth_call();
+    void net_version();
+    bool try_get_mc_info(dev::eth::McInfo &mc_info_a, uint64_t &mci);
+    // related to the upgrades
+    void web3_clientVersion();
+    void eth_getCode();
+    void eth_getStorageAt();
+    void eth_getTransactionByHash();
+    void eth_getTransactionReceipt();
+	void eth_getBalance();
 
 	std::string body;
 	mcp::rpc & rpc;

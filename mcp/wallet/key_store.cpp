@@ -36,6 +36,11 @@ mcp::key_content::key_content(bool & error_a, std::string const & json_a)
 					{
 						std::string ciphertext_text = js["ciphertext"];
 						error_a = ciphertext.decode_hex(ciphertext_text);
+						// added by michael at 1/19
+						//if (!error_a) {
+						//	std::string public_key_text = js["public_key"];
+						//	error_a = public_key.decode_hex(public_key_text);
+						//}
 					}
 				}
 			}
@@ -47,9 +52,10 @@ mcp::key_content::key_content(bool & error_a, std::string const & json_a)
 	}
 }
 
-mcp::key_content::key_content(mcp::account const & account_a, mcp::uint128_union const & kdf_salt_a,
+mcp::key_content::key_content(mcp::account const & account, mcp::uint128_union const & kdf_salt_a,
 	mcp::uint128_union const & iv_a, mcp::secret_ciphertext const & ciphertext_a) :
-	account(account_a),
+	account(account),
+	// public_key(pubic_key),
 	kdf_salt(kdf_salt_a),
 	iv(iv_a),
 	ciphertext(ciphertext_a)
@@ -66,6 +72,7 @@ std::string mcp::key_content::to_json() const
 {
 	mcp::json js;
 	js["account"] = account.to_account();
+	// js["public_key"] = public_key.to_string();
 	js["kdf_salt"] = kdf_salt.to_string();
 	js["iv"] = iv.to_string();
 	js["ciphertext"] = ciphertext.to_string();
@@ -115,28 +122,28 @@ mcp::key_store::key_store(bool & error_a, boost::filesystem::path const& _path) 
 }
 
 //keys
-void mcp::key_store::keys_put(mcp::db::db_transaction& transaction, mcp::public_key const& _k, mcp::key_content const& _v)
+void mcp::key_store::keys_put(mcp::db::db_transaction& transaction, mcp::account const& _k, mcp::key_content const& _v)
 {
-	transaction.put(m_keys, mcp::uint256_to_slice(_k), _v.val());
+	transaction.put(m_keys, mcp::account_to_slice(_k), _v.val());
 }
 
-bool mcp::key_store::keys_get(mcp::db::db_transaction& transaction, mcp::public_key const& _k, mcp::key_content& _v)
+bool mcp::key_store::keys_get(mcp::db::db_transaction& transaction, mcp::account const& _k, mcp::key_content& _v)
 {
 	std::string result;
-	bool ret = transaction.get(m_keys, mcp::uint256_to_slice(_k), result);
+	bool ret = transaction.get(m_keys, mcp::account_to_slice(_k), result);
 	if (ret)
 		_v = mcp::key_content(dev::Slice(result));
 	return !ret;
 }
 
-void mcp::key_store::keys_del(mcp::db::db_transaction& transaction, mcp::public_key const & _k)
+void mcp::key_store::keys_del(mcp::db::db_transaction& transaction, mcp::account const & _k)
 {
-	transaction.del(m_keys, mcp::uint256_to_slice(_k));
+	transaction.del(m_keys, mcp::account_to_slice(_k));
 }
 
-bool mcp::key_store::keys_exists(mcp::db::db_transaction& transaction, mcp::public_key const & _k)
+bool mcp::key_store::keys_exists(mcp::db::db_transaction& transaction, mcp::account const & _k)
 {
-	return transaction.exists(m_keys, mcp::uint256_to_slice(_k));;
+	return transaction.exists(m_keys, mcp::account_to_slice(_k));;
 }
 
 mcp::db::forward_iterator mcp::key_store::keys_begin(mcp::db::db_transaction& transaction)
@@ -144,9 +151,9 @@ mcp::db::forward_iterator mcp::key_store::keys_begin(mcp::db::db_transaction& tr
 	return transaction.begin(m_keys);
 }
 
-mcp::db::forward_iterator mcp::key_store::keys_begin(mcp::db::db_transaction& transaction, mcp::public_key const & _k)
+mcp::db::forward_iterator mcp::key_store::keys_begin(mcp::db::db_transaction& transaction, mcp::account const & _k)
 {
-	return transaction.begin(m_keys, mcp::uint256_to_slice(_k));
+	return transaction.begin(m_keys, mcp::account_to_slice(_k));
 }
 
 mcp::db::backward_iterator mcp::key_store::keys_rbegin(mcp::db::db_transaction& transaction)
@@ -154,34 +161,34 @@ mcp::db::backward_iterator mcp::key_store::keys_rbegin(mcp::db::db_transaction& 
 	return transaction.rbegin(m_keys);
 }
 
-mcp::db::backward_iterator mcp::key_store::keys_rbegin(mcp::db::db_transaction& transaction, mcp::public_key const & _k)
+mcp::db::backward_iterator mcp::key_store::keys_rbegin(mcp::db::db_transaction& transaction, mcp::account const & _k)
 {
-	return transaction.rbegin(m_keys, mcp::uint256_to_slice(_k));
+	return transaction.rbegin(m_keys, mcp::account_to_slice(_k));
 }
 
 //work
-void mcp::key_store::work_put(mcp::db::db_transaction& transaction, mcp::public_key const & _k, mcp::value_previous_work const & _v)
+void mcp::key_store::work_put(mcp::db::db_transaction& transaction, mcp::account const & _k, mcp::value_previous_work const & _v)
 {
-	transaction.put(m_work, mcp::uint256_to_slice(_k), _v.val());
+	transaction.put(m_work, mcp::account_to_slice(_k), _v.val());
 }
 
-bool mcp::key_store::work_get(mcp::db::db_transaction& transaction, mcp::public_key const & _k, mcp::value_previous_work & _v)
+bool mcp::key_store::work_get(mcp::db::db_transaction& transaction, mcp::account const & _k, mcp::value_previous_work & _v)
 {
 	std::string result;
-	bool ret = transaction.get(m_work, mcp::uint256_to_slice(_k), result);
+	bool ret = transaction.get(m_work, mcp::account_to_slice(_k), result);
 	if (ret)
 		_v = mcp::value_previous_work(dev::Slice(result));
 	return !ret;
 }
 
-void mcp::key_store::work_del(mcp::db::db_transaction& transaction, mcp::public_key const & _k)
+void mcp::key_store::work_del(mcp::db::db_transaction& transaction, mcp::account const & _k)
 {
-	transaction.del(m_work, mcp::uint256_to_slice(_k));
+	transaction.del(m_work, mcp::account_to_slice(_k));
 }
 
-bool mcp::key_store::work_exists(mcp::db::db_transaction& transaction, mcp::public_key const & _k)
+bool mcp::key_store::work_exists(mcp::db::db_transaction& transaction, mcp::account const & _k)
 {
-	return transaction.exists(m_work, mcp::uint256_to_slice(_k));;
+	return transaction.exists(m_work, mcp::account_to_slice(_k));;
 }
 
 mcp::db::forward_iterator mcp::key_store::work_begin(mcp::db::db_transaction& transaction)
@@ -189,9 +196,9 @@ mcp::db::forward_iterator mcp::key_store::work_begin(mcp::db::db_transaction& tr
 	return transaction.begin(m_work);
 }
 
-mcp::db::forward_iterator mcp::key_store::work_begin(mcp::db::db_transaction& transaction, mcp::public_key const & _k)
+mcp::db::forward_iterator mcp::key_store::work_begin(mcp::db::db_transaction& transaction, mcp::account const & _k)
 {
-	return transaction.begin(m_work, mcp::uint256_to_slice(_k));
+	return transaction.begin(m_work, mcp::account_to_slice(_k));
 }
 
 mcp::db::backward_iterator mcp::key_store::work_rbegin(mcp::db::db_transaction& transaction)
@@ -199,9 +206,9 @@ mcp::db::backward_iterator mcp::key_store::work_rbegin(mcp::db::db_transaction& 
 	return transaction.rbegin(m_work);
 }
 
-mcp::db::backward_iterator mcp::key_store::work_rbegin(mcp::db::db_transaction& transaction, mcp::public_key const & _k)
+mcp::db::backward_iterator mcp::key_store::work_rbegin(mcp::db::db_transaction& transaction, mcp::account const & _k)
 {
-	return transaction.rbegin(m_work, mcp::uint256_to_slice(_k));
+	return transaction.rbegin(m_work, mcp::account_to_slice(_k));
 }
 
 

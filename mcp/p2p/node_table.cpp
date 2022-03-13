@@ -4,7 +4,7 @@ using namespace mcp::p2p;
 
 node_table::node_table(mcp::p2p::peer_store& store_a, mcp::key_pair const & alias_a, node_endpoint const & endpoint_a) :
 	m_store(store_a),
-	my_node_info(alias_a.pub(), endpoint_a),
+	my_node_info(alias_a.pub_comp(), endpoint_a),
 	secret(alias_a.secret()),
 	socket(std::make_unique<bi::udp::socket>(io_service)),
 	my_endpoint(endpoint_a),
@@ -338,8 +338,9 @@ std::unique_ptr<discover_packet> node_table::interpret_packet(bi::udp::endpoint 
 	node_id_cref.copyTo(from_node_id_ref);
 
 	mcp::signature rlp_sig;
-	dev::bytesRef rlp_sig_ref(rlp_sig.bytes.data(), rlp_sig.bytes.size());
-	rlp_sig_cref.copyTo(rlp_sig_ref);
+	// updated by michael at 1/13
+	// dev::bytesRef rlp_sig_ref(rlp_sig.bytes.data(), rlp_sig.bytes.size());
+	rlp_sig_cref.copyTo(rlp_sig.ref());
 
 	hash256 rlp_hash(mcp::blake2b_hash(rlp_cref));
 

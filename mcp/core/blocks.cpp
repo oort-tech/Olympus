@@ -303,8 +303,10 @@ void mcp::block_hashables::hash(blake2b_state & hash_a) const
 
 		mcp::witness_param w_param(mcp::param::witness_param(0));
 		assert_x(w_param.witness_list.size() > 0);
+
+		// commented by michael at 1/19
 		for (mcp::account witness : w_param.witness_list)
-			blake2b_update(&hash_a, witness.bytes.data(), sizeof(witness.bytes));
+		 	blake2b_update(&hash_a, witness.bytes.data(), sizeof(witness.bytes));
 
 		auto big_exec_timestamp = boost::endian::native_to_big(exec_timestamp);
 		blake2b_update(&hash_a, &big_exec_timestamp, sizeof(big_exec_timestamp));
@@ -475,8 +477,7 @@ void mcp::block::serialize_json(mcp::json & json_a) const
 
 	hashables->serialize_json(json_a);
 
-	std::string signature_l;
-	signature.encode_hex(signature_l);
+	std::string signature_l = signature.to_string();
 	json_a["signature"] = signature_l;
 
 	switch (hashables->type)
@@ -527,7 +528,7 @@ bool mcp::block::operator== (mcp::block const & other_a) const
 
 mcp::block_hash mcp::block::root() const
 {
-	return !previous().is_zero() ? previous() : hashables->from;
+	return !previous().is_zero() ? previous() : (const mcp::block_hash) hashables->from;
 }
 
 void mcp::block::set_signature(mcp::signature signature_a)
@@ -535,9 +536,9 @@ void mcp::block::set_signature(mcp::signature signature_a)
 	signature = signature_a;
 }
 
-void mcp::block::set_signature(mcp::raw_key const & prv_a, mcp::public_key const & pub_a)
+void mcp::block::set_signature(mcp::raw_key const & prv_a/*, mcp::public_key const & pub_a*/)
 {
-	signature = mcp::sign_message(prv_a, pub_a, hash());
+	signature = mcp::sign_message(prv_a, hash());
 }
 
 mcp::uint64_union mcp::block::block_work() const
@@ -560,4 +561,29 @@ int64_t mcp::block::baseGasRequired(bool _contractCreation, dev::bytesConstRef _
 	for (auto i : _data)
 		g += i ? _es.txDataNonZeroGas : _es.txDataZeroGas;
 	return g;
+}
+
+
+void mcp::block::serialize_json_eth(std::string & string_a) const
+{
+	mcp::json json;
+	serialize_json_eth(json);
+	string_a = json.dump();
+}
+
+void mcp::block::serialize_json_eth(mcp::json & json_a) const
+{
+	json_a["hash"] = hash().to_string(true);
+	hashables->serialize_json_eth(json_a);
+	json_a["transactions"].push_back(json_a["hash"]);
+}
+
+void mcp::block_hashables::serialize_json_eth(mcp::json & json_a) const
+{
+	json_a["parentHash"] = previous.to_string(true);
+	json_a["gasLimit"] = uint256_to_hex_nofill(mcp::block_max_gas);
+	json_a["gasUsed"] = uint256_to_hex_nofill(gas);
+	json_a["minGasPrice"] = uint256_to_hex_nofill(gas_price);
+	json_a["timestamp"] = uint64_to_hex_nofill(exec_timestamp);
+	json_a["transactions"] = mcp::json::array();
 }
