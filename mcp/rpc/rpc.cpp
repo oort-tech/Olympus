@@ -3303,6 +3303,15 @@ void mcp::rpc_handler::process_request()
 		else if (action == "eth_getBalance") {
 			eth_getBalance();
 		}
+		else if (action == "eth_getBlockByHash") {
+			eth_getBlockByHash();
+		}
+		else if (action == "eth_accounts") {
+			eth_accounts();
+		}
+		else if (action == "eth_sign") {
+			// eth_sign();
+		}
 		//
 		else
 		{
@@ -4348,7 +4357,7 @@ void mcp::rpc_handler::eth_chainId()
 		return;
 	}
 
-	response_l["result"] = uint64_to_hex_nofill((uint64_t)mcp::mcp_network);
+	response_l["result"] = uint64_to_hex_nofill((uint64_t)((int) mcp::mcp_network + 800));
 
 	response(response_l);
 }
@@ -4456,7 +4465,7 @@ void mcp::rpc_handler::eth_estimateGas()
 	}
 
 	dev::bytes data;
-	if (params[0].count("data"))
+	if (params[0].count("data") && !params[0]["data"].is_null())
 	{
 		std::string data_text = params[0]["data"];
 		if (mcp::hex_to_bytes(data_text, data))
@@ -5301,4 +5310,98 @@ void mcp::rpc_handler::eth_getTransactionReceipt()
 	}
 
 	response(response_l);
+}
+
+void mcp::rpc_handler::eth_getBlockByHash()
+{
+	mcp::json response_l;
+	if (!is_eth_rpc(response_l))
+	{
+		return;
+	}
+
+	mcp::json params = request["params"];
+	if (params.size() != 2)
+	{
+		error_eth_response(response, rpc_eth_error_code::invalid_params, response_l);
+		return;
+	}
+
+	mcp::block_hash block_hash;
+	if (block_hash.decode_hex(params[0], true)) {
+		error_eth_response(response, rpc_eth_error_code::invalid_params, response_l);
+		return;
+	}
+
+	mcp::db::db_transaction transaction(m_store.create_transaction());
+	std::shared_ptr<mcp::block_state> state(m_cache->block_state_get(transaction, block_hash));
+	if (state != nullptr)
+	{
+		auto block(m_cache->block_get(transaction, block_hash));
+		mcp::json block_l;
+		if (block != nullptr)
+		{
+			bool is_full = params[1];
+			block->serialize_json_eth(block_l);
+			block_l["number"] = uint64_to_hex_nofill(state->main_chain_index.get());
+		}
+		response_l["result"] = block_l;
+	}
+
+	response(response_l);
+}
+
+void mcp::rpc_handler::eth_accounts()
+{
+	mcp::json response_l;
+	if (!is_eth_rpc(response_l))
+	{
+		return;
+	}
+
+	mcp::json j_accounts = mcp::json::array();
+	std::list<mcp::account> account_list(m_key_manager->list());
+	for (auto account : account_list)
+	{
+		j_accounts.push_back(account.to_account());
+	}
+	response_l["result"] = j_accounts;
+
+	response(response_l);
+}
+
+void mcp::rpc_handler::eth_sign()
+{
+	mcp::json response_l;
+	if (!is_eth_rpc(response_l))
+	{
+		return;
+	}
+
+	mcp::json params = request["params"];
+	if (params.size() != 2) {
+		error_eth_response(response, rpc_eth_error_code::invalid_params, response_l);
+		return;
+	}
+
+	std::string account_text = params[0];
+	mcp::account account;
+	if (account.decode_account(account_text))
+	{
+		error_eth_response(response, rpc_eth_error_code::invalid_account, response_l);
+		return;
+	}
+
+	dev::bytes data;
+	std::string data_text = params[1];
+	if (mcp::hex_to_bytes(data_text, data))
+	{
+		error_eth_response(response, rpc_eth_error_code::invalid_data, response_l);
+		return;
+	}
+	if (data.size() > mcp::max_data_size)
+	{
+		error_eth_response(response, rpc_eth_error_code::invalid_data, response_l);
+		return;
+	}
 }
