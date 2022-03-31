@@ -15,5 +15,4 @@ void test_secp256k1();
 void test_account_decrypt();
 
 void test_signature();
-
 void test_encrypt_decrypt();

@@ -49,11 +49,11 @@ Compile MCP
 * Download source code
   ```
   git clone https://github.com/computecoin-network/mcp.git --recursive
-  mkdir -p build && cd build
+  cd mcp && mkdir -p build && cd build
   ```
 * CMake configuration
   ```
-  cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo
+  cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo ../
   ```
 * Compile
   ```
@@ -152,11 +152,13 @@ Compile MCP
 * Download source code
   ```
   git clone https://github.com/computecoin-network/mcp.git --recursive
-  mkdir -p build && cd build
+  cd mcp && mkdir -p build && cd build
   ```
 * CMake configuration. Using `cmake-gui` to help generating the configuration.
   ```
   cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+  -DBOOST_ROOT=c:\dependence\boost
+  -DBOOST_INCLUDE_DIR=c:\dependence\boost\include\boost-1_66
   -Dsodium_INCLUDE_DIR=c:\dependence\lisodium\include \
   -Dsodium_LIBRARY_RELEASE=c:\dependence\lisodium\x64\Release\v141\static\libsodium.lib \
   -Dsodium_LIBRARY_DEBUG=c:\dependence\rocksdb\rocksDB\build\Debug\rocksdb.lib \
@@ -169,6 +171,6 @@ Compile MCP
   -DZSTD_LIBRARY_RELEASE=c:\dependence\zstd-1.3.7\build\VS2010\bin\x64_Release\libzstd_static.lib \
   -DZLIB_LIB_DEBUG=c:\dependence\zlib-1.2.11\contrib\vstudio\vc14\x64\ZlibStatDebug\zlibstat.lib \
   -DZLIB_LIB_RELEASE=c:\dependence\zlib-1.2.11\contrib\vstudio\vc14\x64\ZlibStatRelease\zlibstat.lib \
-  /data/mcp/src/mcp
+  -G "Visual Studio 14 Win64" ../
   ```
  * Compile the Visual Studio project

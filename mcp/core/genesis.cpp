@@ -18,8 +18,8 @@ std::string const test_genesis_data = R"%%%({
 })%%%";
 
 std::string const beta_genesis_data = R"%%%({
-    "from":"0x6e5d834741ce6f0df3c106b7b602535f2a11b970",
-    "to":"0x6e5d834741ce6f0df3c106b7b602535f2a11b970",
+    "from":"0x2953233ace71ff6419fbed672f4e92a8aaf1f98b",
+    "to":"0x2953233ace71ff6419fbed672f4e92a8aaf1f98b",
     "amount":"2000000000000000000000000000",
     "data":"",
 	"exec_timestamp":"1514764800"
