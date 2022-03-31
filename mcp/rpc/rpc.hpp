@@ -523,6 +523,10 @@ public:
     void eth_getTransactionByHash();
     void eth_getTransactionReceipt();
 	void eth_getBalance();
+	// related to the metamask
+	void eth_getBlockByHash();
+	void eth_accounts();
+	void eth_sign();
 
 	std::string body;
 	mcp::rpc & rpc;
