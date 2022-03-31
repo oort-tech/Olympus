@@ -14,6 +14,9 @@
 
 #include <mcp/p2p/dh_x25519.hpp>
 
+#include <cryptopp/hkdf.h>
+#include <secp256k1.h>
+
 void test_argon2()
 {
 	std::cout << "-------------argon2---------------" << std::endl;
@@ -365,4 +368,97 @@ void test_signature()
 	else {
 		std::cout << signature.to_string() << std::endl;
 	}
+}
+
+int get_encrypt_key(mcp::secret_encry &key, const mcp::public_key &pk1, const mcp::public_key &pk2, const mcp::secret_key &sk)
+{
+	auto* ctx = mcp::encry::get_secp256k1_ctx();
+
+	std::array<byte, 65> serializedPubkey;
+	serializedPubkey[0] = 0x04;
+	pk2.ref().copyTo(dev::bytesRef(serializedPubkey.data() + 1, 64));
+
+	secp256k1_pubkey rawPubKey;
+	if (!secp256k1_ec_pubkey_parse(ctx, &rawPubKey, serializedPubkey.data(), serializedPubkey.size())) {
+		return 1;
+	}
+	if (!secp256k1_ec_pubkey_tweak_mul(ctx, &rawPubKey, sk.bytes.data())) {
+		return 1;
+	}
+
+	auto serializedPubkeySize = serializedPubkey.size();
+	secp256k1_ec_pubkey_serialize(
+		ctx,
+		serializedPubkey.data(),
+		&serializedPubkeySize,
+		&rawPubKey,
+		SECP256K1_EC_UNCOMPRESSED
+	);
+
+	if (serializedPubkeySize != serializedPubkey.size() ||
+		serializedPubkey[0] != 0x04
+		) {
+		return 1;
+	}
+
+	mcp::public_key pk_m;
+	dev::bytesRef(&serializedPubkey[1], pk_m.size).copyTo(pk_m.ref());
+
+	dev::bytes buf;
+	buf.resize(pk1.bytes.size() + pk_m.bytes.size());
+	pk1.ref().copyTo(dev::bytesRef(buf.data(), pk1.bytes.size()));
+	pk_m.ref().copyTo(dev::bytesRef(buf.data() + pk1.bytes.size(), pk_m.bytes.size()));
+
+	CryptoPP::HKDF<CryptoPP::SHA256> hkdf;
+	hkdf.DeriveKey(key.bytes.data(), key.bytes.size(), buf.data(), buf.size(), NULL, 0, NULL, 0);
+
+	return 0;
+}
+
+void encryption(unsigned char *cipher, const unsigned char *msg, unsigned long long msgLen, const unsigned char *iv, const unsigned char *key)
+{
+	CryptoPP::AES::Encryption alg(key, 32);
+	CryptoPP::CTR_Mode_ExternalCipher::Encryption enc(alg, iv);
+	enc.ProcessData(cipher, msg, msgLen);
+}
+
+void decryption(unsigned char *msg, const unsigned char *cipher, unsigned long long cipherLen, const unsigned char *iv, const unsigned char *key)
+{
+	CryptoPP::AES::Encryption alg(key, 32);
+	CryptoPP::CTR_Mode_ExternalCipher::Decryption dec(alg, iv);
+	dec.ProcessData(msg, cipher, cipherLen);
+}
+
+void test_encrypt_decrypt()
+{
+	mcp::key_pair senderKey = mcp::key_pair::create();
+	mcp::key_pair receiverKey = mcp::key_pair::create();
+
+	mcp::secret_encry encKey;
+	if (get_encrypt_key(encKey, senderKey.pub(), receiverKey.pub(), senderKey.secret())) {
+		return;
+	}
+
+	mcp::uint128_union iv;
+	iv.decode_hex("A695DDC35ED9F3183A09FED1E6D92083");
+
+	mcp::uint256_union plaintext;
+	plaintext.decode_hex("AF8460A7D28A396C62D6C51620B87789C862ED8783374EEF7B783145F540EB19");
+
+	mcp::uint256_union ciphertext;
+	encryption(ciphertext.bytes.data(), plaintext.bytes.data(), plaintext.bytes.size(), iv.bytes.data(), encKey.bytes.data());
+
+	mcp::secret_encry decKey;
+	if (get_encrypt_key(decKey, senderKey.pub(), senderKey.pub(), receiverKey.secret())) {
+		return;
+	}
+
+	std::cout << "encKey Text:" << encKey.to_string() << std::endl;
+	std::cout << "decKey Text:" << decKey.to_string() << std::endl;
+
+	mcp::uint256_union decrypttext;
+	decryption(decrypttext.bytes.data(), ciphertext.bytes.data(), ciphertext.bytes.size(), iv.bytes.data(), decKey.bytes.data());
+
+	std::cout << "Plain Text:" << plaintext.to_string() << std::endl;
+	std::cout << "Decrypted Text:" << decrypttext.to_string() << std::endl;
 }
