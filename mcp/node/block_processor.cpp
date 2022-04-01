@@ -279,7 +279,7 @@ void mcp::block_processor::mt_process_blocks()
 								{
 									//check timestamp
 									//put it at end for no need to do base validete when block release from late_message_cache
-									if (block->hashables->type != mcp::block_type::light
+									if (block->type() != mcp::block_type::light
 										&& mcp::seconds_since_epoch() < block->hashables->exec_timestamp)
 									{
 										ok = false;
@@ -302,7 +302,7 @@ void mcp::block_processor::mt_process_blocks()
 								case base_validate_result_codes::invalid_signature:
 								{
 									ok = false;
-									err_msg = "Invalid signature, hash:" + block_hash.to_string() + ",from:" + block->hashables->from.to_account() + ",signature:" + block->signature.to_string();
+									err_msg = "Invalid signature, hash:" + block_hash.to_string() + ",from:" + block->from().to_account() + ",signature:" + block->signature.to_string();
 									LOG(m_log.debug) << err_msg;
 
 									break;
@@ -578,7 +578,7 @@ void mcp::block_processor::do_process_one(mcp::timeout_db_transaction & timeout_
 	}
 
 	mcp::db::db_transaction & transaction(timeout_tx.get_transaction());
-	switch (block->hashables->type)
+	switch (block->type())
 	{
 	case mcp::block_type::light:
 	{
@@ -1055,7 +1055,7 @@ void mcp::block_processor::clear_unlinks(mcp::timeout_db_transaction & timeout_t
 				if (!m_local_cache->successor_get(timeout_tx.get_transaction(), root, successor_hash))
 				{
 					if (successor_hash == it->hash)
-						rebuilds.insert(std::make_pair(clear_block->block->hashables->from, clear_block->block->root()));
+						rebuilds.insert(std::make_pair(clear_block->block->from(), clear_block->block->root()));
 				}
 				//LOG(m_log.debug) << "delete block,hash:" << it->hash.to_string() << " ,time:" << clear_block->block->hashables->exec_timestamp;
 				clear_unlinks_by_head(timeout_tx, clear_block);
@@ -1207,8 +1207,7 @@ void mcp::block_processor::process_unlink_clear()
 		{
 			auto block = m_cache->unlink_block_get(transaction, head.hash);
 			if (block 
-				&& (block->block->hashables->gas_price <= m_clear_min_gas_price 
-					|| block->block->hashables->light_version == 0)) //legacy light block
+				&& block->block->hashables->gas_price <= m_clear_min_gas_price) //legacy light block
 			{
 				is_clear = true;
 				{

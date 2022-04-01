@@ -129,12 +129,12 @@ void mcp::node_sync::joint_request_handler(p2p::node_id const &id, mcp::joint_re
 		}
 		else
 		{
-			//if block data cleaned, not send this block
-			if (!block->hashables->data_hash.is_zero() && block->data.empty())
-			{
-				LOG(log_sync.info) << "joint_request_handler data_hash exist, data empty, hash:" << block->hashables->data_hash.to_string();
-				return;
-			}
+			////if block data cleaned, not send this block
+			//if (!block->hashables->data_hash.is_zero() && block->data.empty())
+			//{
+			//	LOG(log_sync.info) << "joint_request_handler data_hash exist, data empty, hash:" << block->hashables->data_hash.to_string();
+			//	return;
+			//}
 			mcp::joint_message joint(block);
 			joint.request_id = request.request_id;
 			send_block(id, joint);
@@ -434,7 +434,7 @@ void mcp::node_sync::prepare_catchup_chain(mcp::catchup_request_message const& r
 			assert_x(mc_exists);
 
 			std::shared_ptr<mcp::block> mc_block = m_cache->block_get(transaction, mc_hash);
-			mcp::account acct = mc_block->hashables->from;
+			mcp::account acct = mc_block->from();
 
 			//find first honest witness
 			if (arr_found_witnesses.size() < distinct_witness_size_remote)
@@ -862,7 +862,7 @@ mcp::sync_result mcp::node_sync::process_catchup_chain(mcp::catchup_response_mes
 					return  process_catchup_result;
 				}
 
-				mcp::account acct = block->hashables->from;
+				mcp::account acct = block->from();
 				if (arr_witnesses.count(acct))
 				{
 					if (std::find(arr_found_witnesses.begin(), arr_found_witnesses.end(), acct) == arr_found_witnesses.end())
@@ -900,7 +900,7 @@ mcp::sync_result mcp::node_sync::process_catchup_chain(mcp::catchup_response_mes
 			for (auto joint : arr_witness_joints)
 			{
 				std::shared_ptr<mcp::block> block = joint.block;
-				if (!validate_message(block->hashables->from, block->hash(), block->signature))
+				if (!validate_message(block->from(), block->hash(), block->signature))
 				{
 					LOG(log_sync.info) << "process_catchup_chain_error:invalid signature";
 					process_catchup_result = mcp::sync_result::catchup_chain_summary_check_fail;
@@ -1380,13 +1380,13 @@ void mcp::node_sync::process_hash_tree(p2p::node_id const &id, mcp::hash_tree_re
 				break;
 			}
 
-			// Verify if a block with empty data is valid
-			if (s_item.block->hashables->data_hash != 0 && s_item.block->data.empty() &&
-				(s_item.status != mcp::block_status::fork && s_item.status != mcp::block_status::invalid))
-			{
-				error = true;
-				break;
-			}
+			//// Verify if a block with empty data is valid
+			//if (s_item.block->hashables->data_hash != 0 && s_item.block->data.empty() &&
+			//	(s_item.status != mcp::block_status::fork && s_item.status != mcp::block_status::invalid))
+			//{
+			//	error = true;
+			//	break;
+			//}
 
 			// Verify if all the previous, parents ,links, skiplist of the block exists.
 			// If true, add summary contents to hash_tree_summary table

@@ -38,6 +38,8 @@ mcp::compose_result mcp::composer::compose_joint(mcp::db::db_transaction & trans
 
     mcp::signature sig(mcp::sign_message(prv_a, block->hash()));
 
+	//LOG(m_log.info) << "compose_joint hash:" << block->hash().to_string() << " ,sinature:" << sig.to_string();
+
     return sign_and_compose_joint( block, sig, generate_work_a);
 }
 
@@ -53,8 +55,6 @@ mcp::compose_result_codes mcp::composer::compose_block(mcp::db::db_transaction &
 
     //previous
 	mcp::block_hash previous = previous_a ? *previous_a : get_latest_block(transaction_a, type_a, from_a);
-
-	mcp::uint64_union work_l(0);
 
     //pick parents and last summary
     std::vector<mcp::block_hash> parents;
@@ -88,7 +88,7 @@ mcp::compose_result_codes mcp::composer::compose_block(mcp::db::db_transaction &
 
 	//sichaoy: real gasprice and gas
     block_a = std::make_shared<mcp::block>(type_a, from_a, to_a, amount_a, previous, parents, links, 
-		last_summary, last_summary_block, last_stable_block, gas_a, gas_price_a, mcp::block::data_hash(data_a), data_a, exec_timestamp, work_l);
+		last_summary, last_summary_block, last_stable_block, gas_a, gas_price_a, data_a, exec_timestamp);
     return mcp::compose_result_codes::ok;
 }
 
@@ -456,8 +456,7 @@ std::shared_ptr<std::list<mcp::block_hash>> mcp::composer::random_get_links(mcp:
 						+ " ,hash: " + cur_hash.to_string());
 					account_blocks++;
 
-					if (cur_block->block->hashables->gas_price >= m_gas_price
-						&& cur_block->block->hashables->light_version > 0) //not link legacy light block
+					if (cur_block->block->hashables->gas_price >= m_gas_price)
 					{
 						last_unlink_hash = cur_hash;
 

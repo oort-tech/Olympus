@@ -39,6 +39,7 @@ namespace mcp
 		void pick_parents_and_last_summary_and_wl_block(mcp::error_message & err_msg, mcp::db::db_transaction &  transaction_a, mcp::block_type const & block_type_a, mcp::block_hash const & previous_a, mcp::account const & from_a, std::vector<mcp::block_hash>& parents, std::shared_ptr<std::list<mcp::block_hash>> links, mcp::block_hash & last_summary_block, mcp::summary_hash & last_summary, mcp::block_hash & last_stable_block, uint256_t const& gas_a, uint256_t const& gas_price_a);
 		
 		mcp::block_hash get_latest_block(mcp::db::db_transaction &  transaction_a, mcp::block_type const & type_a, mcp::account const & account_a);
+		uint256_t get_gas_price() { return m_gas_price; }
 		std::shared_ptr<std::list<mcp::block_hash>> random_get_links(mcp::db::db_transaction &  transaction_a, size_t const & limit_a, std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a = nullptr);
 
 		mcp::ledger & m_ledger;

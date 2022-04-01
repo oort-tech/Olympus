@@ -965,7 +965,7 @@ mcp::signature_struct::signature_struct(uint64_t value0) {
 }
 
 bool mcp::signature_struct::is_valid() const noexcept {
-	static const uint256_union s_max("0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141");
+	static const uint256_union s_max("fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141");
 	static const uint256_union s_zero(0);
 	return (v <= 1 && r > s_zero && s > s_zero && r < s_max && s < s_max);
 }

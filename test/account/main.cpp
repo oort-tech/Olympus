@@ -106,7 +106,7 @@ int main(int argc, char * const * argv)
 	//test_aes();
 	// test_x25519();
 
-	test_create_account();
+	//test_create_account();
 	// test_account_encoding();
 	// test_secp256k1();
 
@@ -116,9 +116,18 @@ int main(int argc, char * const * argv)
 
 	//test_work();
 
-	// test_account_decrypt();
+	 //test_account_decrypt();
 
 	// test_signature();
+	//test_blake2();
+	//test_sha3();
+
+	mcp::uint256_union s_max("fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141");
+	std::cout << s_max.to_string() << std::endl;
+	std::cout << s_max.number() << std::endl;
+
+	h256 s_max1{ "0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141" };
+	std::cout << s_max1.hex() << std::endl;
 
 	std::cout << std::endl;
 	std::cout << "Press \"Enter\" to exit...";

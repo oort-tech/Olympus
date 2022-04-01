@@ -919,7 +919,7 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 		}
 
 		std::shared_ptr<mcp::rpc> rpc = get_rpc(
-			chain_store, chain, cache, key_manager, wallet, host, background,
+			chain_store, chain, cache, key_manager, wallet, host, background, composer,
 			io_service, config.rpc
 		);
 		if (config.rpc.rpc_enable)
@@ -1029,6 +1029,7 @@ void mcp_daemon::ongoing_report(
 	size_t block_count(store.block_count(transaction));
 	size_t stable_count(store.stable_block_count(transaction));
 	size_t light_unstable_count(store.light_unstable_count(transaction));
+	size_t light_count(store.light_count(transaction));
 	size_t dag_free_count(store.dag_free_count(transaction));
 	size_t unlink_count(store.unlink_info_count(transaction));
 	size_t unlink_block_count(store.unlink_block_count(transaction));
@@ -1040,6 +1041,7 @@ void mcp_daemon::ongoing_report(
 	LOG(log.info) << "block:" << block_count
 		<< ", unstable block:" << block_count - stable_count
 		<< "(light:" << light_unstable_count << ")"
+		<< "light_count:" << light_count
 		<< ", stable block:" << stable_count
 		<< ", unlink block:" << unlink_block_count
 		<< ", unlink:" << unlink_count

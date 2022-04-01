@@ -102,7 +102,10 @@ mcp::send_result mcp::wallet::handle_compose_result(mcp::compose_result const & 
 	{
 		mcp::validate_status ret = fut.get();
 		if (!ret.ok)
+		{
+			LOG(m_log.debug) << "invalid compose result codes:" << ret.msg;
 			return mcp::send_result(mcp::send_result_codes::validate_error, nullptr, ret.msg);
+		}
 	}
 
 	assert_x(joint);

@@ -95,26 +95,51 @@ void test_account_encoding()
 
 void test_account_decrypt()
 {
+	std::cout << "-------------test_account_decrypt---------------" << std::endl;
+	//mcp::uint128_union kdf_salt;
+	//kdf_salt.decode_hex("F36CA7C846C345960B055C6F10DFD7FD");
+
+	//mcp::uint128_union iv;
+	//iv.decode_hex("7B4F5CCB4A201302C1CE8CA7979EDA54");
+
+	//mcp::raw_key prv;
+
+	//std::string password_a = "1234qwer";
+
+	//mcp::kdf m_kdf;
+	//mcp::raw_key derive_pwd;
+	//m_kdf.phs(derive_pwd, password_a, kdf_salt);
+
+	//mcp::uint256_union ciphertext;
+	//ciphertext.decode_hex("09FD6AEDF849A66AB58C15B12F5F9B901A482521AEB0BD160AF4181D9F14B004");
+	//prv.decrypt(ciphertext, derive_pwd, iv);
+
+	//mcp::public_key compare;
+	//mcp::encry::generate_public_from_secret(prv.data, compare);
+
+	//std::cout << compare.to_string() << std::endl;
+
 	mcp::uint128_union kdf_salt;
-	kdf_salt.decode_hex("F36CA7C846C345960B055C6F10DFD7FD");
+	kdf_salt.decode_hex("3644065b04d80835dc44663c23bd6fc6187a30d433b11e76a005d713185ba9a7");
 
 	mcp::uint128_union iv;
-	iv.decode_hex("7B4F5CCB4A201302C1CE8CA7979EDA54");
+	iv.decode_hex("48fe4b97589fef146ed8729adf5cc863");
 
 	mcp::raw_key prv;
 
-	std::string password_a = "1234qwer";
+	std::string password_a = "123456";
 
 	mcp::kdf m_kdf;
 	mcp::raw_key derive_pwd;
 	m_kdf.phs(derive_pwd, password_a, kdf_salt);
 
 	mcp::uint256_union ciphertext;
-	ciphertext.decode_hex("09FD6AEDF849A66AB58C15B12F5F9B901A482521AEB0BD160AF4181D9F14B004");
+	ciphertext.decode_hex("923af2e03d00276e214e7fd0260a382bfb2861c55303e6cbc7e345c6f290d9c4");
 	prv.decrypt(ciphertext, derive_pwd, iv);
 
 	mcp::public_key compare;
 	mcp::encry::generate_public_from_secret(prv.data, compare);
 
 	std::cout << compare.to_string() << std::endl;
+	std::cout << "account:" << mcp::account(compare).to_account() << std::endl;
 }

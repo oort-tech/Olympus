@@ -8,7 +8,6 @@ mcp::block_store::block_store(bool & error_a, boost::filesystem::path const & pa
 	account_state(0),
 	latest_account_state(0),
 	blocks(0),
-	blocks_data(0),
 	block_state(0),
 	contract_main(0),
 	contract_aux(0),
@@ -51,25 +50,24 @@ mcp::block_store::block_store(bool & error_a, boost::filesystem::path const & pa
 	account_state = m_db->set_column_family(default_col, "003");
 	latest_account_state = m_db->set_column_family(default_col, "004");
 	blocks = m_db->set_column_family(default_col, "005");
-	blocks_data = m_db->set_column_family(default_col, "006");
-	block_state = m_db->set_column_family(default_col, "007");
-	successor = m_db->set_column_family(default_col, "008");
-	main_chain = m_db->set_column_family(default_col, "009");
-	skiplist = m_db->set_column_family(default_col, "010");
-	block_summary = m_db->set_column_family(default_col, "011");
-	summary_block = m_db->set_column_family(default_col, "012");
-	stable_block = m_db->set_column_family(default_col, "013");
-	contract_main = m_db->set_column_family(default_col, "014");
-	prop = m_db->set_column_family(default_col, "015");
-	catchup_chain_summaries = m_db->set_column_family(default_col, "016");
-	catchup_chain_block_summary = m_db->set_column_family(default_col, "017");
-	catchup_chain_summary_block = m_db->set_column_family(default_col, "018");
-	hash_tree_summary = m_db->set_column_family(default_col, "019");
-	unlink_block = m_db->set_column_family(default_col, "020");
-	traces = m_db->set_column_family(default_col, "021");
-	next_unlink = m_db->set_column_family(default_col, "022");
-	next_unlink_index = m_db->set_column_family(default_col, "023");
-	contract_aux = m_db->set_column_family(default_col, "024");
+	block_state = m_db->set_column_family(default_col, "006");
+	successor = m_db->set_column_family(default_col, "007");
+	main_chain = m_db->set_column_family(default_col, "008");
+	skiplist = m_db->set_column_family(default_col, "009");
+	block_summary = m_db->set_column_family(default_col, "010");
+	summary_block = m_db->set_column_family(default_col, "011");
+	stable_block = m_db->set_column_family(default_col, "012");
+	contract_main = m_db->set_column_family(default_col, "013");
+	prop = m_db->set_column_family(default_col, "014");
+	catchup_chain_summaries = m_db->set_column_family(default_col, "015");
+	catchup_chain_block_summary = m_db->set_column_family(default_col, "016");
+	catchup_chain_summary_block = m_db->set_column_family(default_col, "017");
+	hash_tree_summary = m_db->set_column_family(default_col, "018");
+	unlink_block = m_db->set_column_family(default_col, "019");
+	traces = m_db->set_column_family(default_col, "020");
+	next_unlink = m_db->set_column_family(default_col, "021");
+	next_unlink_index = m_db->set_column_family(default_col, "022");
+	contract_aux = m_db->set_column_family(default_col, "023");
 
 	//use iterator
 	dag_free = m_db->set_column_family(default_col, "101");
@@ -167,25 +165,8 @@ std::shared_ptr<mcp::block> mcp::block_store::block_get(mcp::db::db_transaction 
 		result = std::make_shared<mcp::block>(error, r, false);
 		assert_x_msg(!error, "hash:" + hash_a.to_string() + " ,data:" + value);
 		assert_x_msg(result != nullptr, "hash:" + hash_a.to_string() + " ,data:" + value);
-
-		bool data_exists(!block_data_get(transaction_a, result->hashables->data_hash, result->data));
-		if (data_exists)
-			assert_x(result->hashables->data_hash == mcp::block::data_hash(result->data));
 	}
 	return result;
-}
-
-bool mcp::block_store::block_data_get(mcp::db::db_transaction & transaction_a, mcp::data_hash const & hash_a, dev::bytes & data_a)
-{
-	std::string value;
-	bool exists(transaction_a.get(blocks_data, mcp::uint256_to_slice(hash_a), value));
-	if (exists)
-	{
-		dev::RLP r(value);
-		assert_x(r.itemCount() == 1)
-		data_a = r[0].toBytes();
-	}
-	return !exists;
 }
 
 bool mcp::block_store::block_exists(mcp::db::db_transaction & transaction_a, mcp::block_hash const & hash_a)
@@ -201,36 +182,13 @@ void mcp::block_store::block_put(mcp::db::db_transaction & transaction_a, mcp::b
 	dev::bytes b_value;
 	{
 		dev::RLPStream s;
-		block_a.stream_RLP_nodata(s);
+		block_a.stream_RLP(s);
 		s.swapOut(b_value);
 	}
 
 	dev::Slice s_value((char *)b_value.data(), b_value.size());
 	transaction_a.put(blocks, mcp::uint256_to_slice(hash_a), s_value);
 	transaction_a.count_add("block", 1);
-
-	// block data
-	if (!block_a.data.empty())
-		block_data_put(transaction_a, block_a.hashables->data_hash, block_a.data);
-}
-
-void mcp::block_store::block_data_put(mcp::db::db_transaction & transaction_a, mcp::data_hash const & hash_a, dev::bytes const & data_a)
-{
-	dev::bytes b_value;
-	{
-		dev::RLPStream s;
-		s.appendList(1);
-		s << data_a;
-		s.swapOut(b_value);
-	}
-
-	dev::Slice s_value((char *)b_value.data(), b_value.size());
-	transaction_a.put(blocks_data, mcp::uint256_to_slice(hash_a), s_value);
-}
-
-void mcp::block_store::block_data_del(mcp::db::db_transaction & transaction_a, mcp::data_hash const & hash_a)
-{
-	transaction_a.del(blocks_data, mcp::uint256_to_slice(hash_a));
 }
 
 ///////////
@@ -527,6 +485,16 @@ void mcp::block_store::light_unstable_count_add(mcp::db::db_transaction & transa
 void mcp::block_store::light_unstable_count_reduce(mcp::db::db_transaction & transaction_a)
 {
 	transaction_a.count_reduce("light_unstable", 1);
+}
+
+size_t mcp::block_store::light_count(mcp::db::db_transaction & transaction_a)
+{
+	return transaction_a.count_get("light");
+}
+
+void mcp::block_store::light_count_add(mcp::db::db_transaction & transaction_a)
+{
+	transaction_a.count_add("light", 1);
 }
 
 

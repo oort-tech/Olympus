@@ -19,10 +19,7 @@ namespace mcp
 
 		bool block_exists(mcp::db::db_transaction &, mcp::block_hash const &);
 		std::shared_ptr<mcp::block> block_get(mcp::db::db_transaction &, mcp::block_hash const &);
-		bool block_data_get(mcp::db::db_transaction & , mcp::data_hash const &, dev::bytes &);
 		void block_put(mcp::db::db_transaction &, mcp::block_hash const &, mcp::block const &);
-		void block_data_put(mcp::db::db_transaction &, mcp::data_hash const &, dev::bytes const &);
-		void block_data_del(mcp::db::db_transaction &, mcp::data_hash const &);
 		mcp::db::forward_iterator block_begin(mcp::db::db_transaction & transaction_a, std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a = nullptr);
 
 		size_t block_count(mcp::db::db_transaction &);
@@ -72,6 +69,8 @@ namespace mcp
 		size_t light_unstable_count(mcp::db::db_transaction & transaction_a);
 		void light_unstable_count_add(mcp::db::db_transaction & transaction_a);
 		void light_unstable_count_reduce(mcp::db::db_transaction & transaction_a);
+		size_t light_count(mcp::db::db_transaction & transaction_a);
+		void light_count_add(mcp::db::db_transaction & transaction_a);
 
 		//sync
 		bool catchup_chain_summaries_get(mcp::db::db_transaction & transaction_a, uint64_t const &, mcp::summary_hash &);
@@ -181,8 +180,6 @@ namespace mcp
 		int latest_account_state;
 		// block_hash -> block
 		int blocks;
-		// data_hash -> block_data;
-		int blocks_data;
 
 		//block hash -> block state
 		int block_state;

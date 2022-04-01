@@ -48,13 +48,13 @@ void mcp::Executive::initialize()
     bigint gasCost = (bigint)m_s.block->hashables->gas * m_s.block->hashables->gas_price;
     bigint totalCost = (bigint)m_s.block->hashables->amount + gasCost;
 
-    if (m_s.balance(m_s.block->hashables->from) < totalCost)
+    if (m_s.balance(m_s.block->from()) < totalCost)
     {
 		BOOST_LOG(m_log.info) << "Not enough cash: Require > " << totalCost << " = " << m_s.block->hashables->gas
 			<< " * " << m_s.block->hashables->gas_price << " + " << m_s.block->hashables->amount << " Got"
-			<< m_s.balance(m_s.block->hashables->from) << " for sender: " << m_s.block->hashables->from.to_account();
+			<< m_s.balance(m_s.block->from()) << " for sender: " << m_s.block->from().to_account();
 		m_excepted = TransactionException::NotEnoughCash;
-		BOOST_THROW_EXCEPTION(NotEnoughCash() << RequirementError(totalCost, (bigint)m_s.balance(m_s.block->hashables->from)) << errinfo_comment(m_s.block->hashables->from.to_account()));
+		BOOST_THROW_EXCEPTION(NotEnoughCash() << RequirementError(totalCost, (bigint)m_s.balance(m_s.block->from())) << errinfo_comment(m_s.block->from().to_account()));
 	}
     m_gasCost = (u256)gasCost;  // Convert back to 256-bit, safe now.
 }
@@ -66,18 +66,18 @@ bool mcp::Executive::execute()
     //// Pay...
     //BOOST_LOG(m_log.info) << "Paying " << m_gasCost << " from sender for gas ("
     //                     << m_s.block->hashables->gas << " gas at " << m_s.block->hashables->gas_price << ")";
-    m_s.subBalance(m_s.block->hashables->from, m_gasCost);
+    m_s.subBalance(m_s.block->from(), m_gasCost);
 
     assert_x(m_s.block->hashables->gas >= (u256)m_baseGasRequired);
     if (m_s.block->isCreation())
     {
-        return create(m_s.block->hashables->from, m_s.block->hashables->amount, m_s.block->hashables->gas_price,
-            m_s.block->hashables->gas - (u256)m_baseGasRequired, dev::bytesConstRef(&m_s.block->data), m_s.block->hashables->from);
+        return create(m_s.block->from(), m_s.block->hashables->amount, m_s.block->hashables->gas_price,
+            m_s.block->hashables->gas - (u256)m_baseGasRequired, dev::bytesConstRef(&m_s.block->hashables->data), m_s.block->from());
     }
     else
     {
-        return call(m_s.block->hashables->to, m_s.block->hashables->from, m_s.block->hashables->amount, m_s.block->hashables->gas_price,
-            m_s.block->hashables->gas - (u256)m_baseGasRequired, dev::bytesConstRef(&m_s.block->data));
+        return call(m_s.block->hashables->to, m_s.block->from(), m_s.block->hashables->amount, m_s.block->hashables->gas_price,
+            m_s.block->hashables->gas - (u256)m_baseGasRequired, dev::bytesConstRef(&m_s.block->hashables->data));
     }
 }
 
@@ -447,7 +447,7 @@ bool mcp::Executive::finalize()
 
     if (m_s.block)
     {
-        m_s.addBalance(m_s.block->hashables->from, m_gas * m_s.block->hashables->gas_price);
+        m_s.addBalance(m_s.block->from(), m_gas * m_s.block->hashables->gas_price);
 
         uint256_t feesEarned = (m_s.block->hashables->gas - m_gas) * m_s.block->hashables->gas_price;
         // m_s.addBalance(m_envInfo.author(), feesEarned); //sichaoy: these fees should goes to witness

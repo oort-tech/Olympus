@@ -29,7 +29,7 @@ mcp::base_validate_result mcp::validation::base_validate(mcp::db::db_transaction
 	assert_x(block_hash != mcp::genesis::block_hash);
 
 	mcp::base_validate_result result;
-	mcp::block_type const & block_type(block->hashables->type);
+	mcp::block_type const & block_type(block->type());
 
 	//check if block is in invalid block cache;
 	if (!item_a->is_local() && m_invalid_block_cache.contains(block_hash))
@@ -53,7 +53,7 @@ mcp::base_validate_result mcp::validation::base_validate(mcp::db::db_transaction
 		if (!block->hashables->to.is_zero()
 			|| !block->hashables->amount.is_zero()
 			|| !block->hashables->gas.is_zero()
-			|| !block->data.empty())
+			|| !block->hashables->data.empty())
 		{
 			result.code = mcp::base_validate_result_codes::invalid_block;
 			result.err_msg = "invalid dag block";
@@ -110,31 +110,6 @@ mcp::base_validate_result mcp::validation::base_validate(mcp::db::db_transaction
 	}
 	case mcp::block_type::light:
 	{
-		//for legacy light block
-		if (block->hashables->light_version == 0)
-		{
-			if (mcp::mcp_network == mcp::mcp_networks::mcp_live_network)
-			{
-				if (block->hashables->gas_price != mcp::uint256_t(20000 * 1000000000ULL))
-				{
-					if (block_hash.to_string() == "8DF9968DDD10CE042AD75A3CD04DFC55BD74DA6846E3930EB09A2FD37A822187"
-						&& block->hashables->gas_price == mcp::uint256_t(24118 * 1000000000ULL))
-					{
-					}
-					else if (block_hash.to_string() == "F6C8E4E81EBBA91684D1D897CCD11E994E83D7636AEA07179069AE18219A738D"
-						&& block->hashables->gas_price == mcp::uint256_t(40135 * 1000000000ULL))
-					{
-					}
-					else
-					{
-						result.code = mcp::base_validate_result_codes::invalid_block;
-						result.err_msg = "invalid leagcy light block";
-						return result;
-					}
-				}
-			}
-		}
-
 		bool exists(false);
 		exists = cache_a->unlink_block_exists(transaction_a, block_hash);
 		if (!exists)
@@ -155,29 +130,7 @@ mcp::base_validate_result mcp::validation::base_validate(mcp::db::db_transaction
 			return result;
 		}
 
-		//data
-		//if (!block->data.empty())
-		//{
-		if (mcp::block::data_hash(block->data) != block->hashables->data_hash)
-		{
-			result.code = mcp::base_validate_result_codes::invalid_block;
-			result.err_msg = "invalid block data hash";
-			return result;
-		}
-		//}
-		//else
-		//{
-		//	if (!item_a->is_sync()
-		//		&& item_a->joint.summary_hash.is_zero()
-		//		&& !block->hashables->data_hash.is_zero())
-		//	{
-		//		result.code = mcp::base_validate_result_codes::invalid_block;
-		//		result.err_msg = "block data missing";
-		//		return result;
-		//	}
-		//}
-
-		if (block->data.size() > mcp::max_data_size)
+		if (block->hashables->data.size() > mcp::max_data_size)
 		{
 			result.code = mcp::base_validate_result_codes::invalid_block;
 			result.err_msg = "data size too large";
@@ -221,7 +174,7 @@ mcp::base_validate_result mcp::validation::base_validate(mcp::db::db_transaction
 	default:
 	{
 		result.code = mcp::base_validate_result_codes::invalid_block;
-		result.err_msg = boost::str(boost::format("invalid block type %1%") % (uint8_t)block->hashables->type);
+		result.err_msg = boost::str(boost::format("invalid block type %1%") % (uint8_t)block->type());
 		return result;
 		break;
 	}
@@ -236,8 +189,8 @@ mcp::base_validate_result mcp::validation::base_validate(mcp::db::db_transaction
 	//}
 
 	//validate signature
-	bool sig_error = !validate_message(block->hashables->from, block_hash, block->signature);
-	if (sig_error)
+	bool sig_error = !validate_message(block->from(), block_hash, block->signature);
+	if (sig_error || (block_type != mcp::block_type::dag && block->chain_id() != mcp::mcp_network) )
 	{
 		result.code = mcp::base_validate_result_codes::invalid_signature;
 		return result;
@@ -253,7 +206,7 @@ mcp::validate_result mcp::validation::dag_validate(mcp::db::db_transaction & tra
 
 	std::shared_ptr<mcp::block> block(message.block);
 	auto block_hash(block->hash());
-	mcp::block_type const & block_type(block->hashables->type);
+	mcp::block_type const & block_type(block->type());
 	assert_x(block_type == mcp::block_type::dag);
 
 	auto exists(cache_a->block_exists(transaction_a, block_hash));
@@ -282,10 +235,10 @@ mcp::validate_result mcp::validation::dag_validate(mcp::db::db_transaction & tra
 		else
 		{
 			//check previous from
-			if (previous_block->hashables->from != block->hashables->from)
+			if (previous_block->from() != block->from())
 			{
 				result.code = mcp::validate_result_codes::invalid_block;
-				result.err_msg = boost::str(boost::format("block from %1% not equal to previous from %2%") % block->hashables->from.to_account() % previous_block->hashables->from.to_account());
+				result.err_msg = boost::str(boost::format("block from %1% not equal to previous from %2%") % block->from().to_account() % previous_block->from().to_account());
 				return result;
 			}
 
@@ -317,7 +270,7 @@ mcp::validate_result mcp::validation::dag_validate(mcp::db::db_transaction & tra
 			continue;
 		}
 
-		if (pblock->hashables->type != mcp::block_type::dag && pblock->hashables->type != mcp::block_type::genesis)
+		if (pblock->type() != mcp::block_type::dag && pblock->type() != mcp::block_type::genesis)
 		{
 			result.code = mcp::validate_result_codes::invalid_block;
 			result.err_msg = boost::str(boost::format("parent %1% is not dag block") % pblock_hash.to_string());
@@ -380,10 +333,10 @@ mcp::validate_result mcp::validation::dag_validate(mcp::db::db_transaction & tra
 	uint64_t const & last_summary_mci(*last_summary_block_state->main_chain_index);
 
 	//check from account is witness
-	if (!mcp::param::is_witness(last_summary_mci, block->hashables->from))
+	if (!mcp::param::is_witness(last_summary_mci, block->from()))
 	{
 		result.code = mcp::validate_result_codes::invalid_block;
-		result.err_msg = boost::str(boost::format("account %1% is not witness") % block->hashables->from.to_account());
+		result.err_msg = boost::str(boost::format("account %1% is not witness") % block->from().to_account());
 		return result;
 	}
 
@@ -437,7 +390,7 @@ mcp::validate_result mcp::validation::dag_validate(mcp::db::db_transaction & tra
 	mcp::witness_param const & w_param(mcp::param::witness_param(last_summary_mci));
 
 	//check majority different of witnesses
-	bool is_diff_majority(m_ledger.check_majority_witness(transaction_a, cache_a, best_pblock_hash, block->hashables->from, w_param));
+	bool is_diff_majority(m_ledger.check_majority_witness(transaction_a, cache_a, best_pblock_hash, block->from(), w_param));
 	if (!is_diff_majority)
 	{
 		result.code = mcp::validate_result_codes::invalid_block;
@@ -535,14 +488,14 @@ mcp::validate_result mcp::validation::dag_validate(mcp::db::db_transaction & tra
 		{
 			//mcp::stopwatch_guard sw("validate:last stable block stable1_1");
 
-			bool is_last_stable_stable = m_ledger.check_stable(transaction_a, cache_a, last_stable_block_hash, best_pblock_hash, parents, block->hashables->from, max_p_last_stable_block_hash, w_param);
+			bool is_last_stable_stable = m_ledger.check_stable(transaction_a, cache_a, last_stable_block_hash, best_pblock_hash, parents, block->from(), max_p_last_stable_block_hash, w_param);
 			if (!is_last_stable_stable)
 			{
 				auto bp_block_state = cache_a->block_state_get(transaction_a, best_pblock_hash);
 				result.code = mcp::validate_result_codes::invalid_block;
 				result.err_msg = boost::str(boost::format("last stable block %1% is not stable in view of me, best parent: %2%, max parent last stable block: %3%, from: %4%, bp_block_state->earliest_bp_included_mc_index: %5%, bp_block_state->latest_bp_included_mc_index:%6%, bp_block_state->is_on_main_chain:%7%")
 					% block->hashables->last_stable_block.to_string()
-					% best_pblock_hash.to_string() % max_p_last_stable_block_hash.to_string() % block->hashables->from.to_account()
+					% best_pblock_hash.to_string() % max_p_last_stable_block_hash.to_string() % block->from().to_account()
 					% *bp_block_state->earliest_bp_included_mc_index % *bp_block_state->latest_bp_included_mc_index % bp_block_state->is_on_main_chain);
 				return result;
 			}
@@ -558,14 +511,14 @@ mcp::validate_result mcp::validation::dag_validate(mcp::db::db_transaction & tra
 			if (exists)
 			{
 				bool is_next_mc_block_stable(m_ledger.check_stable(transaction_a, cache_a, next_mc_hash, best_pblock_hash,
-					parents, block->hashables->from, last_stable_block_hash, w_param));
+					parents, block->from(), last_stable_block_hash, w_param));
 				if (is_next_mc_block_stable)
 				{
 					auto bp_block_state = cache_a->block_state_get(transaction_a, best_pblock_hash);
 					result.code = mcp::validate_result_codes::invalid_block;
 					result.err_msg = boost::str(boost::format("next mc block of last stable block %1% is stable in view of me, best parent: %2%, last stable block: %3%, from: %4%, bp_block_state->earliest_bp_included_mc_index: %5%, bp_block_state->latest_bp_included_mc_index:%6%, bp_block_state->is_on_main_chain:%7%")
 						% next_mc_hash.to_string()
-						% best_pblock_hash.to_string() % last_stable_block_hash.to_string() % block->hashables->from.to_account()
+						% best_pblock_hash.to_string() % last_stable_block_hash.to_string() % block->from().to_account()
 						% *bp_block_state->earliest_bp_included_mc_index % *bp_block_state->latest_bp_included_mc_index % bp_block_state->is_on_main_chain);
 					return result;
 				}
@@ -580,7 +533,7 @@ mcp::validate_result mcp::validation::dag_validate(mcp::db::db_transaction & tra
 mcp::light_validate_result mcp::validation::light_validate(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::iblock_cache> cache_a, std::shared_ptr<mcp::block> block)
 {
 	mcp::light_validate_result result;
-	mcp::block_type const & block_type(block->hashables->type);
+	mcp::block_type const & block_type(block->type());
 	assert_x(block_type == mcp::block_type::light);
 
 	mcp::block_hash const & block_hash(block->hash());
@@ -613,11 +566,11 @@ mcp::light_validate_result mcp::validation::light_validate(mcp::db::db_transacti
 			previous_block = previous_unlink_block->block;
 
 		//check previous from
-		if (previous_block->hashables->from != block->hashables->from)
+		if (previous_block->from() != block->from())
 		{
 			result.code = mcp::light_validate_result_codes::invalid_block;
 			result.err_msg = boost::str(boost::format("Invalid from %1%, not equal to previous from: %2%")
-				% block->hashables->from.to_account() % previous_block->hashables->from.to_account());
+				% block->from().to_account() % previous_block->from().to_account());
 			return result;
 		}
 	}
