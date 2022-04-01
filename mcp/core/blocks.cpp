@@ -165,7 +165,7 @@ void mcp::block_hashables::stream_RLP(mcp::block_type type, dev::RLPStream & s) 
 		assert_x(last_stable_block.is_zero());
 
 		s.appendList(10);
-		s << previous.number() << gas_price << gas << to << amount <<
+		s << previous << gas_price << gas << to << amount <<
 			data << chainID << exec_timestamp << 0 << 0;
 
 		break;
@@ -177,7 +177,7 @@ void mcp::block_hashables::stream_RLP(mcp::block_type type, dev::RLPStream & s) 
 		assert_x(gas.is_zero());
 		assert_x(data.empty());
 		s.appendList(7);
-		s << previous.number();
+		s << previous;
 
 		s.appendList(parents.size());
 		for (mcp::block_hash const & parent : parents)
