@@ -4321,7 +4321,8 @@ void mcp::rpc_handler::eth_getTransactionCount()
 			error_eth_response(response, rpc_eth_error_code::invalid_account, response_l);
 			return;
 		}
-		mcp::block_hash previous = m_composer->get_latest_block(m_store.create_transaction(), mcp::block_type::light, account);
+		mcp::db::db_transaction transaction(m_store.create_transaction());
+		mcp::block_hash previous = m_composer->get_latest_block(transaction, mcp::block_type::light, account);
 		if (previous.is_zero())
 			response_l["result"] = "0x0";
 		else
