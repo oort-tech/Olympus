@@ -379,6 +379,13 @@ mcp::block_hash & mcp::block::hash() const
 	if (m_hash.is_zero())
 	{
 		dev::RLPStream s;
+		// Other fields of transactions issued by different witness may be exactly the same
+		// so that, dag block have to add from fields
+		if (type() == mcp::block_type::dag)
+		{
+			s.appendList(2);
+			s << m_from;
+		}
 		hashables->stream_RLP(m_type,s);
 		auto ret = dev::sha3(s.out()).ref();
 
