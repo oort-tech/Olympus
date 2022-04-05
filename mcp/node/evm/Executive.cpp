@@ -221,7 +221,8 @@ bool mcp::Executive::createOpcode(mcp::account const& _sender, u256 const& _endo
 
 bool mcp::Executive::create2Opcode(mcp::account const& _sender, u256 const& _endowment, u256 const& _gasPrice, u256 const& _gas, bytesConstRef _init, mcp::account const& _origin, u256 const& _salt)
 {
-    // m_newAddress = right160(sha3(bytes{0xff} +_sender.asBytes() + toBigEndian(_salt) + sha3(_init)));
+    m_newAddress = mcp::account(sha3(bytes{0xff} +_sender.bytes + toBigEndian(_salt) + sha3(_init)));
+    // Contract will be created with the version equal to parent's version
     return executeCreate(_sender, _endowment, _gasPrice, _gas, _init, _origin);
 }
 
