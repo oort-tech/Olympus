@@ -462,6 +462,47 @@ bool mcp::encry::generate_public_from_secret(secret_key const& _sk, public_key& 
 	return false;
 }
 
+// added by michael at 4/5
+bool mcp::encry::generate_public_from_secret(secret_key const& _sk, public_key& _pk, public_key_comp2& _pk_comp)
+{
+	auto* ctx = get_secp256k1_ctx();
+	secp256k1_pubkey rawPubkey;
+	if (!secp256k1_ec_pubkey_create(ctx, &rawPubkey, _sk.ref().data()))
+		return false;
+
+	std::array<byte, 65> serializedPubkey;
+	auto serializedPubkeySize = serializedPubkey.size();
+	secp256k1_ec_pubkey_serialize(
+		ctx,
+		serializedPubkey.data(),
+		&serializedPubkeySize,
+		&rawPubkey,
+		SECP256K1_EC_UNCOMPRESSED
+	);
+
+	std::array<byte, 33> serializedPubkeyComp;
+	auto serializedPubkeySizeComp = serializedPubkeyComp.size();
+	secp256k1_ec_pubkey_serialize(
+		ctx,
+		serializedPubkeyComp.data(),
+		&serializedPubkeySizeComp,
+		&rawPubkey,
+		SECP256K1_EC_COMPRESSED
+	);
+
+	if (serializedPubkeySize == serializedPubkey.size() &&
+		serializedPubkey[0] == 0x04 &&
+		serializedPubkeySizeComp == serializedPubkeyComp.size() &&
+		(serializedPubkeyComp[0] == 0x02 || serializedPubkeyComp[0] == 0x03)
+		) {
+		dev::bytesRef(&serializedPubkey[1], _pk.size).copyTo(_pk.ref());
+		dev::bytesRef(serializedPubkeyComp.data(), _pk_comp.size).copyTo(_pk_comp.ref());
+		return true;
+	}
+
+	return false;
+}
+
 // added by michael at 1/5
 secp256k1_context const* mcp::encry::get_secp256k1_ctx()
 {

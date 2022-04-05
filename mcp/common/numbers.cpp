@@ -1160,3 +1160,47 @@ dev::bytesRef mcp::account20_struct::ref() {
 dev::bytesConstRef mcp::account20_struct::ref() const {
 	return dev::bytesConstRef(bytes.data(), size);
 }
+
+// added by michael at 4/5
+bool mcp::publickey_comp_struct::operator== (publickey_comp_struct const& other_a) const
+{
+	return sig == other_a.sig && body == other_a.body;
+}
+
+bool mcp::publickey_comp_struct::operator!= (publickey_comp_struct const & other_a) const
+{
+	return sig != other_a.sig || body != other_a.body;
+}
+
+bool mcp::publickey_comp_struct::decode_hex(std::string const & text)
+{
+	bool error(text.size() != size || text.empty());
+	if (!error) {
+		dev::bytes bytes;
+		hex_to_bytes(text, bytes);
+		sig = bytes[0];
+		dev::bytesRef(bytes.data() + 1, body.size).copyTo(body.ref());
+	}
+	return error;
+}
+
+std::string mcp::publickey_comp_struct::to_string() const
+{
+	dev::bytes b;
+	b.push_back(sig);
+	return bytes_to_hex(b) + body.to_string();
+}
+
+dev::bytesRef mcp::publickey_comp_struct::ref() {
+	return dev::bytesRef(data(), size);
+}
+
+dev::bytesConstRef mcp::publickey_comp_struct::ref() const {
+	return dev::bytesConstRef(data(), size);
+}
+
+void mcp::publickey_comp_struct::clear()
+{
+	sig = 0;
+	body.clear();
+}

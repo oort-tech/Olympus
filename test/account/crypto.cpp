@@ -370,22 +370,19 @@ void test_signature()
 	}
 }
 
-int get_encrypt_key(mcp::secret_encry &key, const mcp::public_key &pk1, const mcp::public_key &pk2, const mcp::secret_key &sk)
+int get_encrypt_key(mcp::secret_encry &key, const mcp::public_key_comp2 &pk, const mcp::secret_key &sk)
 {
 	auto* ctx = mcp::encry::get_secp256k1_ctx();
 
-	std::array<byte, 65> serializedPubkey;
-	serializedPubkey[0] = 0x04;
-	pk2.ref().copyTo(dev::bytesRef(serializedPubkey.data() + 1, 64));
-
 	secp256k1_pubkey rawPubKey;
-	if (!secp256k1_ec_pubkey_parse(ctx, &rawPubKey, serializedPubkey.data(), serializedPubkey.size())) {
+	if (!secp256k1_ec_pubkey_parse(ctx, &rawPubKey, pk.data(), pk.size)) {
 		return 1;
 	}
 	if (!secp256k1_ec_pubkey_tweak_mul(ctx, &rawPubKey, sk.bytes.data())) {
 		return 1;
 	}
 
+	std::array<byte, 65> serializedPubkey;
 	auto serializedPubkeySize = serializedPubkey.size();
 	secp256k1_ec_pubkey_serialize(
 		ctx,
@@ -401,16 +398,8 @@ int get_encrypt_key(mcp::secret_encry &key, const mcp::public_key &pk1, const mc
 		return 1;
 	}
 
-	mcp::public_key pk_m;
-	dev::bytesRef(&serializedPubkey[1], pk_m.size).copyTo(pk_m.ref());
-
-	dev::bytes buf;
-	buf.resize(pk1.bytes.size() + pk_m.bytes.size());
-	pk1.ref().copyTo(dev::bytesRef(buf.data(), pk1.bytes.size()));
-	pk_m.ref().copyTo(dev::bytesRef(buf.data() + pk1.bytes.size(), pk_m.bytes.size()));
-
 	CryptoPP::HKDF<CryptoPP::SHA256> hkdf;
-	hkdf.DeriveKey(key.bytes.data(), key.bytes.size(), buf.data(), buf.size(), NULL, 0, NULL, 0);
+	hkdf.DeriveKey(key.bytes.data(), key.bytes.size(), &serializedPubkey[1], 64, NULL, 0, NULL, 0);
 
 	return 0;
 }
@@ -435,7 +424,7 @@ void test_encrypt_decrypt()
 	mcp::key_pair receiverKey = mcp::key_pair::create();
 
 	mcp::secret_encry encKey;
-	if (get_encrypt_key(encKey, senderKey.pub(), receiverKey.pub(), senderKey.secret())) {
+	if (get_encrypt_key(encKey, receiverKey.pub_comp2(), senderKey.secret())) {
 		return;
 	}
 
@@ -449,7 +438,7 @@ void test_encrypt_decrypt()
 	encryption(ciphertext.bytes.data(), plaintext.bytes.data(), plaintext.bytes.size(), iv.bytes.data(), encKey.bytes.data());
 
 	mcp::secret_encry decKey;
-	if (get_encrypt_key(decKey, senderKey.pub(), senderKey.pub(), receiverKey.secret())) {
+	if (get_encrypt_key(decKey, senderKey.pub_comp2(), receiverKey.secret())) {
 		return;
 	}
 

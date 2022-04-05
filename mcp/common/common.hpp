@@ -194,7 +194,10 @@ namespace mcp
 		public_key const& pub() const { return m_public; }
 
 		// get the public key compressed
-		public_key_comp const& pub_comp() const { return m_public_comp; }
+		public_key_comp const& pub_comp() const { return m_public_comp.body; }
+
+		// get the public key compressed
+		public_key_comp2 const& pub_comp2() const { return m_public_comp; }
 
 		// get the account's address
 		account20_struct const& account() const { return m_account; }
@@ -206,7 +209,7 @@ namespace mcp
 	private:
 		secret_key m_secret;
 		public_key m_public;
-		public_key_comp m_public_comp;
+		public_key_comp2 m_public_comp;
 		account20_struct m_account;
 	};
 
@@ -280,6 +283,8 @@ namespace mcp
 		// added by michael at 1/5
 		bool generate_public_from_secret(secret_key const& _sk, public_key& _pk);
 		bool generate_public_from_secret(secret_key const& _sk, public_key& _pk, public_key_comp& _pk_comp);
+		// added by michael at 4 / 5
+		bool generate_public_from_secret(secret_key const& _sk, public_key& _pk, public_key_comp2& _pk_comp);
 		secp256k1_context const* get_secp256k1_ctx();
 	}
 }
