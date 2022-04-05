@@ -88,6 +88,11 @@ public:
 	std::array<char, 16> chars;
 	std::array<uint32_t, 4> dwords;
 	std::array<uint64_t, 2> qwords;
+
+	byte* data() { return bytes.data(); }
+	byte const* data() const { return bytes.data(); }
+	dev::bytesRef ref() { return dev::bytesRef(bytes.data(), 16); }
+	dev::bytesConstRef ref() const { return dev::bytesConstRef(bytes.data(), 16); }
 };
 // Balances are 128 bit.
 

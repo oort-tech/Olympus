@@ -3,8 +3,9 @@ using namespace mcp;
 using namespace mcp::p2p;
 using namespace mcp::encry;
 
-void frame_coder_impl::set_key(bool _originated, public_key_comp const&_pub, key_pair_ed const&_key)
+void frame_coder_impl::set_key(bool _originated, public_key_comp2 const&_pub, key_pair const&_key)
 {
+	/*
 	public_key_comp remote_pub, local_pub;
 	secret_encry local_sec;
 	if (!get_encry_public_key_from_sign_key(remote_pub, _pub)
@@ -15,25 +16,38 @@ void frame_coder_impl::set_key(bool _originated, public_key_comp const&_pub, key
 		LOG(m_log.info) << "set_key error.";
 		return;
 	}
+	*/
 
 	if (_originated) //local is client
 	{
+		/*
 		if (crypto_kx_client_session_keys(in_key.ref().data(), out_key.ref().data(),
 			local_pub.ref().data(), local_sec.ref().data(), remote_pub.ref().data()) != 0)
 		{
             LOG(m_log.info) << "set_client_key error.";
 			return;
 		}
+		*/
 	}
 	else  //local is server
 	{
+		/*
 		if (crypto_kx_server_session_keys(in_key.ref().data(), out_key.ref().data(),
 			local_pub.ref().data(), local_sec.ref().data(), remote_pub.ref().data()) != 0)
 		{
             LOG(m_log.info) << "set_server_key error.";
 			return;
 		}
+		*/
 	}
+
+	if (get_encryption_key(out_key, _pub.data(), public_key_comp2::size, _key.secret()) != 0)
+	{
+		LOG(m_log.info) << "set_frame_coder_key error.";
+		return;
+	}
+
+	in_key = out_key;
 }
 
 void frame_coder_impl::set_nonce(nonce const&_remote_nonce, nonce const&_nonce)
@@ -45,11 +59,14 @@ void frame_coder_impl::set_nonce(nonce const&_remote_nonce, nonce const&_nonce)
 bool frame_coder_impl::encry(bytes& io_cipher)
 {
 	size_t msg_len = io_cipher.size();
-	bytes cipherText(crypto_cipher_len + msg_len);
+	// bytes cipherText(crypto_cipher_len + msg_len);
+	bytes cipherText(msg_len);
 
 	bytes plain(std::move(io_cipher));
-	io_cipher.resize(msg_len + crypto_cipher_len);
-	if (encryption(io_cipher.data(), plain.data(), msg_len, local_nonce.ref().data(), out_key.ref().data()) != 0)
+	// io_cipher.resize(msg_len + crypto_cipher_len);
+	io_cipher.resize(msg_len);
+
+	if (encryption2(io_cipher.data(), plain.data(), msg_len, local_nonce.ref().data(), out_key.ref().data()) != 0)
 	{
 		return false;
 	}
@@ -63,12 +80,14 @@ bool frame_coder_impl::dencry(bytes& io_cipher)
 
 	bytes plain(std::move(io_cipher));
 
-	io_cipher.resize(msg_len - crypto_cipher_len);
+	// io_cipher.resize(msg_len - crypto_cipher_len);
+	io_cipher.resize(msg_len);
 
-	if (dencryption(io_cipher.data(), plain.data(), msg_len, remote_nonce.ref().data(), in_key.ref().data()) != 0)
+	if (dencryption2(io_cipher.data(), plain.data(), msg_len, remote_nonce.ref().data(), in_key.ref().data()) != 0)
 	{
 		return false;
 	}
+
 	return true;
 }
 
@@ -76,15 +95,24 @@ bool frame_coder_impl::dencry(bytesConstRef io, bytes& o_bytes)
 {
 	size_t msg_len = io.size();
 
-	if (o_bytes.size() != msg_len - crypto_cipher_len)
+	/*if (o_bytes.size() != msg_len - crypto_cipher_len)
 	{
 		o_bytes.resize(msg_len - crypto_cipher_len);
+	}*/
+	if (o_bytes.size() != msg_len)
+	{
+		o_bytes.resize(msg_len);
 	}
 
-	if (crypto_secretbox_open_easy(o_bytes.data(), io.data(), msg_len, remote_nonce.ref().data(), in_key.ref().data()) != 0)
+	/*if (crypto_secretbox_open_easy(o_bytes.data(), io.data(), msg_len, remote_nonce.ref().data(), in_key.ref().data()) != 0)
+	{
+		return false;
+	}*/
+	if (dencryption2(o_bytes.data(), io.data(), msg_len, remote_nonce.ref().data(), in_key.ref().data()) != 0)
 	{
 		return false;
 	}
+
 	return true;
 }
 
@@ -97,13 +125,13 @@ frame_coder::frame_coder(hankshake const& _init) :
 	setup(_init.m_originated, _init.m_ecdheRemote, _init.m_remoteNonce, _init.m_ecdheLocal, _init.m_nonce);
 }
 
-frame_coder::frame_coder(bool _originated, public_key_comp const& _remoteEphemeral, nonce const& _remoteNonce, key_pair_ed const& _ecdheLocal, nonce const& _nonce) :
+frame_coder::frame_coder(bool _originated, public_key_comp2 const& _remoteEphemeral, nonce const& _remoteNonce, key_pair const& _ecdheLocal, nonce const& _nonce) :
 	m_impl(new frame_coder_impl)
 {
 	setup(_originated, _remoteEphemeral, _remoteNonce, _ecdheLocal, _nonce);
 }
 
-void frame_coder::setup(bool _originated, public_key_comp const& _remoteEphemeral, nonce const& _remoteNonce, key_pair_ed const& _ecdheLocal, nonce const& _nonce)
+void frame_coder::setup(bool _originated, public_key_comp2 const& _remoteEphemeral, nonce const& _remoteNonce, key_pair const& _ecdheLocal, nonce const& _nonce)
 {
 	m_impl->set_key(_originated,_remoteEphemeral, _ecdheLocal);
 	m_impl->set_nonce(_remoteNonce, _nonce);

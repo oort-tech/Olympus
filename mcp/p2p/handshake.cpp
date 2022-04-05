@@ -4,12 +4,12 @@ using namespace mcp;
 using namespace mcp::p2p;
 using namespace dev;
 
-mcp::p2p::hankshake_msg::hankshake_msg(node_id const & node_id_a, uint16_t const & version_a, mcp::mcp_networks const & network_a, std::list<capability_desc> const & cap_descs_a, mcp::public_key_comp const & enckey_a) :
+mcp::p2p::hankshake_msg::hankshake_msg(node_id const & node_id_a, uint16_t const & version_a, mcp::mcp_networks const & network_a, std::list<capability_desc> const & cap_descs_a, mcp::public_key_comp2 const & pubkey_a) :
 	id(node_id_a),
 	version(version_a),
 	network(network_a),
 	cap_descs(cap_descs_a),
-	enckey(enckey_a)
+	pubkey(pubkey_a)
 {
 }
 
@@ -22,8 +22,8 @@ mcp::p2p::hankshake_msg::hankshake_msg(dev::RLP const & r)
 	version = (uint16_t)r[1];
 	network = (mcp::mcp_networks)r[2].toInt<uint8_t>();
 
-	// added by michael at 2/26
-	enckey = (mcp::public_key_comp) r[3];
+	// added by michael at 4/5
+	pubkey = (mcp::public_key_comp2) r[3];
 
 	for (auto const & i : r[4])
 		cap_descs.push_back(capability_desc(i));
@@ -31,7 +31,7 @@ mcp::p2p::hankshake_msg::hankshake_msg(dev::RLP const & r)
 
 void hankshake_msg::stream_RLP(dev::RLPStream & s)
 {
-	s.appendList(5) << id << version << (uint8_t)network << enckey;
+	s.appendList(5) << id << version << (uint8_t)network << pubkey;
 	s.appendList(cap_descs.size());
 	for (auto & desc : cap_descs)
 		desc.stream_RLP(s);
@@ -223,7 +223,7 @@ void mcp::p2p::hankshake::do_process()
 void mcp::p2p::hankshake::writeInfo()
 {
 	std::list<capability_desc> caps;
-	hankshake_msg handmsg(m_host->id(), mcp::p2p::version, mcp::mcp_network, caps, m_ecdheLocal.pub());
+	hankshake_msg handmsg(m_host->id(), mcp::p2p::version, mcp::mcp_network, caps, m_ecdheLocal.pub_comp2());
 	RLPStream s;
 
 	handmsg.stream_RLP(s);
@@ -235,20 +235,20 @@ void mcp::p2p::hankshake::writeInfo()
 
 void hankshake::writeAuth()
 {
-	dev::bytes buf(signature::size + public_key_comp::size + public_key_comp::size + nonce::size + 1);
+	dev::bytes buf(signature::size + public_key_comp::size + public_key_comp2::size + nonce::size + 1);
 	dev::bytes buf_cipher;
 	dev::bytesRef sig(&buf[0], signature::size);
 	dev::bytesRef hepubk(&buf[signature::size], public_key_comp::size);
-	dev::bytesRef pubk(&buf[signature::size + public_key_comp::size], public_key_comp::size);
-	dev::bytesRef nonce_l(&buf[signature::size + public_key_comp::size + public_key_comp::size], nonce::size);
+	dev::bytesRef pubk(&buf[signature::size + public_key_comp::size], public_key_comp2::size);
+	dev::bytesRef nonce_l(&buf[signature::size + public_key_comp::size + public_key_comp2::size], nonce::size);
 
 	// E(remote-pubk, S(ecdhe-random, ecdh-public) || H(ecdhe-random-pubk) || pubk || nonce || 0x0)
 	mcp::signature sig_data;
-	mcp::encry::sign(m_host->alias.secret(), m_ecdheLocal.pub().ref(), sig_data);
+	mcp::encry::sign(m_host->alias.secret(), m_ecdheLocal.pub_comp2().ref(), sig_data);
 	sig_data.ref().copyTo(sig);
 
 	m_host->alias.pub_comp().ref().copyTo(hepubk);
-	m_ecdheLocal.pub().ref().copyTo(pubk);
+	m_ecdheLocal.pub_comp2().ref().copyTo(pubk);
 
 	m_nonce.ref().copyTo(nonce_l);
 	buf[buf.size() - 1] = 0x0;
@@ -259,12 +259,12 @@ void hankshake::writeAuth()
 
 void hankshake::writeAck()
 {
-	dev::bytes buf(public_key_comp::size + nonce::size + 1);
+	dev::bytes buf(public_key_comp2::size + nonce::size + 1);
 	dev::bytes buf_cipher;
-	bytesRef epubk(&buf[0], public_key_comp::size);
-	bytesRef nonce_l(&buf[public_key_comp::size], nonce::size);
+	bytesRef epubk(&buf[0], public_key_comp2::size);
+	bytesRef nonce_l(&buf[public_key_comp2::size], nonce::size);
 
-	m_ecdheLocal.pub().ref().copyTo(epubk);
+	m_ecdheLocal.pub_comp2().ref().copyTo(epubk);
 	m_nonce.ref().copyTo(nonce_l);
 	buf[buf.size() - 1] = 0x0;
 	encrypt_dh(m_ecdheRemote, &buf, buf_cipher);
@@ -272,7 +272,7 @@ void hankshake::writeAck()
 	send(buf_cipher);
 }
 
-void hankshake::setAuthValues(mcp::signature const& _sig, public_key_comp const& _hePubk, public_key_comp const& _remotePubk, mcp::nonce const& _remoteNonce)
+void hankshake::setAuthValues(mcp::signature const& _sig, public_key_comp const& _hePubk, public_key_comp2 const& _remotePubk, mcp::nonce const& _remoteNonce)
 {
 	bool ret = mcp::encry::verify(_hePubk, _sig, _remotePubk.ref());
 	if (!ret)
@@ -309,8 +309,8 @@ void mcp::p2p::hankshake::readInfo()
 	m_transferVersion = mcp::p2p::version < msg.version ? mcp::p2p::version : msg.version;
 	m_remoteVersion = msg.version;
 	m_remote = msg.id;
-	// added by michael at 2/26
-	m_ecdheRemote = msg.enckey;
+	// added by michael at 4/5
+	m_ecdheRemote = msg.pubkey;
 
 	if (msg.network != mcp::mcp_network)
 	{
@@ -333,11 +333,11 @@ void hankshake::readAuth()
 		public_key_comp hepubk;
 		data.cropped(signature::size, public_key_comp::size).copyTo(hepubk.ref());
 
-		public_key_comp pubk;
-		data.cropped(signature::size + public_key_comp::size, public_key_comp::size).copyTo(pubk.ref());
+		public_key_comp2 pubk;
+		data.cropped(signature::size + public_key_comp::size, public_key_comp2::size).copyTo(pubk.ref());
 
 		mcp::nonce nonce_l;
-		data.cropped(signature::size + public_key_comp::size + public_key_comp::size, nonce::size).copyTo(nonce_l.ref());
+		data.cropped(signature::size + public_key_comp::size + public_key_comp2::size, nonce::size).copyTo(nonce_l.ref());
 
 		setAuthValues(sig, hepubk, pubk, nonce_l);
 	}
@@ -354,9 +354,9 @@ void hankshake::readAck()
 	dev::bytes buf;
 	if (dencrypt_dh(m_ecdheLocal.secret(), bytesConstRef(&m_handshakeInBuffer), buf))
 	{
-		bytesConstRef(&buf).cropped(0, public_key_comp::size).copyTo(m_ecdheRemote.ref());
+		bytesConstRef(&buf).cropped(0, public_key_comp2::size).copyTo(m_ecdheRemote.ref());
 
-		bytesConstRef(&buf).cropped(public_key_comp::size, nonce::size).copyTo(m_remoteNonce.ref());
+		bytesConstRef(&buf).cropped(public_key_comp2::size, nonce::size).copyTo(m_remoteNonce.ref());
 	}
 	else
 	{
@@ -479,7 +479,7 @@ void hankshake::transition(boost::system::error_code _ech)
 		/// it will be passed to Host which will take ownership.
 		m_io.reset(new frame_coder(*this));
 
-		hankshake_msg handmsg(m_host->id(), mcp::p2p::version, mcp::mcp_network, m_host->caps(), m_ecdheLocal.pub());
+		hankshake_msg handmsg(m_host->id(), mcp::p2p::version, mcp::mcp_network, m_host->caps(), m_ecdheLocal.pub_comp2());
 		RLPStream s;
 		s.append((unsigned)packet_type::ack);
 		handmsg.stream_RLP(s);

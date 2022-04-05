@@ -5,6 +5,11 @@
 #include <secp256k1_recovery.h>
 #include <secp256k1_sha256.h>
 
+#include <cryptopp/hkdf.h>
+#include <cryptopp/sha.h>
+#include <cryptopp/aes.h>
+#include <cryptopp/modes.h>
+
 std::string mcp::uint64_to_hex (uint64_t value_a)
 {
 	std::stringstream stream;
@@ -219,6 +224,60 @@ int mcp::encry::dencryption(unsigned char * m, const unsigned char * c, unsigned
 {
 	return crypto_secretbox_open_easy(m, c, clen, n, k);
 }
+
+// added by michael at 4/5
+int mcp::encry::get_encryption_key(mcp::secret_encry &key, const unsigned char* pk, const size_t pkLen, const mcp::secret_key &sk)
+{
+	auto* ctx = mcp::encry::get_secp256k1_ctx();
+
+	secp256k1_pubkey rawPubKey;
+	if (!secp256k1_ec_pubkey_parse(ctx, &rawPubKey, pk, pkLen)) {
+		return 1;
+	}
+	if (!secp256k1_ec_pubkey_tweak_mul(ctx, &rawPubKey, sk.bytes.data())) {
+		return 1;
+	}
+
+	std::array<byte, 65> serializedPubkey;
+	auto serializedPubkeySize = serializedPubkey.size();
+	secp256k1_ec_pubkey_serialize(
+		ctx,
+		serializedPubkey.data(),
+		&serializedPubkeySize,
+		&rawPubKey,
+		SECP256K1_EC_UNCOMPRESSED
+	);
+
+	if (serializedPubkeySize != serializedPubkey.size() ||
+		serializedPubkey[0] != 0x04
+		) {
+		return 1;
+	}
+
+	CryptoPP::HKDF<CryptoPP::SHA256> hkdf;
+	hkdf.DeriveKey(key.bytes.data(), key.bytes.size(), &serializedPubkey[1], 64, NULL, 0, NULL, 0);
+
+	return 0;
+}
+
+int mcp::encry::encryption2(unsigned char *c, const unsigned char *m,
+	unsigned long long mlen, const unsigned char *n,
+	const unsigned char *ek) {
+	CryptoPP::AES::Encryption alg(ek, 32);
+	CryptoPP::CTR_Mode_ExternalCipher::Encryption enc(alg, n);
+	enc.ProcessData(c, m, mlen);
+	return 0;
+}
+
+int mcp::encry::dencryption2(unsigned char *m, const unsigned char *c,
+	unsigned long long clen, const unsigned char *n,
+	const unsigned char *ek) {
+	CryptoPP::AES::Encryption alg(ek, 32);
+	CryptoPP::CTR_Mode_ExternalCipher::Decryption dec(alg, n);
+	dec.ProcessData(m, c, clen);
+	return 0;
+}
+//
 
 static const mcp::uint256_t c_secp256k1n("115792089237316195423570985008687907852837564279074904382605163141518161494337");
 

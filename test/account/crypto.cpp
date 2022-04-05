@@ -344,6 +344,7 @@ void test_x25519()
 	mcp::uint256_union message;
 	message.decode_hex("AF8460A7D28A396C62D6C51620B87789C862ED8783374EEF7B783145F540EB19");
 
+	/*
 	mcp::secret_key sec;
 	mcp::public_key_comp pub_comp;
 	if (crypto_sign_seed_keypair(pub_comp.ref().data(), sec.ref().data(), prv.ref().data()) == 0) {
@@ -355,6 +356,16 @@ void test_x25519()
 		mcp::p2p::dencrypt_dh(sec, dev::bytesConstRef(cipher.data(), cipher.size()), plain);
 		std::cout << "Decrypted: " << mcp::bytes_to_hex(plain) << std::endl;
 	}
+	*/
+	mcp::key_pair keys = mcp::key_pair::create();
+
+	dev::bytes cipher;
+	mcp::p2p::encrypt_dh(keys.pub_comp2(), message.ref(), cipher);
+	std::cout << "Encrypted: " << mcp::bytes_to_hex(cipher) << std::endl;
+
+	dev::bytes plain;
+	mcp::p2p::dencrypt_dh(keys.secret(), dev::bytesConstRef(cipher.data(), cipher.size()), plain);
+	std::cout << "Decrypted: " << mcp::bytes_to_hex(plain) << std::endl;
 }
 
 void test_signature()

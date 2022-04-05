@@ -255,6 +255,17 @@ namespace mcp
 			unsigned long long clen, const unsigned char *n,
 			const unsigned char *k);
 
+		// added by michael at 4/5
+		int get_encryption_key(mcp::secret_encry &key, const unsigned char* pk, const size_t pkLen, const mcp::secret_key &sk);
+
+		int encryption2(unsigned char *c, const unsigned char *m,
+			unsigned long long mlen, const unsigned char *n,
+			const unsigned char *ek);
+
+		int dencryption2(unsigned char *m, const unsigned char *c,
+			unsigned long long clen, const unsigned char *n,
+			const unsigned char *ek);
+
 		/// Returns siganture of message hash.
 		bool sign(secret_key const& _k, dev::bytesConstRef _hash, mcp::signature& sig);
 		// this is curious for purpose, right now (commented by michael)
