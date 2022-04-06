@@ -156,7 +156,7 @@ namespace mcp
 	};
 
 	// added by michael at 2/17
-	class key_pair_ed
+	/*class key_pair_ed
 	{
 		public:
 			key_pair_ed() = default;
@@ -177,7 +177,7 @@ namespace mcp
 		private:
 			secret_key m_secret;
 			public_key_comp m_public;
-	};
+	};*/
 
 	class key_pair
 	{
@@ -194,10 +194,7 @@ namespace mcp
 		public_key const& pub() const { return m_public; }
 
 		// get the public key compressed
-		public_key_comp const& pub_comp() const { return m_public_comp.body; }
-
-		// get the public key compressed
-		public_key_comp2 const& pub_comp2() const { return m_public_comp; }
+		public_key_comp const& pub_comp() const { return m_public_comp; }
 
 		// get the account's address
 		account20_struct const& account() const { return m_account; }
@@ -209,7 +206,7 @@ namespace mcp
 	private:
 		secret_key m_secret;
 		public_key m_public;
-		public_key_comp2 m_public_comp;
+		public_key_comp m_public_comp;
 		account20_struct m_account;
 	};
 
@@ -236,6 +233,7 @@ namespace mcp
 
 	namespace encry
 	{
+		/*
 		//encryption curve 25519
 		int encryption(unsigned char *c, const unsigned char *m,
 			unsigned long long mlen, const unsigned char *n,
@@ -254,15 +252,16 @@ namespace mcp
 		int dencryption(unsigned char *m, const unsigned char *c,
 			unsigned long long clen, const unsigned char *n,
 			const unsigned char *k);
+		*/
 
 		// added by michael at 4/5
 		int get_encryption_key(mcp::secret_encry &key, const unsigned char* pk, const size_t pkLen, const mcp::secret_key &sk);
 
-		int encryption2(unsigned char *c, const unsigned char *m,
+		int encryption(unsigned char *c, const unsigned char *m,
 			unsigned long long mlen, const unsigned char *n,
 			const unsigned char *ek);
 
-		int dencryption2(unsigned char *m, const unsigned char *c,
+		int dencryption(unsigned char *m, const unsigned char *c,
 			unsigned long long clen, const unsigned char *n,
 			const unsigned char *ek);
 
@@ -275,17 +274,18 @@ namespace mcp
 		// updated by michael at 1/10
 		bool verify(public_key const& _k, dev::bytesConstRef const& _s);
 		bool verify(public_key const& _k, mcp::signature const& _s, dev::bytesConstRef const& _o);
-		//added by michael
+		// added by michael
+		bool verify(uint256_union const& _k, mcp::signature const& _s, dev::bytesConstRef const& _o);
 		bool verify(public_key_comp const& _k, mcp::signature const& _s, dev::bytesConstRef const& _o);
 
 		// added by michael at 1/10
 		public_key recover(mcp::signature const& _s, dev::bytesConstRef const& _o);
 
-		//ed25519 secret key to curve25519 secret key
-		bool get_encry_secret_key_from_sign_key(secret_encry & curve, secret_key const & ed25519);
-		//ed25519 public key to curve25519 public key
-		bool get_encry_public_key_from_sign_key(public_key_comp & curve, public_key_comp const & ed25519);
-		bool get_encry_public_key_from_sign_key(public_key_comp & curve, dev::bytesConstRef ed25519);
+		// ed25519 secret key to curve25519 secret key
+		// bool get_encry_secret_key_from_sign_key(secret_encry & curve, secret_key const & ed25519);
+		// ed25519 public key to curve25519 public key
+		// bool get_encry_public_key_from_sign_key(public_key_comp & curve, public_key_comp const & ed25519);
+		// bool get_encry_public_key_from_sign_key(public_key_comp & curve, dev::bytesConstRef ed25519);
 
 		// commented by michael at 1/5
 		// ed25519 get public key from secret key
@@ -293,9 +293,9 @@ namespace mcp
 		
 		// added by michael at 1/5
 		bool generate_public_from_secret(secret_key const& _sk, public_key& _pk);
-		bool generate_public_from_secret(secret_key const& _sk, public_key& _pk, public_key_comp& _pk_comp);
+		// bool generate_public_from_secret(secret_key const& _sk, public_key& _pk, public_key_comp& _pk_comp);
 		// added by michael at 4 / 5
-		bool generate_public_from_secret(secret_key const& _sk, public_key& _pk, public_key_comp2& _pk_comp);
+		bool generate_public_from_secret(secret_key const& _sk, public_key& _pk, public_key_comp& _pk_comp);
 		secp256k1_context const* get_secp256k1_ctx();
 	}
 }

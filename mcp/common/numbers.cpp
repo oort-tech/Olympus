@@ -1162,17 +1162,17 @@ dev::bytesConstRef mcp::account20_struct::ref() const {
 }
 
 // added by michael at 4/5
-bool mcp::publickey_comp_struct::operator== (publickey_comp_struct const& other_a) const
+bool mcp::compressed_pubkey_struct::operator== (compressed_pubkey_struct const& other_a) const
 {
 	return sig == other_a.sig && body == other_a.body;
 }
 
-bool mcp::publickey_comp_struct::operator!= (publickey_comp_struct const & other_a) const
+bool mcp::compressed_pubkey_struct::operator!= (compressed_pubkey_struct const & other_a) const
 {
 	return sig != other_a.sig || body != other_a.body;
 }
 
-bool mcp::publickey_comp_struct::decode_hex(std::string const & text)
+bool mcp::compressed_pubkey_struct::decode_hex(std::string const & text)
 {
 	bool error(text.size() != size || text.empty());
 	if (!error) {
@@ -1184,22 +1184,22 @@ bool mcp::publickey_comp_struct::decode_hex(std::string const & text)
 	return error;
 }
 
-std::string mcp::publickey_comp_struct::to_string() const
+std::string mcp::compressed_pubkey_struct::to_string() const
 {
 	dev::bytes b;
 	b.push_back(sig);
 	return bytes_to_hex(b) + body.to_string();
 }
 
-dev::bytesRef mcp::publickey_comp_struct::ref() {
+dev::bytesRef mcp::compressed_pubkey_struct::ref() {
 	return dev::bytesRef(data(), size);
 }
 
-dev::bytesConstRef mcp::publickey_comp_struct::ref() const {
+dev::bytesConstRef mcp::compressed_pubkey_struct::ref() const {
 	return dev::bytesConstRef(data(), size);
 }
 
-void mcp::publickey_comp_struct::clear()
+void mcp::compressed_pubkey_struct::clear()
 {
 	sig = 0;
 	body.clear();

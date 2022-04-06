@@ -5,7 +5,7 @@ using namespace mcp::p2p;
 using namespace mcp::encry;
 using namespace dev;
 
-void mcp::p2p::encrypt_dh(public_key_comp2 const & _k, dev::bytesConstRef _plain, dev::bytes & o_cipher)
+void mcp::p2p::encrypt_dh(public_key_comp const & _k, dev::bytesConstRef _plain, dev::bytes & o_cipher)
 {
 	bytes io = _plain.toBytes();
 	dh_x25519::get()->encrypt_x25519(_k, io);
@@ -27,7 +27,7 @@ dh_x25519* dh_x25519::get()
 	return &s_this;
 }
 
-void dh_x25519::encrypt_x25519(public_key_comp2 const& _k, bytes& io_cipher)
+void dh_x25519::encrypt_x25519(public_key_comp const& _k, bytes& io_cipher)
 {
 	////get encry public key
 	/*public_key_comp public_encry;
@@ -40,7 +40,7 @@ void dh_x25519::encrypt_x25519(public_key_comp2 const& _k, bytes& io_cipher)
 	encrypt_x25519(_k, bytesConstRef(), io_cipher);
 }
 
-void dh_x25519::encrypt_x25519(public_key_comp2 const& _k, bytesConstRef _sharedMacData, bytes& io_cipher)
+void dh_x25519::encrypt_x25519(public_key_comp const& _k, bytesConstRef _sharedMacData, bytes& io_cipher)
 {
 	// create key pair
 	auto senderKeys = key_pair::create();
@@ -63,17 +63,17 @@ void dh_x25519::encrypt_x25519(public_key_comp2 const& _k, bytesConstRef _shared
 	
 	size_t msg_len = io_cipher.size();
 	bytes cipherText(msg_len);
-	if (encryption2(cipherText.data(), io_cipher.data(), msg_len, iv.ref().data(), encry_secret.data()) != 0) {
+	if (encryption(cipherText.data(), io_cipher.data(), msg_len, iv.ref().data(), encry_secret.data()) != 0) {
         LOG(m_log.info) << "encryption error.";
 		return;
 	}
 
-	bytes msg(public_key_comp2::size + nonce::size + cipherText.size());
+	bytes msg(public_key_comp::size + nonce::size + cipherText.size());
 	
-	senderKeys.pub_comp2().ref().copyTo(bytesRef(&msg).cropped(0, public_key_comp2::size));
-	iv.ref().copyTo(bytesRef(&msg).cropped(public_key_comp2::size, nonce::size));
+	senderKeys.pub_comp().ref().copyTo(bytesRef(&msg).cropped(0, public_key_comp::size));
+	iv.ref().copyTo(bytesRef(&msg).cropped(public_key_comp::size, nonce::size));
 
-	bytesRef msgCipherRef = bytesRef(&msg).cropped(public_key_comp2::size + nonce::size, cipherText.size());
+	bytesRef msgCipherRef = bytesRef(&msg).cropped(public_key_comp::size + nonce::size, cipherText.size());
 	bytesConstRef(&cipherText).copyTo(msgCipherRef);
 
 	io_cipher.resize(msg.size());
@@ -102,11 +102,11 @@ bool dh_x25519::decrypt_x25519(secret_encry const& _k, bytesConstRef _sharedMacD
 		// invalid message: publickey
 		return false;
 
-	if (io_text.size() < (public_key_comp2::size + nonce::size))
+	if (io_text.size() < (public_key_comp::size + nonce::size))
 		// invalid message: length
 		return false;
 
-	bytesConstRef public_key(io_text.data(), public_key_comp2::size);
+	bytesConstRef public_key(io_text.data(), public_key_comp::size);
 
 	////get encry public key
 	mcp::secret_encry encry_secret;
@@ -115,19 +115,19 @@ bool dh_x25519::decrypt_x25519(secret_encry const& _k, bytesConstRef _sharedMacD
         LOG(m_log.info) << "decrypt_x25519 to get public key error.";
 		return false;
 	}*/
-	if (get_encryption_key(encry_secret, public_key.data(), public_key_comp2::size, _k) != 0) {
+	if (get_encryption_key(encry_secret, public_key.data(), public_key_comp::size, _k) != 0) {
 		LOG(m_log.info) << "encrypt get encry key error.";
 		return false;
 	}
 
-	size_t cipherLen = io_text.size() - public_key_comp2::size - nonce::size;
-	bytesConstRef cipherWithIV(io_text.data() + public_key_comp2::size, nonce::size + cipherLen);
+	size_t cipherLen = io_text.size() - public_key_comp::size - nonce::size;
+	bytesConstRef cipherWithIV(io_text.data() + public_key_comp::size, nonce::size + cipherLen);
 	bytesConstRef cipherIV = cipherWithIV.cropped(0, nonce::size);
 	bytesConstRef cipherNoIV = cipherWithIV.cropped(nonce::size, cipherLen);
 	nonce iv(cipherIV.toBytes());
 	
 	bytes plain(cipherNoIV.size());
-	if (dencryption2(plain.data(), cipherNoIV.toBytes().data(), cipherLen, iv.ref().data(), encry_secret.ref().data()) != 0) {
+	if (dencryption(plain.data(), cipherNoIV.toBytes().data(), cipherLen, iv.ref().data(), encry_secret.ref().data()) != 0) {
 		LOG(m_log.info) << "dencryption error.";
 		return false;
 	}

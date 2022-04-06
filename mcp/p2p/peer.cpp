@@ -180,7 +180,7 @@ void peer::do_read()
 			entry_buffer = std::move(read_queue[0]);
 		}
 
-		dev::bytes buffer(entry_buffer.size() - crypto_cipher_len);
+		dev::bytes buffer(entry_buffer.size()/* - crypto_cipher_len*/);
 		if (!m_io->auth_and_decrypt_frame(dev::bytesConstRef(entry_buffer.data(), entry_buffer.size()), buffer))
 		{
             LOG(m_log.debug) << "frame decrypt failed";
@@ -472,7 +472,7 @@ void peer::do_write()
 
 	dev::bytes size(m_io->serialize_packet_size(group_buffer_size));	//used for Decompression
 
-	dev::bytes copy_bufs(4 + compressed_data_size + crypto_cipher_len);
+	dev::bytes copy_bufs(4 + compressed_data_size/* + crypto_cipher_len*/);
 
 	dev::bytesConstRef(size.data(), 4).copyTo(dev::bytesRef(copy_bufs.data(), 4));
 	dev::bytesConstRef(compressed_bufs.data(), compressed_data_size).copyTo(dev::bytesRef(copy_bufs.data() + 4, compressed_data_size));

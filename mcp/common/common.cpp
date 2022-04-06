@@ -149,6 +149,7 @@ bool mcp::hex_to_bytes(std::string const & str , dev::bytes & out)
 	return error;
 }
 
+/*
 mcp::key_pair_ed::key_pair_ed(mcp::seed_key const & seed)
 {
 	// create ed-25519(sign) key pair,encryption need trasnsfer to curve-25519
@@ -175,6 +176,7 @@ mcp::key_pair_ed mcp::key_pair_ed::create()
 			return m_key_pair;
 	}
 }
+*/
 
 mcp::key_pair::key_pair(mcp::seed_key const & seed)
 {
@@ -205,6 +207,7 @@ mcp::key_pair mcp::key_pair::create()
 	}
 }
 
+/*
 int mcp::encry::encryption(unsigned char * c, const unsigned char * m, unsigned long long mlen, const unsigned char * n, const unsigned char * pk, const unsigned char * sk)
 {
 	return crypto_box_easy(c, m, mlen, n, pk, sk);
@@ -224,6 +227,7 @@ int mcp::encry::dencryption(unsigned char * m, const unsigned char * c, unsigned
 {
 	return crypto_secretbox_open_easy(m, c, clen, n, k);
 }
+*/
 
 // added by michael at 4/5
 int mcp::encry::get_encryption_key(mcp::secret_encry &key, const unsigned char* pk, const size_t pkLen, const mcp::secret_key &sk)
@@ -260,7 +264,7 @@ int mcp::encry::get_encryption_key(mcp::secret_encry &key, const unsigned char* 
 	return 0;
 }
 
-int mcp::encry::encryption2(unsigned char *c, const unsigned char *m,
+int mcp::encry::encryption(unsigned char *c, const unsigned char *m,
 	unsigned long long mlen, const unsigned char *n,
 	const unsigned char *ek) {
 	CryptoPP::AES::Encryption alg(ek, 32);
@@ -269,7 +273,7 @@ int mcp::encry::encryption2(unsigned char *c, const unsigned char *m,
 	return 0;
 }
 
-int mcp::encry::dencryption2(unsigned char *m, const unsigned char *c,
+int mcp::encry::dencryption(unsigned char *m, const unsigned char *c,
 	unsigned long long clen, const unsigned char *n,
 	const unsigned char *ek) {
 	CryptoPP::AES::Encryption alg(ek, 32);
@@ -402,6 +406,21 @@ bool mcp::encry::verify(public_key const& _k, mcp::signature const& _s, dev::byt
 }
 
 // added by michael at 1/14
+bool mcp::encry::verify(uint256_union const& _k, mcp::signature const& _s, dev::bytesConstRef const& _o)
+{
+	public_key_comp pubkey_comp;
+	pubkey_comp.sig = 0x02;
+	pubkey_comp.body = _k;
+
+	if (!verify(pubkey_comp, _s, _o)) {
+		pubkey_comp.sig = 0x03;
+		return verify(pubkey_comp, _s, _o);
+	}
+
+	return true;
+}
+
+// added by michael at 4/5
 bool mcp::encry::verify(public_key_comp const& _k, mcp::signature const& _s, dev::bytesConstRef const& _o)
 {
 	auto* ctx = get_secp256k1_ctx();
@@ -411,26 +430,14 @@ bool mcp::encry::verify(public_key_comp const& _k, mcp::signature const& _s, dev
         return false;
 
     secp256k1_pubkey rawPubkey;
-	byte _k_b[33];
-	_k_b[0] = 0x02;
-	_k.ref().copyTo(dev::bytesRef(&_k_b[1], 32));
-	
-    if (!secp256k1_ec_pubkey_parse(ctx, &rawPubkey, _k_b, 33)) {
+	if (!secp256k1_ec_pubkey_parse(ctx, &rawPubkey, _k.data(), _k.size)) {
 		return false;
 	}
 
-    if (!secp256k1_ecdsa_verify(ctx, &rawSig, _o.data(), &rawPubkey)) {
-		_k_b[0] = 0x03;
-		if (!secp256k1_ec_pubkey_parse(ctx, &rawPubkey, _k_b, 33)) {
-			return false;
-		}
-		return secp256k1_ecdsa_verify(ctx, &rawSig, _o.data(), &rawPubkey);
-	}
-
-	return true;
+	return secp256k1_ecdsa_verify(ctx, &rawSig, _o.data(), &rawPubkey);
 }
 
-
+/*
 //ed25519 secret key to curve25519 secret key
 bool mcp::encry::get_encry_secret_key_from_sign_key(secret_encry & curve, secret_key const & ed25519)
 {
@@ -447,6 +454,7 @@ bool mcp::encry::get_encry_public_key_from_sign_key(public_key_comp & curve, dev
 {
 	return crypto_sign_ed25519_pk_to_curve25519(curve.ref().data(), ed25519.data()) == 0;
 }
+*/
 
 // modified by michael at 1/5
 bool mcp::encry::generate_public_from_secret(secret_key const& _sk, public_key& _pk)
@@ -481,7 +489,7 @@ bool mcp::encry::generate_public_from_secret(secret_key const& _sk, public_key& 
 }
 
 // added by michael at 1/7
-bool mcp::encry::generate_public_from_secret(secret_key const& _sk, public_key& _pk, public_key_comp& _pk_comp)
+/*bool mcp::encry::generate_public_from_secret(secret_key const& _sk, public_key& _pk, public_key_comp& _pk_comp)
 {
 	auto* ctx = get_secp256k1_ctx();
 	secp256k1_pubkey rawPubkey;
@@ -519,10 +527,10 @@ bool mcp::encry::generate_public_from_secret(secret_key const& _sk, public_key& 
 	}
 
 	return false;
-}
+}*/
 
 // added by michael at 4/5
-bool mcp::encry::generate_public_from_secret(secret_key const& _sk, public_key& _pk, public_key_comp2& _pk_comp)
+bool mcp::encry::generate_public_from_secret(secret_key const& _sk, public_key& _pk, public_key_comp& _pk_comp)
 {
 	auto* ctx = get_secp256k1_ctx();
 	secp256k1_pubkey rawPubkey;

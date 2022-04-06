@@ -360,7 +360,7 @@ void test_x25519()
 	mcp::key_pair keys = mcp::key_pair::create();
 
 	dev::bytes cipher;
-	mcp::p2p::encrypt_dh(keys.pub_comp2(), message.ref(), cipher);
+	mcp::p2p::encrypt_dh(keys.pub_comp(), message.ref(), cipher);
 	std::cout << "Encrypted: " << mcp::bytes_to_hex(cipher) << std::endl;
 
 	dev::bytes plain;
@@ -381,7 +381,7 @@ void test_signature()
 	}
 }
 
-int get_encrypt_key(mcp::secret_encry &key, const mcp::public_key_comp2 &pk, const mcp::secret_key &sk)
+int get_encrypt_key(mcp::secret_encry &key, const mcp::public_key_comp &pk, const mcp::secret_key &sk)
 {
 	auto* ctx = mcp::encry::get_secp256k1_ctx();
 
@@ -435,7 +435,7 @@ void test_encrypt_decrypt()
 	mcp::key_pair receiverKey = mcp::key_pair::create();
 
 	mcp::secret_encry encKey;
-	if (get_encrypt_key(encKey, receiverKey.pub_comp2(), senderKey.secret())) {
+	if (get_encrypt_key(encKey, receiverKey.pub_comp(), senderKey.secret())) {
 		return;
 	}
 
@@ -449,7 +449,7 @@ void test_encrypt_decrypt()
 	encryption(ciphertext.bytes.data(), plaintext.bytes.data(), plaintext.bytes.size(), iv.bytes.data(), encKey.bytes.data());
 
 	mcp::secret_encry decKey;
-	if (get_encrypt_key(decKey, senderKey.pub_comp2(), receiverKey.secret())) {
+	if (get_encrypt_key(decKey, senderKey.pub_comp(), receiverKey.secret())) {
 		return;
 	}
 

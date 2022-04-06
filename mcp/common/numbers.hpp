@@ -247,11 +247,11 @@ using secret_key = uint256_union;
 using public_key = uint512_union;
 
 // added by michael at 4/5
-struct publickey_comp_struct {
-	publickey_comp_struct() = default;
+struct compressed_pubkey_struct {
+	compressed_pubkey_struct() = default;
 	
-	bool operator== (publickey_comp_struct const& other_a) const;
-	bool operator!= (publickey_comp_struct const & other_a) const;
+	bool operator== (compressed_pubkey_struct const& other_a) const;
+	bool operator!= (compressed_pubkey_struct const & other_a) const;
 	bool decode_hex(std::string const & text);
 
 	std::string to_string() const;
@@ -268,8 +268,7 @@ struct publickey_comp_struct {
 	dev::bytesConstRef ref() const;
 };
 
-using public_key_comp = uint256_union;
-using public_key_comp2 = publickey_comp_struct;
+using public_key_comp = compressed_pubkey_struct;
 
 struct account20_struct {
 	account20_struct()  = default;

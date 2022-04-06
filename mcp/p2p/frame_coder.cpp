@@ -3,7 +3,7 @@ using namespace mcp;
 using namespace mcp::p2p;
 using namespace mcp::encry;
 
-void frame_coder_impl::set_key(bool _originated, public_key_comp2 const&_pub, key_pair const&_key)
+void frame_coder_impl::set_key(bool _originated, public_key_comp const&_pub, key_pair const&_key)
 {
 	/*
 	public_key_comp remote_pub, local_pub;
@@ -41,7 +41,7 @@ void frame_coder_impl::set_key(bool _originated, public_key_comp2 const&_pub, ke
 		*/
 	}
 
-	if (get_encryption_key(out_key, _pub.data(), public_key_comp2::size, _key.secret()) != 0)
+	if (get_encryption_key(out_key, _pub.data(), public_key_comp::size, _key.secret()) != 0)
 	{
 		LOG(m_log.info) << "set_frame_coder_key error.";
 		return;
@@ -66,7 +66,7 @@ bool frame_coder_impl::encry(bytes& io_cipher)
 	// io_cipher.resize(msg_len + crypto_cipher_len);
 	io_cipher.resize(msg_len);
 
-	if (encryption2(io_cipher.data(), plain.data(), msg_len, local_nonce.ref().data(), out_key.ref().data()) != 0)
+	if (encryption(io_cipher.data(), plain.data(), msg_len, local_nonce.ref().data(), out_key.ref().data()) != 0)
 	{
 		return false;
 	}
@@ -83,7 +83,7 @@ bool frame_coder_impl::dencry(bytes& io_cipher)
 	// io_cipher.resize(msg_len - crypto_cipher_len);
 	io_cipher.resize(msg_len);
 
-	if (dencryption2(io_cipher.data(), plain.data(), msg_len, remote_nonce.ref().data(), in_key.ref().data()) != 0)
+	if (dencryption(io_cipher.data(), plain.data(), msg_len, remote_nonce.ref().data(), in_key.ref().data()) != 0)
 	{
 		return false;
 	}
@@ -108,7 +108,7 @@ bool frame_coder_impl::dencry(bytesConstRef io, bytes& o_bytes)
 	{
 		return false;
 	}*/
-	if (dencryption2(o_bytes.data(), io.data(), msg_len, remote_nonce.ref().data(), in_key.ref().data()) != 0)
+	if (dencryption(o_bytes.data(), io.data(), msg_len, remote_nonce.ref().data(), in_key.ref().data()) != 0)
 	{
 		return false;
 	}
@@ -125,13 +125,13 @@ frame_coder::frame_coder(hankshake const& _init) :
 	setup(_init.m_originated, _init.m_ecdheRemote, _init.m_remoteNonce, _init.m_ecdheLocal, _init.m_nonce);
 }
 
-frame_coder::frame_coder(bool _originated, public_key_comp2 const& _remoteEphemeral, nonce const& _remoteNonce, key_pair const& _ecdheLocal, nonce const& _nonce) :
+frame_coder::frame_coder(bool _originated, public_key_comp const& _remoteEphemeral, nonce const& _remoteNonce, key_pair const& _ecdheLocal, nonce const& _nonce) :
 	m_impl(new frame_coder_impl)
 {
 	setup(_originated, _remoteEphemeral, _remoteNonce, _ecdheLocal, _nonce);
 }
 
-void frame_coder::setup(bool _originated, public_key_comp2 const& _remoteEphemeral, nonce const& _remoteNonce, key_pair const& _ecdheLocal, nonce const& _nonce)
+void frame_coder::setup(bool _originated, public_key_comp const& _remoteEphemeral, nonce const& _remoteNonce, key_pair const& _ecdheLocal, nonce const& _nonce)
 {
 	m_impl->set_key(_originated,_remoteEphemeral, _ecdheLocal);
 	m_impl->set_nonce(_remoteNonce, _nonce);
@@ -159,8 +159,8 @@ void frame_coder::write_frame(RLPStream const& _header, bytesConstRef _payload, 
 		return;
 	}
 
-	o_bytes.resize(crypto_cipher_len + mcp::p2p::handshake_header_size + payload.size());
-	bytesRef macRef(o_bytes.data() + crypto_cipher_len + mcp::p2p::handshake_header_size, payload.size());
+	o_bytes.resize(/*crypto_cipher_len + */mcp::p2p::handshake_header_size + payload.size());
+	bytesRef macRef(o_bytes.data()/* + crypto_cipher_len*/ + mcp::p2p::handshake_header_size, payload.size());
 	bytesConstRef(&payload).copyTo(macRef);
 }
 
@@ -192,7 +192,7 @@ void frame_coder::write_single_frame_packet(bytesConstRef _packet, bytes& o_byte
 	}
 
 	RLPStream header;
-	uint32_t len = (uint32_t)_packet.size() + crypto_cipher_len;
+	uint32_t len = (uint32_t)_packet.size()/* + crypto_cipher_len*/;
 	header.appendRaw(bytes({ byte((len >> 16) & 0xff), byte((len >> 8) & 0xff), byte(len & 0xff) }));
 
 	write_frame(header, _packet, o_bytes);
@@ -217,7 +217,7 @@ bool frame_coder::auth_and_decrypt_header(bytes& io, uint32_t& len)
 		return false;
 	}
 
-	if (io.size() != handshake_header_size + crypto_cipher_len)
+	if (io.size() != handshake_header_size/* + crypto_cipher_len*/)
 	{
         LOG(m_log.info) << "auth Decrypt Header lenth error.";
 		return false;
@@ -241,13 +241,13 @@ bool frame_coder::auth_and_decrypt_frame(bytes& io)
         LOG(m_log.info) << "Internal error in auth_and_decrypt_frame: frame_coder_impl disappeared.";
 		return false;
 	}
-
+	/*
 	if (io.size() < crypto_cipher_len)
 	{
         LOG(m_log.info) << "auth Decrypt Frame lenth error.";
 		return false;
 	}
-
+	*/
 	if (!m_impl->dencry(io))
 	{
         LOG(m_log.info) << "auth Decrypt Frame error.";
@@ -264,13 +264,13 @@ bool frame_coder::auth_and_decrypt_frame(bytesConstRef io, bytes& o_bytes)
         LOG(m_log.info) << "Internal error in auth_and_decrypt_frame: frame_coder_impl disappeared.";
 		return false;
 	}
-
+	/*
 	if (io.size() < crypto_cipher_len)
 	{
         LOG(m_log.info) << "auth Decrypt Frame lenth error.";
 		return false;
 	}
-
+	*/
 	if (!m_impl->dencry(io, o_bytes))
 	{
         LOG(m_log.info) << "auth Decrypt Frame error.";
