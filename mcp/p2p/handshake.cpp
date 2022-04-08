@@ -191,9 +191,9 @@ uint32_t mcp::p2p::hankshake::packet_size()
 {
 	uint32_t size = 0;
 	if (State::ExchgPublic == m_curState || State::AckExchgPublic == m_curState)
-		size = 71;
+		size = 72;
 	else if (State::New == m_curState)
-		size = 227;
+		size = 213;
 	else if (State::AckAuth == m_curState)
 		size = 130;
 
