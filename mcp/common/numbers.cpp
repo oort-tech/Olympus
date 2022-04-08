@@ -1161,34 +1161,10 @@ dev::bytesConstRef mcp::account20_struct::ref() const {
 	return dev::bytesConstRef(bytes.data(), size);
 }
 
-// added by michael at 4/5
-bool mcp::compressed_pubkey_struct::operator== (compressed_pubkey_struct const& other_a) const
-{
-	return sig == other_a.sig && body == other_a.body;
-}
-
-bool mcp::compressed_pubkey_struct::operator!= (compressed_pubkey_struct const & other_a) const
-{
-	return sig != other_a.sig || body != other_a.body;
-}
-
-bool mcp::compressed_pubkey_struct::decode_hex(std::string const & text)
-{
-	bool error(text.size() != size || text.empty());
-	if (!error) {
-		dev::bytes bytes;
-		hex_to_bytes(text, bytes);
-		sig = bytes[0];
-		dev::bytesRef(bytes.data() + 1, body.size).copyTo(body.ref());
-	}
-	return error;
-}
-
-std::string mcp::compressed_pubkey_struct::to_string() const
-{
-	dev::bytes b;
-	b.push_back(sig);
-	return bytes_to_hex(b) + body.to_string();
+std::string mcp::compressed_pubkey_struct::to_string() const {
+	dev::bytes buf;
+	buf.assign(bytes.begin(), bytes.end());
+	return bytes_to_hex(buf);
 }
 
 dev::bytesRef mcp::compressed_pubkey_struct::ref() {
@@ -1201,6 +1177,13 @@ dev::bytesConstRef mcp::compressed_pubkey_struct::ref() const {
 
 void mcp::compressed_pubkey_struct::clear()
 {
-	sig = 0;
-	body.clear();
+	bytes.fill(0);
+}
+
+mcp::compressed_pubkey_struct::operator mcp::uint256_union() const
+{
+	mcp::uint256_union r;
+	dev::bytesConstRef src(body, 32);
+	src.copyTo(r.ref());
+	return r;
 }

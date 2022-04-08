@@ -4,7 +4,7 @@ using namespace mcp::p2p;
 
 node_table::node_table(mcp::p2p::peer_store& store_a, mcp::key_pair const & alias_a, node_endpoint const & endpoint_a) :
 	m_store(store_a),
-	my_node_info(alias_a.pub_comp().body, endpoint_a),
+	my_node_info((node_id) alias_a.pub_comp(), endpoint_a),
 	secret(alias_a.secret()),
 	socket(std::make_unique<bi::udp::socket>(io_service)),
 	my_endpoint(endpoint_a),

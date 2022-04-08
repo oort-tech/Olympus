@@ -282,7 +282,7 @@ void hankshake::setAuthValues(mcp::signature const& _sig, public_key_comp const&
 		return;
 	}
 
-	if (m_remote != _hePubk.body && !m_remote.is_zero())
+	if (m_remote != (node_id) _hePubk && !m_remote.is_zero())
 	{
 		LOG(m_log.info) << "remote key error: " << m_remote.to_string() << " :" << _hePubk.to_string();
 		m_nextState = Error;
@@ -290,7 +290,7 @@ void hankshake::setAuthValues(mcp::signature const& _sig, public_key_comp const&
 	}
 
 	_remotePubk.ref().copyTo(m_ecdheRemote.ref());	/// transfer encrypt public key
-	_hePubk.body.ref().copyTo(m_remote.ref());	/// transfer signature public key
+	dev::bytesConstRef(_hePubk.body, m_remote.size).copyTo(m_remote.ref());	/// transfer signature public key
 
 	_remoteNonce.ref().copyTo(m_remoteNonce.ref());
 }

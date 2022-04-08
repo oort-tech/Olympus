@@ -247,21 +247,22 @@ using secret_key = uint256_union;
 using public_key = uint512_union;
 
 // added by michael at 4/5
-struct compressed_pubkey_struct {
+union compressed_pubkey_struct {
 	compressed_pubkey_struct() = default;
 	
-	bool operator== (compressed_pubkey_struct const& other_a) const;
-	bool operator!= (compressed_pubkey_struct const & other_a) const;
-	bool decode_hex(std::string const & text);
+	explicit operator mcp::uint256_union() const;
 
 	std::string to_string() const;
 	void clear();
 
-	byte* data() { return &sig; }
-	byte const* data() const { return &sig; }
+	byte* data() { return bytes.data(); }
+	byte const* data() const { return bytes.data(); }
 
-	byte sig;
-	uint256_union body;
+	std::array<byte, 33> bytes;
+	struct {
+		byte sig;
+		byte body[32];
+	};
 
 	enum { size = 33 };
 	dev::bytesRef ref();

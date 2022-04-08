@@ -120,7 +120,7 @@ int main(int argc, char * const * argv)
 
 	// test_signature();
 
-	// test_encrypt_decrypt();
+	test_encrypt_decrypt();
 
 	std::cout << std::endl;
 	std::cout << "Press \"Enter\" to exit...";

@@ -410,7 +410,7 @@ bool mcp::encry::verify(uint256_union const& _k, mcp::signature const& _s, dev::
 {
 	public_key_comp pubkey_comp;
 	pubkey_comp.sig = 0x02;
-	pubkey_comp.body = _k;
+	_k.ref().copyTo(dev::bytesRef(pubkey_comp.body, _k.size));
 
 	if (!verify(pubkey_comp, _s, _o)) {
 		pubkey_comp.sig = 0x03;
@@ -563,7 +563,7 @@ bool mcp::encry::generate_public_from_secret(secret_key const& _sk, public_key& 
 		(serializedPubkeyComp[0] == 0x02 || serializedPubkeyComp[0] == 0x03)
 		) {
 		dev::bytesRef(&serializedPubkey[1], _pk.size).copyTo(_pk.ref());
-		dev::bytesRef(serializedPubkeyComp.data(), _pk_comp.size).copyTo(_pk_comp.ref());
+		dev::bytesRef(serializedPubkeyComp.data(), serializedPubkeySizeComp).copyTo(_pk_comp.ref());
 		return true;
 	}
 
