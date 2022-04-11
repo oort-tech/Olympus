@@ -1161,26 +1161,26 @@ dev::bytesConstRef mcp::account20_struct::ref() const {
 	return dev::bytesConstRef(bytes.data(), size);
 }
 
-std::string mcp::compressed_pubkey_struct::to_string() const {
+std::string mcp::compressed_pubkey_union::to_string() const {
 	dev::bytes buf;
 	buf.assign(bytes.begin(), bytes.end());
 	return bytes_to_hex(buf);
 }
 
-dev::bytesRef mcp::compressed_pubkey_struct::ref() {
+dev::bytesRef mcp::compressed_pubkey_union::ref() {
 	return dev::bytesRef(data(), size);
 }
 
-dev::bytesConstRef mcp::compressed_pubkey_struct::ref() const {
+dev::bytesConstRef mcp::compressed_pubkey_union::ref() const {
 	return dev::bytesConstRef(data(), size);
 }
 
-void mcp::compressed_pubkey_struct::clear()
+void mcp::compressed_pubkey_union::clear()
 {
 	bytes.fill(0);
 }
 
-mcp::compressed_pubkey_struct::operator mcp::uint256_union() const
+mcp::compressed_pubkey_union::operator mcp::uint256_union() const
 {
 	mcp::uint256_union r;
 	dev::bytesConstRef src(body, 32);

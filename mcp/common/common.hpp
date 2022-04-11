@@ -293,7 +293,6 @@ namespace mcp
 		
 		// added by michael at 1/5
 		bool generate_public_from_secret(secret_key const& _sk, public_key& _pk);
-		// bool generate_public_from_secret(secret_key const& _sk, public_key& _pk, public_key_comp& _pk_comp);
 		// added by michael at 4 / 5
 		bool generate_public_from_secret(secret_key const& _sk, public_key& _pk, public_key_comp& _pk_comp);
 		secp256k1_context const* get_secp256k1_ctx();

@@ -247,8 +247,8 @@ using secret_key = uint256_union;
 using public_key = uint512_union;
 
 // added by michael at 4/5
-union compressed_pubkey_struct {
-	compressed_pubkey_struct() = default;
+union compressed_pubkey_union {
+	compressed_pubkey_union() = default;
 	
 	explicit operator mcp::uint256_union() const;
 
@@ -269,7 +269,7 @@ union compressed_pubkey_struct {
 	dev::bytesConstRef ref() const;
 };
 
-using public_key_comp = compressed_pubkey_struct;
+using public_key_comp = compressed_pubkey_union;
 
 struct account20_struct {
 	account20_struct()  = default;
