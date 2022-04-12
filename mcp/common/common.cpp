@@ -149,35 +149,6 @@ bool mcp::hex_to_bytes(std::string const & str , dev::bytes & out)
 	return error;
 }
 
-/*
-mcp::key_pair_ed::key_pair_ed(mcp::seed_key const & seed)
-{
-	// create ed-25519(sign) key pair,encryption need trasnsfer to curve-25519
-	if (crypto_sign_seed_keypair(m_public.ref().data(), m_secret.ref().data(), seed.ref().data()) == 0) {
-		flag = true;
-	}
-}
-
-mcp::key_pair_ed::~key_pair_ed()
-{
-	m_secret.clear();
-	m_public.clear();
-}
-
-mcp::key_pair_ed mcp::key_pair_ed::create()
-{
-	while (true)
-	{
-		mcp::seed_key seed;
-		mcp::random_pool.GenerateBlock(seed.ref().data(), seed.ref().size());
-
-		key_pair_ed m_key_pair(seed);
-		if (m_key_pair.flag)
-			return m_key_pair;
-	}
-}
-*/
-
 mcp::key_pair::key_pair(mcp::seed_key const & seed)
 {
 	seed.ref().copyTo(m_secret.ref());

@@ -21,8 +21,8 @@
 
 #include <secp256k1.h>
 
-#define crypto_cipher_len crypto_box_MACBYTES
-#define crypto_sign_len crypto_sign_BYTES
+// #define crypto_cipher_len crypto_box_MACBYTES
+// #define crypto_sign_len crypto_sign_BYTES
 
 #define STR(s) STR_TEMP(s)
 #define STR_TEMP(s) #s
@@ -155,30 +155,6 @@ namespace mcp
 		std::thread thread;
 	};
 
-	// added by michael at 2/17
-	/*class key_pair_ed
-	{
-		public:
-			key_pair_ed() = default;
-			key_pair_ed(seed_key const & seed);
-			~key_pair_ed();
-			static key_pair_ed create();
-
-			// get the secret key.
-			secret_key const& secret() const { return m_secret; }
-
-			// get the public key
-			public_key_comp const& pub() const { return m_public; }
-
-			bool operator==(key_pair_ed const& _c) const { return m_public == _c.m_public; }
-			bool operator!=(key_pair_ed const& _c) const { return m_public != _c.m_public; }
-			bool flag = false;
-			
-		private:
-			secret_key m_secret;
-			public_key_comp m_public;
-	};*/
-
 	class key_pair
 	{
 	public:
@@ -216,7 +192,8 @@ namespace mcp
 		static nonce get()
 		{
 			static nonce s;
-			randombytes_buf(s.data.data(), s.data.size());
+			// randombytes_buf(s.data.data(), s.data.size());
+			random_pool.GenerateBlock(s.data.data(), s.data.size());
 			return s;
 		}
 
@@ -225,10 +202,10 @@ namespace mcp
 		dev::bytesConstRef ref() const { return dev::bytesConstRef(&data); }
 		dev::bytesRef ref() { return dev::bytesRef(&data); }
 		std::string to_string() const { return dev::toHex(ref()); };
-		enum { size = crypto_box_NONCEBYTES };
+		enum { size = 24 };
 	private:
 		dev::bytes data;
-		void resize() { data.resize(crypto_box_NONCEBYTES); }
+		void resize() { data.resize(size); }
 	};
 
 	namespace encry
