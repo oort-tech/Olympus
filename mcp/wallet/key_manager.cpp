@@ -1,10 +1,14 @@
 #include "key_manager.hpp"
 #include <mcp/common/common.hpp>
 
+#include <cryptopp/sha.h>
+#include <cryptopp/hkdf.h>
+
 void mcp::kdf::phs(mcp::raw_key & result_a, std::string const & password_a, mcp::uint128_union const & salt_a)
 {
 	std::lock_guard<std::mutex> lock(mutex);
 
+	/*
 	uint32_t memory_cost = 16 * 1024 * 1024;
 	auto success = crypto_pwhash(result_a.data.bytes.data(),
 		result_a.data.bytes.size(),
@@ -14,6 +18,10 @@ void mcp::kdf::phs(mcp::raw_key & result_a, std::string const & password_a, mcp:
 		1, memory_cost, crypto_pwhash_ALG_ARGON2ID13);
 	assert_x(success == 0);
 	(void)success;
+	*/
+
+	CryptoPP::HKDF<CryptoPP::SHA256> hkdf;
+	hkdf.DeriveKey(result_a.data.bytes.data(), result_a.data.bytes.size(), (byte*) password_a.data(), password_a.length(), salt_a.data(), salt_a.size, NULL, 0);
 }
 
 mcp::key_manager::key_manager(boost::filesystem::path const & application_path_a, mcp::key_store& store_a):

@@ -810,11 +810,11 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 			config.writestring2file(seed.to_string(), nodekey_path);
 		}
 
-		if (sodium_init() < 0)
+		/*if (sodium_init() < 0)
 		{
 			std::cerr << "encry environment init error,please retry.\n ";
 			return;
-		}
+		}*/
 
 		mcp::db::database::init_table_cache(config.db.cache_size);
 

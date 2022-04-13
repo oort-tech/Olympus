@@ -17,6 +17,7 @@
 #include <cryptopp/hkdf.h>
 #include <secp256k1.h>
 
+/*
 void test_argon2()
 {
 	std::cout << "-------------argon2---------------" << std::endl;
@@ -51,6 +52,7 @@ void test_argon2()
 		std::cout << "result:" << result.to_string() << std::endl;
 	}
 }
+*/
 
 void test_blake2()
 {
