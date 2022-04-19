@@ -134,20 +134,20 @@ private:
 		case mcp::mcp_networks::mcp_test_network:
 		{
 			std::vector<std::string> test_witness_str_list_v0 = {
-				"0x3d8d441841880c414d1058a086d9eaa73eb8065c",
-				"0x3e7d22a76c48d70a50a7904da5e3164f41cb364b",
-				"0x6eca9f91be315bf7a62d06563e3b55b1d0754a9a",
-				"0x25d00bd210dd30e3cff40019e7195b3e91cceea5",
-				"0x42dacf7e05001e9671248a9bd616557fe209931d",
-				"0x86b44128420418ad07a3fec60327c22911f4825d",
-				"0x588b2f316a7f8680b406dbbbae128f28a72ff86e",
-				"0x0856a2d4a0cbb93d9b6d3dbe1af67fe2c4219cf7",
-				"0x1144B522F45265C2DFDBAEE8E324719E63A1694C",
-				"0xc086b09411e4c16b90e1b4b32a7f5d34f0f8eee4",
-				"0xc24760dd2def86397323ac048b7392fe71d92bcc",
-				"0xd11c69cf2a766bee0d7b5186687e70e0ca0530db",
-				"0xdb06ba6181c94d4b30ad8f3d8c29737e4222d7e7",
-				"0xde70e5bb7c626b34167f144efbe57fef09d6fc6d"
+				"0x49a1b41e8ccb704f5c069ef89b08cd33f764e9b3",
+				"0x49c5eb5721eebfe4cf49c5c456b3b099b73907c2",
+				"0x329e6b5b8e59fc73d892958b2ff6a89474e3d067",
+				"0x827cce78dc6ec7051f2d7bb9e7adaefba7ca3248",
+				"0x918d3fe1dbff02fc7521d4a04b50017ce1a7c2ea",
+				"0x929f336edb0a39ad5532a462d4a84e1546c5e5de",
+				"0x1895ac1edc15389b905bb19537eb0c5b33d8c77a",
+				"0x05174fa7ab39a36391b17850a2db9afdcf57190e",
+				"0xa11b98c54d4189adda8eda97e13c214fedaf0a0f",
+				"0xa65ec5c65031d668094cb1b81bb8253ea64a23d7",
+				"0xba618c1e3e90d16e6c15d92ed198780dc4ad39c2",
+				"0xc2cf7b9eb048c34c2b00175a884543366bbcd029",
+				"0xc543a3868f3613eecd109761f71e31832ecf51ba",
+				"0xdab8a5fb82eb24ad321751bb2dd8e4cc9a4e45e5"
 			};
 			mcp::witness_param w_param_v0;
 			w_param_v0.witness_count = 14;
