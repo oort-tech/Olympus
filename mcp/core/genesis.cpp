@@ -10,8 +10,8 @@ std::string const mini_test_genesis_data = R"%%%({
 })%%%";
 
 std::string const test_genesis_data = R"%%%({
-    "from":"0x1144B522F45265C2DFDBAEE8E324719E63A1694C",
-    "to":"0x1144B522F45265C2DFDBAEE8E324719E63A1694C",
+    "from":"0x49a1b41e8ccb704f5c069ef89b08cd33f764e9b3",
+    "to":"0x49a1b41e8ccb704f5c069ef89b08cd33f764e9b3",
     "amount":"1132623791600000000000000000",
     "data":"",
 	"exec_timestamp":"1514764800"
@@ -26,8 +26,8 @@ std::string const beta_genesis_data = R"%%%({
 })%%%";
 
 std::string const live_genesis_data = R"%%%({
-    "from":"0x1144B522F45265C2DFDBAEE8E324719E63A1694C",
-    "to":"0x1144B522F45265C2DFDBAEE8E324719E63A1694C",
+    "from":"0x49a1b41e8ccb704f5c069ef89b08cd33f764e9b3",
+    "to":"0x49a1b41e8ccb704f5c069ef89b08cd33f764e9b3",
     "amount":"1132623791600000000000000000",
     "data":"",
 	"exec_timestamp":"1562288400"
