@@ -16,16 +16,16 @@ void test_create_account()
 	std::cout << "-------------test_create_account---------------" << std::endl;
 
 	mcp::uint128_union kdf_salt;
-	// mcp::random_pool.GenerateBlock(kdf_salt.bytes.data(), kdf_salt.bytes.size());
-	kdf_salt.decode_hex("59555A1474D77707BC6CF1FA7DE67199");
+	mcp::random_pool.GenerateBlock(kdf_salt.bytes.data(), kdf_salt.bytes.size());
+	// kdf_salt.decode_hex("59555A1474D77707BC6CF1FA7DE67199");
 
 	mcp::uint128_union iv;
-	// mcp::random_pool.GenerateBlock(iv.bytes.data(), iv.bytes.size());
-	iv.decode_hex("E9A53520669C4131592E581CA81E873C");
+	mcp::random_pool.GenerateBlock(iv.bytes.data(), iv.bytes.size());
+	// iv.decode_hex("E9A53520669C4131592E581CA81E873C");
 
 	mcp::raw_key prv;
-	// mcp::random_pool.GenerateBlock(prv.data.bytes.data(), prv.data.bytes.size());
-	prv.data.decode_hex("D79703A37D55FD5AFC17FA4BF98047F9C6592559ABE107D01FAD13F8CDD0CD2A");
+	mcp::random_pool.GenerateBlock(prv.data.bytes.data(), prv.data.bytes.size());
+	// prv.data.decode_hex("D79703A37D55FD5AFC17FA4BF98047F9C6592559ABE107D01FAD13F8CDD0CD2A");
 
 	std::string password = "12345678";
 
@@ -52,20 +52,17 @@ void test_create_account()
 	std::cout << "ciphertext:" << ciphertext.to_string() << std::endl;
 	std::cout << "pub:" << pub.to_string() << std::endl;
 	std::cout << "account:" << mcp::account(pub).to_account() << std::endl;
-
-	std::cout << "------------------------------------------------------" << std::endl;
 	std::cout << "derive_pwd:" << derive_pwd.data.to_string() << std::endl;
 
-	mcp::raw_key derive_pwd2;
-	CryptoPP::HKDF<CryptoPP::SHA256> hkdf;
-	hkdf.DeriveKey(derive_pwd2.data.bytes.data(), derive_pwd2.data.bytes.size(), (byte*) password.data(), password.length(), kdf_salt.data(), kdf_salt.size, NULL, 0);
-	std::cout << "derive_pwd2:" << derive_pwd2.data.to_string() << std::endl;
+	std::cout << "------------------------------------------------------" << std::endl;
 
-	mcp::raw_key derive_pwd3;
-	CryptoPP::PKCS5_PBKDF2_HMAC<CryptoPP::SHA256> pbkdf;
-	byte unused = 0;
-	pbkdf.DeriveKey(derive_pwd3.data.bytes.data(), derive_pwd3.data.bytes.size(), unused, (byte*) password.data(), password.length(), kdf_salt.data(), kdf_salt.size, 1024, 0.0f);
-	std::cout << "derive_pwd3:" << derive_pwd3.data.to_string() << std::endl;
+	mcp::json js;
+	js["account"] = mcp::account(pub).to_account();
+	js["kdf_salt"] = kdf_salt.to_string();
+	js["iv"] = iv.to_string();
+	js["ciphertext"] = ciphertext.to_string();
+
+	std::cout << js.dump() << std::endl;
 
 	// if (mcp::mcp_network == mcp::mcp_networks::mcp_test_network)
 	// {

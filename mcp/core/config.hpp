@@ -135,7 +135,7 @@ private:
 		{
 			std::vector<std::string> test_witness_str_list_v0 = {
 				"0x49a1b41e8ccb704f5c069ef89b08cd33f764e9b3",
-				"0x49c5eb5721eebfe4cf49c5c456b3b099b73907c2",
+				"0xea7c1a74a0200a626cc858cd968abf85d6d91f2f",
 				"0x329e6b5b8e59fc73d892958b2ff6a89474e3d067",
 				"0x827cce78dc6ec7051f2d7bb9e7adaefba7ca3248",
 				"0x918d3fe1dbff02fc7521d4a04b50017ce1a7c2ea",
