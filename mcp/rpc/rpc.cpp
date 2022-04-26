@@ -3284,6 +3284,9 @@ void mcp::rpc_handler::process_request()
 		{
 			net_listening();
 		}
+		else if (action == "net_peerCount") {
+			net_peerCount();
+		}
 		else if (action == "web3_clientVersion")
 		{
 			web3_clientVersion();
@@ -5085,6 +5088,17 @@ void mcp::rpc_handler::net_listening()
 		return;
 	}
 	response_l["result"] = m_host->is_started();
+	response(response_l);
+}
+
+void mcp::rpc_handler::net_peerCount()
+{
+	mcp::json response_l;
+	if (!is_eth_rpc(response_l))
+	{
+		return;
+	}
+	response_l["result"] = m_host->get_peers_count();
 	response(response_l);
 }
 
