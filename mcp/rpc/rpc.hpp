@@ -518,6 +518,7 @@ public:
     bool try_get_mc_info(dev::eth::McInfo &mc_info_a, uint64_t &mci);
     // related to the upgrades
     void web3_clientVersion();
+	void web3_sha3();
     void eth_getCode();
     void eth_getStorageAt();
     void eth_getTransactionByHash();

@@ -3284,6 +3284,9 @@ void mcp::rpc_handler::process_request()
 		{
 			web3_clientVersion();
 		}
+		else if (action == "web3_sha3") {
+			web3_sha3();
+		}
 		else if (action == "eth_getCode")
 		{
 			eth_getCode();
@@ -5078,6 +5081,26 @@ void mcp::rpc_handler::web3_clientVersion()
 		return;
 	}
 	response_l["result"] = STR(MCP_VERSION);
+	response(response_l);
+}
+
+void mcp::rpc_handler::web3_sha3() {
+	mcp::json response_l;
+	if (!is_eth_rpc(response_l))
+	{
+		return;
+	}
+	mcp::json params = request["params"];
+	if (params.size() != 1)
+	{
+		error_eth_response(response, rpc_eth_error_code::invalid_params, response_l);
+		return;
+	}
+	if (!params[0].is_string()) {
+		error_eth_response(response, rpc_eth_error_code::invalid_params, response_l);
+		return;
+	}
+	response_l["result"] = toJS(sha3(jsToBytes(params[0])));
 	response(response_l);
 }
 
