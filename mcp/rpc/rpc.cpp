@@ -3280,6 +3280,10 @@ void mcp::rpc_handler::process_request()
 		{
 			net_version();
 		}
+		else if (action == "net_listening")
+		{
+			net_listening();
+		}
 		else if (action == "web3_clientVersion")
 		{
 			web3_clientVersion();
@@ -5070,6 +5074,17 @@ void mcp::rpc_handler::net_version()
 	response_l["version"] = STR(MCP_VERSION);
 	response_l["result"] = "828";
 
+	response(response_l);
+}
+
+void mcp::rpc_handler::net_listening()
+{
+	mcp::json response_l;
+	if (!is_eth_rpc(response_l))
+	{
+		return;
+	}
+	response_l["result"] = m_host->is_started();
 	response(response_l);
 }
 

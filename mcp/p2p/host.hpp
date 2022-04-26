@@ -65,7 +65,7 @@ namespace mcp
 			std::mutex pending_conns_mutex;
 			std::unordered_set<node_id> pending_conns;
 			peer_outbound attempt_outs;
-
+			bool is_started() { return is_run; };
 			void replace_bootstrap(node_id const& old_a, node_id new_a);
         private:
             enum class peer_type
