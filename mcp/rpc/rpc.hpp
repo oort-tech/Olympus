@@ -526,6 +526,8 @@ public:
     void eth_getCode();
     void eth_getStorageAt();
     void eth_getTransactionByHash();
+	void eth_getTransactionByBlockHashAndIndex();
+	void eth_getTransactionByBlockNumberAndIndex();
     void eth_getTransactionReceipt();
 	void eth_getBalance();
 	// related to the metamask

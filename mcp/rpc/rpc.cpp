@@ -3306,6 +3306,12 @@ void mcp::rpc_handler::process_request()
 		{
 			eth_getTransactionByHash();
 		}
+		else if (action == "eth_getTransactionByBlockHashAndIndex") {
+			eth_getTransactionByBlockHashAndIndex();
+		}
+		else if (action == "eth_getTransactionByBlockNumberAndIndex") {
+			eth_getTransactionByBlockNumberAndIndex();
+		}
 		else if (action == "eth_getTransactionReceipt")
 		{
 			eth_getTransactionReceipt();
@@ -5225,6 +5231,169 @@ void mcp::rpc_handler::eth_getTransactionByHash()
 
 	mcp::db::db_transaction transaction(m_store.create_transaction());
 	std::shared_ptr<mcp::block_state> state(m_cache->block_state_get(transaction, block_hash));
+	if (block_hash != mcp::genesis::block_hash && state != nullptr)
+	{
+		auto block(m_cache->block_get(transaction, block_hash));
+		if (block != nullptr && state->receipt != boost::none) {
+			if (block->hashables->type == mcp::block_type::light /*&& block->isCreation()*/ && state->is_stable)
+			{
+				if (state->status == mcp::block_status::ok) {
+					std::shared_ptr<mcp::account_state> acc_state(m_store.account_state_get(transaction, state->receipt->from_state));
+					assert_x(acc_state);
+					mcp::json json_receipt;
+					json_receipt["hash"] = block_hash.to_string(true);
+					json_receipt["nonce"] = uint256_to_hex_nofill(acc_state->nonce() - 1);
+					json_receipt["blockHash"] = block_hash.to_string(true);
+					json_receipt["blockNumber"] = uint64_to_hex_nofill(state->main_chain_index.get());
+					json_receipt["transactionIndex"] = "0x0";
+					json_receipt["from"] = block->hashables->from.to_account();
+					if (block->isCreation()) {
+						json_receipt["to"] = nullptr;
+					}
+					else {
+						json_receipt["to"] = block->hashables->to.to_account();;
+					}
+					json_receipt["value"] = uint256_to_hex_nofill(block->hashables->amount);
+					json_receipt["gas"] = uint256_to_hex_nofill(block->hashables->gas);
+					json_receipt["input"] = "0x" + bytes_to_hex(block->data);
+					json_receipt["gasPrice"] = uint64_to_hex_nofill(1000000000);
+					response_l["result"] = json_receipt;
+				}
+				else if (state->status == mcp::block_status::fail) {
+					error_eth_response(response, rpc_eth_error_code::TRANSACTION_REJECTED, response_l);
+					return;
+				}
+			}
+		}
+	}
+
+	response(response_l);
+}
+
+void mcp::rpc_handler::eth_getTransactionByBlockHashAndIndex()
+{
+	mcp::json response_l;
+	if (!is_eth_rpc(response_l))
+	{
+		return;
+	}
+
+	mcp::json params = request["params"];
+	if (params.size() != 2) {
+		error_eth_response(response, rpc_eth_error_code::invalid_params, response_l);
+		return;
+	}
+
+	int index = params[1];
+	if (index != 0) {
+		error_eth_response(response, rpc_eth_error_code::invalid_params, response_l);
+		return;
+	}
+
+	mcp::block_hash block_hash;
+	if (block_hash.decode_hex(params[0], true)) {
+		error_eth_response(response, rpc_eth_error_code::invalid_params, response_l);
+		return;
+	}
+
+	mcp::db::db_transaction transaction(m_store.create_transaction());
+	std::shared_ptr<mcp::block_state> state(m_cache->block_state_get(transaction, block_hash));
+	if (block_hash != mcp::genesis::block_hash && state != nullptr)
+	{
+		auto block(m_cache->block_get(transaction, block_hash));
+		if (block != nullptr && state->receipt != boost::none) {
+			if (block->hashables->type == mcp::block_type::light /*&& block->isCreation()*/ && state->is_stable)
+			{
+				if (state->status == mcp::block_status::ok) {
+					std::shared_ptr<mcp::account_state> acc_state(m_store.account_state_get(transaction, state->receipt->from_state));
+					assert_x(acc_state);
+					mcp::json json_receipt;
+					json_receipt["hash"] = block_hash.to_string(true);
+					json_receipt["nonce"] = uint256_to_hex_nofill(acc_state->nonce() - 1);
+					json_receipt["blockHash"] = block_hash.to_string(true);
+					json_receipt["blockNumber"] = uint64_to_hex_nofill(state->main_chain_index.get());
+					json_receipt["transactionIndex"] = "0x0";
+					json_receipt["from"] = block->hashables->from.to_account();
+					if (block->isCreation()) {
+						json_receipt["to"] = nullptr;
+					}
+					else {
+						json_receipt["to"] = block->hashables->to.to_account();;
+					}
+					json_receipt["value"] = uint256_to_hex_nofill(block->hashables->amount);
+					json_receipt["gas"] = uint256_to_hex_nofill(block->hashables->gas);
+					json_receipt["input"] = "0x" + bytes_to_hex(block->data);
+					json_receipt["gasPrice"] = uint64_to_hex_nofill(1000000000);
+					response_l["result"] = json_receipt;
+				}
+				else if (state->status == mcp::block_status::fail) {
+					error_eth_response(response, rpc_eth_error_code::TRANSACTION_REJECTED, response_l);
+					return;
+				}
+			}
+		}
+	}
+
+	response(response_l);
+}
+
+void mcp::rpc_handler::eth_getTransactionByBlockNumberAndIndex()
+{
+	mcp::json response_l;
+	if (!is_eth_rpc(response_l))
+	{
+		return;
+	}
+
+	mcp::json params = request["params"];
+	if (params.size() != 2)
+	{
+		error_eth_response(response, rpc_eth_error_code::invalid_params, response_l);
+		return;
+	}
+
+	uint64_t block_number;
+	if (params[0].is_string())
+	{
+		std::string block_numberText = params[0];
+		if (block_numberText == "latest")
+		{
+			block_number = m_chain->last_stable_mci();
+		}
+		else if (block_numberText == "earliest")
+		{
+			block_number = 0;
+		}
+		else if (block_numberText.find("0x") == 0)
+		{
+			if (hex_to_uint64(block_numberText, block_number, true))
+			{
+				error_eth_response(response, rpc_eth_error_code::invalid_block_number, response_l);
+				return;
+			}
+		}
+		else
+		{
+			error_eth_response(response, rpc_eth_error_code::invalid_block_number, response_l);
+			return;
+		}
+	}
+	else
+	{
+		error_eth_response(response, rpc_eth_error_code::invalid_block_number, response_l);
+		return;
+	}
+
+	mcp::db::db_transaction transaction(m_store.create_transaction());
+	mcp::block_hash block_hash;
+	if (m_store.main_chain_get(transaction, block_number, block_hash))
+	{
+		error_eth_response(response, rpc_eth_error_code::invalid_block_number, response_l);
+		return;
+	}
+
+	std::shared_ptr<mcp::block_state> state(m_cache->block_state_get(transaction, block_hash));
+
 	if (block_hash != mcp::genesis::block_hash && state != nullptr)
 	{
 		auto block(m_cache->block_get(transaction, block_hash));
