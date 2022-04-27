@@ -511,6 +511,8 @@ public:
     void eth_gasPrice();
     void eth_estimateGas();
     void eth_getBlockByNumber();
+	void eth_getBlockTransactionCountByHash();
+	void eth_getBlockTransactionCountByNumber();
     void eth_sendRawTransaction();
     void eth_sendTransaction();
     void eth_call();

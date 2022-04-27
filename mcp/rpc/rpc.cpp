@@ -3316,6 +3316,12 @@ void mcp::rpc_handler::process_request()
 		else if (action == "eth_getBlockByHash") {
 			eth_getBlockByHash();
 		}
+		else if (action == "eth_getBlockTransactionCountByHash") {
+			eth_getBlockTransactionCountByHash();
+		}
+		else if (action == "eth_getBlockTransactionCountByNumber") {
+			eth_getBlockTransactionCountByNumber();
+		}
 		else if (action == "eth_accounts") {
 			eth_accounts();
 		}
@@ -5398,6 +5404,120 @@ void mcp::rpc_handler::eth_getBlockByHash()
 			block_l["number"] = uint64_to_hex_nofill(state->main_chain_index.get());
 		}
 		response_l["result"] = block_l;
+	}
+
+	response(response_l);
+}
+
+void mcp::rpc_handler::eth_getBlockTransactionCountByHash()
+{
+	mcp::json response_l;
+	if (!is_eth_rpc(response_l))
+	{
+		return;
+	}
+
+	mcp::json params = request["params"];
+	if (params.size() != 1)
+	{
+		error_eth_response(response, rpc_eth_error_code::invalid_params, response_l);
+		return;
+	}
+
+	mcp::block_hash block_hash;
+	if (block_hash.decode_hex(params[0], true)) {
+		error_eth_response(response, rpc_eth_error_code::invalid_params, response_l);
+		return;
+	}
+
+	mcp::db::db_transaction transaction(m_store.create_transaction());
+	std::shared_ptr<mcp::block_state> state(m_cache->block_state_get(transaction, block_hash));
+	if (state != nullptr)
+	{
+		auto block(m_cache->block_get(transaction, block_hash));
+		mcp::json block_l;
+		response_l["result"] = 0;
+		if (block != nullptr)
+		{
+			if (!block->hash().is_zero()) {
+				response_l["result"] = 1;
+			}
+		}
+		
+	}
+
+	response(response_l);
+}
+
+void mcp::rpc_handler::eth_getBlockTransactionCountByNumber()
+{
+	mcp::json response_l;
+	if (!is_eth_rpc(response_l))
+	{
+		return;
+	}
+
+	mcp::json params = request["params"];
+	if (params.size() != 1)
+	{
+		error_eth_response(response, rpc_eth_error_code::invalid_params, response_l);
+		return;
+	}
+
+	uint64_t block_number;
+	if (params[0].is_string())
+	{
+		std::string block_numberText = params[0];
+		if (block_numberText == "latest")
+		{
+			block_number = m_chain->last_stable_mci();
+		}
+		else if (block_numberText == "earliest")
+		{
+			block_number = 0;
+		}
+		else if (block_numberText.find("0x") == 0)
+		{
+			if (hex_to_uint64(block_numberText, block_number, true))
+			{
+				error_eth_response(response, rpc_eth_error_code::invalid_block_number, response_l);
+				return;
+			}
+		}
+		else
+		{
+			error_eth_response(response, rpc_eth_error_code::invalid_block_number, response_l);
+			return;
+		}
+	}
+	else
+	{
+		error_eth_response(response, rpc_eth_error_code::invalid_block_number, response_l);
+		return;
+	}
+
+	mcp::db::db_transaction transaction(m_store.create_transaction());
+	mcp::block_hash block_hash;
+	if (m_store.main_chain_get(transaction, block_number, block_hash))
+	{
+		error_eth_response(response, rpc_eth_error_code::invalid_block_number, response_l);
+		return;
+	}
+
+	std::shared_ptr<mcp::block_state> state(m_cache->block_state_get(transaction, block_hash));
+	if (/*block_hash != mcp::genesis::block_hash &&*/state != nullptr)
+	{
+		auto block(m_cache->block_get(transaction, block_hash));
+		if (block != nullptr)
+		{
+			response_l["result"] = 0;
+			if (block != nullptr)
+			{
+				if (!block->hash().is_zero()) {
+					response_l["result"] = 1;
+				}
+			}
+		}
 	}
 
 	response(response_l);
