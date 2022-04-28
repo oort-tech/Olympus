@@ -5234,15 +5234,18 @@ void mcp::rpc_handler::eth_getTransactionByHash()
 	if (block_hash != mcp::genesis::block_hash && state != nullptr)
 	{
 		auto block(m_cache->block_get(transaction, block_hash));
-		if (block != nullptr && state->receipt != boost::none) {
-			if (block->hashables->type == mcp::block_type::light /*&& block->isCreation()*/ && state->is_stable)
+		if (block != nullptr) {
+			if (state->is_stable)
 			{
 				if (state->status == mcp::block_status::ok) {
-					std::shared_ptr<mcp::account_state> acc_state(m_store.account_state_get(transaction, state->receipt->from_state));
-					assert_x(acc_state);
 					mcp::json json_receipt;
 					json_receipt["hash"] = block_hash.to_string(true);
-					json_receipt["nonce"] = uint256_to_hex_nofill(acc_state->nonce() - 1);
+					json_receipt["nonce"] = 0;
+					if (state->receipt != boost::none) {
+						std::shared_ptr<mcp::account_state> acc_state(m_store.account_state_get(transaction, state->receipt->from_state));
+						assert_x(acc_state);
+						json_receipt["nonce"] = uint256_to_hex_nofill(acc_state->nonce() - 1);
+					}
 					json_receipt["blockHash"] = block_hash.to_string(true);
 					json_receipt["blockNumber"] = uint64_to_hex_nofill(state->main_chain_index.get());
 					json_receipt["transactionIndex"] = "0x0";
@@ -5301,15 +5304,18 @@ void mcp::rpc_handler::eth_getTransactionByBlockHashAndIndex()
 	if (block_hash != mcp::genesis::block_hash && state != nullptr)
 	{
 		auto block(m_cache->block_get(transaction, block_hash));
-		if (block != nullptr && state->receipt != boost::none) {
-			if (block->hashables->type == mcp::block_type::light /*&& block->isCreation()*/ && state->is_stable)
+		if (block != nullptr) {
+			if (state->is_stable)
 			{
 				if (state->status == mcp::block_status::ok) {
-					std::shared_ptr<mcp::account_state> acc_state(m_store.account_state_get(transaction, state->receipt->from_state));
-					assert_x(acc_state);
 					mcp::json json_receipt;
 					json_receipt["hash"] = block_hash.to_string(true);
-					json_receipt["nonce"] = uint256_to_hex_nofill(acc_state->nonce() - 1);
+					json_receipt["nonce"] = 0;
+					if (state->receipt != boost::none) {
+						std::shared_ptr<mcp::account_state> acc_state(m_store.account_state_get(transaction, state->receipt->from_state));
+						assert_x(acc_state);
+						json_receipt["nonce"] = uint256_to_hex_nofill(acc_state->nonce() - 1);
+					}
 					json_receipt["blockHash"] = block_hash.to_string(true);
 					json_receipt["blockNumber"] = uint64_to_hex_nofill(state->main_chain_index.get());
 					json_receipt["transactionIndex"] = "0x0";
@@ -5397,15 +5403,18 @@ void mcp::rpc_handler::eth_getTransactionByBlockNumberAndIndex()
 	if (block_hash != mcp::genesis::block_hash && state != nullptr)
 	{
 		auto block(m_cache->block_get(transaction, block_hash));
-		if (block != nullptr && state->receipt != boost::none) {
-			if (block->hashables->type == mcp::block_type::light /*&& block->isCreation()*/ && state->is_stable)
+		if (block != nullptr) {
+			if (state->is_stable)
 			{
 				if (state->status == mcp::block_status::ok) {
-					std::shared_ptr<mcp::account_state> acc_state(m_store.account_state_get(transaction, state->receipt->from_state));
-					assert_x(acc_state);
 					mcp::json json_receipt;
 					json_receipt["hash"] = block_hash.to_string(true);
-					json_receipt["nonce"] = uint256_to_hex_nofill(acc_state->nonce() - 1);
+					json_receipt["nonce"] = 0;
+					if (state->receipt != boost::none) {
+						std::shared_ptr<mcp::account_state> acc_state(m_store.account_state_get(transaction, state->receipt->from_state));
+						assert_x(acc_state);
+						json_receipt["nonce"] = uint256_to_hex_nofill(acc_state->nonce() - 1);
+					}
 					json_receipt["blockHash"] = block_hash.to_string(true);
 					json_receipt["blockNumber"] = uint64_to_hex_nofill(state->main_chain_index.get());
 					json_receipt["transactionIndex"] = "0x0";
@@ -5488,23 +5497,22 @@ void mcp::rpc_handler::eth_getTransactionReceipt()
 	{
 		auto block(m_cache->block_get(transaction, block_hash));
 		if (block != nullptr && state->receipt != boost::none) {
-			if (block->hashables->type == mcp::block_type::light && state->is_stable)
+			if (state->is_stable)
 			{
 				if (state->status == mcp::block_status::ok) {
-					std::shared_ptr<mcp::account_state> acc_state(m_store.account_state_get(transaction, state->receipt->from_state));
-					assert_x(acc_state);
 					mcp::json json_receipt;
 					json_receipt["blockHash"] = block_hash.to_string(true);
 					json_receipt["blockNumber"] = uint64_to_hex_nofill(state->main_chain_index.get());
 					json_receipt["from"] = block->hashables->from.to_account();
 					if (block->isCreation()) {
 						json_receipt["to"] = nullptr;
+						std::shared_ptr<mcp::account_state> acc_state(m_store.account_state_get(transaction, state->receipt->from_state));
+						assert_x(acc_state);
+						json_receipt["contractAddress"] = toAddress(block->hashables->from, acc_state->nonce() - 1).to_account();
 					}
 					else {
 						json_receipt["to"] = block->hashables->to.to_account();;
 					}
-					json_receipt["to"] = nullptr;
-					json_receipt["contractAddress"] = toAddress(block->hashables->from, acc_state->nonce() - 1).to_account();
 					json_receipt["gasUsed"] = uint256_to_hex_nofill(state->receipt->gas_used);
 					json_receipt["cumulativeGasUsed"] = uint256_to_hex_nofill(block->hashables->gas);
 					json_receipt["gasPrice"] = uint64_to_hex_nofill(1000000000);
@@ -5674,7 +5682,7 @@ void mcp::rpc_handler::eth_getBlockTransactionCountByNumber()
 	}
 
 	std::shared_ptr<mcp::block_state> state(m_cache->block_state_get(transaction, block_hash));
-	if (/*block_hash != mcp::genesis::block_hash &&*/state != nullptr)
+	if (state != nullptr)
 	{
 		auto block(m_cache->block_get(transaction, block_hash));
 		if (block != nullptr)
