@@ -16,3 +16,5 @@ void test_account_decrypt();
 
 void test_signature();
 void test_encrypt_decrypt();
+
+void test_eth_sign();

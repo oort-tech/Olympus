@@ -221,7 +221,7 @@ bool mcp::key_manager::decrypt_prv(mcp::key_content const & kc_a, std::string co
 bool mcp::key_manager::is_locked(mcp::account const & account_a)
 {
 	std::lock_guard<std::mutex> lock(m_unlocked_mutex);
-	return m_unlocked.count(account_a) > 0;
+	return m_unlocked.count(account_a) == 0;
 }
 
 bool mcp::key_manager::find_unlocked_prv(mcp::account const & account_a, mcp::raw_key & prv)

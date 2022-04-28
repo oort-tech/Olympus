@@ -5740,6 +5740,11 @@ void mcp::rpc_handler::eth_sign()
 		error_eth_response(response, rpc_eth_error_code::invalid_account, response_l);
 		return;
 	}
+	else if (!m_key_manager->exists(account) || m_key_manager->is_locked(account))
+	{
+		error_eth_response(response, rpc_eth_error_code::invalid_account, response_l);
+		return;
+	}
 
 	dev::bytes data;
 	std::string data_text = params[1];
@@ -5753,4 +5758,31 @@ void mcp::rpc_handler::eth_sign()
 		error_eth_response(response, rpc_eth_error_code::invalid_data, response_l);
 		return;
 	}
+
+	dev::bytes msg;
+	std::string prefix = "Ethereum Signed Message:\n" + std::to_string(data.size());
+	msg.resize(prefix.size() + data.size() + 1);
+
+	msg[0] = 0x19;
+	dev::bytesRef((unsigned char*)prefix.data(), prefix.size()).copyTo(dev::bytesRef(msg.data() + 1, prefix.size()));
+	dev::bytesRef(data.data(), data.size()).copyTo(dev::bytesRef(msg.data() + prefix.size() + 1, data.size()));
+
+	dev::bytes digest;
+	CryptoPP::Keccak_256 hash;
+	hash.Update((const byte*)msg.data(), msg.size());
+	digest.resize(hash.DigestSize());
+	hash.Final(digest.data());
+
+	mcp::raw_key prv;
+	if (!m_key_manager->find_unlocked_prv(account, prv)) {
+		error_eth_response(response, rpc_eth_error_code::invalid_account, response_l);
+		return;
+	}
+
+	mcp::signature signature;
+	if (mcp::encry::sign(prv.data, dev::bytesConstRef(digest.data(), digest.size()), signature)) {
+		response_l["result"] = "0x" + signature.to_string();
+	}
+
+	response(response_l);
 }

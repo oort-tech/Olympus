@@ -17,6 +17,9 @@
 #include <cryptopp/hkdf.h>
 #include <secp256k1.h>
 
+#include <cryptopp/cryptlib.h>
+#include <cryptopp/keccak.h>
+
 /*
 void test_argon2()
 {
@@ -463,4 +466,30 @@ void test_encrypt_decrypt()
 
 	std::cout << "Plain Text:" << plaintext.to_string() << std::endl;
 	std::cout << "Decrypted Text:" << decrypttext.to_string() << std::endl;
+}
+
+void test_eth_sign()
+{
+	dev::bytes data;
+	std::string data_text = "0x5363686f6f6c627573";
+	if (mcp::hex_to_bytes(data_text, data))
+	{
+		return;
+	}
+	std::string prefix = "Ethereum Signed Message:\n" + std::to_string(data.size());
+
+	dev::bytes msg;
+	msg.resize(prefix.size() + data.size() + 1);
+	msg[0] = 0x19;
+	dev::bytesRef((unsigned char*) prefix.data(), prefix.size()).copyTo(dev::bytesRef(msg.data() + 1, prefix.size()));
+	dev::bytesRef(data.data(), data.size()).copyTo(dev::bytesRef(msg.data() + prefix.size() + 1, data.size()));
+	
+	dev::bytes digest;
+	CryptoPP::Keccak_256 hash;
+	hash.Update((const byte*) msg.data(), msg.size());
+	digest.resize(hash.DigestSize());
+	hash.Final(digest.data());
+
+	std::cout << "Message: " << msg.data() << std::endl;
+	std::cout << "Keccak256" << mcp::bytes_to_hex(digest) << std::endl;
 }
