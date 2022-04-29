@@ -3332,7 +3332,10 @@ void mcp::rpc_handler::process_request()
 			eth_accounts();
 		}
 		else if (action == "eth_sign") {
-			// eth_sign();
+			eth_sign();
+		}
+		else if (action == "eth_signTransaction") {
+			eth_signTransaction();
 		}
 		//
 		else
@@ -4857,36 +4860,36 @@ void mcp::rpc_handler::eth_sendTransaction()
 
 	mcp::account to;
 	to.clear();
-	if (!params.count("to") ||
-		!params["to"].is_string() ||
-		to.decode_account(params["to"]))
+	if (params.count("to") &&
+		(!params["to"].is_string() ||
+		to.decode_account(params["to"])))
 	{
 		error_eth_response(response, rpc_eth_error_code::invalid_to_account, response_l);
 		return;
 	}
 
 	uint256_t amount(0);
-	if (!params.count("value") ||
-		!params["value"].is_string() ||
-		hex_to_uint256(params["value"], amount, true))
+	if (params.count("value") &&
+		(!params["value"].is_string() ||
+		hex_to_uint256(params["value"], amount, true)))
 	{
 		error_eth_response(response, rpc_eth_error_code::invalid_value, response_l);
 		return;
 	}
 
 	uint256_t gas(0);
-	if (!params.count("gas") ||
-		!params["gas"].is_string() ||
-		hex_to_uint256(params["gas"], gas, true))
+	if (params.count("gas") &&
+		(!params["gas"].is_string() ||
+		hex_to_uint256(params["gas"], gas, true)))
 	{
 		error_eth_response(response, rpc_eth_error_code::invalid_gas, response_l);
 		return;
 	}
 
 	uint256_t gas_price(0);
-	if (!params.count("gasPrice") ||
-		!params["gasPrice"].is_string() ||
-		hex_to_uint256(params["gasPrice"], gas_price, true))
+	if (params.count("gasPrice") &&
+		(params["gasPrice"].is_string() ||
+		hex_to_uint256(params["gasPrice"], gas_price, true)))
 	{
 		error_eth_response(response, rpc_eth_error_code::invalid_gas_price, response_l);
 		return;
@@ -4901,6 +4904,11 @@ void mcp::rpc_handler::eth_sendTransaction()
 			error_eth_response(response, rpc_eth_error_code::invalid_data, response_l);
 			return;
 		}
+	}
+	else
+	{
+		error_eth_response(response, rpc_eth_error_code::invalid_params, response_l);
+		return;
 	}
 	if (data.size() > mcp::max_data_size)
 	{
@@ -5781,6 +5789,127 @@ void mcp::rpc_handler::eth_sign()
 
 	mcp::signature signature;
 	if (mcp::encry::sign(prv.data, dev::bytesConstRef(digest.data(), digest.size()), signature)) {
+		response_l["result"] = "0x" + signature.to_string();
+	}
+
+	response(response_l);
+}
+
+void mcp::rpc_handler::eth_signTransaction()
+{
+	mcp::json response_l;
+	if (!is_eth_rpc(response_l))
+	{
+		return;
+	}
+
+	mcp::json params = request["params"][0];
+	if (!params.is_object())
+	{
+		error_eth_response(response, rpc_eth_error_code::invalid_params, response_l);
+		return;
+	}
+
+	mcp::account from;
+	if (!params.count("from") ||
+		!params["from"].is_string() ||
+		from.decode_account(params["from"]) ||
+		!m_key_manager->exists(from))
+	{
+		error_eth_response(response, rpc_eth_error_code::invalid_from_account, response_l);
+		return;
+	}
+
+	mcp::account to;
+	to.clear();
+	if (params.count("to") &&
+		(!params["to"].is_string() ||
+		to.decode_account(params["to"])))
+	{
+		error_eth_response(response, rpc_eth_error_code::invalid_to_account, response_l);
+		return;
+	}
+
+	uint256_t amount(0);
+	if (params.count("value") &&
+		(!params["value"].is_string() ||
+		hex_to_uint256(params["value"], amount, true)))
+	{
+		error_eth_response(response, rpc_eth_error_code::invalid_value, response_l);
+		return;
+	}
+
+	uint256_t gas(0);
+	if (params.count("gas") &&
+		(!params["gas"].is_string() ||
+		hex_to_uint256(params["gas"], gas, true)))
+	{
+		error_eth_response(response, rpc_eth_error_code::invalid_gas, response_l);
+		return;
+	}
+
+	uint256_t gas_price(0);
+	if (params.count("gasPrice") &&
+		(!params["gasPrice"].is_string() ||
+		hex_to_uint256(params["gasPrice"], gas_price, true)))
+	{
+		error_eth_response(response, rpc_eth_error_code::invalid_gas_price, response_l);
+		return;
+	}
+
+	dev::bytes data;
+	if (params.count("data"))
+	{
+		std::string data_text = params["data"];
+		if (mcp::hex_to_bytes(data_text, data))
+		{
+			error_eth_response(response, rpc_eth_error_code::invalid_data, response_l);
+			return;
+		}
+	}
+	else
+	{
+		error_eth_response(response, rpc_eth_error_code::invalid_params, response_l);
+		return;
+	}
+	if (data.size() > mcp::max_data_size)
+	{
+		error_eth_response(response, rpc_eth_error_code::invalid_data, response_l);
+		return;
+	}
+
+	uint256_t nonce(0);
+	if (!params.count("nonce") ||
+		!params["nonce"].is_string() ||
+		hex_to_uint256(params["nonce"], nonce, true))
+	{
+		error_eth_response(response, rpc_eth_error_code::invalid_value, response_l);
+		return;
+	}
+
+	RLPStream rlpStream;
+	rlpStream.appendList(9);
+	rlpStream << nonce;
+	rlpStream << gas_price;
+	rlpStream << gas;
+	if (to.is_zero()) {
+		rlpStream << "";
+	}
+	else {
+		rlpStream << to;
+	}
+	rlpStream << amount;
+	rlpStream << data;
+	rlpStream << (uint64_t)((int)mcp::mcp_network + 800) << 0 << 0;
+
+	mcp::raw_key prv;
+	if (!m_key_manager->find_unlocked_prv(from, prv)) {
+		error_eth_response(response, rpc_eth_error_code::invalid_account, response_l);
+		return;
+	}
+
+	mcp::signature signature;
+	if (mcp::encry::sign(prv.data, dev::sha3(rlpStream.out()).ref(), signature)) {
 		response_l["result"] = "0x" + signature.to_string();
 	}
 

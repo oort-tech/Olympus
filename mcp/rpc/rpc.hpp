@@ -534,6 +534,7 @@ public:
 	void eth_getBlockByHash();
 	void eth_accounts();
 	void eth_sign();
+	void eth_signTransaction();
 
 	std::string body;
 	mcp::rpc & rpc;
