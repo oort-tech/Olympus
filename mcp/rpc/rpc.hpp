@@ -519,6 +519,9 @@ public:
     void net_version();
 	void net_listening();
 	void net_peerCount();
+	void eth_protocolVersion();
+	void eth_syncing();
+	void eth_getLogs();
     bool try_get_mc_info(dev::eth::McInfo &mc_info_a, uint64_t &mci);
     // related to the upgrades
     void web3_clientVersion();
