@@ -3343,6 +3343,9 @@ void mcp::rpc_handler::process_request()
 		else if (action == "eth_protocolVersion") {
 			eth_protocolVersion();
 		}
+		else if (action == "eth_getLogs") {
+			eth_getLogs();
+		}
 		//
 		else
 		{
