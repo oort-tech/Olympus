@@ -978,10 +978,11 @@ bool mcp::signature_struct::operator!= (signature_struct const & other_a) const 
 }
 
 bool mcp::signature_struct::decode_hex(std::string const & text) {
-	bool error(text.size() != 130 || text.empty());
+	std::string text_s = text.find("0x") == 0 ? text.substr(2) : text;
+	bool error(text_s.size() != 130 || text.empty());
 	if (!error) {
 		dev::bytes bytes;
-		hex_to_bytes(text, bytes);
+		hex_to_bytes(text_s, bytes);
 		dev::bytesRef(bytes.data(), r.size).copyTo(r.ref());
 		dev::bytesRef(bytes.data() + r.size, s.size).copyTo(s.ref());
 		v = bytes[bytes.size() - 1];

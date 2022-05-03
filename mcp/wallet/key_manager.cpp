@@ -180,6 +180,13 @@ bool mcp::key_manager::import(std::string const & json_a, key_content & kc_a, bo
 	return error;
 }
 
+mcp::key_content mcp::key_manager::importRawKey(mcp::raw_key & prv, std::string const & password)
+{
+	mcp::key_content kc = gen_key_content(prv, password);
+	add_or_update_key(kc, true);
+	return kc;
+}
+
 bool mcp::key_manager::decrypt_prv(mcp::account const & account, std::string const & password_a, mcp::raw_key & prv)
 {
 	bool error(false);

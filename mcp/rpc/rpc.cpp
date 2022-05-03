@@ -3306,45 +3306,89 @@ void mcp::rpc_handler::process_request()
 		{
 			eth_getTransactionByHash();
 		}
-		else if (action == "eth_getTransactionByBlockHashAndIndex") {
+		else if (action == "eth_getTransactionByBlockHashAndIndex")
+		{
 			eth_getTransactionByBlockHashAndIndex();
 		}
-		else if (action == "eth_getTransactionByBlockNumberAndIndex") {
+		else if (action == "eth_getTransactionByBlockNumberAndIndex")
+		{
 			eth_getTransactionByBlockNumberAndIndex();
 		}
 		else if (action == "eth_getTransactionReceipt")
 		{
 			eth_getTransactionReceipt();
 		}
-		else if (action == "eth_getBalance") {
+		else if (action == "eth_getBalance")
+		{
 			eth_getBalance();
 		}
-		else if (action == "eth_getBlockByHash") {
+		else if (action == "eth_getBlockByHash")
+		{
 			eth_getBlockByHash();
 		}
-		else if (action == "eth_getBlockTransactionCountByHash") {
+		else if (action == "eth_getBlockTransactionCountByHash")
+		{
 			eth_getBlockTransactionCountByHash();
 		}
-		else if (action == "eth_getBlockTransactionCountByNumber") {
+		else if (action == "eth_getBlockTransactionCountByNumber")
+		{
 			eth_getBlockTransactionCountByNumber();
 		}
-		else if (action == "eth_accounts") {
+		else if (action == "eth_accounts")
+		{
 			eth_accounts();
 		}
-		else if (action == "eth_sign") {
+		else if (action == "eth_sign")
+		{
 			eth_sign();
 		}
-		else if (action == "eth_signTransaction") {
+		else if (action == "eth_signTransaction")
+		{
 			eth_signTransaction();
 		}
-		else if (action == "eth_syncing") {
+		else if (action == "eth_syncing")
+		{
 			eth_syncing();
 		}
-		else if (action == "eth_protocolVersion") {
+		else if (action == "eth_protocolVersion")
+		{
 			eth_protocolVersion();
 		}
-		else if (action == "eth_getLogs") {
+		else if (action == "eth_getLogs")
+		{
 			eth_getLogs();
+		}
+		else if (action == "personal_importRawKey")
+		{
+			personal_importRawKey();
+		}
+		else if (action == "personal_listAccounts")
+		{
+			personal_listAccounts();
+		}
+		else if (action == "personal_lockAccount")
+		{
+			personal_lockAccount();
+		}
+		else if (action == "personal_newAccount")
+		{
+			personal_newAccount();
+		}
+		else if (action == "personal_unlockAccount")
+		{
+			personal_unlockAccount();
+		}
+		else if (action == "personal_sendTransaction")
+		{
+			personal_sendTransaction();
+		}
+		else if (action == "personal_sign")
+		{
+			personal_sign();
+		}
+		else if (action == "personal_ecRecover")
+		{
+			personal_ecRecover();
 		}
 		//
 		else
@@ -5792,26 +5836,15 @@ void mcp::rpc_handler::eth_sign()
 		return;
 	}
 
-	dev::bytes msg;
-	std::string prefix = "Ethereum Signed Message:\n" + std::to_string(data.size());
-	msg.resize(prefix.size() + data.size() + 1);
-
-	msg[0] = 0x19;
-	dev::bytesRef((unsigned char*)prefix.data(), prefix.size()).copyTo(dev::bytesRef(msg.data() + 1, prefix.size()));
-	dev::bytesRef(data.data(), data.size()).copyTo(dev::bytesRef(msg.data() + prefix.size() + 1, data.size()));
-
-	dev::bytes digest;
-	CryptoPP::Keccak_256 hash;
-	hash.Update((const byte*)msg.data(), msg.size());
-	digest.resize(hash.DigestSize());
-	hash.Final(digest.data());
-
 	mcp::raw_key prv;
 	if (!m_key_manager->find_unlocked_prv(account, prv)) {
 		error_eth_response(response, rpc_eth_error_code::locked_account, response_l);
 		return;
 	}
 
+	dev::bytes digest;
+	get_eth_signed_msg(data, digest);
+	
 	mcp::signature signature;
 	if (mcp::encry::sign(prv.data, dev::bytesConstRef(digest.data(), digest.size()), signature)) {
 		response_l["result"] = "0x" + signature.to_string();
@@ -5912,6 +5945,12 @@ void mcp::rpc_handler::eth_signTransaction()
 		return;
 	}
 
+	mcp::raw_key prv;
+	if (!m_key_manager->find_unlocked_prv(from, prv)) {
+		error_eth_response(response, rpc_eth_error_code::locked_account, response_l);
+		return;
+	}
+
 	RLPStream rlpStream;
 	rlpStream.appendList(9);
 	rlpStream << nonce;
@@ -5926,13 +5965,7 @@ void mcp::rpc_handler::eth_signTransaction()
 	rlpStream << amount;
 	rlpStream << data;
 	rlpStream << (uint64_t)((int)mcp::mcp_network + 800) << 0 << 0;
-
-	mcp::raw_key prv;
-	if (!m_key_manager->find_unlocked_prv(from, prv)) {
-		error_eth_response(response, rpc_eth_error_code::locked_account, response_l);
-		return;
-	}
-
+	
 	mcp::signature signature;
 	if (mcp::encry::sign(prv.data, dev::sha3(rlpStream.out()).ref(), signature)) {
 		response_l["result"] = "0x" + signature.to_string();
@@ -6098,7 +6131,7 @@ void mcp::rpc_handler::eth_getLogs()
 		for (std::string const &topic_text : topics_l)
 		{
 			mcp::uint256_union topic;
-			auto error(topic.decode_hex(topic_text));
+			auto error(topic.decode_hex(topic_text, true));
 			if (error)
 			{
 				error_eth_response(response, rpc_eth_error_code::invalid_params, response_l);
@@ -6178,4 +6211,388 @@ void mcp::rpc_handler::eth_getLogs()
 
 	response_l["result"] = logs_l;
 	response(response_l);
+}
+
+void mcp::rpc_handler::personal_importRawKey()
+{
+	mcp::json response_l;
+	if (!is_eth_rpc(response_l))
+	{
+		return;
+	}
+
+	mcp::json params = request["params"];
+	if (params.size() != 2)
+	{
+		error_eth_response(response, rpc_eth_error_code::invalid_params, response_l);
+		return;
+	}
+
+	mcp::raw_key prv;
+	if (!params[0].is_string() || prv.data.decode_hex(params[0], true))
+	{
+		error_eth_response(response, rpc_eth_error_code::invalid_params, response_l);
+		return;
+	}
+
+	std::string password = params[1];
+	if (password.empty() ||
+		!mcp::validatePasswordSize(password) ||
+		!mcp::validatePassword(password))
+	{
+		error_eth_response(response, rpc_eth_error_code::invalid_password, response_l);
+		return;
+	}
+
+	mcp::key_content kc = m_key_manager->importRawKey(prv, password);
+
+	response_l["result"] = kc.account.to_account();
+	response(response_l);
+}
+
+void mcp::rpc_handler::personal_listAccounts()
+{
+	mcp::json response_l;
+	if (!is_eth_rpc(response_l))
+	{
+		return;
+	}
+
+	mcp::json j_accounts = mcp::json::array();
+	std::list<mcp::account> account_list(m_key_manager->list());
+	for (auto account : account_list)
+	{
+		j_accounts.push_back(account.to_account());
+	}
+	response_l["result"] = j_accounts;
+
+	response(response_l);
+}
+
+void mcp::rpc_handler::personal_lockAccount()
+{
+	mcp::json response_l;
+	if (!is_eth_rpc(response_l))
+	{
+		return;
+	}
+
+	mcp::json params = request["params"];
+	std::string account_text = params[0];
+	mcp::account account;
+	if (account.decode_account(account_text) ||
+		!m_key_manager->exists(account))
+	{
+		error_eth_response(response, rpc_eth_error_code::invalid_params, response_l);
+	}
+
+	m_key_manager->lock(account);
+	response_l["result"] = true;
+
+	response(response_l);
+}
+
+void mcp::rpc_handler::personal_newAccount()
+{
+	mcp::json response_l;
+	if (!is_eth_rpc(response_l))
+	{
+		return;
+	}
+
+	mcp::json params = request["params"];
+	if (params.size() != 1)
+	{
+		error_eth_response(response, rpc_eth_error_code::invalid_params, response_l);
+		return;
+	}
+
+	std::string password = params[0];
+	if (password.empty() ||
+		!mcp::validatePasswordSize(password) ||
+		!mcp::validatePassword(password))
+	{
+		error_eth_response(response, rpc_eth_error_code::invalid_password, response_l);
+		return;
+	}
+
+	mcp::account account = m_key_manager->create(password, false, true);
+
+	response_l["result"] = account.to_account();
+	response(response_l);
+}
+
+void mcp::rpc_handler::personal_unlockAccount()
+{
+	mcp::json response_l;
+	if (!is_eth_rpc(response_l))
+	{
+		return;
+	}
+
+	mcp::json params = request["params"];
+	if (params.size() != 3)
+	{
+		error_eth_response(response, rpc_eth_error_code::invalid_params, response_l);
+		return;
+	}
+
+	std::string account_text = params[0];
+	mcp::account account;
+	if (account.decode_account(account_text) ||
+		!m_key_manager->exists(account))
+	{
+		error_eth_response(response, rpc_eth_error_code::invalid_params, response_l);
+	}
+
+	std::string password_text = params[1];
+	auto error(m_key_manager->unlock(account, password_text));
+	if (error)
+	{
+		error_eth_response(response, rpc_eth_error_code::invalid_password, response_l);
+		return;
+	}
+	
+	response_l["result"] = true;
+
+	response(response_l);
+}
+
+void mcp::rpc_handler::personal_sendTransaction()
+{
+	mcp::json response_l;
+	if (!is_eth_rpc(response_l))
+	{
+		return;
+	}
+
+	mcp::json params = request["params"];
+	mcp::json tx = params[0];
+	if (!tx.is_object() || !params[1].is_string())
+	{
+		error_eth_response(response, rpc_eth_error_code::invalid_params, response_l);
+		return;
+	}
+	std::string password = params[1];
+
+	mcp::account from;
+	if (!tx.count("from") ||
+		!tx["from"].is_string() ||
+		from.decode_account(tx["from"]) ||
+		!m_key_manager->exists(from))
+	{
+		error_eth_response(response, rpc_eth_error_code::invalid_from_account, response_l);
+		return;
+	}
+
+	mcp::account to;
+	to.clear();
+	if (tx.count("to") &&
+		(!tx["to"].is_string() ||
+			to.decode_account(tx["to"])))
+	{
+		error_eth_response(response, rpc_eth_error_code::invalid_to_account, response_l);
+		return;
+	}
+
+	uint256_t amount(0);
+	if (tx.count("value") &&
+		(!tx["value"].is_string() ||
+			hex_to_uint256(tx["value"], amount, true)))
+	{
+		error_eth_response(response, rpc_eth_error_code::invalid_value, response_l);
+		return;
+	}
+
+	uint256_t gas(0);
+	if (tx.count("gas") &&
+		(!tx["gas"].is_string() ||
+			hex_to_uint256(tx["gas"], gas, true)))
+	{
+		error_eth_response(response, rpc_eth_error_code::invalid_gas, response_l);
+		return;
+	}
+
+	uint256_t gas_price(0);
+	if (tx.count("gasPrice") &&
+		(tx["gasPrice"].is_string() ||
+			hex_to_uint256(tx["gasPrice"], gas_price, true)))
+	{
+		error_eth_response(response, rpc_eth_error_code::invalid_gas_price, response_l);
+		return;
+	}
+
+	dev::bytes data;
+	if (tx.count("data"))
+	{
+		std::string data_text = tx["data"];
+		if (mcp::hex_to_bytes(data_text, data))
+		{
+			error_eth_response(response, rpc_eth_error_code::invalid_data, response_l);
+			return;
+		}
+	}
+	else
+	{
+		error_eth_response(response, rpc_eth_error_code::invalid_params, response_l);
+		return;
+	}
+	if (data.size() > mcp::max_data_size)
+	{
+		error_eth_response(response, rpc_eth_error_code::invalid_data, response_l);
+		return;
+	}
+	
+	boost::optional<mcp::block_hash> previous_opt;
+	bool gen_next_work_l(false);
+	bool async(false);
+	auto rpc_l(shared_from_this());
+	m_wallet->send_async(
+		mcp::block_type::light, previous_opt, from, to, amount, gas, gas_price, data, password, [response_l, rpc_l, this](mcp::send_result result)
+	{
+		mcp::json response_j = response_l;
+		switch (result.code)
+		{
+		case mcp::send_result_codes::ok:
+		{
+			response_j["result"] = result.block->hash().to_string(true);
+			response(response_j);
+			break;
+		}
+		case mcp::send_result_codes::from_not_exists:
+			error_eth_response(response, rpc_eth_error_code::invalid_from_account, response_j);
+			break;
+		case mcp::send_result_codes::account_locked:
+			error_eth_response(response, rpc_eth_error_code::locked_account, response_j);
+			break;
+		case mcp::send_result_codes::wrong_password:
+			error_eth_response(response, rpc_eth_error_code::invalid_password, response_j);
+			break;
+		case mcp::send_result_codes::insufficient_balance:
+			error_eth_response(response, rpc_eth_error_code::insufficient_balance, response_j);
+			break;
+		case mcp::send_result_codes::data_size_too_large:
+			error_eth_response(response, rpc_eth_error_code::data_size_too_large, response_j);
+			break;
+		case mcp::send_result_codes::validate_error:
+			error_eth_response(response, rpc_eth_error_code::validate_error, response_j);
+			break;
+		case mcp::send_result_codes::error:
+			error_eth_response(response, rpc_eth_error_code::block_error, response_j);
+			break;
+		default:
+			error_eth_response(response, rpc_eth_error_code::unknown_error, response_j);
+			break;
+		} },
+		gen_next_work_l, async);
+}
+
+void mcp::rpc_handler::personal_sign()
+{
+	mcp::json response_l;
+	if (!is_eth_rpc(response_l))
+	{
+		return;
+	}
+
+	mcp::json params = request["params"];
+	if (params.size() != 3) {
+		error_eth_response(response, rpc_eth_error_code::invalid_params, response_l);
+		return;
+	}
+	
+	dev::bytes data;
+	std::string data_text = params[0];
+	if (mcp::hex_to_bytes(data_text, data))
+	{
+		error_eth_response(response, rpc_eth_error_code::invalid_data, response_l);
+		return;
+	}
+	if (data.size() > mcp::max_data_size)
+	{
+		error_eth_response(response, rpc_eth_error_code::invalid_data, response_l);
+		return;
+	}
+	
+	std::string account_text = params[1];
+	mcp::account account;
+	if (account.decode_account(account_text))
+	{
+		error_eth_response(response, rpc_eth_error_code::invalid_account, response_l);
+		return;
+	}
+	else if (!m_key_manager->exists(account))
+	{
+		error_eth_response(response, rpc_eth_error_code::invalid_account, response_l);
+		return;
+	}
+
+	std::string password_text = params[2];
+
+	mcp::raw_key prv;
+	if (m_key_manager->decrypt_prv(account, password_text, prv)) {
+		error_eth_response(response, rpc_eth_error_code::invalid_password, response_l);
+		return;
+	}
+
+	dev::bytes digest;
+	get_eth_signed_msg(data, digest);
+
+	mcp::signature signature;
+	if (mcp::encry::sign(prv.data, dev::bytesConstRef(digest.data(), digest.size()), signature)) {
+		response_l["result"] = "0x" + signature.to_string();
+	}
+
+	response(response_l);
+}
+
+void mcp::rpc_handler::personal_ecRecover()
+{
+	mcp::json response_l;
+	if (!is_eth_rpc(response_l))
+	{
+		return;
+	}
+
+	mcp::json params = request["params"];
+	if (params.size() != 2) {
+		error_eth_response(response, rpc_eth_error_code::invalid_params, response_l);
+		return;
+	}
+
+	mcp::bytes data;
+	if (mcp::hex_to_bytes(params[0], data)) {
+		error_eth_response(response, rpc_eth_error_code::invalid_params, response_l);
+		return;
+	}
+
+	mcp::signature sig;
+	if (sig.decode_hex(params[1])) {
+		error_eth_response(response, rpc_eth_error_code::invalid_params, response_l);
+		return;
+	}
+
+	dev::bytes digest;
+	get_eth_signed_msg(data, digest);
+
+	mcp::account from(mcp::encry::recover(sig, dev::bytesConstRef(digest.data(), digest.size())));
+	response_l["result"] = from.to_account();
+
+	response(response_l);
+}
+
+void mcp::rpc_handler::get_eth_signed_msg(dev::bytes & data, dev::bytes & digest)
+{
+	dev::bytes msg;
+	std::string prefix = "Ethereum Signed Message:\n" + std::to_string(data.size());
+	msg.resize(prefix.size() + data.size() + 1);
+
+	msg[0] = 0x19;
+	dev::bytesRef((unsigned char*)prefix.data(), prefix.size()).copyTo(dev::bytesRef(msg.data() + 1, prefix.size()));
+	dev::bytesRef(data.data(), data.size()).copyTo(dev::bytesRef(msg.data() + prefix.size() + 1, data.size()));
+
+	CryptoPP::Keccak_256 hash;
+	hash.Update((const byte*)msg.data(), msg.size());
+	digest.resize(hash.DigestSize());
+	hash.Final(digest.data());
 }

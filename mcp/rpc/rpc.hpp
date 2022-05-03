@@ -505,6 +505,7 @@ public:
 
     // added by michael
     bool is_eth_rpc(mcp::json &response);
+	void get_eth_signed_msg(dev::bytes & data, dev::bytes & digest);
     void eth_blockNumber();
     void eth_getTransactionCount();
     void eth_chainId();
@@ -538,6 +539,15 @@ public:
 	void eth_accounts();
 	void eth_sign();
 	void eth_signTransaction();
+	// related to personal
+	void personal_importRawKey();
+	void personal_listAccounts();
+	void personal_lockAccount();
+	void personal_newAccount();
+	void personal_unlockAccount();
+	void personal_sendTransaction();
+	void personal_sign();
+	void personal_ecRecover();
 
 	std::string body;
 	mcp::rpc & rpc;
