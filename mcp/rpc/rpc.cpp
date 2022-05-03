@@ -3337,6 +3337,12 @@ void mcp::rpc_handler::process_request()
 		else if (action == "eth_signTransaction") {
 			eth_signTransaction();
 		}
+		else if (action == "eth_syncing") {
+			eth_syncing();
+		}
+		else if (action == "eth_protocolVersion") {
+			eth_protocolVersion();
+		}
 		//
 		else
 		{
@@ -5094,9 +5100,8 @@ void mcp::rpc_handler::net_version()
 	{
 		return;
 	}
-	response_l["version"] = STR(MCP_VERSION);
-	response_l["result"] = "828";
 
+	response_l["result"] = (int)mcp::mcp_network + 800;
 	response(response_l);
 }
 
@@ -5149,7 +5154,15 @@ void mcp::rpc_handler::web3_sha3() {
 		error_eth_response(response, rpc_eth_error_code::invalid_params, response_l);
 		return;
 	}
-	response_l["result"] = toJS(sha3(jsToBytes(params[0])));
+
+	dev::bytes digest;
+	CryptoPP::Keccak_256 hash;
+	dev::bytes msg = jsToBytes(params[0]);
+	hash.Update((const byte*)msg.data(), msg.size());
+	digest.resize(hash.DigestSize());
+	hash.Final(digest.data());
+
+	response_l["result"] = "0x" + mcp::bytes_to_hex(digest);
 	response(response_l);
 }
 
@@ -5638,7 +5651,6 @@ void mcp::rpc_handler::eth_getBlockTransactionCountByHash()
 				response_l["result"] = 1;
 			}
 		}
-		
 	}
 
 	response(response_l);
@@ -5758,7 +5770,7 @@ void mcp::rpc_handler::eth_sign()
 		error_eth_response(response, rpc_eth_error_code::invalid_account, response_l);
 		return;
 	}
-	else if (!m_key_manager->exists(account) || m_key_manager->is_locked(account))
+	else if (!m_key_manager->exists(account))
 	{
 		error_eth_response(response, rpc_eth_error_code::invalid_account, response_l);
 		return;
@@ -5793,7 +5805,7 @@ void mcp::rpc_handler::eth_sign()
 
 	mcp::raw_key prv;
 	if (!m_key_manager->find_unlocked_prv(account, prv)) {
-		error_eth_response(response, rpc_eth_error_code::invalid_account, response_l);
+		error_eth_response(response, rpc_eth_error_code::locked_account, response_l);
 		return;
 	}
 
@@ -5914,7 +5926,7 @@ void mcp::rpc_handler::eth_signTransaction()
 
 	mcp::raw_key prv;
 	if (!m_key_manager->find_unlocked_prv(from, prv)) {
-		error_eth_response(response, rpc_eth_error_code::invalid_account, response_l);
+		error_eth_response(response, rpc_eth_error_code::locked_account, response_l);
 		return;
 	}
 
@@ -5923,5 +5935,244 @@ void mcp::rpc_handler::eth_signTransaction()
 		response_l["result"] = "0x" + signature.to_string();
 	}
 
+	response(response_l);
+}
+
+void mcp::rpc_handler::eth_protocolVersion()
+{
+	mcp::json response_l;
+	if (!is_eth_rpc(response_l))
+	{
+		return;
+	}
+
+	response_l["result"] = STR(MCP_VERSION);
+	response(response_l);
+}
+
+void mcp::rpc_handler::eth_syncing()
+{
+	mcp::json response_l;
+	if (!is_eth_rpc(response_l))
+	{
+		return;
+	}
+
+	uint64_t last_stable_mci(m_chain->last_stable_mci());
+	uint64_t last_mci(m_chain->last_mci());
+	uint64_t last_stable_index(m_chain->last_stable_index());
+
+	mcp::json result;
+	result["startingBlock"] = uint64_to_hex_nofill(last_stable_mci);
+	result["currentBlock"] = uint64_to_hex_nofill(last_mci);
+	result["highestBlock"] = uint64_to_hex_nofill(last_stable_index);
+
+	response_l["result"] = result;
+	response(response_l);
+}
+
+void mcp::rpc_handler::eth_getLogs()
+{
+	mcp::json response_l;
+	if (!is_eth_rpc(response_l))
+	{
+		return;
+	}
+
+	mcp::json params = request["params"][0];
+	if (!params.is_object())
+	{
+		error_eth_response(response, rpc_eth_error_code::invalid_params, response_l);
+		return;
+	}
+
+	uint64_t fromBlock = 0;
+	if (params.count("fromBlock"))
+	{
+		std::string fromBlockText = params["fromBlock"];
+		if (fromBlockText == "latest")
+		{
+			fromBlock = m_chain->last_stable_index();
+		}
+		else if (fromBlockText == "earliest")
+		{
+			fromBlock = 0;
+		}
+		else if (fromBlockText.find("0x") == 0)
+		{
+			if (hex_to_uint64(fromBlockText, fromBlock, true))
+			{
+				error_eth_response(response, rpc_eth_error_code::invalid_block_number, response_l);
+				return;
+			}
+		}
+		else
+		{
+			error_eth_response(response, rpc_eth_error_code::invalid_block_number, response_l);
+			return;
+		}
+	}
+
+	uint64_t toBlock = 0;
+	if (params.count("toBlock"))
+	{
+		std::string toBlockText = params["toBlock"];
+		if (toBlockText == "latest")
+		{
+			toBlock = m_chain->last_stable_index();
+		}
+		else if (toBlockText == "earliest")
+		{
+			toBlock = 0;
+		}
+		else if (toBlockText.find("0x") == 0)
+		{
+			if (hex_to_uint64(toBlockText, toBlock, true))
+			{
+				error_eth_response(response, rpc_eth_error_code::invalid_block_number, response_l);
+				return;
+			}
+		}
+		else
+		{
+			error_eth_response(response, rpc_eth_error_code::invalid_block_number, response_l);
+			return;
+		}
+	}
+
+	mcp::block_hash block_hash;
+	block_hash.clear();
+	if (params.count("blockhash"))
+	{
+		if (block_hash.decode_hex(params["blockhash"], true)) {
+			error_eth_response(response, rpc_eth_error_code::invalid_hash, response_l);
+			return;
+		}
+	}
+
+	std::vector<mcp::account> search_address;
+	if (params.count("address") && !params["address"].is_null())
+	{
+		if (request["address"].is_string())
+		{
+			std::string account_text = params["account"];
+			mcp::account account;
+			bool error = account.decode_account(account_text);
+			if (error)
+			{
+				error_eth_response(response, rpc_eth_error_code::invalid_params, response_l);
+				return;
+			}
+			search_address.push_back(account);
+		}
+		else if (params["address"].is_array())
+		{
+			std::vector<std::string> address_l = params["address"];
+			for (std::string const &address_text : address_l)
+			{
+				mcp::account address;
+				auto error(address.decode_account(address_text));
+				if (error)
+				{
+					error_eth_response(response, rpc_eth_error_code::invalid_params, response_l);
+					return;
+				}
+				search_address.push_back(address);
+			}
+		}
+	}
+
+	std::vector<dev::h256> search_topics;
+	if (params.count("topics") && !params["topics"].is_null())
+	{
+		if (!params["topics"].is_array())
+		{
+			error_eth_response(response, rpc_eth_error_code::invalid_params, response_l);
+			return;
+		}
+
+		std::vector<std::string> topics_l = params["topics"];
+		for (std::string const &topic_text : topics_l)
+		{
+			mcp::uint256_union topic;
+			auto error(topic.decode_hex(topic_text));
+			if (error)
+			{
+				error_eth_response(response, rpc_eth_error_code::invalid_params, response_l);
+				return;
+			}
+
+			search_topics.push_back(dev::h256(topic.ref()));
+		}
+	}
+	
+	int logi = 0;
+	mcp::json logs_l = mcp::json::array();
+	mcp::db::db_transaction transaction(m_store.create_transaction());
+
+	if (!block_hash.is_zero()) {
+		std::shared_ptr<mcp::block_state> state(m_cache->block_state_get(transaction, block_hash));
+		fromBlock = toBlock = state->stable_index;
+	}
+
+	for (uint64_t i(fromBlock); i <= toBlock; i++)
+	{
+		mcp::block_hash block_hash;
+		bool exists(!m_store.stable_block_get(transaction, i, block_hash));
+		assert_x(exists);
+		std::shared_ptr<mcp::block_state> block_state(m_cache->block_state_get(transaction, block_hash));
+		assert_x(block_state);
+
+		if (block_state->block_type != mcp::block_type::light)
+			continue;
+
+		if (!block_state->receipt)
+			continue;
+
+		std::unordered_set<mcp::account> existed_addresses;
+		for (mcp::account const &address : search_address)
+		{
+			if (block_state->receipt->contains_bloom(address.ref()))
+				existed_addresses.insert(address);
+		}
+		if (search_address.size() > 0 && existed_addresses.size() == 0)
+			continue;
+
+		std::unordered_set<dev::h256> existed_topics;
+		for (dev::h256 const &topic : search_topics)
+		{
+			if (block_state->receipt->contains_bloom(topic))
+				existed_topics.insert(topic);
+		}
+
+		if (search_topics.size() > 0 && existed_topics.size() == 0)
+			continue;
+
+		for (auto const &log : block_state->receipt->log)
+		{
+			if (search_address.empty() || existed_addresses.count(log.acct))
+			{
+				for (dev::h256 const &t : log.topics)
+				{
+					if (search_topics.size() == 0 || existed_topics.count(t))
+					{
+						mcp::json log_l;
+						log_l["transactionIndex"] = "0x0";
+						log_l["blockNumber"] = uint64_to_hex_nofill(block_state->main_chain_index.get());
+						log_l["transactionHash"] = block_hash.to_string(true);
+						logi++;
+						log_l["logIndex"] = logi;
+						log_l["blockHash"] = block_hash.to_string(true);
+						log.serialize_json_eth(log_l);
+
+						logs_l.push_back(log_l);
+						break;
+					}
+				}
+			}
+		}
+	}
+
+	response_l["result"] = logs_l;
 	response(response_l);
 }
