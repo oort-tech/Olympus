@@ -5311,12 +5311,11 @@ void mcp::rpc_handler::eth_getTransactionByBlockHashAndIndex()
 		return;
 	}
 
-	int index = params[1];
-	if (index != 0) {
+	if (params[1] != "0x0") {
 		error_eth_response(response, rpc_eth_error_code::invalid_params, response_l);
 		return;
 	}
-
+	
 	mcp::block_hash block_hash;
 	if (block_hash.decode_hex(params[0], true)) {
 		error_eth_response(response, rpc_eth_error_code::invalid_params, response_l);
@@ -5354,6 +5353,9 @@ void mcp::rpc_handler::eth_getTransactionByBlockHashAndIndex()
 					json_receipt["gas"] = uint256_to_hex_nofill(block->hashables->gas);
 					json_receipt["input"] = "0x" + bytes_to_hex(block->data);
 					json_receipt["gasPrice"] = uint64_to_hex_nofill(1000000000);
+					json_receipt["v"] = block->signature.v;
+					json_receipt["r"] = block->signature.r.to_string_no_fill(true);
+					json_receipt["s"] = block->signature.s.to_string_no_fill(true);
 					response_l["result"] = json_receipt;
 				}
 				else if (state->status == mcp::block_status::fail) {
@@ -5378,6 +5380,11 @@ void mcp::rpc_handler::eth_getTransactionByBlockNumberAndIndex()
 	mcp::json params = request["params"];
 	if (params.size() != 2)
 	{
+		error_eth_response(response, rpc_eth_error_code::invalid_params, response_l);
+		return;
+	}
+
+	if (params[1] != "0x0") {
 		error_eth_response(response, rpc_eth_error_code::invalid_params, response_l);
 		return;
 	}
@@ -5453,6 +5460,9 @@ void mcp::rpc_handler::eth_getTransactionByBlockNumberAndIndex()
 					json_receipt["gas"] = uint256_to_hex_nofill(block->hashables->gas);
 					json_receipt["input"] = "0x" + bytes_to_hex(block->data);
 					json_receipt["gasPrice"] = uint64_to_hex_nofill(1000000000);
+					json_receipt["v"] = block->signature.v;
+					json_receipt["r"] = block->signature.r.to_string_no_fill(true);
+					json_receipt["s"] = block->signature.s.to_string_no_fill(true);
 					response_l["result"] = json_receipt;
 				}
 				else if (state->status == mcp::block_status::fail) {
