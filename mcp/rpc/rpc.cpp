@@ -3023,7 +3023,7 @@ void mcp::rpc_connection::read()
 					try
 					{
                         std::string body = js.dump();
-						//LOG(this_l->m_log.error) << "RESPONSE" << body;
+						LOG(this_l->m_log.error) << "RESPONSE" << body;
 						this_l->write_result(body, version);
 						boost::beast::http::async_write(this_l->socket, this_l->res, [this_l](boost::system::error_code const & e, size_t size)
 						{
@@ -3065,7 +3065,7 @@ void mcp::rpc_handler::process_request()
 	try
 	{
 		request = mcp::json::parse(body);
-		//LOG(m_log.error) << "REQUEST:" << request;
+		LOG(m_log.error) << "REQUEST:" << request;
 		std::string action = request.count("action") > 0 ? request["action"] : request["method"];
 		bool handled = false;
 		if (action == "account_create")
@@ -4664,7 +4664,7 @@ void mcp::rpc_handler::eth_getBlockByNumber()
 	}
 
 	std::shared_ptr<mcp::block_state> state(m_cache->block_state_get(transaction, block_hash));
-	if (/*block_hash != mcp::genesis::block_hash &&*/state != nullptr)
+	if (state != nullptr)
 	{
 		auto block(m_cache->block_get(transaction, block_hash));
 		mcp::json block_l;
@@ -4840,7 +4840,7 @@ void mcp::rpc_handler::eth_sendRawTransaction()
 		error_eth_response(response, rpc_eth_error_code::invalid_account, response_l);
 		return;
 	}
-	
+
 	boost::optional<mcp::block_hash> previous_opt;
 	boost::optional<std::string> password;
 	bool gen_next_work_l(false);
@@ -4941,7 +4941,7 @@ void mcp::rpc_handler::eth_sendTransaction()
 
 	uint256_t gas_price(0);
 	if (params.count("gasPrice") &&
-		(params["gasPrice"].is_string() ||
+		(!params["gasPrice"].is_string() ||
 		hex_to_uint256(params["gasPrice"], gas_price, true)))
 	{
 		error_eth_response(response, rpc_eth_error_code::invalid_gas_price, response_l);
@@ -5937,11 +5937,11 @@ void mcp::rpc_handler::eth_signTransaction()
 	}
 
 	uint256_t nonce(0);
-	if (!params.count("nonce") ||
-		!params["nonce"].is_string() ||
-		hex_to_uint256(params["nonce"], nonce, true))
+	if (params.count("nonce") &&
+		(!params["nonce"].is_string() ||
+		hex_to_uint256(params["nonce"], nonce, true)))
 	{
-		error_eth_response(response, rpc_eth_error_code::invalid_value, response_l);
+		error_eth_response(response, rpc_eth_error_code::invalid_nonce, response_l);
 		return;
 	}
 

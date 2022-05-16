@@ -402,6 +402,8 @@ enum class rpc_eth_error_code
 	block_error = 17,
 	unknown_error = 18,
 
+	invalid_nonce = 21,
+
 	PARSE_ERROR = -32700,
 	INVALID_REQUEST = -32600,
 	METHOD_NOT_FOUND = -32601,
