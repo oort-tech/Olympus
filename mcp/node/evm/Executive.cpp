@@ -39,7 +39,7 @@ namespace
 
 
 
-void mcp::Executive::initialize(transaction const& _transaction)
+void mcp::Executive::initialize(Transaction const& _transaction)
 {
 	m_t = _transaction;
 	m_baseGasRequired = m_t.baseGasRequired(dev::eth::ConstantinopleSchedule);

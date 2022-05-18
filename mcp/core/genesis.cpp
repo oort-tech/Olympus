@@ -62,7 +62,7 @@ bool mcp::genesis::try_initialize(mcp::db::db_transaction & transaction_a, mcp::
 	_t.to = mcp::toAddress(json["to"]);
 	_t.value = jsToU256(json["value"]);
 	_t.nonce = 0;
-	transaction ts(_t, dev::Secret());
+	Transaction ts(_t, dev::Secret());
 	
 	mcp::account from;
 	if (from.decode_account(json["from"]))

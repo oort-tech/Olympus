@@ -219,20 +219,20 @@ bool mcp::block_store::transaction_exists(mcp::db::db_transaction & transaction_
 	return exists;
 }
 
-std::shared_ptr<mcp::transaction> mcp::block_store::transaction_get(mcp::db::db_transaction & transaction_a, h256 const& hash_a)
+std::shared_ptr<mcp::Transaction> mcp::block_store::transaction_get(mcp::db::db_transaction & transaction_a, h256 const& hash_a)
 {
 	std::string value;
 	bool exists(transaction_a.get(transactions, mcp::h256_to_slice(hash_a), value));
-	std::shared_ptr<mcp::transaction> result = nullptr;
+	std::shared_ptr<mcp::Transaction> result = nullptr;
 	if (exists)
 	{
 		dev::RLP r(value);
-		result = std::make_shared<mcp::transaction>(r,CheckTransaction::None);
+		result = std::make_shared<mcp::Transaction>(r,CheckTransaction::None);
 	}
 	return result;
 }
 
-void mcp::block_store::transaction_put(mcp::db::db_transaction & transaction_a, h256 const& hash_a, mcp::transaction const& _t)
+void mcp::block_store::transaction_put(mcp::db::db_transaction & transaction_a, h256 const& hash_a, mcp::Transaction const& _t)
 {
 	// all parts of block except data
 	dev::bytes b_value;

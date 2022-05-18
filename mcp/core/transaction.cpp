@@ -7,7 +7,7 @@
 #include "config.hpp"
 
 
-mcp::transaction::transaction(TransactionSkeleton const& ts, Secret const& s) :
+mcp::Transaction::Transaction(TransactionSkeleton const& ts, Secret const& s) :
 	m_nonce(ts.nonce),
 	m_value(ts.value),
 	m_receiveAddress(ts.to),
@@ -22,7 +22,7 @@ mcp::transaction::transaction(TransactionSkeleton const& ts, Secret const& s) :
 }
 
 
-mcp::transaction::transaction(dev::RLP const & rlp, CheckTransaction _checkSig)
+mcp::Transaction::Transaction(dev::RLP const & rlp, CheckTransaction _checkSig)
 {
 	try
 	{
@@ -88,7 +88,7 @@ mcp::transaction::transaction(dev::RLP const & rlp, CheckTransaction _checkSig)
 	}
 }
 
-Address const& mcp::transaction::safeSender() const noexcept
+Address const& mcp::Transaction::safeSender() const noexcept
 {
 	try
 	{
@@ -100,7 +100,7 @@ Address const& mcp::transaction::safeSender() const noexcept
 	}
 }
 
-Address const& mcp::transaction::sender() const
+Address const& mcp::Transaction::sender() const
 {
 	if (!m_sender.is_initialized())
 	{
@@ -120,7 +120,7 @@ Address const& mcp::transaction::sender() const
 	return *m_sender;
 }
 
-SignatureStruct const& mcp::transaction::signature() const
+SignatureStruct const& mcp::Transaction::signature() const
 {
 	if (!m_vrs)
 		BOOST_THROW_EXCEPTION(TransactionIsUnsigned());
@@ -128,7 +128,7 @@ SignatureStruct const& mcp::transaction::signature() const
 	return *m_vrs;
 }
 
-u256 mcp::transaction::rawV() const
+u256 mcp::Transaction::rawV() const
 {
 	if (!m_vrs)
 		BOOST_THROW_EXCEPTION(TransactionIsUnsigned());
@@ -137,7 +137,7 @@ u256 mcp::transaction::rawV() const
 	return m_vrs->v + vOffset;
 }
 
-void mcp::transaction::sign(Secret const& priv)
+void mcp::Transaction::sign(Secret const& priv)
 {
 	auto sig = dev::sign(priv, sha3(WithoutSignature));
 	SignatureStruct sigStruct = *(SignatureStruct const*)&sig;
@@ -147,7 +147,7 @@ void mcp::transaction::sign(Secret const& priv)
 		BOOST_THROW_EXCEPTION(InvalidSignature() << errinfo_comment("signatue invalid"));
 }
 
-void mcp::transaction::streamRLP(RLPStream& s, IncludeSignature sig) const
+void mcp::Transaction::streamRLP(RLPStream& s, IncludeSignature sig) const
 {
 	s.appendList(9);
 	s << m_nonce << m_gasPrice << m_gas;
@@ -175,7 +175,7 @@ void mcp::transaction::streamRLP(RLPStream& s, IncludeSignature sig) const
 
 static const u256 c_secp256k1n("115792089237316195423570985008687907852837564279074904382605163141518161494337");
 
-void mcp::transaction::checkLowS() const
+void mcp::Transaction::checkLowS() const
 {
 	if (!m_vrs)
 		BOOST_THROW_EXCEPTION(TransactionIsUnsigned());
@@ -184,13 +184,13 @@ void mcp::transaction::checkLowS() const
 		BOOST_THROW_EXCEPTION(InvalidSignature());
 }
 
-void mcp::transaction::checkChainId(uint64_t _chainId) const
+void mcp::Transaction::checkChainId(uint64_t _chainId) const
 {
 	if (m_chainId.is_initialized() && *m_chainId != _chainId)
 		BOOST_THROW_EXCEPTION(InvalidSignature());
 }
 
-int64_t mcp::transaction::baseGasRequired(bool _contractCreation, dev::bytesConstRef _data, dev::eth::EVMSchedule const& _es)
+int64_t mcp::Transaction::baseGasRequired(bool _contractCreation, dev::bytesConstRef _data, dev::eth::EVMSchedule const& _es)
 {
 	int64_t g = _contractCreation ? _es.txCreateGas : _es.txGas;
 
@@ -202,7 +202,7 @@ int64_t mcp::transaction::baseGasRequired(bool _contractCreation, dev::bytesCons
 	return g;
 }
 
-h256 mcp::transaction::sha3(IncludeSignature _sig) const
+h256 mcp::Transaction::sha3(IncludeSignature _sig) const
 {
 	if (_sig == WithSignature && m_hashWith)
 		return m_hashWith;

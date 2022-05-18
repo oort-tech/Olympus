@@ -53,7 +53,7 @@ namespace mcp
 	}
 
 
-	mcp::json toJson(transaction const& _t)
+	mcp::json toJson(Transaction const& _t)
 	{
 		mcp::json res;
 		if (_t)

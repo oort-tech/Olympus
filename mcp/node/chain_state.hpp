@@ -87,7 +87,7 @@ public:
     explicit chain_state(mcp::db::db_transaction& transaction_a, u256 const& _accountStartNonce, mcp::block_store& store_a,
 		std::shared_ptr<mcp::chain> chain_a, std::shared_ptr<mcp::iblock_cache> cache_a);
 
-    std::pair<ExecutionResult, dev::eth::TransactionReceipt> execute(dev::eth::EnvInfo const& _envInfo, Permanence _p, mcp::transaction const& _t, dev::eth::OnOpFunc const& _onOp = dev::eth::OnOpFunc());
+    std::pair<ExecutionResult, dev::eth::TransactionReceipt> execute(dev::eth::EnvInfo const& _envInfo, Permanence _p, mcp::Transaction const& _t, dev::eth::OnOpFunc const& _onOp = dev::eth::OnOpFunc());
 
     /// @returns the account at the given address or a null pointer if it does not exist.
     /// The pointer is valid until the next access to the state or account.
@@ -209,7 +209,7 @@ public:
     std::shared_ptr<mcp::iblock_cache> block_cache;
 
 	/// current block
-	mcp::transaction ts;
+	mcp::Transaction ts;
 
 	std::list<std::shared_ptr<mcp::trace>> traces;
 

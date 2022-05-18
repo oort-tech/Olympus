@@ -35,7 +35,7 @@ h256 mcp::wallet::send_action(TransactionSkeleton t, boost::optional<std::string
 	{
 		populateTransactionWithDefaults(t);
 		t.from = dev::toAddress(ar.second);
-		transaction ts(t, ar.second);
+		Transaction ts(t, ar.second);
 		return importTransaction(ts);
 	}
 	else
@@ -45,7 +45,7 @@ h256 mcp::wallet::send_action(TransactionSkeleton t, boost::optional<std::string
 	}
 }
 
-h256 mcp::wallet::importTransaction(transaction const& _t)
+h256 mcp::wallet::importTransaction(Transaction const& _t)
 {
 	// Use the Executive to perform basic validation of the transaction
 	// (e.g. transaction signature, account balance) using the state of

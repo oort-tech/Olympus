@@ -32,11 +32,11 @@ namespace mcp
 		/// @param _tx Trasnaction data.
 		/// @param _ik Set to Retry to force re-addinga transaction that was previously dropped.
 		/// @returns Import result code.
-		ImportResult import(transaction const& _tx, IfDropped _ik = IfDropped::Ignore);
+		ImportResult import(Transaction const& _tx, IfDropped _ik = IfDropped::Ignore);
 
 		/// get transaction from the queue
 		/// @param _txHash Trasnaction hash
-		transaction get(h256 const& _txHash) const;
+		Transaction get(h256 const& _txHash) const;
 
 		/// Remove transaction from the queue
 		/// @param _txHash Trasnaction hash
@@ -64,13 +64,13 @@ namespace mcp
 		/// Verified and imported transaction
 		struct VerifiedTransaction
 		{
-			VerifiedTransaction(transaction const& _t) : transaction(_t) {}
+			VerifiedTransaction(Transaction const& _t) : transaction(_t) {}
 			VerifiedTransaction(VerifiedTransaction&& _t) : transaction(std::move(_t.transaction)) {}
 
 			VerifiedTransaction(VerifiedTransaction const&) = delete;
 			VerifiedTransaction& operator=(VerifiedTransaction const&) = delete;
 
-			transaction transaction;  ///< Transaction data
+			Transaction transaction;  ///< Transaction data
 		};
 
 		/// Transaction pending verification
@@ -112,15 +112,15 @@ namespace mcp
 
 		ImportResult import(bytesConstRef _tx, IfDropped _ik = IfDropped::Ignore);
 		ImportResult check_WITH_LOCK(h256 const& _h, IfDropped _ik);
-		ImportResult manageImport_WITH_LOCK(h256 const& _h, transaction const& _transaction);
+		ImportResult manageImport_WITH_LOCK(h256 const& _h, Transaction const& _transaction);
 
-		void insertCurrent_WITH_LOCK(std::pair<h256, transaction> const& _p);
-		void makeCurrent_WITH_LOCK(transaction const& _t);
+		void insertCurrent_WITH_LOCK(std::pair<h256, Transaction> const& _p);
+		void makeCurrent_WITH_LOCK(Transaction const& _t);
 		bool remove_WITH_LOCK(h256 const& _txHash);
 		u256 maxNonce_WITH_LOCK(Address const& _a) const;
 		void verifierBody();
 
-		void validateTx(transaction const& _t);
+		void validateTx(Transaction const& _t);
 
 		mutable SharedMutex m_lock;  ///< General lock.
 		h256Hash m_known;            ///< Headers of transactions in both sets.

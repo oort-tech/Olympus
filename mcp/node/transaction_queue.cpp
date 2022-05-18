@@ -40,7 +40,7 @@ namespace mcp
 		RLP const rlp(_transactionRLP);
 		try
 		{
-			transaction t = transaction(rlp, CheckTransaction::Everything);
+			Transaction t = Transaction(rlp, CheckTransaction::Everything);
 			return import(t, _ik);
 		}
 		catch (Exception const&)
@@ -60,7 +60,7 @@ namespace mcp
 		return ImportResult::Success;
 	}
 
-	ImportResult TransactionQueue::import(transaction const& _transaction, IfDropped _ik)
+	ImportResult TransactionQueue::import(Transaction const& _transaction, IfDropped _ik)
 	{
 		validateTx(_transaction);
 		//if (_transaction.hasZeroSignature())
@@ -108,7 +108,7 @@ namespace mcp
 	}
 
 
-	ImportResult TransactionQueue::manageImport_WITH_LOCK(h256 const& _h, transaction const& _transaction)
+	ImportResult TransactionQueue::manageImport_WITH_LOCK(h256 const& _h, Transaction const& _transaction)
 	{
 		try
 		{
@@ -193,7 +193,7 @@ namespace mcp
 	}
 
 
-	void TransactionQueue::insertCurrent_WITH_LOCK(std::pair<h256, transaction> const& _p)
+	void TransactionQueue::insertCurrent_WITH_LOCK(std::pair<h256, Transaction> const& _p)
 	{
 		if (m_currentByHash.count(_p.first))
 		{
@@ -201,7 +201,7 @@ namespace mcp
 			return;
 		}
 
-		transaction const& t = _p.second;
+		Transaction const& t = _p.second;
 		// Insert into current
 		auto inserted = m_currentByAddressAndNonce[t.from()].insert(std::make_pair(t.nonce(), PriorityQueue::iterator()));
 		PriorityQueue::iterator handle = m_current.emplace(VerifiedTransaction(t));
@@ -232,7 +232,7 @@ namespace mcp
 	}
 
 
-	void TransactionQueue::makeCurrent_WITH_LOCK(transaction const& _t)
+	void TransactionQueue::makeCurrent_WITH_LOCK(Transaction const& _t)
 	{
 		bool newCurrent = false;
 		auto fs = m_future.find(_t.from());
@@ -289,13 +289,13 @@ namespace mcp
 		remove_WITH_LOCK(_txHash);
 	}
 
-	transaction TransactionQueue::get(h256 const& _txHash) const
+	Transaction TransactionQueue::get(h256 const& _txHash) const
 	{
 		UpgradableGuard l(m_lock);
 
 		auto t = m_currentByHash.find(_txHash);
 		if (t == m_currentByHash.end())
-			return transaction();
+			return Transaction();
 
 		return (*t->second).transaction;
 	}
@@ -340,7 +340,7 @@ namespace mcp
 
 			try
 			{
-				transaction t(work.transaction, CheckTransaction::Everything);
+				Transaction t(work.transaction, CheckTransaction::Everything);
 				ImportResult ir = import(t);
 				//m_onImport(ir, t.sha3(), work.nodeId); //Notify capability and P2P to process peer. diconnect peer if bad transaction  
 			}
@@ -352,7 +352,7 @@ namespace mcp
 		}
 	}
 
-	void TransactionQueue::validateTx(transaction const& _t)
+	void TransactionQueue::validateTx(Transaction const& _t)
 	{
 		if (_t.hasZeroSignature())
 			BOOST_THROW_EXCEPTION(ZeroSignatureTransaction());

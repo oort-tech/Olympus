@@ -30,8 +30,8 @@ namespace mcp
 
 		std::pair<u256, bool> estimate_gas(mcp::db::db_transaction& transaction_a, std::shared_ptr<mcp::iblock_cache> cache_a,
 			Address const& _from, u256 const& _value, Address const& _dest, bytes const& _data, int64_t const& _maxGas, u256 const& _gasPrice, dev::eth::McInfo const & mc_info, GasEstimationCallback const& _callback = GasEstimationCallback());
-		std::pair<ExecutionResult, dev::eth::TransactionReceipt> execute(mcp::db::db_transaction& transaction_a, std::shared_ptr<mcp::iblock_cache> cache_a, transaction const& _t, dev::eth::McInfo const & mc_info_a, Permanence _p, dev::eth::OnOpFunc const& _onOp);
-		mcp::json traceTransaction(Executive& _e, transaction const& _t, mcp::json const& _json);
+		std::pair<ExecutionResult, dev::eth::TransactionReceipt> execute(mcp::db::db_transaction& transaction_a, std::shared_ptr<mcp::iblock_cache> cache_a, Transaction const& _t, dev::eth::McInfo const & mc_info_a, Permanence _p, dev::eth::OnOpFunc const& _onOp);
+		mcp::json traceTransaction(Executive& _e, Transaction const& _t, mcp::json const& _json);
 
 		void save_dag_block(mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a, std::shared_ptr<mcp::block> block_a);
 		void try_advance(mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a);

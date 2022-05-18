@@ -4194,7 +4194,7 @@ void mcp::rpc_handler::eth_sendRawTransaction()
 	try
 	{
 		std::string _rlp = request["params"][0];
-		transaction t(jsToBytes(_rlp, OnFailed::Throw), CheckTransaction::None);
+		Transaction t(jsToBytes(_rlp, OnFailed::Throw), CheckTransaction::None);
 
 		mcp::json response_l;
 		response_l["result"] = toJS(m_wallet->importTransaction(t));
@@ -4437,7 +4437,7 @@ void mcp::rpc_handler::eth_getTransactionByHash()
 {
 	try
 	{
-
+		mcp::json response_l;
 		//todo localisedTransaction, have block hash and block number. but how to associate blocks before witness
 		std::string str = request["params"][0];
 		h256 h = jsToFixed<32>(str);
@@ -4445,8 +4445,12 @@ void mcp::rpc_handler::eth_getTransactionByHash()
 		//todo used cache
 		auto transaction = m_store.create_transaction();
 		auto t = m_store.transaction_get(transaction, h);
+		if (t == nullptr)//todo throw and catch
+		{
+			error_eth_response(response, rpc_eth_error_code::invalid_params, response_l);
+			return;
+		}
 
-		mcp::json response_l;
 		response_l["result"] = toJson(*t);
 		response(response_l);
 	}

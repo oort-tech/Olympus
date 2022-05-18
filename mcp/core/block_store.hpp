@@ -28,8 +28,8 @@ namespace mcp
 
 		/// transactions
 		bool transaction_exists(mcp::db::db_transaction &, h256 const &);
-		std::shared_ptr<mcp::transaction> transaction_get(mcp::db::db_transaction &, h256 const &);
-		void transaction_put(mcp::db::db_transaction &, h256 const &, mcp::transaction const &);
+		std::shared_ptr<mcp::Transaction> transaction_get(mcp::db::db_transaction &, h256 const &);
+		void transaction_put(mcp::db::db_transaction &, h256 const &, mcp::Transaction const &);
 
 		std::shared_ptr<mcp::account_state> account_state_get(mcp::db::db_transaction & transaction_a, h256 const& hash_a);
 		void account_state_put(mcp::db::db_transaction & transaction_a, h256 const& hash_a, mcp::account_state const & value_a);

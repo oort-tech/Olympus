@@ -30,7 +30,7 @@ namespace mcp
         /// Collect execution results in the result storage provided.
         void setResultRecipient(ExecutionResult& _res) { m_res = &_res; }
 
-        void initialize(transaction const& _transaction);
+        void initialize(Transaction const& _transaction);
         bool finalize();
         bool execute();
         bool go(dev::eth::OnOpFunc const& _onOp = dev::eth::OnOpFunc());
@@ -81,7 +81,7 @@ namespace mcp
 
         mcp::chain_state &m_s;              ///< The state to which this operation/transaction is applied.
 
-		transaction m_t;					///< The original transaction. Set by setup().
+		Transaction m_t;					///< The original transaction. Set by setup().
         log_entries m_logs;					///< The log entries created by this transaction. Set by finalize().
 
         u256 m_gasCost;

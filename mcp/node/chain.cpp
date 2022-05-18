@@ -954,7 +954,7 @@ std::pair<u256, bool> mcp::chain::estimate_gas(mcp::db::db_transaction& transact
 		//if (_maxGas == 0)
 		//	_maxGas = mcp::block_max_gas;
 
-		int64_t lowerBound = transaction::baseGasRequired(!_dest, &_data, dev::eth::EVMSchedule());
+		int64_t lowerBound = Transaction::baseGasRequired(!_dest, &_data, dev::eth::EVMSchedule());
 
 		///// if gas need used 50000,but input _maxGas ,it return zero ?
 		//if(_maxGas < lowerBound)
@@ -977,11 +977,11 @@ std::pair<u256, bool> mcp::chain::estimate_gas(mcp::db::db_transaction& transact
 			auto chain_ptr(shared_from_this());
 			chain_state c_state(transaction_a, 0, m_store, chain_ptr, cache_a);
 			u256 n = c_state.getNonce(_from);
-			transaction t;
+			Transaction t;
 			if (_dest)
-				t = transaction(_value, gasPrice, mid, _dest, _data, n);
+				t = Transaction(_value, gasPrice, mid, _dest, _data, n);
 			else
-				t = transaction(_value, gasPrice, mid, _data, n);
+				t = Transaction(_value, gasPrice, mid, _data, n);
 			t.setSinature(h256(0), h256(0), 0);
 			t.forceSender(_from);
 			c_state.addBalance(_from, mid * _gasPrice + _value);
@@ -1024,7 +1024,7 @@ std::pair<u256, bool> mcp::chain::estimate_gas(mcp::db::db_transaction& transact
 
 // This is the top function to be called by js call(). The reason to have this extra wrapper is to have this function
 // be called other methods except chain::set_block_stable
-std::pair<mcp::ExecutionResult, dev::eth::TransactionReceipt> mcp::chain::execute(mcp::db::db_transaction& transaction_a, std::shared_ptr<mcp::iblock_cache> cache_a, transaction const& _t, dev::eth::McInfo const & mc_info_a ,Permanence _p, dev::eth::OnOpFunc const& _onOp)
+std::pair<mcp::ExecutionResult, dev::eth::TransactionReceipt> mcp::chain::execute(mcp::db::db_transaction& transaction_a, std::shared_ptr<mcp::iblock_cache> cache_a, Transaction const& _t, dev::eth::McInfo const & mc_info_a ,Permanence _p, dev::eth::OnOpFunc const& _onOp)
 {
 	dev::eth::EnvInfo env(transaction_a, m_store, cache_a, mc_info_a);
 	// sichaoy: startNonce = 0
@@ -1035,7 +1035,7 @@ std::pair<mcp::ExecutionResult, dev::eth::TransactionReceipt> mcp::chain::execut
 	return c_state.execute(env, _p, _t, _onOp);
 }
 
-mcp::json mcp::chain::traceTransaction(Executive& _e, transaction const& _t, mcp::json const& _json)
+mcp::json mcp::chain::traceTransaction(Executive& _e, Transaction const& _t, mcp::json const& _json)
 {
 	StandardTrace st;
 	st.setShowMnemonics();

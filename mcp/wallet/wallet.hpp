@@ -40,7 +40,7 @@ public:
 	//void send_async(std::shared_ptr<mcp::block> const p_block, mcp::signature const & signature_a, std::function<void(mcp::send_result)> const & action_a, bool gen_next_work_a, bool const & async_a);
 	//mcp::send_result send_action(std::shared_ptr<mcp::block> const p_block, mcp::signature const & signature_a, std::function<void(mcp::send_result)> const & action_a, bool const & gen_next_work_a, bool const & async_a);
 	/// Imports the given transaction into the transaction queue
-	h256 importTransaction(transaction const& _t);
+	h256 importTransaction(Transaction const& _t);
 	u256 getTransactionCount(Address const& from);
 	void stop();
 

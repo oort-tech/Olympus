@@ -97,7 +97,7 @@ void mcp::chain_state::clearCacheIfTooLarge() const
 {
 }
 
-std::pair<mcp::ExecutionResult, dev::eth::TransactionReceipt> mcp::chain_state::execute(dev::eth::EnvInfo const& _envInfo, Permanence _p, mcp::transaction const& _t, dev::eth::OnOpFunc const& _onOp)
+std::pair<mcp::ExecutionResult, dev::eth::TransactionReceipt> mcp::chain_state::execute(dev::eth::EnvInfo const& _envInfo, Permanence _p, mcp::Transaction const& _t, dev::eth::OnOpFunc const& _onOp)
 {
 	Executive e(*this, _envInfo, traces);
     ExecutionResult res;

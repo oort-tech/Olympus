@@ -156,7 +156,7 @@ namespace mcp
 		void stream_RLP(dev::RLPStream & s) const;
 		h256 hash();
 
-		h256 init_hash = 0;
+		h256 init_hash = h256(0);
 
 		void record_init_hash();
 

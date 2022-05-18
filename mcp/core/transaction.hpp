@@ -35,15 +35,15 @@ namespace mcp
 		Everything
 	};
 
-	class transaction
+	class Transaction
 	{
 	public:
-		transaction() {}
+		Transaction() {}
 		/// Constructs a transaction from a transaction skeleton & optional secret.
-		transaction(TransactionSkeleton const& ts, Secret const& _s);
+		Transaction(TransactionSkeleton const& ts, Secret const& _s);
 
 		/// Constructs an unsigned message-call transaction.
-		transaction(u256 const& _value, u256 const& _gasPrice, u256 const& _gas, Address const& _dest, bytes const& _data, u256 const& _nonce = 0) : 
+		Transaction(u256 const& _value, u256 const& _gasPrice, u256 const& _gas, Address const& _dest, bytes const& _data, u256 const& _nonce = 0) :
 			m_nonce(_nonce), 
 			m_value(_value), 
 			m_receiveAddress(_dest), 
@@ -53,7 +53,7 @@ namespace mcp
 		{}
 
 		/// Constructs an unsigned contract-creation transaction.
-		transaction(u256 const& _value, u256 const& _gasPrice, u256 const& _gas, bytes const& _data, u256 const& _nonce = 0) :
+		Transaction(u256 const& _value, u256 const& _gasPrice, u256 const& _gas, bytes const& _data, u256 const& _nonce = 0) :
 			m_nonce(_nonce), 
 			m_value(_value), 
 			m_gasPrice(_gasPrice), 
@@ -62,18 +62,18 @@ namespace mcp
 		{}
 
 		/// Constructs a transaction from the given RLP.
-		transaction(dev::RLP const & r, CheckTransaction _checkSig);
+		Transaction(dev::RLP const & r, CheckTransaction _checkSig);
 
 		/// Constructs a transaction from the given RLP.
-		explicit transaction(bytesConstRef _rlp, CheckTransaction _checkSig) : transaction(RLP(_rlp), _checkSig) {}
+		explicit Transaction(bytesConstRef _rlp, CheckTransaction _checkSig) : Transaction(RLP(_rlp), _checkSig) {}
 
-		/// Constructs a transaction from the given RLP.
-		explicit transaction(bytes const& _rlp, CheckTransaction _checkSig) : transaction(&_rlp, _checkSig) {}
+		/// Constructs a Transaction from the given RLP.
+		explicit Transaction(bytes const& _rlp, CheckTransaction _checkSig) : Transaction(&_rlp, _checkSig) {}
 
 		///// Checks equality of transactions.
-		//bool operator==(transaction const& _c) const { return m_receiveAddress == _c.m_receiveAddress && m_value == _c.m_value && m_data == _c.m_data; }
+		//bool operator==(Transaction const& _c) const { return m_receiveAddress == _c.m_receiveAddress && m_value == _c.m_value && m_data == _c.m_data; }
 		///// Checks inequality of transactions.
-		//bool operator!=(transaction const& _c) const { return !operator==(_c); }
+		//bool operator!=(Transaction const& _c) const { return !operator==(_c); }
 
 		/// @returns sender of the transaction from the signature (and hash).
 		/// @throws TransactionIsUnsigned if signature was not initialized
@@ -180,5 +180,5 @@ namespace mcp
 	};
 
 	/// Nice name for vector of Transaction.
-	using transactions = std::vector<transaction>;
+	using Transactions = std::vector<Transaction>;
 }
