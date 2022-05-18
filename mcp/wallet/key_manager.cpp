@@ -38,60 +38,6 @@ bool mcp::key_manager::exists(mcp::account const & account_a)
 	return m_key_contents.count(account_a) > 0;
 }
 
-bool mcp::key_manager::work_account_exisit(mcp::account const & account_a)
-{
-	mcp::db::db_transaction transaction = m_store.create_transaction();
-	auto result(m_store.work_exists(transaction, account_a));
-	return result;
-}
-
-bool mcp::key_manager::work_account_get(mcp::account const & account_a, mcp::block_hash &  previous_a, mcp::uint64_union & work_a)
-{
-	auto result(false);
-	mcp::value_previous_work previous_work_l;
-	mcp::db::db_transaction transaction = m_store.create_transaction();
-	auto exists(!m_store.work_get(transaction, account_a, previous_work_l));
-	if (exists)
-	{
-		previous_a = previous_work_l.previous;
-		work_a = previous_work_l.work;
-	}
-	else
-		result = true;
-	return result;
-}
-
-bool mcp::key_manager::work_get(mcp::account const & account_a, mcp::block_hash const&  previous_a, mcp::uint64_union & work_a)
-{
-    auto result(false);
-	mcp::value_previous_work previous_work_l;
-	mcp::db::db_transaction transaction = m_store.create_transaction();
-	auto exists(!m_store.work_get(transaction, account_a, previous_work_l));
-
-	if (exists)
-	{
-		if (previous_work_l.previous == previous_a)
-		{
-			work_a = previous_work_l.work;
-			assert_x(!result);
-		}
-		else
-			result = true;
-	}
-	else
-		result = true;
-
-	return result;
-}
-
-void mcp::key_manager::work_put(mcp::account const & account_a, mcp::block_hash const&  previous_a, mcp::uint64_union const & work_a)
-{
-    mcp::value_previous_work previous_work_l(previous_a, work_a);
-
-	mcp::db::db_transaction transaction = m_store.create_transaction();
-	m_store.work_put(transaction, account_a, previous_work_l);
-}
-
 bool mcp::key_manager::find(mcp::account const & account_a, mcp::key_content & kc_a)
 {
 	bool exists(true);
@@ -289,4 +235,31 @@ void mcp::key_manager::add_or_update_key(mcp::key_content const & kc, bool const
 
 	if(is_backup_a)
 		write_backup(kc.account, kc.to_json());
+}
+
+std::pair<bool, Secret> mcp::key_manager::authenticate(Address addr, boost::optional<std::string> const & password)
+{
+	std::pair<bool, Secret> ret;
+	mcp::account from(0);
+	addr.ref().copyTo(from.ref());
+	
+	if (m_key_contents.count(from))
+	{
+		if (m_unlocked.count(from))
+		{
+			dev::Secret s(m_unlocked[from].ref());
+			ret = std::make_pair(false, s);
+		}
+		else if (password)
+		{
+			mcp::raw_key prv;
+			if(decrypt_prv(from, *password, prv))
+				BOOST_THROW_EXCEPTION(AccountLocked());
+		}
+		else
+			BOOST_THROW_EXCEPTION(AccountLocked());
+	}
+	else
+		BOOST_THROW_EXCEPTION(UnknownAccount());
+	return ret;
 }

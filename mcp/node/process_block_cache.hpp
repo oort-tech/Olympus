@@ -21,16 +21,8 @@ namespace mcp
 		std::shared_ptr<mcp::block_state> block_state_get(mcp::db::db_transaction & transaction_a, mcp::block_hash const & block_hash_a);
 		void block_state_put(mcp::db::db_transaction & transaction_a, mcp::block_hash const & block_hash_a, std::shared_ptr<mcp::block_state> block_state_a);
 
-		std::shared_ptr<mcp::account_state> latest_account_state_get(mcp::db::db_transaction & transaction_a, mcp::account const & account_a);
-		void latest_account_state_put(mcp::db::db_transaction & transaction_a, mcp::account const & account_a, std::shared_ptr<mcp::account_state> account_state_a);
-
-		bool unlink_block_exists(mcp::db::db_transaction & transaction_a, mcp::block_hash const &block_hash_a);
-		std::shared_ptr<mcp::unlink_block> unlink_block_get(mcp::db::db_transaction & transaction_a, mcp::block_hash const & block_hash_a);
-		void unlink_block_put(mcp::db::db_transaction & transaction_a, mcp::block_hash const & block_hash_a, std::shared_ptr<mcp::unlink_block> unlink_block_a);
-		void unlink_block_del(mcp::db::db_transaction & transaction_a, mcp::block_hash const & block_hash_a);
-
-		std::shared_ptr<mcp::account_info> account_get(mcp::db::db_transaction & transaction_a, mcp::account const & account_a);
-		void account_put(mcp::db::db_transaction & transaction_a, mcp::account const & account_a, std::shared_ptr<mcp::account_info> account_info_a);
+		std::shared_ptr<mcp::account_state> latest_account_state_get(mcp::db::db_transaction & transaction_a, Address const & account_a);
+		void latest_account_state_put(mcp::db::db_transaction & transaction_a, Address const & account_a, std::shared_ptr<mcp::account_state> account_state_a);
 
 		bool successor_get(mcp::db::db_transaction & transaction_a, mcp::block_hash const & root_a, mcp::block_hash & successor_a);
 		void successor_put(mcp::db::db_transaction & transaction_a, mcp::block_hash const & root_a, mcp::block_hash const & successor_a);
@@ -80,36 +72,15 @@ namespace mcp
 			>>
 			m_block_state_puts;
 
-		size_t m_max_latest_account_state_puts_size = 10000;
-		std::unordered_set<mcp::account> m_latest_account_state_puts_flushed;
-		boost::multi_index_container<
-			put_item<mcp::account, std::shared_ptr<mcp::account_state>>,
-			boost::multi_index::indexed_by<
-			boost::multi_index::sequenced<>,
-			boost::multi_index::hashed_unique<boost::multi_index::member<put_item<mcp::account, std::shared_ptr<mcp::account_state>>, mcp::account, &put_item<mcp::account, std::shared_ptr<mcp::account_state>>::key>>
-			>>
-			m_latest_account_state_puts;
-
-		size_t m_max_unlink_block_puts_size = 10000;
-		std::unordered_set<mcp::block_hash> m_unlink_block_puts_flushed;
-		boost::multi_index_container<
-			put_item<mcp::block_hash, std::shared_ptr<mcp::unlink_block>>,
-			boost::multi_index::indexed_by<
-			boost::multi_index::sequenced<>,
-			boost::multi_index::hashed_unique<boost::multi_index::member<put_item<mcp::block_hash, std::shared_ptr<mcp::unlink_block>>, mcp::block_hash, &put_item<mcp::block_hash, std::shared_ptr<mcp::unlink_block>>::key>>
-			>>
-			m_unlink_block_puts;
-		std::unordered_set<mcp::block_hash> m_unlink_block_dels;
-
-		size_t m_max_account_puts_size = 10000;
-		std::unordered_set<mcp::account> m_account_puts_flushed;
-		boost::multi_index_container<
-			put_item<mcp::account, std::shared_ptr<mcp::account_info>>,
-			boost::multi_index::indexed_by<
-			boost::multi_index::sequenced<>,
-			boost::multi_index::hashed_unique<boost::multi_index::member<put_item<mcp::account, std::shared_ptr<mcp::account_info>>, mcp::account, &put_item<mcp::account, std::shared_ptr<mcp::account_info>>::key>>
-			>>
-			m_account_puts;
+		//size_t m_max_latest_account_state_puts_size = 10000;
+		//std::unordered_set<Address> m_latest_account_state_puts_flushed;
+		//boost::multi_index_container<
+		//	put_item<Address, std::shared_ptr<mcp::account_state>>,
+		//	boost::multi_index::indexed_by<
+		//	boost::multi_index::sequenced<>,
+		//	boost::multi_index::hashed_unique<boost::multi_index::member<put_item<Address, std::shared_ptr<mcp::account_state>>, Address, &put_item<Address, std::shared_ptr<mcp::account_state>>::key>>
+		//	>>
+		//	m_latest_account_state_puts;
 
 		size_t m_max_successor_puts_size = 10000;
 		std::unordered_set<mcp::block_hash> m_successor_puts_flushed;

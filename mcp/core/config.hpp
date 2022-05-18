@@ -20,6 +20,9 @@ enum class mcp_networks
 
 extern mcp::mcp_networks mcp_network;
 
+extern dev::u256 gas_price;
+extern uint64_t chain_id;
+
 bool is_test_network();
 
 
@@ -89,22 +92,28 @@ private:
 		b_param_v0.max_link_size = 4096;
 		block_param_map.insert({ 0, b_param_v0 });
 
+		//chain_id = (uint64_t)mcp::mcp_network;
+		chain_id = (uint64_t)804;
 		switch (mcp::mcp_network)
 		{
 		case mcp::mcp_networks::mcp_mini_test_network:
 		{
+			gas_price = 10000000;
 			break;
 		}
 		case mcp::mcp_networks::mcp_test_network:
 		{
+			gas_price = 10000000;
 			break;
 		}
 		case mcp::mcp_networks::mcp_beta_network:
 		{
+			gas_price = 10000000;
 			break;
 		}
 		case mcp::mcp_networks::mcp_live_network:
 		{
+			gas_price = (uint256_t)5e13;
 			break;
 		}
 		default:

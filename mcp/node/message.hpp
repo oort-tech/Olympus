@@ -128,13 +128,12 @@ private:
 class joint_request_message
 {
   public:
-	joint_request_message(mcp::sync_request_hash const& request_id_a, mcp::block_hash const & block_hash_a, mcp::block_type const & type_a);
+	joint_request_message(mcp::sync_request_hash const& request_id_a, mcp::block_hash const & block_hash_a);
 	joint_request_message(bool &error_a, dev::RLP const &r);
 	void stream_RLP(dev::RLPStream &s) const;
 
 	mcp::sync_request_hash request_id;
 	mcp::block_hash block_hash;
-	mcp::block_type type;
 };
 
 enum joint_request_item_from
@@ -146,14 +145,13 @@ enum joint_request_item_from
 class joint_request_item
 {
 public:
-	joint_request_item(p2p::node_id const &id_a, std::shared_ptr<mcp::block_hash> block_hash_a, mcp::block_type const & type_a, mcp::requesting_block_cause const& cause_a) :
-		id(id_a), block_hash(block_hash_a), type(type_a), cause(cause_a), request_id(0)
+	joint_request_item(p2p::node_id const &id_a, std::shared_ptr<mcp::block_hash> block_hash_a, mcp::requesting_block_cause const& cause_a) :
+		id(id_a), block_hash(block_hash_a), cause(cause_a), request_id(0)
 	{
 	}
 
 	mcp::p2p::node_id id;
 	std::shared_ptr<mcp::block_hash> block_hash;
-	mcp::block_type type;
 	mcp::requesting_block_cause cause;
 	mcp::sync_request_hash request_id;
 	mcp::joint_request_item_from from = mcp::joint_request_item_from::missing;
@@ -230,7 +228,7 @@ class hash_tree_response_message
 		mcp::block_status status;
 		uint64_t stable_index;
 		uint64_t mc_timestamp;
-		boost::optional<transaction_receipt> receipt;
+		//boost::optional<transaction_receipt> receipt;
 		uint64_t level;
 		std::shared_ptr<mcp::block> block;
 		uint64_t mci;
@@ -239,7 +237,7 @@ class hash_tree_response_message
 		summary_items(mcp::block_hash const & bh, mcp::summary_hash const & sh, mcp::summary_hash const & previous_summary_a,
 			std::list<mcp::summary_hash> const & p_summary, std::list<mcp::summary_hash> const & l_summary, 
 			std::set<mcp::summary_hash> const & s_summary, mcp::block_status const & status_a, uint64_t const& stable_index_a, uint64_t const& mc_timestamp_a,
-			boost::optional<transaction_receipt> receipt_a,
+			//boost::optional<transaction_receipt> receipt_a,
 			uint64_t level_a, std::shared_ptr<mcp::block> const & block_a, uint64_t mci_a, std::set<mcp::summary_hash> const & skiplist_block_a);
 
 		summary_items(bool &error_a, dev::RLP const &r);
@@ -273,7 +271,7 @@ class peer_info_message
 	void stream_RLP(dev::RLPStream &s) const;
 	uint64_t min_retrievable_mci;
 	std::vector<mcp::block_hash> arr_tip_blocks;
-	std::map<mcp::account, mcp::block_hash> arr_light_tip_blocks;
+	//std::map<mcp::account, mcp::block_hash> arr_light_tip_blocks;
 };
 
 class peer_info_request_message
@@ -297,23 +295,6 @@ class base_validate_result
 {
   public:
 	mcp::base_validate_result_codes code;
-	std::string err_msg;
-};
-
-enum class light_validate_result_codes
-{
-	ok,
-	old,
-	missing_previous,
-	invalid_block,
-	previous_is_invalid_block,
-	known_invalid_block
-};
-
-class light_validate_result
-{
-public:
-	mcp::light_validate_result_codes code;
 	std::string err_msg;
 };
 

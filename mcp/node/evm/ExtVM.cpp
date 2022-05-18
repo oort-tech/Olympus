@@ -126,7 +126,7 @@ evmc_status_code transactionExceptionToEvmcStatusCode(TransactionException ex) n
 
 CallResult ExtVM::call(CallParameters& _p)
 {   
-    Executive e(m_s, envInfo(), false, m_s.traces, depth);
+    Executive e(m_s, envInfo(), m_s.traces, depth);
     if (!e.call(_p, 1, origin))
     {
         go(depth, e, _p.onOp);
@@ -137,12 +137,12 @@ CallResult ExtVM::call(CallParameters& _p)
     return {transactionExceptionToEvmcStatusCode(e.getException()), e.takeOutput()};
 }
 
-size_t ExtVM::codeSizeAt(mcp::account _a)
+size_t ExtVM::codeSizeAt(Address _a)
 {
     return m_s.codeSize(_a);
 }
 
-h256 ExtVM::codeHashAt(mcp::account _a)
+h256 ExtVM::codeHashAt(Address _a)
 {    
     return exists(_a) ? m_s.codeHash(_a) : h256{};
 }
@@ -154,7 +154,7 @@ void ExtVM::setStore(u256 _n, u256 _v)
 
 CreateResult ExtVM::create(u256 _endowment, u256& io_gas, bytesConstRef _code, Instruction _op, u256 _salt, OnOpFunc const& _onOp)
 {
-    Executive e(m_s, envInfo(), false, m_s.traces, depth);
+    Executive e(m_s, envInfo(), m_s.traces, depth);
     bool result = false;
     if (_op == Instruction::CREATE)
         result = e.createOpcode(myAddress, _endowment, 1, io_gas, _code, origin);
@@ -173,7 +173,7 @@ CreateResult ExtVM::create(u256 _endowment, u256& io_gas, bytesConstRef _code, I
     return {transactionExceptionToEvmcStatusCode(e.getException()), e.takeOutput(), e.newAddress()};
 }
 
-void ExtVM::suicide(mcp::account _a)
+void ExtVM::suicide(Address _a)
 {
     // Why transfer is not used here? That caused a consensus issue before (see Quirk #2 in
     // http://martin.swende.se/blog/Ethereum_quirks_and_vulns.html). There is one test case

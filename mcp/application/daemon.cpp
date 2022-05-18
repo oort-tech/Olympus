@@ -632,12 +632,6 @@ bool mcp_daemon::parse_command_to_config(mcp_daemon::daemon_config & config_a, b
     {
         config_a.witness.last_block = vm_a["last_block"].as<std::string>();
     }
-	if (vm_a.count("gas_price"))
-	{
-		mcp::uint256_union uint;
-		error = uint.decode_dec(vm_a["gas_price"].as<std::string>());
-		config_a.witness.gas_price = uint.number();
-	}
 
 	//database
 	if (vm_a.count("cache"))
@@ -867,8 +861,11 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 		///validation
 		std::shared_ptr<mcp::validation> validation(std::make_shared<mcp::validation>(chain_store, ledger, invalid_block_cache, cache));
 
+		/// transaction queue
+		std::shared_ptr<mcp::TransactionQueue> TQ(std::make_shared<mcp::TransactionQueue>(chain_store, cache, chain));
+
 		///composer
-		std::shared_ptr<mcp::composer> composer(std::make_shared<mcp::composer>(chain_store, cache, ledger, chain, config.witness.gas_price));
+		std::shared_ptr<mcp::composer> composer(std::make_shared<mcp::composer>(chain_store, cache, ledger, TQ));
 
 		///node_capability
 		std::shared_ptr<mcp::node_capability> capability(std::make_shared<mcp::node_capability>(io_service, chain_store, steady_clock, cache, sync_async, block_arrival));
@@ -881,14 +878,14 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 		);
 
 		/// block processor
-		std::shared_ptr<mcp::block_processor> processor(std::make_shared<mcp::block_processor>(error, chain_store, cache, chain, sync, capability, validation, sync_async, steady_clock, block_arrival, bg_io_service, invalid_block_cache, alarm, config.witness.gas_price));
+		std::shared_ptr<mcp::block_processor> processor(std::make_shared<mcp::block_processor>(error, chain_store, cache, chain, sync, capability, validation, sync_async, TQ, steady_clock, block_arrival, bg_io_service, invalid_block_cache, alarm));
 		if (error)
 			return;
 		capability->set_processor(processor);
 		sync->set_processor(processor);
 
 		///wallet
-		std::shared_ptr<mcp::wallet> wallet(std::make_shared<mcp::wallet>(wallet_store, chain_store, key_manager, composer, processor));
+		std::shared_ptr<mcp::wallet> wallet(std::make_shared<mcp::wallet>(chain_store, cache, key_manager, TQ));
 		//host
 		std::shared_ptr<mcp::p2p::host> host(std::make_shared<mcp::p2p::host>(error, config.p2p, io_service, seed, data_path));
 		if (error)
@@ -905,9 +902,9 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 		{
 			mcp::error_message error_msg;
 			witness = std::make_shared<mcp::witness>(error_msg,
-				ledger, key_manager, chain_store, alarm, wallet, chain, cache,
+				ledger, key_manager, chain_store, alarm, composer, chain, processor, cache, TQ,
 				config.witness.account_or_file, config.witness.password,
-				last_witness_block_hash_l, config.witness.gas_price
+				last_witness_block_hash_l
 				);
 
 			if (error_msg.error)
@@ -931,26 +928,26 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 			LOG(m_log.info) << "RPC is disabled";
 		}
 
-		std::shared_ptr<mcp::rpc_ws> rpc_ws = get_rpc_ws(io_service, background, config.rpc_ws);
-		if (config.rpc_ws.rpc_ws_enable)
-		{
-			rpc_ws->start();
-			rpc_ws->register_subscribe("new_block");
-			rpc_ws->register_subscribe("stable_block");
-			chain->set_ws_new_block_func(
-				std::bind(&mcp::rpc_ws::on_new_block, rpc_ws, std::placeholders::_1)
-			);
-			chain->set_ws_stable_block_func(
-				std::bind(&mcp::rpc_ws::on_stable_block, rpc_ws, std::placeholders::_1)
-			);
-			chain->set_ws_stable_mci_func(
-				std::bind(&mcp::rpc_ws::on_stable_mci, rpc_ws, std::placeholders::_1)
-			);
-		}
-		else
-		{
-			LOG(m_log.info) << "WebSocket RPC is disabled";
-		}
+		//std::shared_ptr<mcp::rpc_ws> rpc_ws = get_rpc_ws(io_service, background, config.rpc_ws);
+		//if (config.rpc_ws.rpc_ws_enable)
+		//{
+		//	rpc_ws->start();
+		//	rpc_ws->register_subscribe("new_block");
+		//	rpc_ws->register_subscribe("stable_block");
+		//	chain->set_ws_new_block_func(
+		//		std::bind(&mcp::rpc_ws::on_new_block, rpc_ws, std::placeholders::_1)
+		//	);
+		//	chain->set_ws_stable_block_func(
+		//		std::bind(&mcp::rpc_ws::on_stable_block, rpc_ws, std::placeholders::_1)
+		//	);
+		//	chain->set_ws_stable_mci_func(
+		//		std::bind(&mcp::rpc_ws::on_stable_mci, rpc_ws, std::placeholders::_1)
+		//	);
+		//}
+		//else
+		//{
+		//	LOG(m_log.info) << "WebSocket RPC is disabled";
+		//}
 
 		ongoing_report(chain_store, host, sync_async, background, cache,
 			sync, processor, capability,chain, alarm, m_log);
@@ -1028,24 +1025,24 @@ void mcp_daemon::ongoing_report(
 	mcp::db::db_transaction transaction(store.create_transaction());
 	size_t block_count(store.block_count(transaction));
 	size_t stable_count(store.stable_block_count(transaction));
-	size_t light_unstable_count(store.light_unstable_count(transaction));
-	size_t light_count(store.light_count(transaction));
+	size_t transaction_unstable_count(store.transaction_unstable_count(transaction));
+	size_t transaction_count(store.transaction_count(transaction));
 	size_t dag_free_count(store.dag_free_count(transaction));
-	size_t unlink_count(store.unlink_info_count(transaction));
-	size_t unlink_block_count(store.unlink_block_count(transaction));
-	size_t head_count(store.head_unlink_count(transaction));
+	//size_t unlink_count(store.unlink_info_count(transaction));
+	//size_t unlink_block_count(store.unlink_block_count(transaction));
+	//size_t head_count(store.head_unlink_count(transaction));
 
 	uint64_t last_mci = chain->last_mci();
 	uint64_t last_stable_mci = chain->last_stable_mci();
 
 	LOG(log.info) << "block:" << block_count
 		<< ", unstable block:" << block_count - stable_count
-		<< "(light:" << light_unstable_count << ")"
-		<< "light_count:" << light_count
 		<< ", stable block:" << stable_count
-		<< ", unlink block:" << unlink_block_count
-		<< ", unlink:" << unlink_count
-		<< ", head:" << head_count
+		<< ", unstable transaction:" << transaction_unstable_count
+		<< ", transaction:" << transaction_count
+		//<< ", unlink block:" << unlink_block_count
+		//<< ", unlink:" << unlink_count
+		//<< ", head:" << head_count
 		<< processor->get_clear_unlink_info()
 		<< ", dag free:" << dag_free_count
 		<< ", last_stable_mci:" << last_stable_mci

@@ -4,22 +4,24 @@
 mcp::witness::witness(mcp::error_message & error_msg,
 	mcp::ledger& ledger_a, std::shared_ptr<mcp::key_manager> key_manager_a,
 	mcp::block_store& store_a, std::shared_ptr<mcp::alarm> alarm_a,
-	std::shared_ptr<mcp::wallet> wallet_a, std::shared_ptr<mcp::chain> chain_a,
-	std::shared_ptr<mcp::block_cache> cache_a,
+	std::shared_ptr<mcp::composer> composer_a, std::shared_ptr<mcp::chain> chain_a,
+	std::shared_ptr<mcp::block_processor> block_processor_a,
+	std::shared_ptr<mcp::block_cache> cache_a, std::shared_ptr<TransactionQueue> tq,
 	std::string const & account_or_file_text, std::string const & password_a,
-	mcp::block_hash const & last_witness_block_hash_a, uint256_t const& gas_price_a
+	mcp::block_hash const & last_witness_block_hash_a
 ) :
 	m_ledger(ledger_a),
 	m_store(store_a),
 	m_alarm(alarm_a),
-	m_wallet(wallet_a),
+	m_composer(composer_a),
 	m_chain(chain_a),
+	m_block_processor(block_processor_a),
 	m_cache(cache_a),
+	m_tq(tq),
 	m_last_witness_time(std::chrono::steady_clock::now()),
 	m_witness_interval(std::chrono::milliseconds(m_max_witness_interval)),
     m_witness_get_current_chain(true),
-    m_last_witness_block_hash(last_witness_block_hash_a),
-	gas_price(gas_price_a)
+    m_last_witness_block_hash(last_witness_block_hash_a)
 {
 	bool error(m_account.decode_account(account_or_file_text));
 	if (error)
@@ -33,6 +35,15 @@ mcp::witness::witness(mcp::error_message & error_msg,
 			return;
 		}
 		m_account = kc.account;
+		mcp::raw_key prv;
+		error  = key_manager_a->decrypt_prv(m_account, password_a, prv);
+		if (error)
+		{
+			error_msg.error = true;
+			LOG(m_log.error) << "Witness error: Account not exists, " << m_account.to_account();
+			return;
+		}
+		m_secret = dev::Secret(prv.data.ref());
 	}
 
 	error = key_manager_a->unlock(m_account, password_a);
@@ -61,11 +72,12 @@ void mcp::witness::start()
 {
 	std::weak_ptr<mcp::witness> this_w(shared_from_this());
 	
-	uint32_t ms = mcp::mcp_network == mcp::mcp_networks::mcp_mini_test_network ? 50 : mcp::random_pool.GenerateWord32(500, 1000);
+	//uint32_t ms = mcp::mcp_network == mcp::mcp_networks::mcp_mini_test_network ? 50 : mcp::random_pool.GenerateWord32(500, 1000);
+	uint32_t ms = 1000;
 	m_alarm->add(std::chrono::steady_clock::now() + std::chrono::milliseconds(ms), [this_w]() {
 		if (auto this_l = this_w.lock())
 		{
-            //LOG(this_l->node->log_node.debug) << "Witness :is time to check_and_witness";
+            //LOG(this_l->m_log.info) << "Witness :is time to check_and_witness";
 			this_l->check_and_witness();
 			this_l->start();
 		}
@@ -93,7 +105,6 @@ void mcp::witness::check_and_witness()
 	}
 
 	mcp::db::db_transaction transaction(m_store.create_transaction());
-
     //can send witness
     if (!m_witness_get_current_chain)
     {
@@ -109,17 +120,16 @@ void mcp::witness::check_and_witness()
         }
     }
 
-	size_t light_unstable_count(m_store.light_unstable_count(transaction));
-	if (light_unstable_count == 0)
+	if (m_tq->size() == 0)
 	{
-		size_t unlink_info_count(m_store.unlink_info_count(transaction));
-		if (unlink_info_count == 0)
+		size_t transaction_unstable_count(m_store.transaction_unstable_count(transaction));
+		if (transaction_unstable_count == 0)
 		{
 			m_is_witnessing.clear();
 			return;
 		}
 	}
-
+	
 	mcp::block_hash mc_block_hash;
 	while (true)
 	{
@@ -133,7 +143,7 @@ void mcp::witness::check_and_witness()
 	if (mc_block_hash != mcp::genesis::block_hash)
 	{
 		std::shared_ptr<mcp::block> mc_block(m_cache->block_get(transaction, mc_block_hash));
-		std::shared_ptr<mcp::block_state> last_summary_block_state(m_cache->block_state_get(transaction, mc_block->hashables->last_summary_block));
+		std::shared_ptr<mcp::block_state> last_summary_block_state(m_cache->block_state_get(transaction, mc_block->last_summary_block()));
 		assert_x(last_summary_block_state
 			&& last_summary_block_state->is_stable
 			&& last_summary_block_state->is_on_main_chain
@@ -167,65 +177,32 @@ void mcp::witness::do_witness()
 {
     LOG(m_log.info) << "Do witness";
 
-	boost::optional<mcp::block_hash> previous = boost::none;
-	auto from(m_account);
-	auto to(0);
-	uint128_t amount(0);
-	mcp::uint256_t gas(0);
-	mcp::uint256_t gas_price(0);
-	std::vector<uint8_t> data;
-	boost::optional<std::string> password = boost::none;
-	bool gen_work = true;
-	bool async = false;
+	try
+	{
+		auto block = m_composer->compose_block(m_account, m_secret);
+		std::shared_ptr<mcp::joint_message> joint(new mcp::joint_message(block));
 
-	std::weak_ptr<mcp::witness> this_w(shared_from_this());
-	m_wallet->send_async(mcp::block_type::dag, previous, from, to, amount, gas, gas_price, data, password, [from, this_w](mcp::send_result result) {
-		if (auto this_l = this_w.lock())
+		std::shared_ptr<std::promise<mcp::validate_status>> p(std::make_shared<std::promise<mcp::validate_status>>());
+		auto fut = p->get_future();
+		std::shared_ptr<mcp::block_processor_item> item(std::make_shared<mcp::block_processor_item>(*joint, p));
+		m_block_processor->add_to_mt_process(item);
+		mcp::validate_status ret = fut.get();
+		if (!ret.ok)
 		{
-			switch (result.code)
-			{
-			case mcp::send_result_codes::ok:
-			{
-                LOG(this_l->m_log.info) << "Do witness ok";
-				uint32_t r_interval = mcp::random_pool.GenerateWord32(this_l->m_min_witness_interval, this_l->m_max_witness_interval);
-				this_l->m_witness_interval = std::chrono::milliseconds(r_interval);
-				break;
-			}
-			case mcp::send_result_codes::from_not_exists:
-                LOG(this_l->m_log.error) << "Witness error: Account not exists, " << from.to_account();
-				break;
-			case mcp::send_result_codes::account_locked:
-                LOG(this_l->m_log.error) << "Witness error: Account locked";
-				break;
-			case mcp::send_result_codes::wrong_password:
-                LOG(this_l->m_log.error) << "Witness error: Wrong password";
-				break;
-			case mcp::send_result_codes::insufficient_balance:
-                LOG(this_l->m_log.error) << "Witness error: Insufficient balance";
-				break;
-			case mcp::send_result_codes::data_size_too_large:
-                LOG(this_l->m_log.error) << "Witness error: Data size to large";
-				break;
-			case mcp::send_result_codes::validate_error:
-			{
-                LOG(this_l->m_log.error) << "Witness error: Validate error";
-				break;
-			}
-			case mcp::send_result_codes::dag_no_links:
-				LOG(this_l->m_log.error) << "Witness error: no links";
-				break;
-			case mcp::send_result_codes::error:
-                LOG(this_l->m_log.error) << "Witness error: Generate block error";
-				break;
-			default:
-                LOG(this_l->m_log.error) << "Unknown error";
-				break;
-			}
-
-			this_l->m_last_witness_time = std::chrono::steady_clock::now();
-			this_l->m_is_witnessing.clear();
+			LOG(m_log.error) << "invalid compose result codes:" << ret.msg;
 		}
-	}, gen_work, async);
+		else
+		{
+			LOG(m_log.info) << "Do witness ok";
+		}
+		m_last_witness_time = std::chrono::steady_clock::now();
+		m_is_witnessing.clear();
+		//LOG(m_log.info) << "-----------witness hash:" << block->hash().to_string() << " ,links:" << block->links().size();
+	}
+	catch (Exception& _e)
+	{
+		LOG(m_log.error) << "witness error," << _e.what();
+	}
 }
 
 std::atomic_flag mcp::witness::m_is_witnessing = ATOMIC_FLAG_INIT;
@@ -243,7 +220,6 @@ void mcp::witness_config::serialize_json(mcp::json &json_a) const
     json_a["witness_account"] = account_or_file;
     json_a["password"] = password;
     json_a["last_block"] = last_block;
-	json_a["gas_price"] = gas_price.str();
 }
 
 bool mcp::witness_config::deserialize_json(mcp::json const & json_a)
@@ -286,21 +262,6 @@ bool mcp::witness_config::deserialize_json(mcp::json const & json_a)
         {
             error = true;
         }
-
-		if (json_a.count("gas_price") && json_a["gas_price"].is_string())
-		{
-			mcp::uint256_union uint;
-			error = uint.decode_dec(json_a["gas_price"].get<std::string>());
-			if (uint > 0)
-				gas_price = uint.number();
-			else
-			{
-				if (mcp::mcp_network == mcp::mcp_networks::mcp_live_network)
-					gas_price = (uint256_t)5e13; //mcp 0.08
-				else
-					gas_price = 10000000;
-			}
-		}
     }
     catch (std::runtime_error const &)
     {
@@ -327,16 +288,6 @@ bool mcp::witness_config::parse_old_version_data(mcp::json const & json_a, uint6
 
 			if (json_a.count("last_block") && json_a["last_block"].is_string())
 				last_block = json_a["last_block"].get<std::string>();
-		}
-		
-		if (version == 3)
-		{
-			if (json_a.count("gas_price") && json_a["gas_price"].is_string())
-			{
-				mcp::uint256_union uint;
-				error = uint.decode_dec(json_a["gas_price"].get<std::string>());
-				gas_price = uint.number();
-			}
 		}
 	}
 	catch (std::runtime_error const &)

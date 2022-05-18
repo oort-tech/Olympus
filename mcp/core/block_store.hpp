@@ -1,7 +1,9 @@
 #pragma once
 
+#include "blocks.hpp"
 #include <mcp/core/common.hpp>
 #include <mcp/db/database.hpp>
+#include <mcp/core/transaction_receipt.hpp>
 
 namespace mcp
 {
@@ -24,11 +26,16 @@ namespace mcp
 
 		size_t block_count(mcp::db::db_transaction &);
 
-		std::shared_ptr<mcp::account_state> account_state_get(mcp::db::db_transaction & transaction_a, mcp::account_state_hash const & hash_a);
-		void account_state_put(mcp::db::db_transaction & transaction_a, mcp::account_state_hash const & hash_a, mcp::account_state const & value_a);
+		/// transactions
+		bool transaction_exists(mcp::db::db_transaction &, h256 const &);
+		std::shared_ptr<mcp::transaction> transaction_get(mcp::db::db_transaction &, h256 const &);
+		void transaction_put(mcp::db::db_transaction &, h256 const &, mcp::transaction const &);
 
-		bool latest_account_state_get(mcp::db::db_transaction & transaction_a, mcp::account const & account_a, mcp::account_state_hash & hash_a);
-		void latest_account_state_put(mcp::db::db_transaction & transaction_a, mcp::account const & account_a, mcp::account_state_hash const & hash_a);
+		std::shared_ptr<mcp::account_state> account_state_get(mcp::db::db_transaction & transaction_a, h256 const& hash_a);
+		void account_state_put(mcp::db::db_transaction & transaction_a, h256 const& hash_a, mcp::account_state const & value_a);
+
+		bool latest_account_state_get(mcp::db::db_transaction & transaction_a, Address const & account_a, h256& hash_a);
+		void latest_account_state_put(mcp::db::db_transaction & transaction_a, Address const & account_a, h256 const& hash_a);
 
 		bool contract_main_trie_node_get(mcp::db::db_transaction & transaction_a, mcp::code_hash const & hash_a, std::string & value_a);
 		void contract_main_trie_node_put(mcp::db::db_transaction & transaction_a, mcp::code_hash const & hash_a, std::string const & value_a);
@@ -38,9 +45,6 @@ namespace mcp
 
 		bool dag_account_get(mcp::db::db_transaction & transaction_a, mcp::account const & account_a, mcp::dag_account_info & info_a);
 		void dag_account_put(mcp::db::db_transaction & transaction_a, mcp::account const & account_a, mcp::dag_account_info const & info_a);
-
-		std::shared_ptr<mcp::account_info> account_get(mcp::db::db_transaction &, mcp::account const &);
-		void account_put(mcp::db::db_transaction &, mcp::account const &, mcp::account_info & info_a);
 
 		bool block_summary_get(mcp::db::db_transaction &, mcp::block_hash const &, mcp::summary_hash &);
 		void block_summary_put(mcp::db::db_transaction &, mcp::block_hash const &, mcp::summary_hash const &);
@@ -66,11 +70,11 @@ namespace mcp
 		bool stable_block_get(mcp::db::db_transaction & transaction_a, uint64_t const & index, mcp::block_hash & hash_a, std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a = nullptr);
 		void stable_block_put(mcp::db::db_transaction & transaction_a, uint64_t const & index_a, mcp::block_hash const & hash_a);
 
-		size_t light_unstable_count(mcp::db::db_transaction & transaction_a);
-		void light_unstable_count_add(mcp::db::db_transaction & transaction_a);
-		void light_unstable_count_reduce(mcp::db::db_transaction & transaction_a);
-		size_t light_count(mcp::db::db_transaction & transaction_a);
-		void light_count_add(mcp::db::db_transaction & transaction_a);
+		size_t transaction_unstable_count(mcp::db::db_transaction & transaction_a);
+		void transaction_unstable_count_add(mcp::db::db_transaction & transaction_a, uint32_t v);
+		void transaction_unstable_count_reduce(mcp::db::db_transaction & transaction_a, uint32_t v);
+		size_t transaction_count(mcp::db::db_transaction & transaction_a);
+		void transaction_count_add(mcp::db::db_transaction & transaction_a, uint32_t v);
 
 		//sync
 		bool catchup_chain_summaries_get(mcp::db::db_transaction & transaction_a, uint64_t const &, mcp::summary_hash &);
@@ -118,8 +122,11 @@ namespace mcp
 		void successor_put(mcp::db::db_transaction & transaction_a, mcp::block_hash const & root_a, mcp::block_hash const & successor_a);
 		void successor_del(mcp::db::db_transaction & transaction_a, mcp::block_hash const & root_a);
 
+		//bool genesis_transaction_hash_get(mcp::db::db_transaction & transaction_a, h256 &);
+		//void genesis_transaction_hash_put(mcp::db::db_transaction & transaction_a, h256 const&);
 		bool genesis_hash_get(mcp::db::db_transaction & transaction_a, mcp::block_hash & genesis_hash);
 		void genesis_hash_put(mcp::db::db_transaction & transaction_a, mcp::block_hash const & genesis_hash);
+		//void genesis_block_put(mcp::db::db_transaction &, mcp::block_hash const &, mcp::block const &);
 
 		bool catchup_index_get(mcp::db::db_transaction & transaction_a, uint64_t & _v);
 		void catchup_index_put(mcp::db::db_transaction & transaction_a, uint64_t const& _v);
@@ -129,33 +136,11 @@ namespace mcp
 		void catchup_max_index_put(mcp::db::db_transaction & transaction_a, uint64_t const& _v);
 		void catchup_max_index_del(mcp::db::db_transaction & transaction_a);
 
-		std::shared_ptr<mcp::unlink_block> unlink_block_get(mcp::db::db_transaction & transaction_a, mcp::block_hash const & hash_a, std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a = nullptr);
-		bool unlink_block_exists(mcp::db::db_transaction & transaction_a, mcp::block_hash const & hash_a);
-		void unlink_block_put(mcp::db::db_transaction & transaction_a, mcp::block_hash const & hash_a, mcp::unlink_block const & block_a);
-		void unlink_block_del(mcp::db::db_transaction & transaction_a, mcp::block_hash const & hash_a);
-		size_t unlink_block_count(mcp::db::db_transaction & transaction_a, std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a = nullptr);
-
-		std::shared_ptr<mcp::unlink_info> unlink_info_get(mcp::db::db_transaction & transaction_a, mcp::account const & account_a);
-		bool unlink_info_exists(mcp::db::db_transaction & transaction_a, mcp::account const & account_a);
-		void unlink_info_put(mcp::db::db_transaction & transaction_a, mcp::account const & account_a, mcp::unlink_info const & unlink_a);
-		void unlink_info_del(mcp::db::db_transaction & transaction_a, mcp::account const & account_a);
-		mcp::db::forward_iterator unlink_info_begin(mcp::db::db_transaction & transaction_a, std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a = nullptr);
-		mcp::db::forward_iterator unlink_info_begin(mcp::db::db_transaction & transaction_a, mcp::account const & account_a, std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a = nullptr);
-		size_t unlink_info_count(mcp::db::db_transaction & transaction_a, std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a = nullptr);
-
-		bool next_unlink_exists(mcp::db::db_transaction & transaction_a, mcp::next_unlink const & next_unlink_a);
-		void next_unlink_put(mcp::db::db_transaction & transaction_a, mcp::next_unlink const & next_unlink_a);
-		void next_unlink_del(mcp::db::db_transaction & transaction_a, mcp::next_unlink const & next_unlink_a);
-		void next_unlink_get(mcp::db::db_transaction & transaction_a, mcp::block_hash const & hash_a, std::list<mcp::next_unlink>& li);
-
-		bool head_unlink_exists(mcp::db::db_transaction & transaction_a, mcp::head_unlink const & head_unlink_a);
-		void head_unlink_put(mcp::db::db_transaction & transaction_a, mcp::head_unlink const & head_unlink_a);
-		void head_unlink_del(mcp::db::db_transaction & transaction_a, mcp::head_unlink const & head_unlink_a);
-		mcp::db::forward_iterator head_link_begin(mcp::db::db_transaction & transaction_a, std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a = nullptr);
-		size_t head_unlink_count(mcp::db::db_transaction & transaction_a, std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a = nullptr);
-
 		bool traces_get(mcp::db::db_transaction & transaction_a, mcp::block_hash const & block_hash_a, std::list<std::shared_ptr<mcp::trace>> & traces_a);
 		void traces_put(mcp::db::db_transaction & transaction_a, mcp::block_hash const & block_hash_a, std::list<std::shared_ptr<mcp::trace>> const & traces_a);
+
+		std::shared_ptr<dev::eth::TransactionReceipt> transaction_receipt_get(mcp::db::db_transaction & transaction_a, h256 const& hash_a);
+		void transaction_receipt_put(mcp::db::db_transaction &, h256 const& hash_a, dev::eth::TransactionReceipt const& receipt);
 
 		void version_put(mcp::db::db_transaction &, int);
 		int version_get();
@@ -180,6 +165,9 @@ namespace mcp
 		int latest_account_state;
 		// block_hash -> block
 		int blocks;
+
+		// transaction hash -> transaction
+		int transactions;
 
 		//block hash -> block state
 		int block_state;
@@ -224,8 +212,13 @@ namespace mcp
 		//traces
 		int traces;
 
+		//hash -> transaction receipt
+		int transaction_receipt;
+
 		//genesis hash key
 		static mcp::uint256_union const genesis_hash_key;
+		//genesis transaction hash key
+		static mcp::uint256_union const genesis_transaction_hash_key;
 		//last main chain index key
 		static mcp::uint256_union const last_mci_key;
 		//last stable main chain index key

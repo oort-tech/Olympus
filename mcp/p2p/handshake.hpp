@@ -5,6 +5,7 @@
 #include <mcp/p2p/host.hpp>
 #include <mcp/common/common.hpp>
 #include <mcp/common/log.hpp>
+#include <mcp/core/config.hpp>
 
 namespace mcp
 {

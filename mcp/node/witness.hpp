@@ -21,7 +21,6 @@ namespace mcp
         std::string account_or_file;
         std::string password;
         std::string last_block;
-		uint256_t gas_price;
     };
 	class witness : public std::enable_shared_from_this<mcp::witness>
 	{
@@ -29,25 +28,28 @@ namespace mcp
 		witness(mcp::error_message & error_msg, 
 			mcp::ledger& ledger_a, std::shared_ptr<mcp::key_manager> key_manager_a,
 			mcp::block_store& store_a, std::shared_ptr<mcp::alarm> alarm_a,
-			std::shared_ptr<mcp::wallet> wallet_a, std::shared_ptr<mcp::chain> chain_a,
-			std::shared_ptr<mcp::block_cache> cache_a,
+			std::shared_ptr<mcp::composer> composer_a, std::shared_ptr<mcp::chain> chain_a,
+			std::shared_ptr<mcp::block_processor> block_processor_a,
+			std::shared_ptr<mcp::block_cache> cache_a, std::shared_ptr<TransactionQueue> tq,
 			std::string const & account_text, std::string const & password_a, 
-			mcp::block_hash const& last_witness_block_hash_a = 0, uint256_t const& gas_price_a = 0
+			mcp::block_hash const& last_witness_block_hash_a = 0
 		);
 		void start();
 		void check_and_witness();
 
-		uint256_t gas_price;
 	private:
 		void do_witness();
 
 		mcp::ledger & m_ledger;
 		mcp::block_store m_store;
 		std::shared_ptr<mcp::alarm> m_alarm;
-		std::shared_ptr<mcp::wallet> m_wallet;
 		std::shared_ptr<mcp::chain> m_chain;
 		std::shared_ptr<mcp::block_cache> m_cache;
+		std::shared_ptr<mcp::composer> m_composer;
+		std::shared_ptr<mcp::block_processor> m_block_processor;
+		std::shared_ptr<TransactionQueue> m_tq;
 		mcp::account m_account;
+		dev::Secret m_secret;
 
 		std::chrono::steady_clock::time_point m_last_witness_time;
 		uint32_t const m_min_witness_interval = 1000;

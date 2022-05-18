@@ -8,6 +8,8 @@
 #include <mcp/common/log.hpp>
 #include <mcp/p2p/peer_store.hpp>
 #include <mcp/common/utility.hpp>
+#include <mcp/core/config.hpp>
+
 namespace mcp
 {
 	namespace p2p

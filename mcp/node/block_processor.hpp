@@ -4,7 +4,7 @@
 #include <mcp/core/timeout_db_transaction.hpp>
 #include <mcp/node/unhandle.hpp>
 #include <mcp/node/process_block_cache.hpp>
-
+#include <mcp/node/transaction_queue.hpp>
 #include <mcp/core/block_store.hpp>
 #include <mcp/node/chain.hpp>
 #include <mcp/node/sync.hpp>
@@ -70,6 +70,7 @@ namespace mcp
 	class chain;
 	class node_sync;
 	class node_capability;
+	class TransactionQueue;
 	// Processing blocks is a potentially long IO operation
 	// This class isolates block insertion from other operations like servicing network operations
 	class block_processor
@@ -79,11 +80,10 @@ namespace mcp
 			mcp::block_store& store_a, std::shared_ptr<mcp::block_cache> cache_a,
 			std::shared_ptr<mcp::chain> chain_a, std::shared_ptr<mcp::node_sync> sync_a,
 			std::shared_ptr<mcp::node_capability> capability_a, std::shared_ptr<mcp::validation> validation_a,
-			std::shared_ptr<mcp::async_task> async_task_a,
+			std::shared_ptr<mcp::async_task> async_task_a, std::shared_ptr<TransactionQueue> tq,
 			mcp::fast_steady_clock& steady_clock_a, std::shared_ptr<mcp::block_arrival> block_arrival_a,
 			boost::asio::io_service &io_service_a,
-			mcp::mru_list<mcp::block_hash>& invalid_block_cache_a, std::shared_ptr<mcp::alarm> alarm_a,
-			uint256_t const& gas_price_a
+			mcp::mru_list<mcp::block_hash>& invalid_block_cache_a, std::shared_ptr<mcp::alarm> alarm_a
 		);
 		~block_processor();
 		void stop();
@@ -93,7 +93,6 @@ namespace mcp
 		void add_to_process(std::shared_ptr<mcp::block_processor_item> item_a);
 		
 		void on_sync_completed(mcp::p2p::node_id const & remote_node_id_a);
-		bool exist_in_clear_block_filter(mcp::block_hash const& clear_hash_a);
 
 		bool is_full();
 
@@ -123,14 +122,6 @@ namespace mcp
 		void before_db_commit_event();
 		void after_db_commit_event();
 
-		void clear_unlinks(mcp::timeout_db_transaction & timeout_tx, bool compulsory = false);
-		void clear_unlinks_by_head(mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::unlink_block> head_block);
-		std::list<mcp::next_unlink> get_nexts_by_hashs(mcp::timeout_db_transaction & timeout_tx_a, std::list<mcp::block_hash> const& hashs);
-		void process_unlink_clear();
-
-		void put_clear_block_filter(mcp::block_hash const& clear_hash_a);
-		void erase_clear_block_filter(mcp::block_hash const& clear_hash_a);
-
 		void ongoing_retry_late_message();
 
 		mcp::block_store m_store;
@@ -144,6 +135,7 @@ namespace mcp
 		std::shared_ptr<mcp::block_arrival> m_block_arrival;
 		mcp::mru_list<mcp::block_hash> m_invalid_block_cache;
 		std::shared_ptr<mcp::alarm> m_alarm;
+		std::shared_ptr<TransactionQueue> m_tq;                  ///< Maintains a list of incoming transactions not yet in a block on the blockchain.
 
 
 		std::shared_ptr<mcp::process_block_cache> m_local_cache;
@@ -177,24 +169,24 @@ namespace mcp
 		std::chrono::time_point<std::chrono::steady_clock> m_last_request_unknown_missing_time;
 
 		//clear unlink block
-		std::unique_ptr<boost::asio::deadline_timer> m_clear_timer;
-		std::mutex m_clear_mutex;
-		std::list<mcp::head_unlink> m_clear_hash;
-		uint64_t m_clear_time;
-		uint64_t m_clear_time_interval = 30;
-		std::thread m_process_unlink_clear_thread;
-		uint64_t	m_clear_max_size = 10000;
-		std::list<mcp::block_hash> m_change_successor;
-		uint256_t	m_clear_min_gas_price;
+		//std::unique_ptr<boost::asio::deadline_timer> m_clear_timer;
+		//std::mutex m_clear_mutex;
+		//std::list<mcp::head_unlink> m_clear_hash;
+		//uint64_t m_clear_time;
+		//uint64_t m_clear_time_interval = 30;
+		//std::thread m_process_unlink_clear_thread;
+		//uint64_t	m_clear_max_size = 10000;
+		//std::list<mcp::block_hash> m_change_successor;
+		//uint256_t	m_clear_min_gas_price;
 
-		boost::multi_index_container<
-			mcp::put_clear_item,
-			boost::multi_index::indexed_by<
-			boost::multi_index::ordered_non_unique<boost::multi_index::member<mcp::put_clear_item, uint64_t, &mcp::put_clear_item::m_time> >,
-			boost::multi_index::hashed_unique<boost::multi_index::member<mcp::put_clear_item, mcp::block_hash, &mcp::put_clear_item::m_clear_block_hash> >
-			>
-		> m_clear_block;
-		std::mutex max_clear_block_mutex;
+		//boost::multi_index_container<
+		//	mcp::put_clear_item,
+		//	boost::multi_index::indexed_by<
+		//	boost::multi_index::ordered_non_unique<boost::multi_index::member<mcp::put_clear_item, uint64_t, &mcp::put_clear_item::m_time> >,
+		//	boost::multi_index::hashed_unique<boost::multi_index::member<mcp::put_clear_item, mcp::block_hash, &mcp::put_clear_item::m_clear_block_hash> >
+		//	>
+		//> m_clear_block;
+		//std::mutex max_clear_block_mutex;
 
 		//info
 		std::atomic<uint64_t> block_processor_add = { 0 };

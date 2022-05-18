@@ -493,7 +493,6 @@ public:
 	void status();
 	void peers();
 	void nodes();
-	void work_get();
 	void witness_list();
 
     void estimate_gas();
@@ -513,7 +512,7 @@ public:
     void eth_estimateGas();
     void eth_getBlockByNumber();
     void eth_sendRawTransaction();
-    //void eth_sendTransaction();
+    void eth_sendTransaction();
     void eth_call();
     void net_version();
     bool try_get_mc_info(dev::eth::McInfo &mc_info_a, uint64_t &mci);

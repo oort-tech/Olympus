@@ -7,6 +7,7 @@
 #include <mcp/common/SecureTrieDB.h>
 #include <libevm/ExtVMFace.h>
 #include <mcp/node/chain.hpp>
+#include <mcp/core/transaction.hpp>
 
 #include <set>
 #include <unordered_set>
@@ -48,30 +49,30 @@ struct Change
     };
 
     Kind kind;        ///< The kind of the change.
-    account address;  ///< Changed account address.
+	Address address;  ///< Changed account address.
     uint256_t value;       ///< Change value, e.g. balance, storage and nonce.
     uint256_t key;         ///< Storage key. Last because used only in one case.
     dev::bytes oldCode;    ///< Code overwritten by CREATE, empty except in case of address collision.
 
     /// Helper constructor to make change log update more readable.
-    Change(Kind _kind, account const& _addr, uint256_t const& _value = 0):
+    Change(Kind _kind, Address const& _addr, uint256_t const& _value = 0):
             kind(_kind), address(_addr), value(_value)
     {
         assert_x(_kind != Code); // For this the special constructor needs to be used.
     }
 
     /// Helper constructor especially for storage change log.
-    Change(account const& _addr, uint256_t const& _key, uint256_t const& _value):
+    Change(Address const& _addr, uint256_t const& _key, uint256_t const& _value):
             kind(Storage), address(_addr), value(_value), key(_key)
     {}
 
     /// Helper constructor for nonce change log.
-    Change(account const& _addr, uint256_t const& _value):
+    Change(Address const& _addr, uint256_t const& _value):
             kind(Nonce), address(_addr), value(_value)
     {}
 
     /// Helper constructor especially for new code change log.
-    Change(account const& _addr, dev::bytes const& _oldCode):
+    Change(Address const& _addr, dev::bytes const& _oldCode):
             kind(Code), address(_addr), oldCode(_oldCode)
     {}
 };
@@ -84,36 +85,36 @@ class chain_state
 public:
 
     explicit chain_state(mcp::db::db_transaction& transaction_a, u256 const& _accountStartNonce, mcp::block_store& store_a,
-		std::shared_ptr<mcp::chain> chain_a, std::shared_ptr<mcp::iblock_cache> cache_a, std::shared_ptr<mcp::block> const block_a = nullptr);
+		std::shared_ptr<mcp::chain> chain_a, std::shared_ptr<mcp::iblock_cache> cache_a);
 
-    std::pair<ExecutionResult, dev::eth::TransactionReceipt> execute(dev::eth::EnvInfo const& _envInfo, Permanence _p, dev::eth::OnOpFunc const& _onOp = dev::eth::OnOpFunc());
+    std::pair<ExecutionResult, dev::eth::TransactionReceipt> execute(dev::eth::EnvInfo const& _envInfo, Permanence _p, mcp::transaction const& _t, dev::eth::OnOpFunc const& _onOp = dev::eth::OnOpFunc());
 
     /// @returns the account at the given address or a null pointer if it does not exist.
     /// The pointer is valid until the next access to the state or account.
-	std::shared_ptr<mcp::account_state> account(mcp::account const& _addr) const;
+	std::shared_ptr<mcp::account_state> account(Address const& _addr) const;
 
     /// Check if the address is in use.
-    bool addressInUse(mcp::account const& _address) const;
+    bool addressInUse(Address const& _address) const;
 
     /// Check if the address contains executable code.
-    bool addressHasCode(mcp::account const& _address) const;
+    bool addressHasCode(Address const& _address) const;
 
     /// Get an account's balance.
     /// @returns 0 if the address has never been used.
-    uint256_t balance(mcp::account const& _id) const;
+    uint256_t balance(Address const& _id) const;
 
     /// Add some amount to balance.
     /// Will initialise the address if it has never been used.
-    void addBalance(mcp::account const& _id, uint256_t const& _amount);
+    void addBalance(Address const& _id, uint256_t const& _amount);
 
     /// Subtract the @p _value amount from the balance of @p _addr account.
     /// @throws NotEnoughCash if the balance of the account is less than the
     /// amount to be subtrackted (also in case the account does not exist).
-    void subBalance(mcp::account const& _addr, uint256_t const& _value);
+    void subBalance(Address const& _addr, uint256_t const& _value);
 
     /// Set the balance of @p _addr to @p _value.
     /// Will instantiate the address if it has never been used.
-    void setBalance(mcp::account const& _addr, uint256_t const& _value);
+    void setBalance(Address const& _addr, uint256_t const& _value);
 
     /**
      * @brief Transfers "the balance @a _value between two accounts.
@@ -121,57 +122,57 @@ public:
      * @param _to Account to which @a _value will be added.
      * @param _value Amount to be transferred.
      */
-    void transferBalance(mcp::account const& _from, mcp::account const& _to, uint256_t const& _value);
+    void transferBalance(Address const& _from, Address const& _to, uint256_t const& _value);
 
     /// Get the value of a storage position of an account.
     /// @returns 0 if no account exists at that address.
-    mcp::uint256_t storage(mcp::account const& _contract, mcp::uint256_t const& _memory) const;
+    mcp::uint256_t storage(Address const& _contract, mcp::uint256_t const& _memory) const;
 
     /// Get the storage of an account.
     /// @note This is expensive. Don't use it unless you need to.
     /// @returns map of hashed keys to key-value pairs or empty map if no account exists at that address.
-    std::map<h256, std::pair<u256, u256>> storage(mcp::account const& _id) const;
+    std::map<h256, std::pair<u256, u256>> storage(Address const& _id) const;
 
     /// Set the value of a storage position of an account.
-    void setStorage(mcp::account const& _contract, dev::u256 const& _location, dev::u256 const& _value);
+    void setStorage(Address const& _contract, dev::u256 const& _location, dev::u256 const& _value);
 
     /// Get the original value of a storage position of an account (before modifications saved in
     /// account cache).
     /// @returns 0 if no account exists at that address.
-    dev::u256 originalStorageValue(mcp::account const& _contract, mcp::uint256_t const& _key) const;
+    dev::u256 originalStorageValue(Address const& _contract, mcp::uint256_t const& _key) const;
 
     /// Clear the storage root hash of an account to the hash of the empty trie.
-    void clearStorage(mcp::account const& _contract);
+    void clearStorage(Address const& _contract);
 
     /// Get the code of an account.
     /// @returns bytes() if no account exists at that address.
     /// @warning The reference to the code is only valid until the access to
     ///          other account. Do not keep it.
-    dev::bytes const& code(mcp::account const& _addr) const;
+    dev::bytes const& code(Address const& _addr) const;
 
     /// Get the code hash of an account.
     /// @returns EmptySHA3 if no account exists at that address or if there is no code associated with the address.
-    dev::h256 codeHash(mcp::account const& _contract) const;
+    dev::h256 codeHash(Address const& _contract) const;
 
     /// Get the byte-size of the code of an account.
     /// @returns code(_contract).size(), but utilizes CodeSizeHash.
-    size_t codeSize(mcp::account const& _contract) const;
+    size_t codeSize(Address const& _contract) const;
 
     /// Increament the account nonce.
-    void incNonce(mcp::account const& _id);
+    void incNonce(Address const& _id);
 
     /// Set the account nonce.
-    void setNonce(mcp::account const& _addr, mcp::uint256_t const& _newNonce);
+    void setNonce(Address const& _addr, mcp::uint256_t const& _newNonce);
 
     /// Get the account nonce -- the number of transactions it has sent.
     /// @returns 0 if the address has never been used.
-    u256 getNonce(mcp::account const& _addr) const;
+    u256 getNonce(Address const& _addr) const;
 
     /// Sets the code of the account. Must only be called during / after contract creation.
-    void setCode(mcp::account const& _address, dev::bytes&& _code);
+    void setCode(Address const& _address, dev::bytes&& _code);
 
     /// Delete an account (used for processing suicides).
-    void kill(mcp::account _a);
+    void kill(Address _a);
 
     /// Commit all changes waiting in the address cache to the DB.
     /// @param _commitBehaviour whether or not to remove empty accounts during commit.
@@ -191,11 +192,11 @@ public:
 
     ChangeLog const& changeLog() const { return m_changeLog; }
 
-	bool is_precompiled(mcp::account const& account_a, uint64_t const& last_summary_mci_a) const;
+	bool is_precompiled(Address const& account_a, uint64_t const& last_summary_mci_a) const;
 
-	bigint cost_of_precompiled(mcp::account const& account_a, bytesConstRef in_a) const;
+	bigint cost_of_precompiled(Address const& account_a, bytesConstRef in_a) const;
 
-	std::pair<bool, bytes> execute_precompiled(mcp::account const& account_a, bytesConstRef in_a) const;
+	std::pair<bool, bytes> execute_precompiled(Address const& account_a, bytesConstRef in_a) const;
 
 
     /// transaction
@@ -206,8 +207,9 @@ public:
 	std::shared_ptr<mcp::chain> chain;
     /// database cache
     std::shared_ptr<mcp::iblock_cache> block_cache;
-    /// current block
-    std::shared_ptr<mcp::block> const block;
+
+	/// current block
+	mcp::transaction ts;
 
 	std::list<std::shared_ptr<mcp::trace>> traces;
 
@@ -219,7 +221,7 @@ private:
     /// Purges non-modified entries in m_cache if it grows too large.
     void clearCacheIfTooLarge() const;
 
-    void createAccount(mcp::account const& _address, std::shared_ptr<mcp::account_state> _account);
+    void createAccount(Address const& _address, std::shared_ptr<mcp::account_state> _account);
 	
     /// @returns true when normally halted; false when exceptionally halted; throws when internal VM
     /// exception occurred.
@@ -230,13 +232,13 @@ private:
 
 	/// Our address cache. This stores the states of each address that has (or at least might have)
     /// been changed.
-    mutable std::unordered_map<mcp::account, std::shared_ptr<mcp::account_state>> m_cache;
+    mutable std::unordered_map<Address, std::shared_ptr<mcp::account_state>> m_cache;
     /// Tracks entries in m_cache that can potentially be purged if it grows too large.
-    mutable std::vector<mcp::account> m_unchangedCacheEntries;
+    mutable std::vector<Address> m_unchangedCacheEntries;
     /// Tracks addresses that are known to not exist.
-    mutable std::set<mcp::account> m_nonExistingAccountsCache;
+    mutable std::set<Address> m_nonExistingAccountsCache;
     /// Tracks all addresses touched so far.
-    AccountHash m_touched;
+	AddressHash m_touched;
 
     u256 m_accountStartNonce;
 
@@ -244,6 +246,6 @@ private:
 };
 
 template <class DB>
-AccountHash commit(mcp::db::db_transaction & transaction_a, AccountMap const& _cache, DB* db, std::shared_ptr<mcp::process_block_cache> block_cache, mcp::block_store& store, mcp::block_hash const & block_hash_a);
+AddressHash commit(mcp::db::db_transaction & transaction_a, AccountMap const& _cache, DB* db, std::shared_ptr<mcp::process_block_cache> block_cache, mcp::block_store& store, h256 const& ts);
 
 }

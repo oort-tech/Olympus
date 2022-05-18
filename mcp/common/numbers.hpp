@@ -147,7 +147,7 @@ union uint256_union
 using amount = uint256_t;
 using block_hash = uint256_union;
 using summary_hash = uint256_union;
-using account_state_hash = uint256_union;
+//using account_state_hash = uint256_union;
 // using account = uint256_union;
 /// A hash set of mcp accounts
 // using AccountHash = std::unordered_set<account>;
@@ -271,7 +271,7 @@ struct account20_struct {
 };
 
 using account = account20_struct;
-using AccountHash = std::unordered_set<account>;
+//using AccountHash = std::unordered_set<account>;
 
 namespace p2p
 {
@@ -279,8 +279,8 @@ namespace p2p
 	using hash256 = mcp::uint256_union;
 }
 
-mcp::signature sign_message (mcp::raw_key const &, /*mcp::public_key const &,*/ mcp::uint256_union const &);
-bool validate_message (mcp::account const &, mcp::uint256_union const &, mcp::signature const &);
+//mcp::signature sign_message (mcp::raw_key const &, /*mcp::public_key const &,*/ mcp::uint256_union const &);
+//bool validate_message (mcp::account const &, mcp::uint256_union const &, mcp::signature const &);
 }
 
 namespace std

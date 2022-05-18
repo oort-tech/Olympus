@@ -506,22 +506,22 @@ std::string mcp::uint512_union::to_string() const
 	return result;
 }
 
-mcp::signature mcp::sign_message(mcp::raw_key const & private_key, /*mcp::public_key const & public_key,*/ mcp::uint256_union const & message)
-{
-	mcp::signature result;
-	mcp::encry::sign(private_key.data, /*public_key,*/ message.ref(), result);
-	return result;
-}
-
-bool mcp::validate_message(mcp::account const & account, mcp::uint256_union const & message, mcp::signature const & signature)
-{
-	mcp::public_key pubkey = mcp::encry::recover(signature, message.ref());
-	if (account == mcp::account(pubkey)) {
-		return true;
-	} else {
-		return false;
-	}
-}
+//mcp::signature mcp::sign_message(mcp::raw_key const & private_key, /*mcp::public_key const & public_key,*/ mcp::uint256_union const & message)
+//{
+//	mcp::signature result;
+//	mcp::encry::sign(private_key.data, /*public_key,*/ message.ref(), result);
+//	return result;
+//}
+//
+//bool mcp::validate_message(mcp::account const & account, mcp::uint256_union const & message, mcp::signature const & signature)
+//{
+//	mcp::public_key pubkey = mcp::encry::recover(signature, message.ref());
+//	if (account == mcp::account(pubkey)) {
+//		return true;
+//	} else {
+//		return false;
+//	}
+//}
 
 mcp::uint128_union::uint128_union(std::string const & string_a)
 {

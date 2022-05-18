@@ -104,15 +104,6 @@ void mcp::node_sync::joint_request_handler(p2p::node_id const &id, mcp::joint_re
 		mcp::db::db_transaction transaction(m_store.create_transaction());
 
 		std::shared_ptr<mcp::block> block = m_cache->block_get(transaction, request.block_hash);
-		if (block == nullptr 
-			&& request.type == mcp::block_type::light)
-		{
-			std::shared_ptr<mcp::unlink_block> unlink_block = m_cache->unlink_block_get(transaction, request.block_hash);
-			if (unlink_block == nullptr)
-				return;
-			block = unlink_block->block;
-		}
-
 		if (nullptr == block)
 			return;
 
@@ -129,12 +120,6 @@ void mcp::node_sync::joint_request_handler(p2p::node_id const &id, mcp::joint_re
 		}
 		else
 		{
-			////if block data cleaned, not send this block
-			//if (!block->hashables->data_hash.is_zero() && block->data.empty())
-			//{
-			//	LOG(log_sync.info) << "joint_request_handler data_hash exist, data empty, hash:" << block->hashables->data_hash.to_string();
-			//	return;
-			//}
 			mcp::joint_message joint(block);
 			joint.request_id = request.request_id;
 			send_block(id, joint);
@@ -448,12 +433,12 @@ void mcp::node_sync::prepare_catchup_chain(mcp::catchup_request_message const& r
 			if (arr_found_witnesses.size() == distinct_witness_size_remote)
 			{
 				// Collect last summaries of last distinct witnessed blocks
-				if (!mc_block->hashables->last_summary_block.is_zero() && last_summary_hash.is_zero())
+				if (!mc_block->last_summary_block().is_zero() && last_summary_hash.is_zero())
 				{
-					last_summary_hash = mc_block->hashables->last_summary_block;
+					last_summary_hash = mc_block->last_summary_block();
 				}
 
-				std::shared_ptr<mcp::block_state> first_last_summary_state(m_cache->block_state_get(transaction, mc_block->hashables->last_summary_block));
+				std::shared_ptr<mcp::block_state> first_last_summary_state(m_cache->block_state_get(transaction, mc_block->last_summary_block()));
 				assert_x(first_last_summary_state
 					&& first_last_summary_state->is_on_main_chain
 					&& first_last_summary_state->main_chain_index);
@@ -537,7 +522,7 @@ void mcp::node_sync::prepare_catchup_chain(mcp::catchup_request_message const& r
 		if (last_summary_mci > last_stable_mci_remote && last_summary_mci > 0 && arr_stable_last_summary_joints.size() < 500)
 		{
 			// go to next - last summary
-			last_summary_block = bk->hashables->last_summary_block;
+			last_summary_block = bk->last_summary_block();
 			std::shared_ptr<mcp::block_state> bs(m_cache->block_state_get(transaction, last_summary_block));
 			last_summary_mci = *bs->main_chain_index;
 		}
@@ -872,13 +857,13 @@ mcp::sync_result mcp::node_sync::process_catchup_chain(mcp::catchup_response_mes
 					arr_witness_joints.push_back(joint);
 				}
 
-				arr_parent_blocks = block->hashables->parents;
+				arr_parent_blocks = block->parents();
 
 				// derive last_summary_block from receiver's own point of view
-				if (!block->hashables->last_summary_block.is_zero() && arr_found_witnesses.size() >= distinct_witness_size)
+				if (!block->last_summary_block().is_zero() && arr_found_witnesses.size() >= distinct_witness_size)
 				{
-					arr_last_summary_blocks.push_back(block->hashables->last_summary_block);
-					assoc_last_summary_by_block[block->hashables->last_summary_block] = block->hashables->last_summary;
+					arr_last_summary_blocks.push_back(block->last_summary_block());
+					assoc_last_summary_by_block[block->last_summary_block()] = block->last_summary();
 				}
 			}
 
@@ -900,7 +885,7 @@ mcp::sync_result mcp::node_sync::process_catchup_chain(mcp::catchup_response_mes
 			for (auto joint : arr_witness_joints)
 			{
 				std::shared_ptr<mcp::block> block = joint.block;
-				if (!validate_message(block->from(), block->hash(), block->signature))
+				//if (!validate_message(block->from(), block->hash(), block->signature()))//todo used eth sign ----------------------------------------
 				{
 					LOG(log_sync.info) << "process_catchup_chain_error:invalid signature";
 					process_catchup_result = mcp::sync_result::catchup_chain_summary_check_fail;
@@ -995,10 +980,10 @@ mcp::sync_result mcp::node_sync::process_catchup_chain(mcp::catchup_response_mes
 				process_catchup_result = mcp::sync_result::catchup_chain_summary_check_fail;
 				return  process_catchup_result;
 			}
-			if (!block->hashables->last_summary_block.is_zero())
+			if (!block->last_summary_block().is_zero())
 			{
-				last_summary_block = block->hashables->last_summary_block;
-				last_summary = block->hashables->last_summary;
+				last_summary_block = block->last_summary_block();
+				last_summary = block->last_summary();
 			}
 		}
 #pragma endregion
@@ -1201,16 +1186,16 @@ void mcp::node_sync::read_hash_tree(mcp::hash_tree_request_message const& hash_t
 		}
 
 		// check if all the links have summaries
-		std::shared_ptr<std::list<mcp::block_hash>> links(block_ptr->links());
-		for (auto it = links->begin(); it != links->end(); ++it)
+		auto links(block_ptr->links());
+		for (auto it = links.begin(); it != links.end(); ++it)
 		{
-			mcp::summary_hash sh;
-			if (m_cache->block_summary_get(transaction, *it, sh))
-			{
-				LOG(log_sync.info) << "read_hash_tree: some parents have no summaries";
-				l_summaries.clear();
-				return;
-			}
+			//mcp::summary_hash sh;
+			//if (m_cache->block_summary_get(transaction, *it, sh))
+			//{
+			//	LOG(log_sync.info) << "read_hash_tree: some parents have no summaries";
+			//	l_summaries.clear();
+			//	return;
+			//}
 			//BOOST_LOG(log) << "read_hash_tree:"<<"block:"<< bh.to_string() <<",parent summary: " << sh.to_string();
 			l_summaries.push_back(sh);
 		}
@@ -1233,7 +1218,7 @@ void mcp::node_sync::read_hash_tree(mcp::hash_tree_request_message const& hash_t
 		}
 
 		// fill the summary items
-		mcp::hash_tree_response_message::summary_items s(bh, sh, previous_summary, p_summaries, l_summaries, s_summaries, bs->status, bs->stable_index, bs->mc_timestamp, bs->receipt, bs->level, block_ptr, *bs->main_chain_index, s_info.list);
+		mcp::hash_tree_response_message::summary_items s(bh, sh, previous_summary, p_summaries, l_summaries, s_summaries, bs->status, bs->stable_index, bs->mc_timestamp, bs->level, block_ptr, *bs->main_chain_index, s_info.list);
 		hash_tree_response.arr_summaries.insert(s);
 
 		//dev::RLPStream rlp_stream;
@@ -1344,25 +1329,25 @@ void mcp::node_sync::process_hash_tree(p2p::node_id const &id, mcp::hash_tree_re
 			}
 
 			mcp::summary_hash s_hash = mcp::summary::gen_summary_hash(
-				s_item.block_hash,			   // block hash
-				s_item.previous_summary,	//previous summary hash
-				s_item.parent_summaries,	// parent summary hashs
-				s_item.link_summaries,	// link summary hashs
-				s_item.skiplist_summaries, // skip_list
+				s_item.block_hash,			   /// block hash
+				s_item.previous_summary,	///previous summary hash
+				s_item.parent_summaries,	/// parent summary hashs
+				h256(0),
+				//s_item.link_summaries,	/// link summary hashs
+				s_item.skiplist_summaries, /// skip_list
 				s_item.status,
 				s_item.stable_index,
-				s_item.mc_timestamp,
-				s_item.receipt
+				s_item.mc_timestamp
 			);
 
 			if (s_item.summary != s_hash)
 			{
 				LOG(log_sync.info) << "process_hash_tree:wrong summary hash" << ", local_summary: " << s_hash.to_string() << ",remote_hash:" << s_item.summary.to_string();
 				LOG(log_sync.info) << "process_hash_tree:wrong summary hash" << ", block: " << s_item.block_hash.to_string() << ".status:" << (int)s_item.status;
-				if (s_item.receipt)
-				{
-					LOG(log_sync.info) << "process_hash_tree:wrong summary hash" << ", to_state: " << s_item.receipt->from_state.to_string() << ".status:" << s_item.receipt->from_state.to_string();
-				}
+				//if (s_item.receipt)
+				//{
+				//	LOG(log_sync.info) << "process_hash_tree:wrong summary hash" << ", to_state: " << s_item.receipt->from_state.to_string() << ".status:" << s_item.receipt->from_state.to_string();
+				//}
 				LOG(log_sync.info) << "process_hash_tree:wrong summary hash" << ", previous_summary: " << s_item.previous_summary.to_string();
 				for (auto i : s_item.parent_summaries)
 				{
@@ -1659,45 +1644,45 @@ void mcp::node_sync::peer_info_request_handler(p2p::node_id const &id)
 	assert_x(have_get_block_count < max_send_count);
 	unsigned max_latest_unlink_send_count = max_send_count - have_get_block_count;
 
-	try
-	{
-		auto snap = m_store.create_snapshot();
+	//try
+	//{
+	//	auto snap = m_store.create_snapshot();
 
-		mcp::db::forward_iterator it = m_store.unlink_info_begin(transaction, snap);
-		if (it.valid())
-		{
-			mcp::account rand_account;
-			mcp::random_pool.GenerateBlock(rand_account.bytes.data(), rand_account.bytes.size());
-			mcp::db::forward_iterator rand_it = m_store.unlink_info_begin(transaction, rand_account, snap);
-			if (rand_it.valid())
-			{
-				it = std::move(rand_it);
-			}
+	//	mcp::db::forward_iterator it = m_store.unlink_info_begin(transaction, snap);
+	//	if (it.valid())
+	//	{
+	//		mcp::account rand_account;
+	//		mcp::random_pool.GenerateBlock(rand_account.bytes.data(), rand_account.bytes.size());
+	//		mcp::db::forward_iterator rand_it = m_store.unlink_info_begin(transaction, rand_account, snap);
+	//		if (rand_it.valid())
+	//		{
+	//			it = std::move(rand_it);
+	//		}
 
-			mcp::account start_account(0);
-			while (pi.arr_light_tip_blocks.size() < max_latest_unlink_send_count)
-			{
-				if (!it.valid())
-					it = m_store.unlink_info_begin(transaction, snap);
+	//		mcp::account start_account(0);
+	//		while (pi.arr_light_tip_blocks.size() < max_latest_unlink_send_count)
+	//		{
+	//			if (!it.valid())
+	//				it = m_store.unlink_info_begin(transaction, snap);
 
-				mcp::account current_account(mcp::slice_to_account(it.key()));
-				if (start_account == current_account)  // eq start ,break
-					break;
-				if (start_account.is_zero())
-					start_account = current_account;
+	//			mcp::account current_account(mcp::slice_to_account(it.key()));
+	//			if (start_account == current_account)  // eq start ,break
+	//				break;
+	//			if (start_account.is_zero())
+	//				start_account = current_account;
 
-				mcp::unlink_info info(it.value());
-				if (!info.latest_unlink.is_zero())
-					pi.arr_light_tip_blocks.insert(std::make_pair(current_account, info.latest_unlink));
-				++it;
-			}
-		}
-	}
-	catch (const std::exception& e)
-	{
-		LOG(log_sync.error) << "latest_unlinks error:" << e.what();
-		throw;
-	}
+	//			mcp::unlink_info info(it.value());
+	//			if (!info.latest_unlink.is_zero())
+	//				pi.arr_light_tip_blocks.insert(std::make_pair(current_account, info.latest_unlink));
+	//			++it;
+	//		}
+	//	}
+	//}
+	//catch (const std::exception& e)
+	//{
+	//	LOG(log_sync.error) << "latest_unlinks error:" << e.what();
+	//	throw;
+	//}
 	
 	send_peer_info(id, pi);
 	return;
@@ -1897,7 +1882,7 @@ void mcp::node_sync::request_new_missing_joints(mcp::joint_request_item& item_a,
 		else
 			assert_x(false);
 
-		mcp::requesting_item item(item_a.id, *item_a.block_hash, millisecondsSinceEpoch, item_a.type);
+		mcp::requesting_item item(item_a.id, *item_a.block_hash, millisecondsSinceEpoch);
 		
 		if (!m_capability->m_requesting.add(item, is_timeout))
 		{
@@ -1931,7 +1916,7 @@ void mcp::node_sync::process_request_joints()
 			if (!m_block_processor->unhandle->exists(*item_a.block_hash) ||
 				item_a.from == mcp::joint_request_item_from::peerinfo)
 			{
-				mcp::joint_request_message message(item_a.request_id, *item_a.block_hash, item_a.type);
+				mcp::joint_request_message message(item_a.request_id, *item_a.block_hash);
 				send_joint_request(item_a.id, message);
 				//LOG(log_sync.info) << "process_request_joints hash:" << message.block_hash.to_string();
 			}
