@@ -71,7 +71,7 @@ mcp::Transaction::Transaction(dev::RLP const & rlp, CheckTransaction _checkSig)
 				BOOST_THROW_EXCEPTION(InvalidSignature());
 
 			auto const recoveryID =
-				m_chainId.is_initialized() ? byte{ v - (u256{ *m_chainId } *2 + 35) } : byte{ v - 27 };
+				m_chainId.is_initialized() ? byte(v - (u256( *m_chainId ) *2 + 35)) : byte( v - 27 );
 			m_vrs = SignatureStruct{ r, s, recoveryID };
 
 			if (_checkSig >= CheckTransaction::Cheap && !m_vrs->isValid())

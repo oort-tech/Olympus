@@ -1922,7 +1922,7 @@ void mcp::rpc_handler::send_block()
 			response(response_l);
 		};
 
-		TransactionSkeleton t = toTransactionSkeleton(request);
+		TransactionSkeleton t = mcp::toTransactionSkeleton(request);
 		m_wallet->send_async(t, fun, password);
 	}
 	catch (Exception const&)
@@ -4113,7 +4113,7 @@ void mcp::rpc_handler::eth_estimateGas()
 	{
 		mcp::json response_l;
 		mcp::json params = request["params"][0];
-		TransactionSkeleton t = toTransactionSkeleton(params);
+		TransactionSkeleton t = mcp::toTransactionSkeleton(params);
 		int64_t gas = static_cast<int64_t>(t.gas);
 
 		dev::eth::McInfo mc_info;
@@ -4220,7 +4220,7 @@ void mcp::rpc_handler::eth_sendTransaction()
 			response(response_l);
 		};
 
-		TransactionSkeleton t = toTransactionSkeleton(params);
+		TransactionSkeleton t = mcp::toTransactionSkeleton(params);
 		m_wallet->send_async(t, fun);
 	}
 	catch (Exception const& e)

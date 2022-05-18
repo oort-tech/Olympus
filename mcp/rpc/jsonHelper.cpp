@@ -4,35 +4,35 @@
 
 namespace mcp
 {
-	TransactionSkeleton mcp::toTransactionSkeleton(mcp::json const& json)
+	TransactionSkeleton toTransactionSkeleton(mcp::json const& _json)
 	{
 		TransactionSkeleton ret;
 
-		if (!json.is_object() || json.empty())
+		if (!_json.is_object() || _json.empty())
 			return ret;
 
-		if (json.count("from") && !json["from"].empty() && json["from"].is_string())
-			ret.from = jsToAddress(json["from"]);
-		if (json.count("to") && !json["to"].empty() && json["to"].is_string())
-			ret.to = jsToAddress(json["to"]);
+		if (_json.count("from") && !_json["from"].empty() && _json["from"].is_string())
+			ret.from = jsToAddress(_json["from"]);
+		if (_json.count("to") && !_json["to"].empty() && _json["to"].is_string())
+			ret.to = jsToAddress(_json["to"]);
 
-		if (json.count("value") && !json["value"].empty() && json["value"].is_string())
-			ret.value = jsToU256(json["value"]);
+		if (_json.count("value") && !_json["value"].empty() && _json["value"].is_string())
+			ret.value = jsToU256(_json["value"]);
 
-		if (json.count("gas") && !json["gas"].empty() && json["gas"].is_string())
-			ret.gas = jsToU256(json["gas"]);
+		if (_json.count("gas") && !_json["gas"].empty() && _json["gas"].is_string())
+			ret.gas = jsToU256(_json["gas"]);
 
-		if (json.count("gasPrice") && !json["gasPrice"].empty() && json["gasPrice"].is_string())
-			ret.gasPrice = jsToU256(json["gasPrice"]);
+		if (_json.count("gasPrice") && !_json["gasPrice"].empty() && _json["gasPrice"].is_string())
+			ret.gasPrice = jsToU256(_json["gasPrice"]);
 
-		if (json.count("data") && !json["data"].empty() && json["data"].is_string())
-			ret.data = jsToBytes(json["data"], OnFailed::Throw);
+		if (_json.count("data") && !_json["data"].empty() && _json["data"].is_string())
+			ret.data = jsToBytes(_json["data"], OnFailed::Throw);
 
-		//if (!json["code"].empty() && json["gasPrice"].is_string())
-		//	ret.data = jsToBytes(json["code"].asString(), OnFailed::Throw);
+		//if (!_json["code"].empty() && _json["gasPrice"].is_string())
+		//	ret.data = jsToBytes(_json["code"].asString(), OnFailed::Throw);
 
-		if (json.count("nonce") && !json["nonce"].empty() && json["nonce"].is_string())
-			ret.nonce = jsToU256(json["nonce"]);
+		if (_json.count("nonce") && !_json["nonce"].empty() && _json["nonce"].is_string())
+			ret.nonce = jsToU256(_json["nonce"]);
 		return ret;
 	}
 

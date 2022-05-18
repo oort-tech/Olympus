@@ -5,7 +5,7 @@
 
 namespace mcp
 {
-	TransactionSkeleton toTransactionSkeleton(mcp::json const& json);
+	TransactionSkeleton toTransactionSkeleton(mcp::json const& _json);
 
 	inline Address jsToAddress(std::string const& _s) { return mcp::toAddress(_s); }
 
