@@ -5322,7 +5322,7 @@ void mcp::rpc_handler::eth_getTransactionByHash()
 						json_receipt["to"] = nullptr;
 					}
 					else {
-						json_receipt["to"] = block->hashables->to.to_account();;
+						json_receipt["to"] = block->hashables->to.to_account();
 					}
 					json_receipt["value"] = uint256_to_hex_nofill(block->hashables->amount);
 					json_receipt["gas"] = uint256_to_hex_nofill(block->hashables->gas);
@@ -5391,7 +5391,7 @@ void mcp::rpc_handler::eth_getTransactionByBlockHashAndIndex()
 						json_receipt["to"] = nullptr;
 					}
 					else {
-						json_receipt["to"] = block->hashables->to.to_account();;
+						json_receipt["to"] = block->hashables->to.to_account();
 					}
 					json_receipt["value"] = uint256_to_hex_nofill(block->hashables->amount);
 					json_receipt["gas"] = uint256_to_hex_nofill(block->hashables->gas);
@@ -5498,7 +5498,7 @@ void mcp::rpc_handler::eth_getTransactionByBlockNumberAndIndex()
 						json_receipt["to"] = nullptr;
 					}
 					else {
-						json_receipt["to"] = block->hashables->to.to_account();;
+						json_receipt["to"] = block->hashables->to.to_account();
 					}
 					json_receipt["value"] = uint256_to_hex_nofill(block->hashables->amount);
 					json_receipt["gas"] = uint256_to_hex_nofill(block->hashables->gas);
@@ -5589,7 +5589,7 @@ void mcp::rpc_handler::eth_getTransactionReceipt()
 						json_receipt["contractAddress"] = toAddress(block->hashables->from, acc_state->nonce() - 1).to_account();
 					}
 					else {
-						json_receipt["to"] = block->hashables->to.to_account();;
+						json_receipt["to"] = block->hashables->to.to_account();
 					}
 					json_receipt["gasUsed"] = uint256_to_hex_nofill(state->receipt->gas_used);
 					json_receipt["cumulativeGasUsed"] = uint256_to_hex_nofill(block->hashables->gas);
