@@ -1,5 +1,6 @@
 #pragma once
 
+#include "blocks.hpp"
 #include <mcp/core/common.hpp>
 #include <mcp/core/block_store.hpp>
 #include <mcp/common/lruc_cache.hpp>
@@ -18,10 +19,8 @@ public:
 	virtual bool block_exists(mcp::db::db_transaction & transaction_a, mcp::block_hash const & block_hash_a) = 0;
 	virtual std::shared_ptr<mcp::block> block_get(mcp::db::db_transaction & transaction_a, mcp::block_hash const & block_hash_a) = 0;
 	virtual std::shared_ptr<mcp::block_state> block_state_get(mcp::db::db_transaction & transaction_a, mcp::block_hash const & block_hash_a) = 0;
-	virtual std::shared_ptr<mcp::account_state> latest_account_state_get(mcp::db::db_transaction & transaction_a, mcp::account const & account_a) = 0;
-	virtual bool unlink_block_exists(mcp::db::db_transaction & transaction_a, mcp::block_hash const & block_hash_a) = 0;
-	virtual std::shared_ptr<mcp::unlink_block> unlink_block_get(mcp::db::db_transaction & transaction_a, mcp::block_hash const & block_hash_a) = 0;
-	virtual std::shared_ptr<mcp::account_info> account_get(mcp::db::db_transaction & transaction_a, mcp::account const & account_a) = 0;
+	virtual std::shared_ptr<mcp::account_state> latest_account_state_get(mcp::db::db_transaction & transaction_a, Address const & account_a) = 0;
+	//virtual transaction transaction_get(mcp::db::db_transaction & transaction_a, h256 const & hash) = 0;
 	virtual bool successor_get(mcp::db::db_transaction & transaction_a, mcp::block_hash const & root_a, mcp::block_hash & successor_a) = 0;
 	virtual bool block_summary_get(mcp::db::db_transaction & transaction_a, mcp::block_hash const & block_hash_a, mcp::summary_hash & summary_a) = 0;
 };
@@ -44,24 +43,17 @@ class block_cache : public mcp::iblock_cache
 	void mark_block_state_as_changing(std::unordered_set<mcp::block_hash> const & block_hashs_a);
 	void clear_block_state_changing();
 
-	std::shared_ptr<mcp::account_state> latest_account_state_get(mcp::db::db_transaction & transaction_a, mcp::account const & account_a);
-	void latest_account_state_put(mcp::account const & account_a, std::shared_ptr<mcp::account_state> account_state_a);
-	void latest_account_state_earse(std::unordered_set<mcp::account> const & accounts_a);
-	void mark_latest_account_state_as_changing(std::unordered_set<mcp::account> const & accounts_a);
+	std::shared_ptr<mcp::account_state> latest_account_state_get(mcp::db::db_transaction & transaction_a, Address const & account_a);
+	void latest_account_state_put(Address const & account_a, std::shared_ptr<mcp::account_state> account_state_a);
+	void latest_account_state_earse(std::unordered_set<Address> const & accounts_a);
+	void mark_latest_account_state_as_changing(std::unordered_set<Address> const & accounts_a);
 	void clear_latest_account_state_changing();
 
-	bool unlink_block_exists(mcp::db::db_transaction & transaction_a, mcp::block_hash const & block_hash_a);
-	std::shared_ptr<mcp::unlink_block> unlink_block_get(mcp::db::db_transaction & transaction_a, mcp::block_hash const &block_hash_a);
-	void unlink_block_put(mcp::block_hash const & block_hash_a, std::shared_ptr<mcp::unlink_block> unlink_block_a);
-	void unlink_block_earse(std::unordered_set<mcp::block_hash> const & block_hashs_a);
-	void mark_unlink_block_as_changing(std::unordered_set<mcp::block_hash> const & block_hashs_a);
-	void clear_unlink_block_changing();
-
-	std::shared_ptr<mcp::account_info> account_get(mcp::db::db_transaction & transaction_a, mcp::account const & account_a);
-	void account_put(mcp::account const & account_a, std::shared_ptr<mcp::account_info> account_info_a);
-	void account_earse(std::unordered_set<mcp::account> const & accounts_a);
-	void mark_account_as_changing(std::unordered_set<mcp::account> const & accounts_a);
-	void clear_account_changing();
+	//transaction transaction_get(mcp::db::db_transaction & transaction_a, h256 const & hash);
+	//void transaction_put(h256 const & hash, transaction const& t);
+	////void transaction_earse(std::unordered_set<Address> const & accounts_a);
+	////void mark_latest_account_state_as_changing(std::unordered_set<Address> const & accounts_a);
+	////void clear_latest_account_state_changing();
 
 	bool successor_get(mcp::db::db_transaction & transaction_a, mcp::block_hash const & root_a, mcp::block_hash & successor_a);
 	void successor_put(mcp::block_hash const & root_a, mcp::block_hash const & summary_a);
@@ -89,16 +81,8 @@ private:
 	mcp::Cache<mcp::block_hash, std::shared_ptr<mcp::block_state>> m_block_states;
 
 	std::mutex m_latest_account_state_mutex;
-	std::unordered_set<mcp::account> m_latest_account_state_changings;
-	mcp::Cache<mcp::account, std::shared_ptr<mcp::account_state>> m_latest_account_states;
-
-	std::mutex m_unlink_block_mutex;
-	std::unordered_set<mcp::block_hash> m_unlink_block_changings;
-	mcp::Cache<mcp::block_hash, std::shared_ptr<mcp::unlink_block>> m_unlink_blocks;
-
-	std::mutex m_account_mutex;
-	std::unordered_set<mcp::account> m_account_changings;
-	mcp::Cache<mcp::account, std::shared_ptr<mcp::account_info>> m_accounts;
+	std::unordered_set<Address> m_latest_account_state_changings;
+	mcp::Cache<Address, std::shared_ptr<mcp::account_state>> m_latest_account_states;
 
 	std::mutex m_successor_mutex;
 	std::unordered_set<mcp::block_hash> m_successor_changings;

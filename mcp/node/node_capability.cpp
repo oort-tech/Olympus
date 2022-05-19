@@ -111,24 +111,14 @@ void mcp::node_capability::request_block_timeout()
 		}
 		else
 		{
-			if (mcp::block_type::dag == it.m_block_type)
-			{
-				if (m_store.block_exists(transaction, it.m_request_hash))
-					exist = true;
-			}
-			else
-			{
-				if (m_cache->unlink_block_exists(transaction, it.m_request_hash))
-					exist = true;
-				else if (m_cache->block_exists(transaction, it.m_request_hash))
-					exist = true;
-			}
+			if (m_store.block_exists(transaction, it.m_request_hash))
+				exist = true;
 		}
 		
 		if (!exist)
 		{
 			auto hash(std::make_shared<mcp::block_hash>(it.m_request_hash));
-			mcp::joint_request_item request_item(it.m_node_id, hash, it.m_block_type, mcp::requesting_block_cause::new_unknown);
+			mcp::joint_request_item request_item(it.m_node_id, hash, mcp::requesting_block_cause::new_unknown);
 			m_sync->request_new_missing_joints(request_item, now, true);
 		}
 		else
@@ -459,7 +449,7 @@ bool mcp::node_capability::read_packet(std::shared_ptr<p2p::peer> peer_a, unsign
 						{
 							m_block_arrival->remove(*hash);
 							uint64_t _time = m_steady_clock.now_since_epoch();
-							mcp::joint_request_item item(peer_a->remote_node_id(), hash, mcp::block_type::dag, mcp::requesting_block_cause::request_peer_info);
+							mcp::joint_request_item item(peer_a->remote_node_id(), hash, mcp::requesting_block_cause::request_peer_info);
 							item.from = mcp::joint_request_item_from::peerinfo;
 							m_sync->request_new_missing_joints(item, _time);
 						}
@@ -472,34 +462,34 @@ bool mcp::node_capability::read_packet(std::shared_ptr<p2p::peer> peer_a, unsign
 				});
 			}
 
-			//light
-			for (auto it = pi.arr_light_tip_blocks.begin(); it != pi.arr_light_tip_blocks.end(); it++)
-			{
-				auto hash(std::make_shared<mcp::block_hash>(it->second));
-				if (m_block_processor->exist_in_clear_block_filter(*hash))
-					continue;
+			////light
+			//for (auto it = pi.arr_light_tip_blocks.begin(); it != pi.arr_light_tip_blocks.end(); it++)
+			//{
+			//	auto hash(std::make_shared<mcp::block_hash>(it->second));
+			//	if (m_block_processor->exist_in_clear_block_filter(*hash))
+			//		continue;
 
-				m_async_task->sync_async([peer_a, hash, this]() {
-					try
-					{
-						mcp::db::db_transaction transaction(m_store.create_transaction());
-						if (!m_cache->unlink_block_exists(transaction, *hash)
-							&& !m_cache->block_exists(transaction, *hash))
-						{
-							m_block_arrival->remove(*hash);
-							uint64_t _time = m_steady_clock.now_since_epoch();
-							mcp::joint_request_item item(peer_a->remote_node_id(), hash, mcp::block_type::light, mcp::requesting_block_cause::request_peer_info);
-							item.from = mcp::joint_request_item_from::peerinfo;
-							m_sync->request_new_missing_joints(item, _time);
-						}
-					}
-					catch (const std::exception& e)
-					{
-						LOG(m_log.error) << "peer_info error:" << e.what();
-						throw;
-					}
-				});
-			}
+			//	m_async_task->sync_async([peer_a, hash, this]() {
+			//		try
+			//		{
+			//			mcp::db::db_transaction transaction(m_store.create_transaction());
+			//			if (!m_cache->unlink_block_exists(transaction, *hash)
+			//				&& !m_cache->block_exists(transaction, *hash))
+			//			{
+			//				m_block_arrival->remove(*hash);
+			//				uint64_t _time = m_steady_clock.now_since_epoch();
+			//				mcp::joint_request_item item(peer_a->remote_node_id(), hash, mcp::block_type::light, mcp::requesting_block_cause::request_peer_info);
+			//				item.from = mcp::joint_request_item_from::peerinfo;
+			//				m_sync->request_new_missing_joints(item, _time);
+			//			}
+			//		}
+			//		catch (const std::exception& e)
+			//		{
+			//			LOG(m_log.error) << "peer_info error:" << e.what();
+			//			throw;
+			//		}
+			//	});
+			//}
 
             break;
         }

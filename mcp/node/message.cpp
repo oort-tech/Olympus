@@ -25,7 +25,14 @@ mcp::joint_message::joint_message(bool & error_a, dev::RLP const & r)
 		return;
 
 	request_id = (mcp::sync_request_hash)r[0];
-	block = std::make_shared<mcp::block>(error_a, r[1], true);
+	try
+	{
+		block = std::make_shared<mcp::block>(r[1]);
+	}
+	catch (Exception& _e)
+	{
+		error_a = true;
+	}
 	if (error_a)
 		return;
 
@@ -39,24 +46,23 @@ void mcp::joint_message::stream_RLP(dev::RLPStream & s) const
 {
 	summary_hash.is_zero() ? s.appendList(2) : s.appendList(3);
 	s << request_id;
-	block->stream_RLP(s);
+	block->streamRLP(s);
 	if (!summary_hash.is_zero())
 	{
 		s << summary_hash;
 	}
 }
 
-mcp::joint_request_message::joint_request_message(mcp::sync_request_hash const& request_id_a, mcp::block_hash const & block_hash_a, mcp::block_type const & type_a)
+mcp::joint_request_message::joint_request_message(mcp::sync_request_hash const& request_id_a, mcp::block_hash const & block_hash_a)
 	:request_id(request_id_a), 
-	block_hash(block_hash_a),
-	type(type_a)
+	block_hash(block_hash_a)
 {
 }
 
 void mcp::joint_request_message::stream_RLP(dev::RLPStream & s) const
 {
-	s.appendList(3);
-	s << request_id << block_hash << (uint8_t)type;
+	s.appendList(2);
+	s << request_id << block_hash;
 }
 
 
@@ -68,7 +74,6 @@ mcp::joint_request_message::joint_request_message(bool & error_a, dev::RLP const
 
 	request_id = (mcp::sync_request_hash)r[0];
 	block_hash = (mcp::block_hash)r[1];
-	type = (mcp::block_type)r[2].toInt<uint8_t>();
 }
 
 mcp::catchup_request_message::catchup_request_message(bool & error_a, dev::RLP const & r)
@@ -198,7 +203,7 @@ mcp::hash_tree_response_message::hash_tree_response_message(bool & error_a, dev:
 
 mcp::hash_tree_response_message::summary_items::summary_items(mcp::block_hash const & bh, mcp::summary_hash const & sh,
 	mcp::summary_hash const & previous_summary_a, std::list<mcp::summary_hash> const & p_summary, std::list<mcp::summary_hash> const & l_summary, std::set<mcp::summary_hash> const & s_summary,
-	mcp::block_status const & status_a, uint64_t const& stable_index_a, uint64_t const& mc_timestamp_a, boost::optional<transaction_receipt> receipt_a,
+	mcp::block_status const & status_a, uint64_t const& stable_index_a, uint64_t const& mc_timestamp_a,
 	uint64_t level_a, std::shared_ptr<mcp::block> const & block_a, uint64_t mci_a, std::set<mcp::summary_hash> const & skiplist_block_a) :
 	block_hash(bh), 
 	summary(sh),
@@ -209,7 +214,7 @@ mcp::hash_tree_response_message::summary_items::summary_items(mcp::block_hash co
 	status(status_a),
 	stable_index(stable_index_a),
 	mc_timestamp(mc_timestamp_a),
-	receipt(receipt_a),
+	//receipt(receipt_a),
 	level(level_a), 
 	block(block_a),
 	mci(mci_a), 
@@ -247,19 +252,26 @@ mcp::hash_tree_response_message::summary_items::summary_items(bool & error_a, de
 	stable_index = r[7].toInt<uint64_t>();
 	mc_timestamp = r[8].toInt<uint64_t>();
 
-	dev::RLP const & receipt_rlp = r[9];
-	if (receipt_rlp.itemCount() == 1)
-	{
-		receipt = transaction_receipt(error_a, receipt_rlp[0]);
-		assert_x(!error_a);
-	}
-	else
-		receipt = boost::none;
+	//dev::RLP const & receipt_rlp = r[9];
+	//if (receipt_rlp.itemCount() == 1)
+	//{
+	//	receipt = transaction_receipt(error_a, receipt_rlp[0]);
+	//	assert_x(!error_a);
+	//}
+	//else
+	//	receipt = boost::none;
 
 	level = (uint64_t)r[10];
 
-    block = std::make_shared<mcp::block>(error_a, r[11], true);
-    assert_x(!error_a)
+	try
+	{
+		block = std::make_shared<mcp::block>(r[11]);
+	}
+	catch (Exception& _e)
+	{
+		error_a = true;
+	}
+
     mci = (uint64_t)r[12];
 
     dev::RLP const & skiplist_block_rlp = r[13];
@@ -269,7 +281,7 @@ mcp::hash_tree_response_message::summary_items::summary_items(bool & error_a, de
 
 void mcp::hash_tree_response_message::summary_items::stream_RLP(dev::RLPStream & s) const
 {
-	s.appendList(14);
+	s.appendList(13);
 	s << block_hash << summary << previous_summary;
 
 	s.appendList(parent_summaries.size());
@@ -288,19 +300,19 @@ void mcp::hash_tree_response_message::summary_items::stream_RLP(dev::RLPStream &
 	s << stable_index;
 	s << mc_timestamp;
 
-	if (receipt)
-	{
-		s.appendList(1);
-		receipt->stream_RLP(s);
-	}
-	else
-	{
-		s.appendList(0);
-	}
+	//if (receipt)
+	//{
+	//	s.appendList(1);
+	//	receipt->stream_RLP(s);
+	//}
+	//else
+	//{
+	//	s.appendList(0);
+	//}
 	
 	s << level;
 
-    block->stream_RLP(s);
+    block->streamRLP(s);
     s << mci;
 
     s.appendList(skiplist_block.size());
@@ -326,38 +338,38 @@ mcp::peer_info_message::peer_info_message(bool & error_a, dev::RLP const &r)
 	if (error_a)
 		return;
 
-	error_a = r.itemCount() != 3;
+	error_a = r.itemCount() != 2;
 	if (error_a)
 		return;
 
 	min_retrievable_mci = (uint64_t)r[0];
 	for (auto r_hash : r[1])
 		arr_tip_blocks.push_back((mcp::block_hash)r_hash);
-	for (auto r_account_hash : r[2])
-	{
-		error_a = r_account_hash.itemCount() != 2;
-		if (error_a)
-			return;
+	//for (auto r_account_hash : r[2])
+	//{
+	//	error_a = r_account_hash.itemCount() != 2;
+	//	if (error_a)
+	//		return;
 
-		mcp::account account(r_account_hash[0]);
-		mcp::block_hash hash(r_account_hash[1]);
-		arr_light_tip_blocks.insert(std::make_pair(account, hash));
-	}
+	//	mcp::account account(r_account_hash[0]);
+	//	mcp::block_hash hash(r_account_hash[1]);
+	//	arr_light_tip_blocks.insert(std::make_pair(account, hash));
+	//}
 }
 
 void mcp::peer_info_message::stream_RLP(dev::RLPStream & s) const
 {
-	s.appendList(3);
+	s.appendList(2);
 	s << min_retrievable_mci;
 	s.appendList(arr_tip_blocks.size());
 	for (auto hash : arr_tip_blocks)
 		s << hash;
-	s.appendList(arr_light_tip_blocks.size());
-	for (auto p : arr_light_tip_blocks)
-	{
-		s.appendList(2);
-		s << p.first << p.second;
-	}
+	//s.appendList(arr_light_tip_blocks.size());
+	//for (auto p : arr_light_tip_blocks)
+	//{
+	//	s.appendList(2);
+	//	s << p.first << p.second;
+	//}
 }
 
 mcp::peer_info_request_message::peer_info_request_message()

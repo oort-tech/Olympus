@@ -23,8 +23,7 @@
 
 #include <mcp/core/log_entry.hpp>
 #include <libdevcore/RLP.h>
-
-#include <boost/variant/variant.hpp>
+#include <libdevcore/Address.h>
 #include <array>
 
 namespace dev
@@ -38,16 +37,36 @@ namespace eth
 class TransactionReceipt
 {
 public:
+	TransactionReceipt(RLP r);
 	TransactionReceipt(uint8_t _status, u256 const& _gasUsed, mcp::log_entries const& _log);
 
+	// 
+	void setBlockInfo(h256 _blockHash, unsigned _blockNumber, unsigned _transactionIndex)
+	{
+		m_blockHash = _blockHash;
+		m_blockNumber = _blockNumber;
+		m_transactionIndex = _transactionIndex;
+	}
 	/// @returns the status code.
 	/// @throw TransactionReceiptVersionError when the receipt has a state root instead of a status code.
-	uint8_t statusCode() const;
+	uint8_t statusCode() const { return m_statusCode; };
 	u256 const& cumulativeGasUsed() const { return m_gasUsed; }
+	log_bloom const& bloom() const { return m_bloom; }
 	mcp::log_entries const& log() const { return m_log; }
+	h256 const& blockHash() const { return m_blockHash; }
+	unsigned blockNumber() const { return m_blockNumber; }
+	unsigned transactionIndex() const { return m_transactionIndex; }
+	u256 const& gasUsed() const { return m_gasUsed; }
+
+	void streamRLP(dev::RLPStream & s) const;
+	bytes rlp() const { RLPStream s; streamRLP(s); return s.out(); }
 private:
-	boost::variant<uint8_t,h256> m_statusCodeOrStateRoot;
+	h256 m_blockHash;
+	unsigned m_blockNumber;
+	unsigned m_transactionIndex = 0;
+	uint8_t m_statusCode;
 	u256 m_gasUsed;
+	log_bloom m_bloom;
 	mcp::log_entries m_log;
 };
 
@@ -61,37 +80,55 @@ public:
 	LocalisedTransactionReceipt(
 		TransactionReceipt const& _t,
 		h256 const& _hash,
-		mcp::account const& _from,
-		mcp::account const& _to, 
-		mcp::account const& _contractAddress // = Address() sichaoy: where is default address generated
+		//h256 const& _blockHash,
+		//unsigned _blockNumber,
+		Address const& _from,
+		Address const& _to,
+		//unsigned _transactionIndex,
+		//u256 const& _gasUsed,
+		Address const& _contractAddress = Address()
 	):
 		TransactionReceipt(_t),
 		m_hash(_hash),
+		//m_blockHash(_blockHash),
+		//m_blockNumber(_blockNumber),
 		m_from(_from),
 		m_to(_to),
+		//m_transactionIndex(_transactionIndex),
+		//m_gasUsed(_gasUsed),
 		m_contractAddress(_contractAddress)
 	{
 		mcp::log_entries entries = log();
 		for (unsigned i = 0; i < entries.size(); i++)
 			m_localisedLogs.push_back(mcp::localised_log_entry(
 				entries[i],
+				blockHash(),
+				blockNumber(),
 				m_hash,
+				transactionIndex(),
 				i
 			));
 	}
 
 	h256 const& hash() const { return m_hash; }
-	mcp::account const& from() const { return m_from; }
-	mcp::account const& to() const { return m_to; }
-	mcp::account const& contractAddress() const { return m_contractAddress; }
+	//h256 const& blockHash() const { return m_blockHash; }
+	//unsigned blockNumber() const { return m_blockNumber; }
+	Address const& from() const { return m_from; }
+	Address const& to() const { return m_to; }
+	//unsigned transactionIndex() const { return m_transactionIndex; }
+	//u256 const& gasUsed() const { return m_gasUsed; }
+	Address const& contractAddress() const { return m_contractAddress; }
 	mcp::localised_log_entries const& localisedLogs() const { return m_localisedLogs; };
 
 private:
 	h256 m_hash;
-	mcp::account m_from;
-	mcp::account m_to;
-	unsigned m_transactionIndex = 0;
-	mcp::account m_contractAddress;
+	//h256 m_blockHash;
+	//unsigned m_blockNumber;
+	Address m_from;
+	Address m_to;
+	//unsigned m_transactionIndex = 0;
+	//u256 m_gasUsed;
+	Address m_contractAddress;
 	mcp::localised_log_entries m_localisedLogs;
 };
 

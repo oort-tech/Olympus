@@ -48,21 +48,10 @@ namespace mcp
 		mcp::db::backward_iterator keys_rbegin(mcp::db::db_transaction& transaction);
 		mcp::db::backward_iterator keys_rbegin(mcp::db::db_transaction& transaction, mcp::account const& _k);
 
-		//work
-		void work_put(mcp::db::db_transaction& transaction, mcp::account const& _k, mcp::value_previous_work const& _v);
-		bool work_get(mcp::db::db_transaction& transaction, mcp::account const& _k, mcp::value_previous_work& _v);
-		void work_del(mcp::db::db_transaction& transaction, mcp::account const& _k);
-		bool work_exists(mcp::db::db_transaction& transaction, mcp::account const& _k);
-		mcp::db::forward_iterator work_begin(mcp::db::db_transaction& transaction);
-		mcp::db::forward_iterator work_begin(mcp::db::db_transaction& transaction, mcp::account const& _k);
-		mcp::db::backward_iterator work_rbegin(mcp::db::db_transaction& transaction);
-		mcp::db::backward_iterator work_rbegin(mcp::db::db_transaction& transaction, mcp::account const& _k);
-
 		mcp::db::db_transaction create_transaction() { return m_database->create_transaction(); };
 		
 	private:
 		std::shared_ptr<mcp::db::database> m_database;
 		int m_keys;
-		int m_work;
 	};
 }

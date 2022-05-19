@@ -91,6 +91,19 @@ void test_blake2()
 	std::cout << "Caculate blake2 fail";
 }
 
+void test_sha3()
+{
+	std::cout << "-------------sha3---------------" << std::endl;
+
+	mcp::uint256_union input;
+	input.decode_hex("5E844EE4D2E26920F8B0C4B7846929057CFCE48BF40BA269B173648999630053");
+
+	std::chrono::time_point<std::chrono::high_resolution_clock> start = std::chrono::high_resolution_clock::now();
+	std::cout << dev::sha3(input.ref()).hex();
+	std::chrono::nanoseconds dur = std::chrono::duration_cast<std::chrono::nanoseconds> (std::chrono::high_resolution_clock::now() - start);
+	std::cout << "duration:" << dur.count() << "ns" << std::endl;
+}
+
 void test_sha512()
 {
 	std::cout << "-------------sha512---------------" << std::endl;

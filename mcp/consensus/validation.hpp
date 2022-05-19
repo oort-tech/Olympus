@@ -23,7 +23,7 @@ namespace mcp
 
 		mcp::base_validate_result base_validate(mcp::db::db_transaction& transaction_a, std::shared_ptr<mcp::iblock_cache> cache_a, std::shared_ptr<mcp::block_processor_item> item_a);
 		mcp::validate_result dag_validate(mcp::db::db_transaction &  transaction_a, std::shared_ptr<mcp::iblock_cache> cache_a, mcp::joint_message const & message);
-		mcp::light_validate_result light_validate(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::iblock_cache> cache_a, std::shared_ptr<mcp::block> block);
+		//mcp::light_validate_result light_validate(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::iblock_cache> cache_a, std::shared_ptr<mcp::block> block);
 
 		mcp::block_store & m_store;
 		mcp::ledger & m_ledger;

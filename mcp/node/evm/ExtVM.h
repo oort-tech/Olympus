@@ -35,8 +35,8 @@ class ExtVM : public ExtVMFace
 {
 public:
     /// Full constructor.
-    ExtVM(mcp::chain_state& _s, EnvInfo const& _envInfo, mcp::account _myAddress,
-        mcp::account _caller, mcp::account _origin, u256 _value, u256 _gasPrice, bytesConstRef _data,
+    ExtVM(mcp::chain_state& _s, EnvInfo const& _envInfo, Address _myAddress,
+        Address _caller, Address _origin, u256 _value, u256 _gasPrice, bytesConstRef _data,
         bytesConstRef _code, h256 const& _codeHash, unsigned _depth, bool _isCreate,
         bool _staticCall)
       : ExtVMFace(_envInfo, _myAddress, _caller, _origin, _value, _gasPrice, _data, _code.toBytes(),
@@ -65,13 +65,13 @@ public:
     }
 
     /// Read address's code.
-    bytes const& codeAt(mcp::account _a) final { return m_s.code(_a); }
+    bytes const& codeAt(Address _a) final { return m_s.code(_a); }
 
     /// @returns the size of the code in  bytes at the given address.
-    size_t codeSizeAt(mcp::account _a) final;
+    size_t codeSizeAt(Address _a) final;
 
     /// @returns the hash of the code at the given address.
-    h256 codeHashAt(mcp::account _a) final;
+    h256 codeHashAt(Address _a) final;
 
     /// Create a new contract.
     CreateResult create(u256 _endowment, u256& io_gas, bytesConstRef _code, Instruction _op, u256 _salt, OnOpFunc const& _onOp = {}) final;
@@ -80,19 +80,19 @@ public:
     CallResult call(CallParameters& _params) final;
 
     /// Read address's balance.
-    u256 balance(mcp::account _a) final 
+    u256 balance(Address _a) final 
     {
         return m_s.balance(_a);
     }
 
     /// Does the account exist?
-    bool exists(mcp::account _a) final
+    bool exists(Address _a) final
     {
         return m_s.addressInUse(_a);
     }
 
     /// Suicide the associated contract to the given address.
-    void suicide(mcp::account _a) final;
+    void suicide(Address _a) final;
 
     /*
     /// Return the EVM gas-price schedule for this execution context.

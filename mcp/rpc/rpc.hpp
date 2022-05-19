@@ -50,7 +50,7 @@ public:
 	rpc (mcp::block_store & store_a, std::shared_ptr<mcp::chain> chain_a,
 		std::shared_ptr<mcp::block_cache> cache_a, std::shared_ptr<mcp::key_manager> key_manager_a,
 		std::shared_ptr<mcp::wallet> wallet_a, std::shared_ptr<mcp::p2p::host> host_a,
-		std::shared_ptr<mcp::async_task> background_a,
+		std::shared_ptr<mcp::async_task> background_a, std::shared_ptr<mcp::composer> composer_a,
 		boost::asio::io_service & service_a, mcp::rpc_config const& config_a);
 	void start ();
 	virtual void accept ();
@@ -65,6 +65,7 @@ public:
 	std::shared_ptr<mcp::wallet> m_wallet;
 	std::shared_ptr<mcp::p2p::host> m_host;
 	std::shared_ptr<mcp::async_task> m_background;
+	std::shared_ptr<mcp::composer> m_composer;
 	mcp::block_store m_store;
     mcp::log m_log = { mcp::log("rpc") };
 };
@@ -494,7 +495,6 @@ public:
 	void status();
 	void peers();
 	void nodes();
-	void work_get();
 	void witness_list();
 
     void estimate_gas();
@@ -565,6 +565,7 @@ private:
 	std::shared_ptr<mcp::key_manager> m_key_manager;
 	std::shared_ptr<mcp::wallet> m_wallet;
 	std::shared_ptr<mcp::p2p::host> m_host;
+	std::shared_ptr<mcp::composer> m_composer;
 	std::shared_ptr<mcp::async_task> m_background;
 	mcp::block_store m_store;
 	
@@ -579,6 +580,6 @@ private:
 std::shared_ptr<mcp::rpc> get_rpc (mcp::block_store & store_a, std::shared_ptr<mcp::chain> chain_a,
 	std::shared_ptr<mcp::block_cache> cache_a, std::shared_ptr<mcp::key_manager> key_manager_a,
 	std::shared_ptr<mcp::wallet> wallet_a, std::shared_ptr<mcp::p2p::host> host_a,
-	std::shared_ptr<mcp::async_task> background_a,
+	std::shared_ptr<mcp::async_task> background_a, std::shared_ptr<mcp::composer> composer_a,
 	boost::asio::io_service & service_a, mcp::rpc_config const& config_a);
 }

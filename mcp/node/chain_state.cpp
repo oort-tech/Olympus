@@ -5,18 +5,17 @@
 #include <mcp/common/stopwatch.hpp>
 
 mcp::chain_state::chain_state(mcp::db::db_transaction& transaction_a, u256 const& _accountStartNonce, mcp::block_store& store_a,
-	std::shared_ptr<mcp::chain> chain_a, std::shared_ptr<mcp::iblock_cache> cache_a, std::shared_ptr<mcp::block> const block_a):
+	std::shared_ptr<mcp::chain> chain_a, std::shared_ptr<mcp::iblock_cache> cache_a):
     transaction(transaction_a),
     store(store_a),
 	chain(chain_a),
     block_cache(cache_a),
-    block(block_a),
     m_db(mcp::overlay_db(transaction_a, store_a)),
     m_accountStartNonce(_accountStartNonce)
 {
 }
 
-void mcp::chain_state::incNonce(mcp::account const& _addr)
+void mcp::chain_state::incNonce(Address const& _addr)
 {
     if (std::shared_ptr<mcp::account_state> a = account(_addr))
     {
@@ -26,10 +25,10 @@ void mcp::chain_state::incNonce(mcp::account const& _addr)
     }
     else
         // This is possible if a transaction has gas price 0.
-        createAccount(_addr, std::make_shared<mcp::account_state>(_addr, block->hash(), 0, requireAccountStartNonce() + 1, 0));
+        createAccount(_addr, std::make_shared<mcp::account_state>(_addr, ts.sha3(), h256(0), requireAccountStartNonce() + 1, 0));
 }
 
-void mcp::chain_state::setNonce(mcp::account const& _addr, mcp::uint256_t const& _newNonce)
+void mcp::chain_state::setNonce(Address const& _addr, mcp::uint256_t const& _newNonce)
 {
     if (std::shared_ptr<mcp::account_state> a = account(_addr))
     {
@@ -39,10 +38,10 @@ void mcp::chain_state::setNonce(mcp::account const& _addr, mcp::uint256_t const&
     }
     else
         // This is possible when a contract is being created.
-        createAccount(_addr, std::make_shared<mcp::account_state>(_addr, block->hash(), 0, _newNonce, 0));
+        createAccount(_addr, std::make_shared<mcp::account_state>(_addr, ts.sha3(), h256(0), _newNonce, 0));
 }
 
-mcp::uint256_t mcp::chain_state::getNonce(mcp::account const& _addr) const
+mcp::uint256_t mcp::chain_state::getNonce(Address const& _addr) const
 {
     if (std::shared_ptr<mcp::account_state> a = account(_addr))
         return a->nonce();
@@ -65,7 +64,7 @@ void mcp::chain_state::noteAccountStartNonce(u256 const& _actual)
         BOOST_THROW_EXCEPTION(IncorrectAccountStartNonceInState());
 }
 
-std::shared_ptr<mcp::account_state> mcp::chain_state::account(mcp::account const& _addr) const
+std::shared_ptr<mcp::account_state> mcp::chain_state::account(Address const& _addr) const
 {
     // If the account is already modified, return immediately
     auto it = m_cache.find(_addr);
@@ -98,11 +97,13 @@ void mcp::chain_state::clearCacheIfTooLarge() const
 {
 }
 
-std::pair<mcp::ExecutionResult, dev::eth::TransactionReceipt> mcp::chain_state::execute(dev::eth::EnvInfo const& _envInfo, Permanence _p, dev::eth::OnOpFunc const& _onOp)
+std::pair<mcp::ExecutionResult, dev::eth::TransactionReceipt> mcp::chain_state::execute(dev::eth::EnvInfo const& _envInfo, Permanence _p, mcp::Transaction const& _t, dev::eth::OnOpFunc const& _onOp)
 {
-	Executive e(*this, _envInfo, true, traces);
+	Executive e(*this, _envInfo, traces);
     ExecutionResult res;
     e.setResultRecipient(res);
+
+	ts = _t;
 
     auto onOp = _onOp;
 #if ETH_VMTRACE
@@ -134,7 +135,7 @@ std::pair<mcp::ExecutionResult, dev::eth::TransactionReceipt> mcp::chain_state::
 	return std::make_pair(res, receipt);
 }
 
-bool mcp::chain_state::addressInUse(mcp::account const& _address) const
+bool mcp::chain_state::addressInUse(Address const& _address) const
 {
     return !!account(_address);
 }
@@ -146,7 +147,7 @@ bool mcp::chain_state::executeTransaction(Executive& _e, dev::eth::OnOpFunc cons
 	size_t const savept = savepoint();
 	try
 	{
-		_e.initialize();
+		_e.initialize(ts);
 
 		if (!_e.execute())
 			_e.go(_onOp);
@@ -206,14 +207,14 @@ void mcp::chain_state::commit()
 {
     removeEmptyAccounts();
 	std::shared_ptr<mcp::process_block_cache> process_block_cache = std::dynamic_pointer_cast<mcp::process_block_cache>(block_cache);
-    m_touched += mcp::commit(transaction, m_cache, &m_db, process_block_cache, store, block->hash());
+    m_touched += mcp::commit(transaction, m_cache, &m_db, process_block_cache, store, ts.sha3());
     m_changeLog.clear();
     m_cache.clear();
     m_unchangedCacheEntries.clear();
 
 	//save traces
-	assert_x(block);
-	store.traces_put(transaction, block->hash(), traces);
+	//assert_x(block);
+	//store.traces_put(transaction, block->hash(), traces);		//todo
 	traces.clear();
 }
 
@@ -230,11 +231,11 @@ void mcp::chain_state::removeEmptyAccounts()
 // 2. commit storageDB to DB
 // 3. commit the cached account_state to DB
 template <class DB>
-mcp::AccountHash mcp::commit(mcp::db::db_transaction & transaction_a, mcp::AccountMap const& _cache, DB* db, std::shared_ptr<mcp::process_block_cache> block_cache, mcp::block_store& store, mcp::block_hash const & block_hash_a)
+AddressHash mcp::commit(mcp::db::db_transaction & transaction_a, mcp::AccountMap const& _cache, DB* db, std::shared_ptr<mcp::process_block_cache> block_cache, mcp::block_store& store,h256 const& ts)
 {
 	//mcp::stopwatch_guard sw("chain state:commit");
 
-    mcp::AccountHash ret;
+	AddressHash ret;
     for (auto const& i: _cache)
     {
         if (i.second->isDirty())
@@ -274,9 +275,9 @@ mcp::AccountHash mcp::commit(mcp::db::db_transaction & transaction_a, mcp::Accou
                 // commit the account_state to DB
                 db->commit();
 
-				// Update account_state  previous and block hash
-				state->previous = state->init_hash;
-				state->block_hash = block_hash_a;
+				//// Update account_state  previous and block hash
+				state->setPrevious();
+				state->setTs(ts);
 				state->record_init_hash();
 				state->clear_temp_state();
 
@@ -289,7 +290,7 @@ mcp::AccountHash mcp::commit(mcp::db::db_transaction & transaction_a, mcp::Accou
     return ret;
 }
 
-bool mcp::chain_state::addressHasCode(mcp::account const& _id) const
+bool mcp::chain_state::addressHasCode(Address const& _id) const
 {
 	std::shared_ptr<mcp::account_state> a = account(_id);
     if (a)
@@ -299,16 +300,16 @@ bool mcp::chain_state::addressHasCode(mcp::account const& _id) const
 }
 
 
-mcp::uint256_t mcp::chain_state::balance(mcp::account const& _id) const
+mcp::uint256_t mcp::chain_state::balance(Address const& _id) const
 {
 	std::shared_ptr<mcp::account_state> a = account(_id);
     if (a)
-        return a->balance;
+        return a->balance();
     else
         return 0;
 }
 
-void mcp::chain_state::addBalance(mcp::account const& _id, uint256_t const& _amount)
+void mcp::chain_state::addBalance(Address const& _id, uint256_t const& _amount)
 {
 	std::shared_ptr<mcp::account_state> a = account(_id);
     if (a)
@@ -328,42 +329,42 @@ void mcp::chain_state::addBalance(mcp::account const& _id, uint256_t const& _amo
         a->addBalance(_amount);
     }
     else					
-        createAccount(_id, std::make_shared<mcp::account_state>(_id, block->hash(), 0, requireAccountStartNonce(), _amount));
+        createAccount(_id, std::make_shared<mcp::account_state>(_id, ts.sha3(), h256(0), requireAccountStartNonce(), _amount));
 
     if (_amount)
         m_changeLog.emplace_back(Change::Balance, _id, _amount);
 }
     
-void mcp::chain_state::subBalance(mcp::account const& _id, uint256_t const& _amount)
+void mcp::chain_state::subBalance(Address const& _id, uint256_t const& _amount)
 {
     if (_amount == 0)
         return;
 
 	std::shared_ptr<mcp::account_state> a = account(_id);
-    if (!a || a->balance < _amount)
+    if (!a || a->balance() < _amount)
         // TODO: I expect this never happens.
-        BOOST_THROW_EXCEPTION(NotEnoughCash());
+        BOOST_THROW_EXCEPTION(dev::eth::NotEnoughCash());
 
     // Fall back to addBalance().
     addBalance(_id, 0 - _amount);
 }
 
-void mcp::chain_state::setBalance(mcp::account const& _id, uint256_t const& _value)
+void mcp::chain_state::setBalance(Address const& _id, uint256_t const& _value)
 {
 	std::shared_ptr<mcp::account_state> a = account(_id);
-	u256 original = a ? a->balance : 0;
+	u256 original = a ? a->balance() : 0;
 
 	// Fall back to addBalance().
 	addBalance(_id, _value - original);
 }
 
-void mcp::chain_state::transferBalance(mcp::account const& _from, mcp::account const& _to, uint256_t const& _value)
+void mcp::chain_state::transferBalance(Address const& _from, Address const& _to, uint256_t const& _value)
 {
     subBalance(_from, _value);
     addBalance(_to, _value);
 }
 
-void mcp::chain_state::createAccount(mcp::account const& _address, std::shared_ptr<mcp::account_state> _account)
+void mcp::chain_state::createAccount(Address const& _address, std::shared_ptr<mcp::account_state> _account)
 {
     assert_x(!addressInUse(_address) && "Account already exists");
     m_cache[_address] = _account;
@@ -371,14 +372,14 @@ void mcp::chain_state::createAccount(mcp::account const& _address, std::shared_p
     m_changeLog.emplace_back(Change::Create, _address);
 }
 
-void mcp::chain_state::kill(mcp::account _addr)
+void mcp::chain_state::kill(Address _addr)
 {
     if (auto a = account(_addr))
         a->kill();
     // If the account is not in the db, nothing to kill.
 }
 
-mcp::uint256_t mcp::chain_state::storage(mcp::account const& _id, mcp::uint256_t const& _key) const
+mcp::uint256_t mcp::chain_state::storage(Address const& _id, mcp::uint256_t const& _key) const
 {
     if (std::shared_ptr<mcp::account_state> as = account(_id))
         return as->storageValue(_key, m_db);
@@ -386,20 +387,20 @@ mcp::uint256_t mcp::chain_state::storage(mcp::account const& _id, mcp::uint256_t
     return 0;
 }
 
-void mcp::chain_state::setStorage(mcp::account const& _contract, u256 const& _key, u256 const& _value)
+void mcp::chain_state::setStorage(Address const& _contract, u256 const& _key, u256 const& _value)
 {
     m_changeLog.emplace_back(_contract, _key, storage(_contract, _key));
     m_cache[_contract]->setStorage(_key, _value);
 }
 
-mcp::uint256_t mcp::chain_state::originalStorageValue(mcp::account const& _contract, mcp::uint256_t const& _key) const
+mcp::uint256_t mcp::chain_state::originalStorageValue(Address const& _contract, mcp::uint256_t const& _key) const
 {
     if (std::shared_ptr<mcp::account_state> as = account(_contract))
         return as->originalStorageValue(_key, m_db);
     return 0;
 }
 
-void mcp::chain_state::clearStorage(mcp::account const& _contract)
+void mcp::chain_state::clearStorage(Address const& _contract)
 {
     h256 const& oldHash{m_cache[_contract]->baseRoot()};
     if (oldHash == EmptyTrie)
@@ -408,7 +409,7 @@ void mcp::chain_state::clearStorage(mcp::account const& _contract)
     m_cache[_contract]->clearStorage();
 }
 
-std::map<h256, std::pair<u256, u256>> mcp::chain_state::storage(mcp::account const& _id) const
+std::map<h256, std::pair<u256, u256>> mcp::chain_state::storage(Address const& _id) const
 {
 #if ETH_FATDB
     std::map<h256, std::pair<u256, u256>> ret;
@@ -447,7 +448,7 @@ std::map<h256, std::pair<u256, u256>> mcp::chain_state::storage(mcp::account con
 #endif
 }
 
-dev::bytes const& mcp::chain_state::code(mcp::account const& _addr) const
+dev::bytes const& mcp::chain_state::code(Address const& _addr) const
 {
     std::shared_ptr<mcp::account_state> a = account(_addr);
     if (!a || a->codeHash() == EmptySHA3)
@@ -464,13 +465,13 @@ dev::bytes const& mcp::chain_state::code(mcp::account const& _addr) const
     return a->code();
 }
 
-void mcp::chain_state::setCode(mcp::account const& _address, dev::bytes&& _code)
+void mcp::chain_state::setCode(Address const& _address, dev::bytes&& _code)
 {
     m_changeLog.emplace_back(_address, code(_address));
     m_cache[_address]->setCode(std::move(_code));
 }
 
-dev::h256 mcp::chain_state::codeHash(mcp::account const& _a) const
+dev::h256 mcp::chain_state::codeHash(Address const& _a) const
 {
     if (std::shared_ptr<mcp::account_state> a = account(_a))
         return a->codeHash();
@@ -478,7 +479,7 @@ dev::h256 mcp::chain_state::codeHash(mcp::account const& _a) const
         return EmptySHA3;
 }
 
-size_t mcp::chain_state::codeSize(mcp::account const& _a) const
+size_t mcp::chain_state::codeSize(Address const& _a) const
 {
     if (std::shared_ptr<mcp::account_state> a = account(_a))
     {
@@ -500,15 +501,15 @@ size_t mcp::chain_state::codeSize(mcp::account const& _a) const
 }
 
 
-bool mcp::chain_state::is_precompiled(mcp::account const& account_a, uint64_t const& last_summary_mci_a) const
+bool mcp::chain_state::is_precompiled(Address const& account_a, uint64_t const& last_summary_mci_a) const
 {
 	return chain->is_precompiled(account_a, last_summary_mci_a);
 }
-bigint mcp::chain_state::cost_of_precompiled(mcp::account const& account_a, bytesConstRef in_a) const
+bigint mcp::chain_state::cost_of_precompiled(Address const& account_a, bytesConstRef in_a) const
 {
 	return chain->cost_of_precompiled(account_a, in_a);
 }
-std::pair<bool, bytes> mcp::chain_state::execute_precompiled(mcp::account const& account_a, bytesConstRef in_a) const
+std::pair<bool, bytes> mcp::chain_state::execute_precompiled(Address const& account_a, bytesConstRef in_a) const
 {
 	return chain->execute_precompiled(account_a, in_a);
 }

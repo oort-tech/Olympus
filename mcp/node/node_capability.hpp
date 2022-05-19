@@ -95,11 +95,10 @@ namespace mcp
 	public:
 		requesting_item() = default;
 		requesting_item(mcp::p2p::node_id const & node_id_a,mcp::block_hash const& hash_a, 
-			uint64_t const& time_a, mcp::block_type const& block_type_a, mcp::sub_packet_type const& type_a = mcp::sub_packet_type::joint_request) :
+			uint64_t const& time_a, mcp::sub_packet_type const& type_a = mcp::sub_packet_type::joint_request) :
 			m_node_id(node_id_a),
 			m_request_hash(hash_a),
 			m_time(time_a),
-			m_block_type(block_type_a),
 			m_type(type_a),
 			m_request_id(0),
 			m_request_count(1)
@@ -109,7 +108,6 @@ namespace mcp
 		mcp::p2p::node_id		m_node_id;
 		mcp::block_hash			m_request_hash;
 		uint64_t				m_time;
-		mcp::block_type			m_block_type;
 		mcp::sub_packet_type	m_type;
 
 		mcp::sync_request_hash	m_request_id;

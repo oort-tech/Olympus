@@ -319,6 +319,8 @@ add_library (node
 	mcp/node/arrival.hpp
 	mcp/node/debug.cpp
 	mcp/node/debug.hpp
+	mcp/node/transaction_queue.cpp
+	mcp/node/transaction_queue.hpp
     )
 
 add_library (p2p
@@ -355,6 +357,8 @@ add_library (rpc
 	mcp/rpc/rpc.hpp
 	mcp/rpc/rpc_ws.cpp
 	mcp/rpc/rpc_ws.hpp
+	mcp/rpc/jsonHelper.cpp
+	mcp/rpc/jsonHelper.hpp
 	)
 	
 add_library (wallet
@@ -398,6 +402,8 @@ add_library (core
 	mcp/core/log_entry.cpp
 	mcp/core/transaction_receipt.hpp
 	mcp/core/transaction_receipt.cpp
+	mcp/core/transaction.hpp
+	mcp/core/transaction.cpp
 	)
 	
 add_executable (mcp

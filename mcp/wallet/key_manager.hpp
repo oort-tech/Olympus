@@ -30,10 +30,7 @@ namespace mcp
 		bool unlock(mcp::account const & account_a, std::string const & password_a);
 		void write_backup(mcp::account const & account, std::string const & json);
 		void lock(mcp::account const & account_a);
-		bool work_account_exisit(mcp::account const & pub_a);
-		bool work_account_get(mcp::account const & account_a, mcp::block_hash &  previous_a, mcp::uint64_union & work_a);
-		bool work_get(mcp::account const &, mcp::block_hash const&  previous_a, mcp::uint64_union & work_a);
-		void work_put(mcp::account const &, mcp::block_hash const&  previous_a, mcp::uint64_union const& work_a);
+		std::pair<bool, Secret> authenticate(Address, boost::optional<std::string> const & password);
 	private:
 		mcp::key_content gen_key_content(mcp::raw_key const & prv, std::string const & password_a);
 		void add_or_update_key(mcp::key_content const & kc, bool const & is_backup_a = true);

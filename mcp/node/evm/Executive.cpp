@@ -39,22 +39,23 @@ namespace
 
 
 
-void mcp::Executive::initialize()
+void mcp::Executive::initialize(Transaction const& _transaction)
 {
-    // sichaoy: evmschedule should not be hardcoded here
-    m_baseGasRequired = m_s.block->baseGasRequired(dev::eth::ConstantinopleSchedule);
+	m_t = _transaction;
+	m_baseGasRequired = m_t.baseGasRequired(dev::eth::ConstantinopleSchedule);
 
 	// Avoid unaffordable transactions.
-    bigint gasCost = (bigint)m_s.block->hashables->gas * m_s.block->hashables->gas_price;
-    bigint totalCost = (bigint)m_s.block->hashables->amount + gasCost;
+	bigint gasCost = (bigint)m_t.gas() * m_t.gasPrice();
+	bigint totalCost = m_t.value() + gasCost;
 
-    if (m_s.balance(m_s.block->hashables->from) < totalCost)
+    if (m_s.balance(m_t.sender()) < totalCost)
     {
-		BOOST_LOG(m_log.info) << "Not enough cash: Require > " << totalCost << " = " << m_s.block->hashables->gas
-			<< " * " << m_s.block->hashables->gas_price << " + " << m_s.block->hashables->amount << " Got"
-			<< m_s.balance(m_s.block->hashables->from) << " for sender: " << m_s.block->hashables->from.to_account();
+		LOG(m_log.info) << "Not enough cash: Require > " << totalCost << " = " << m_t.gas()
+			<< " * " << m_t.gasPrice() << " + " << m_t.value() << " Got"
+			<< m_s.balance(m_t.sender()) << " for sender: " << m_t.sender();
 		m_excepted = TransactionException::NotEnoughCash;
-		BOOST_THROW_EXCEPTION(NotEnoughCash() << RequirementError(totalCost, (bigint)m_s.balance(m_s.block->hashables->from)) << errinfo_comment(m_s.block->hashables->from.to_account()));
+		m_excepted = TransactionException::NotEnoughCash;
+		BOOST_THROW_EXCEPTION(dev::NotEnoughCash() << RequirementError(totalCost, (bigint)m_s.balance(m_t.sender())) << errinfo_comment(m_t.sender().hex()));
 	}
     m_gasCost = (u256)gasCost;  // Convert back to 256-bit, safe now.
 }
@@ -64,39 +65,38 @@ bool mcp::Executive::execute()
 	//mcp::stopwatch_guard sw("Executive:execute");
 
     //// Pay...
-    //BOOST_LOG(m_log.info) << "Paying " << m_gasCost << " from sender for gas ("
-    //                     << m_s.block->hashables->gas << " gas at " << m_s.block->hashables->gas_price << ")";
-    m_s.subBalance(m_s.block->hashables->from, m_gasCost);
+	//LOG(m_log.info) << "Paying " << m_gasCost << " from sender for gas ("
+	//	<< m_t.gas() << " gas at " << m_t.gasPrice() << ")";
+    m_s.subBalance(m_t.sender(), m_gasCost);
 
-    assert_x(m_s.block->hashables->gas >= (u256)m_baseGasRequired);
-    if (m_s.block->isCreation())
+    assert_x(m_t.gas() >= (u256)m_baseGasRequired);
+    if (m_t.isCreation())
     {
-        return create(m_s.block->hashables->from, m_s.block->hashables->amount, m_s.block->hashables->gas_price,
-            m_s.block->hashables->gas - (u256)m_baseGasRequired, dev::bytesConstRef(&m_s.block->data), m_s.block->hashables->from);
+        return create(m_t.sender(), m_t.value(), m_t.gasPrice(), m_t.gas() - (u256)m_baseGasRequired, &m_t.data(), m_t.sender());
     }
     else
     {
-        return call(m_s.block->hashables->to, m_s.block->hashables->from, m_s.block->hashables->amount, m_s.block->hashables->gas_price,
-            m_s.block->hashables->gas - (u256)m_baseGasRequired, dev::bytesConstRef(&m_s.block->data));
+        return call(m_t.receiveAddress(), m_t.sender(), m_t.value(), m_t.gasPrice(), bytesConstRef(&m_t.data()), m_t.gas() - (u256)m_baseGasRequired);
     }
+	return true;
 }
 
-bool mcp::Executive::create(mcp::account const& _txSender, u256 const& _endowment, u256  const& _gasPrice, u256  const& _gas, dev::bytesConstRef _init, mcp::account const& _origin)
+bool mcp::Executive::create(Address const& _txSender, u256 const& _endowment, u256 const& _gasPrice, u256 const& _gas, bytesConstRef _init, Address const& _origin)
 {
     // Contract creation by an external account is the same as CREATE opcode
     return createOpcode(_txSender, _endowment, _gasPrice, _gas, _init, _origin);
 }
 
-bool mcp::Executive::call(mcp::account const& _receiveAddress, mcp::account const& _senderAddress, u256 const& _value, u256 const& _gasPrice, u256 const& _gas, dev::bytesConstRef _data)
+bool mcp::Executive::call(Address const& _receiveAddress, Address const& _senderAddress, u256 const& _value, u256 const& _gasPrice, bytesConstRef _data, u256 const& _gas)
 {
     dev::eth::CallParameters params(_senderAddress, _receiveAddress, _receiveAddress, _value, _value, _gas, _data, {});
     return call(params, _gasPrice, _senderAddress);
 }
 
-bool mcp::Executive::call(dev::eth::CallParameters const& _p, u256 const& _gasPrice, mcp::account const& _origin)
+bool mcp::Executive::call(dev::eth::CallParameters const& _p, u256 const& _gasPrice, mcp::Address const& _origin)
 {
-
-    if (m_isTransaction)
+	// If external transaction.
+    if (m_t)
     {
         m_s.incNonce(_p.senderAddress);
     }
@@ -212,28 +212,21 @@ void mcp::Executive::accrueSubState(SubState& _parentContext)
         _parentContext += m_ext->sub;
 }
 
-bool mcp::Executive::createOpcode(mcp::account const& _sender, u256 const& _endowment, u256 const& _gasPrice, u256 const& _gas, bytesConstRef _init, mcp::account const& _origin)
+bool mcp::Executive::createOpcode(Address const& _sender, u256 const& _endowment, u256 const& _gasPrice, u256 const& _gas, bytesConstRef _init, Address const& _origin)
 {
     u256 nonce = m_s.getNonce(_sender);
-    m_newAddress = toAddress(_sender, nonce);
+	m_newAddress = right160(sha3(rlpList(_sender, nonce)));
     return executeCreate(_sender, _endowment, _gasPrice, _gas, _init, _origin);
 }
 
-bool mcp::Executive::create2Opcode(mcp::account const& _sender, u256 const& _endowment, u256 const& _gasPrice, u256 const& _gas, bytesConstRef _init, mcp::account const& _origin, u256 const& _salt)
+bool mcp::Executive::create2Opcode(Address const& _sender, u256 const& _endowment, u256 const& _gasPrice, u256 const& _gas, bytesConstRef _init, Address const& _origin, u256 const& _salt)
 {
-	//if (m_s.block->hashables->from.to_account() != "0x76aa62bb086bee410c609698565c50a799af760a" )
-	//{
-		m_newAddress = mcp::account(sha3(bytes{ 0xff } +_sender.bytes + toBigEndian(_salt) + sha3(_init)));
-	//}
-	//if (m_s.block->hash().to_string() == "6a8b003096b8708d1836c53b09c22c34d59ed5751346475de16a4dcad1aade59")
-	//{
-	//	m_newAddress.decode_account("0x000000d37f00006056ffd4d37f00007c08000000");
-	//}
-    // Contract will be created with the version equal to parent's version
+    m_newAddress = right160(sha3(bytes{0xff} +_sender.asBytes() + toBigEndian(_salt) + sha3(_init)));
     return executeCreate(_sender, _endowment, _gasPrice, _gas, _init, _origin);
 }
 
-bool mcp::Executive::executeCreate(account const & _sender, u256 const& _endowment, u256 const& _gasPrice, u256 const& _gas, dev::bytesConstRef _init, account const& _origin)
+bool mcp::Executive::executeCreate(Address const& _sender, u256 const& _endowment, u256 const& _gasPrice,
+	u256 const& _gas, bytesConstRef _init, Address const& _origin)
 {
     // sichaoy: why should _sender != MaxAddress?
     m_s.incNonce(_sender);
@@ -249,7 +242,7 @@ bool mcp::Executive::executeCreate(account const & _sender, u256 const& _endowme
     bool accountAlreadyExist = (m_s.addressHasCode(m_newAddress) || m_s.getNonce(m_newAddress) >0);
     if (accountAlreadyExist)
     {
-		BOOST_LOG(m_log.info) << "Address already used: " << m_newAddress.to_account();
+		BOOST_LOG(m_log.info) << "Address already used: " << m_newAddress;
         m_gas = 0;
         m_excepted = TransactionException::AddressAlreadyUsed;
         revert();
@@ -443,21 +436,15 @@ bool mcp::Executive::finalize()
 
         // Refunds must be applied before the miner gets the fees.
         assert_x(m_ext->sub.refunds >= 0);
-
-		if (m_s.block)
-		{
-			int64_t maxRefund = (static_cast<int64_t>(m_s.block->hashables->gas) - static_cast<int64_t>(m_gas)) / 2;
-			m_gas += std::min(maxRefund, m_ext->sub.refunds);
-		}
-		else
-			assert_x(false);
+		int64_t maxRefund = (static_cast<int64_t>(m_t.gas()) - static_cast<int64_t>(m_gas)) / 2;
+		m_gas += min(maxRefund, m_ext->sub.refunds);
     }
 
-    if (m_s.block)
+    if (m_t)
     {
-        m_s.addBalance(m_s.block->hashables->from, m_gas * m_s.block->hashables->gas_price);
+        m_s.addBalance(m_t.sender(), m_gas * m_t.gasPrice());
 
-        uint256_t feesEarned = (m_s.block->hashables->gas - m_gas) * m_s.block->hashables->gas_price;
+		u256 feesEarned = (m_t.gas() - m_gas) * m_t.gasPrice();
         // m_s.addBalance(m_envInfo.author(), feesEarned); //sichaoy: these fees should goes to witness
     }
 
@@ -492,7 +479,7 @@ void mcp::Executive::revert()
 
 mcp::uint256_t mcp::Executive::gasUsed() const
 {
-    return m_s.block->hashables->gas - m_gas;
+    return m_t.gas() - m_gas;
 }
 
 

@@ -2,9 +2,13 @@
 #include <mcp/common/stopwatch.hpp>
 #include <mcp/core/genesis.hpp>
 
+
+//////test
+#include <libdevcore/CommonJS.h>
+
 mcp::late_message_info::late_message_info(std::shared_ptr<mcp::block_processor_item> item_a) :
 	item(item_a),
-	timestamp(item_a->joint.block->hashables->exec_timestamp),
+	timestamp(item_a->joint.block->exec_timestamp()),
 	hash(item_a->joint.block->hash())
 {
 }
@@ -50,11 +54,10 @@ mcp::block_processor::block_processor(bool & error_a,
 	mcp::block_store& store_a, std::shared_ptr<mcp::block_cache> cache_a,
 	std::shared_ptr<mcp::chain> chain_a, std::shared_ptr<mcp::node_sync> sync_a,
 	std::shared_ptr<mcp::node_capability> capability_a, std::shared_ptr<mcp::validation> validation_a,
-	std::shared_ptr<mcp::async_task> async_task_a,
+	std::shared_ptr<mcp::async_task> async_task_a, std::shared_ptr<TransactionQueue> tq,
 	mcp::fast_steady_clock& steady_clock_a, std::shared_ptr<mcp::block_arrival> block_arrival_a,
 	boost::asio::io_service &io_service_a,
-	mcp::mru_list<mcp::block_hash>& invalid_block_cache_a, std::shared_ptr<mcp::alarm> alarm_a,
-	uint256_t const& gas_price_a
+	mcp::mru_list<mcp::block_hash>& invalid_block_cache_a, std::shared_ptr<mcp::alarm> alarm_a
 ):
 	m_store(store_a),
 	m_cache(cache_a),
@@ -63,6 +66,7 @@ mcp::block_processor::block_processor(bool & error_a,
 	m_capability(capability_a),
 	m_validation(validation_a),
 	m_async_task(async_task_a),
+	m_tq(tq),
 	m_steady_clock(steady_clock_a),
 	m_block_arrival(block_arrival_a),
 	m_invalid_block_cache(invalid_block_cache_a),
@@ -70,8 +74,6 @@ mcp::block_processor::block_processor(bool & error_a,
 	m_stopped(false),
 	m_local_cache(std::make_shared<process_block_cache>(cache_a, store_a)),
 	m_last_request_unknown_missing_time(std::chrono::steady_clock::now()),
-	m_clear_time(steady_clock_a.now_since_epoch()),
-	m_clear_min_gas_price(gas_price_a),
 	unhandle(std::make_shared<mcp::unhandle_cache>(block_arrival_a))
 {
 	if (error_a)
@@ -105,10 +107,8 @@ mcp::block_processor::block_processor(bool & error_a,
 	if (error_a)
 		return;
 
-	m_clear_timer = std::make_unique<ba::deadline_timer>(io_service_a);
 	m_mt_process_block_thread = std::thread([this]() { this->mt_process_blocks(); });
 	m_process_block_thread = std::thread([this]() { this->process_blocks(); });
-	m_process_unlink_clear_thread = std::thread([this]() { this->process_unlink_clear(); });
 
 	ongoing_retry_late_message();
 }
@@ -140,10 +140,6 @@ void mcp::block_processor::stop()
 		m_mt_process_block_thread.join();
 	if (m_process_block_thread.joinable())
 		m_process_block_thread.join();
-	if(m_process_unlink_clear_thread.joinable())
-		m_process_unlink_clear_thread.join();
-	if (m_clear_timer)
-		m_clear_timer->cancel();
 }
 
 bool mcp::block_processor::is_full()
@@ -184,10 +180,6 @@ void mcp::block_processor::add_item(std::shared_ptr<mcp::block_processor_item> i
 			//LOG(m_log.debug) << "Recent block:" << block_hash.to_string();
 
 			block_processor_recent_block_size++;
-			return;
-		}
-		if (exist_in_clear_block_filter(block_hash))
-		{
 			return;
 		}
 	}
@@ -279,14 +271,13 @@ void mcp::block_processor::mt_process_blocks()
 								{
 									//check timestamp
 									//put it at end for no need to do base validete when block release from late_message_cache
-									if (block->hashables->type != mcp::block_type::light
-										&& mcp::seconds_since_epoch() < block->hashables->exec_timestamp)
+									if (mcp::seconds_since_epoch() < block->exec_timestamp())
 									{
 										ok = false;
-										err_msg = boost::str(boost::format("Exec timestamp too late, block: %1%, exec_timestamp: %2%, sys_timestamp: %3%") % block_hash.to_string() % block->hashables->exec_timestamp % mcp::seconds_since_epoch());
+										err_msg = boost::str(boost::format("Exec timestamp too late, block: %1%, exec_timestamp: %2%, sys_timestamp: %3%") % block_hash.to_string() % block->exec_timestamp() % mcp::seconds_since_epoch());
 										LOG(m_log.debug) << err_msg;
 										//cache late message
-										if (block->hashables->exec_timestamp < mcp::seconds_since_epoch() + 300) //5 minutes
+										if (block->exec_timestamp() < mcp::seconds_since_epoch() + 300) //5 minutes
 										{
                                             m_late_message_cache.add(item);
 										}
@@ -302,7 +293,7 @@ void mcp::block_processor::mt_process_blocks()
 								case base_validate_result_codes::invalid_signature:
 								{
 									ok = false;
-									err_msg = "Invalid signature, hash:" + block_hash.to_string() + ",from:" + block->hashables->from.to_account() + ",signature:" + block->signature.to_string();
+									err_msg = "Invalid signature, hash:" + block_hash.to_string() + ",from:" + block->from().to_account() + ",signature:" + ((Signature)block->signature()).hex();
 									LOG(m_log.debug) << err_msg;
 
 									break;
@@ -457,17 +448,7 @@ void mcp::block_processor::process_blocks()
 			}
 		}
 
-		bool to_do_deal = false;
-		if (to_processing.empty())
-		{
-			std::lock_guard<std::mutex> lock(m_clear_mutex);
-			if (!m_clear_hash.empty())
-				to_do_deal = true;
-		}
-		else
-			to_do_deal = true;
-
-		if (to_do_deal)
+		if (!to_processing.empty())
 		{
 			lock.unlock();
 			{
@@ -486,13 +467,6 @@ void mcp::block_processor::process_blocks()
 					if (!to_processing.empty())
 					{
 						do_process(timeout_tx, to_processing);
-						timeout_tx.commit_and_continue();
-						clear_unlinks(timeout_tx);
-						timeout_tx.commit();
-					}
-					else
-					{
-						clear_unlinks(timeout_tx, true);
 						timeout_tx.commit();
 					}
 				}
@@ -578,226 +552,115 @@ void mcp::block_processor::do_process_one(mcp::timeout_db_transaction & timeout_
 	}
 
 	mcp::db::db_transaction & transaction(timeout_tx.get_transaction());
-	switch (block->hashables->type)
+	//dag validate
+	mcp::validate_result result(m_validation->dag_validate(transaction, m_local_cache, joint));
+	switch (result.code)
 	{
-	case mcp::block_type::light:
+	case mcp::validate_result_codes::ok:
 	{
-		mcp::light_validate_result result(m_validation->light_validate(transaction, m_local_cache, block));
-		switch (result.code)
+		//broadcast
+		if (!item->is_local() && !item->is_sync() && item->joint.summary_hash.is_zero())
 		{
-		case mcp::light_validate_result_codes::ok:
-		{
-			if (!item->is_local() && !item->is_sync() && item->joint.summary_hash.is_zero())
-			{
-				m_async_task->sync_async([this, joint]() {
-					m_capability->broadcast_block(joint);
-				});
-			}
-
-			m_chain->save_light_to_pool(timeout_tx, m_local_cache, item);
-
-			break;
-		}
-		case mcp::light_validate_result_codes::old:
-		{
-			light_old_size++;
-			LOG(m_log.trace) << boost::str(boost::format("Old light block: %1%") % block_hash.to_string());
-			break;
-		}
-		case mcp::light_validate_result_codes::missing_previous:
-		{
-			if (!item->is_local())
-			{
-				std::unordered_set<mcp::block_hash> missings;
-				std::unordered_set<mcp::block_hash> light_missings;
-				light_missings.insert(block->previous());
-				process_missing(item, missings, light_missings);
-			}
-
-			break;
-		}
-		case mcp::light_validate_result_codes::invalid_block:
-		{
-			LOG(m_log.info) << boost::str(boost::format("Invalid light block: %1%, error message: %2%") % block_hash.to_string() % result.err_msg);
-			assert_x(!item->is_local());
-			m_invalid_block_cache.add(block_hash);
-			break;
-		}
-		case mcp::light_validate_result_codes::previous_is_invalid_block:
-		{
-			LOG(m_log.trace) << boost::str(boost::format("Invalid light block: %1%, error message: %2%") % block_hash.to_string() % result.err_msg);
-			assert_x(!item->is_local());
-			m_invalid_block_cache.add(block_hash);
-			break;
-		}
-		case mcp::light_validate_result_codes::known_invalid_block:
-		{
-			LOG(m_log.trace) << boost::str(boost::format("Known invalid light block: %1%") % block_hash.to_string());
-			assert_x(!item->is_local());
-			break;
-		}
+			m_async_task->sync_async([this, joint]() {
+				m_capability->broadcast_block(joint);
+			});
 		}
 
-		//local light
-		if (item->is_local())
-		{
-			switch (result.code)
-			{
-			case mcp::light_validate_result_codes::ok:
-			case mcp::light_validate_result_codes::old:
-				m_ok_local_promises.push_back(item->get_local_promise());
-				break;
-			case mcp::light_validate_result_codes::missing_previous:
-			{
-				std::string msg = "previous not found,please retry";
-				item->set_local_promise(mcp::validate_status(false, msg));
-				break;
-			}
-			default:
-			{
-				std::string msg = "validate error";
-				item->set_local_promise(mcp::validate_status(false, msg));
-				break;
-			}
-			}
-		}
+		do_process_dag_item(timeout_tx, item);
 
-		//unhandle
-		switch (result.code)
-		{
-		case mcp::light_validate_result_codes::ok:
-		{
-			try_process_unhandle(item);
-			break;
-		}
-		case mcp::light_validate_result_codes::invalid_block:
-		case mcp::light_validate_result_codes::previous_is_invalid_block:
-		case mcp::light_validate_result_codes::known_invalid_block:
-		{
-			try_remove_invalid_unhandle(item->block_hash);
-			break;
-		}
-		default:
-			break;
-		}
 		break;
 	}
-	case mcp::block_type::dag:
+	case mcp::validate_result_codes::old:
 	{
-		//dag validate
-		mcp::validate_result result(m_validation->dag_validate(transaction, m_local_cache, joint));
+		dag_old_size++;
+		LOG(m_log.trace) << boost::str(boost::format("Old block: %1%") % block_hash.to_string());
+		break;
+	}
+	case mcp::validate_result_codes::missing_parents_and_previous:
+	{
+		if (item->is_local() && result.missing_links.size() > 0)
+			break;
+
+		if (result.missing_parents_and_previous.size() > 0 || result.missing_links.size() > 0)
+		{
+			if (result.missing_parents_and_previous.size() > 0)
+			{
+				assert_x(!item->is_local());
+			}
+			process_missing(item, result.missing_parents_and_previous, result.missing_links);
+		}
+
+		LOG(m_log.trace) << boost::str(boost::format("Missing parents and previous for: %1%") % block_hash.to_string());
+
+		break;
+	}
+	case mcp::validate_result_codes::invalid_block:
+	{
+		LOG(m_log.info) << boost::str(boost::format("Invalid block: %1%, error message: %2%") % block_hash.to_string() % result.err_msg);
+		assert_x(!item->is_local());
+		//cache invalid block
+		m_invalid_block_cache.add(block_hash);
+		break;
+	}
+	case mcp::validate_result_codes::parents_and_previous_include_invalid_block:
+	{
+		LOG(m_log.trace) << boost::str(boost::format("Invalid block: %1%, error message: %2%") % block_hash.to_string() % result.err_msg);
+		assert_x(!item->is_local());
+		//cache invalid block
+		m_invalid_block_cache.add(block_hash);
+		break;
+	}
+	case mcp::validate_result_codes::known_invalid_block:
+	{
+		LOG(m_log.trace) << boost::str(boost::format("Known invalid block: %1%") % block_hash.to_string());
+		assert_x(!item->is_local());
+		break;
+	}
+	}
+
+	//local dag
+	if (item->is_local())
+	{
 		switch (result.code)
 		{
 		case mcp::validate_result_codes::ok:
-		{
-			//broadcast
-			if (!item->is_local() && !item->is_sync() && item->joint.summary_hash.is_zero())
-			{
-				m_async_task->sync_async([this, joint]() {
-					m_capability->broadcast_block(joint);
-				});
-			}
-
-			do_process_dag_item(timeout_tx, item);
-
-			break;
-		}
 		case mcp::validate_result_codes::old:
-		{
-			dag_old_size++;
-			LOG(m_log.trace) << boost::str(boost::format("Old block: %1%") % block_hash.to_string());
+			m_ok_local_promises.push_back(item->get_local_promise());
 			break;
-		}
 		case mcp::validate_result_codes::missing_parents_and_previous:
 		{
-			if (item->is_local() && result.missing_links.size() > 0)
-				break;
-
-			if (result.missing_parents_and_previous.size() > 0 || result.missing_links.size() > 0)
-			{
-				if (result.missing_parents_and_previous.size() > 0)
-				{
-					assert_x(!item->is_local());
-				}
-				process_missing(item, result.missing_parents_and_previous, result.missing_links);
-			}
-
-			LOG(m_log.trace) << boost::str(boost::format("Missing parents and previous for: %1%") % block_hash.to_string());
-
-			break;
-		}
-		case mcp::validate_result_codes::invalid_block:
-		{
-			LOG(m_log.info) << boost::str(boost::format("Invalid block: %1%, error message: %2%") % block_hash.to_string() % result.err_msg);
-			assert_x(!item->is_local());
-			//cache invalid block
-			m_invalid_block_cache.add(block_hash);
-			break;
-		}
-		case mcp::validate_result_codes::parents_and_previous_include_invalid_block:
-		{
-			LOG(m_log.trace) << boost::str(boost::format("Invalid block: %1%, error message: %2%") % block_hash.to_string() % result.err_msg);
-			assert_x(!item->is_local());
-			//cache invalid block
-			m_invalid_block_cache.add(block_hash);
-			break;
-		}
-		case mcp::validate_result_codes::known_invalid_block:
-		{
-			LOG(m_log.trace) << boost::str(boost::format("Known invalid block: %1%") % block_hash.to_string());
-			assert_x(!item->is_local());
-			break;
-		}
-		}
-
-		//local dag
-		if (item->is_local())
-		{
-			switch (result.code)
-			{
-			case mcp::validate_result_codes::ok:
-			case mcp::validate_result_codes::old:
-				m_ok_local_promises.push_back(item->get_local_promise());
-				break;
-			case mcp::validate_result_codes::missing_parents_and_previous:
-			{
-				std::string msg = "missing parents or previous or links";
-				item->set_local_promise(mcp::validate_status(false, msg));
-				break;
-			}
-			default:
-			{
-				std::string msg = "validate error";
-				item->set_local_promise(mcp::validate_status(false, msg));
-				break;
-			}
-			}
-		}
-
-		//unhandle
-		switch (result.code)
-		{
-		case mcp::validate_result_codes::ok:
-		{
-			try_process_unhandle(item);
-			break;
-		}
-		case mcp::validate_result_codes::invalid_block:
-		case mcp::validate_result_codes::parents_and_previous_include_invalid_block:
-		case mcp::validate_result_codes::known_invalid_block:
-		{
-			try_remove_invalid_unhandle(item->block_hash);
+			std::string msg = "missing parents or previous or links";
+			item->set_local_promise(mcp::validate_status(false, msg));
 			break;
 		}
 		default:
+		{
+			std::string msg = "validate error";
+			item->set_local_promise(mcp::validate_status(false, msg));
 			break;
 		}
+		}
+	}
 
+	//unhandle
+	switch (result.code)
+	{
+	case mcp::validate_result_codes::ok:
+	{
+		try_process_unhandle(item);
+		break;
+	}
+	case mcp::validate_result_codes::invalid_block:
+	case mcp::validate_result_codes::parents_and_previous_include_invalid_block:
+	case mcp::validate_result_codes::known_invalid_block:
+	{
+		try_remove_invalid_unhandle(item->block_hash);
 		break;
 	}
 	default:
-		assert_x("Invalid block type");
+		break;
 	}
+
 
 	if (item->is_local())
 	{
@@ -811,53 +674,30 @@ void mcp::block_processor::do_process_dag_item(mcp::timeout_db_transaction & tim
 	std::shared_ptr<mcp::block> block(item_a->joint.block);
 	mcp::db::db_transaction & transaction(timeout_tx.get_transaction());
 
-	std::deque<std::shared_ptr<mcp::unlink_block>> processing_light_blocks;
-	for (mcp::block_hash const & link_hash : *block->links())
+	//todo use cache
+	for (auto const & link_hash : block->links())
 	{
-		mcp::block_hash previous_link(link_hash);
-		while (true)
-		{
-			std::shared_ptr<mcp::unlink_block> link_block = m_local_cache->unlink_block_get(timeout_tx.get_transaction(), previous_link);
-			if (!link_block)
-				break;
+		auto t = m_tq->get(link_hash);
+		m_store.transaction_put(transaction, link_hash, t);
+		m_tq->drop(link_hash);
 
-			processing_light_blocks.push_front(link_block);
-			previous_link = link_block->block->previous();
-			if (previous_link.is_zero())
-				break;
-		}
+		//////test get RAW transaction to test interface
+		//dev::bytes b_value;
+		//{
+		//	dev::RLPStream s;
+		//	t.streamRLP(s);
+		//	s.swapOut(b_value);
+		//}
+		//LOG(m_log.info) << ":::::::::::" << toJS(b_value);
 	}
 
-	//save light block and try advance 
-	bool deal_local = false;
-	while (!m_stopped && !processing_light_blocks.empty())
+	if (block->links().size() > 0)
 	{
-		if (!item_a->is_local())
-		{
-			bool has_local(try_process_local_item_first(timeout_tx));
-			if (has_local)
-			{
-				deal_local = true;
-				continue;
-			}	
-		}
-
-		std::shared_ptr<mcp::unlink_block> light_block(processing_light_blocks.front());
-		processing_light_blocks.pop_front();
-
-		//local have processed, light block maybe processed yet
-		if (deal_local &&
-			m_local_cache->block_exists(timeout_tx.get_transaction(), light_block->block->hash()))
-		{
-			continue;
-		}
-
-		m_chain->save_light_block(timeout_tx, m_local_cache, light_block);
+		m_store.transaction_unstable_count_add(transaction, block->links().size());
+		m_store.transaction_count_add(transaction, block->links().size());
 	}
 
-	//save dag block and try advance 
-	//if block from sync ,front hash tree deal completed, delete it
-	//m_sync->deal_exist_catchup_index(block->hash());
+	/// save block and try advance 
 	m_chain->save_dag_block(timeout_tx, m_local_cache, block);
 	m_chain->try_advance(timeout_tx, m_local_cache);
 }
@@ -876,16 +716,15 @@ void mcp::block_processor::process_missing(std::shared_ptr<mcp::block_processor_
 		for (auto it = missings.begin(); it != missings.end(); it++)
 		{
 			auto hash(std::make_shared<mcp::block_hash>(*it));
-			mcp::joint_request_item request_item(item_a->remote_node_id(), hash, mcp::block_type::dag, mcp::requesting_block_cause::new_unknown);
+			mcp::joint_request_item request_item(item_a->remote_node_id(), hash, mcp::requesting_block_cause::new_unknown);
 			m_sync->request_new_missing_joints(request_item, now);
 		}
-		for (auto it = light_missings.begin(); it != light_missings.end(); it++)
-		{
-			auto hash(std::make_shared<mcp::block_hash>(*it));
-			erase_clear_block_filter(*hash);
-			mcp::joint_request_item request_item(item_a->remote_node_id(), hash, mcp::block_type::light, mcp::requesting_block_cause::new_unknown);
-			m_sync->request_new_missing_joints(request_item, now);
-		}
+		//for (auto it = light_missings.begin(); it != light_missings.end(); it++)
+		//{
+		//	auto hash(std::make_shared<mcp::block_hash>(*it));
+		//	mcp::joint_request_item request_item(item_a->remote_node_id(), hash, mcp::requesting_block_cause::new_unknown);
+		//	m_sync->request_new_missing_joints(request_item, now);
+		//}
 	}
 	else
 	{
@@ -912,23 +751,21 @@ void mcp::block_processor::process_existing_missing(mcp::p2p::node_id const & re
 			for (auto it = missings.begin(); it != missings.end(); it++)
 			{
 				auto hash(std::make_shared<mcp::block_hash>(*it));
-				erase_clear_block_filter(*hash);
-				mcp::joint_request_item request_item(remote_node_id, hash, mcp::block_type::dag, mcp::requesting_block_cause::existing_unknown);
+				mcp::joint_request_item request_item(remote_node_id, hash, mcp::requesting_block_cause::existing_unknown);
 				m_sync->request_new_missing_joints(request_item, now);
 			}
 		}
 
-		if (!light_missings.empty())
-		{
-			uint64_t now = m_steady_clock.now_since_epoch();
-			for (auto it = light_missings.begin(); it != light_missings.end(); it++)
-			{
-				auto hash(std::make_shared<mcp::block_hash>(*it));
-				erase_clear_block_filter(*hash);
-				mcp::joint_request_item request_item(remote_node_id, hash, mcp::block_type::light, mcp::requesting_block_cause::existing_unknown);
-				m_sync->request_new_missing_joints(request_item, now);
-			}
-		}
+		//if (!light_missings.empty())
+		//{
+		//	uint64_t now = m_steady_clock.now_since_epoch();
+		//	for (auto it = light_missings.begin(); it != light_missings.end(); it++)
+		//	{
+		//		auto hash(std::make_shared<mcp::block_hash>(*it));
+		//		mcp::joint_request_item request_item(remote_node_id, hash, mcp::block_type::light, mcp::requesting_block_cause::existing_unknown);
+		//		m_sync->request_new_missing_joints(request_item, now);
+		//	}
+		//}
 	}
 }
 
@@ -996,7 +833,7 @@ void mcp::block_processor::after_db_commit_event()
 	m_sync->del_hash_tree_summaries();
 	//m_sync->del_catchup_indexs();
 
-	m_chain->notify_observers();
+	//m_chain->notify_observers();
 }
 
 std::string mcp::block_processor::get_processor_info()
@@ -1010,7 +847,6 @@ std::string mcp::block_processor::get_processor_info()
 		+ " ,m_mt_blocks_pending:" + std::to_string(m_mt_blocks_pending.size())
 		+ " ,m_mt_blocks_processing:" + std::to_string(m_mt_blocks_processing.size())
 		+ " ,m_ok_local_dag_promises:" + std::to_string(m_ok_local_promises.size())
-		+ " ,m_clear_block:" + std::to_string(m_clear_block.size())
 		+ "ok:" + std::to_string(block_processor_add)
 		+ ", recent block:" + std::to_string(block_processor_recent_block_size)
 		+ ", invalid:" + std::to_string(m_invalid_block_cache.size())
@@ -1020,264 +856,6 @@ std::string mcp::block_processor::get_processor_info()
     blocks_missing_size = 0;
     blocks_missing_throw_size = 0;
 	return str;
-}
-
-void mcp::block_processor::clear_unlinks(mcp::timeout_db_transaction & timeout_tx, bool compulsory)
-{
-	//clear timeout unlink
-	std::list<mcp::head_unlink> clear_hash;
-	uint64_t now(m_steady_clock.now_since_epoch());
-	{
-		std::lock_guard<std::mutex> lock(m_clear_mutex);
-		if (m_clear_hash.size() > 100 || now - m_clear_time > m_clear_time_interval || compulsory)
-		{
-			while (clear_hash.size() <= 100 && m_clear_hash.size() > 0)
-			{
-				clear_hash.push_back(std::move(m_clear_hash.front()));
-				m_clear_hash.pop_front();
-			}
-			m_clear_time = now;
-		}
-	}
-
-	std::unordered_map<mcp::account, mcp::block_hash> rebuilds;
-	if (clear_hash.size() > 0)
-	{
-		//LOG(m_log.info) << "tobe clear unlink head block size:" << clear_hash.size();
-		for (auto it = clear_hash.begin(); it != clear_hash.end(); it++)
-		{
-			std::shared_ptr<mcp::unlink_block> clear_block = m_local_cache->unlink_block_get(timeout_tx.get_transaction(), it->hash);
-			if (nullptr != clear_block)
-			{
-				m_head_clear_size++;
-				mcp::block_hash root(clear_block->block->root());
-				mcp::block_hash successor_hash(0);
-				if (!m_local_cache->successor_get(timeout_tx.get_transaction(), root, successor_hash))
-				{
-					if (successor_hash == it->hash)
-						rebuilds.insert(std::make_pair(clear_block->block->hashables->from, clear_block->block->root()));
-				}
-				//LOG(m_log.debug) << "delete block,hash:" << it->hash.to_string() << " ,time:" << clear_block->block->hashables->exec_timestamp;
-				clear_unlinks_by_head(timeout_tx, clear_block);
-			}
-			else
-				continue;
-		}
-	}
-
-	//change successor
-	for (auto it = m_change_successor.begin(); it != m_change_successor.end(); it++)
-	{
-		mcp::block_hash root(*it);
-		std::list<mcp::next_unlink> li;
-		m_store.next_unlink_get(timeout_tx.get_transaction(), root, li);
-		if (li.size() > 0)
-		{
-			auto it = li.begin();
-			m_local_cache->successor_put(timeout_tx.get_transaction(), root, it->next);
-			//LOG(m_log.debug) << "successor rebuild, root:" << root.to_string() << " ,successor:" << it->next.to_string();
-		}
-	}
-	m_change_successor.clear();
-
-	//rebuild unlink info
-	for (auto it = rebuilds.begin(); it != rebuilds.end(); it++)
-	{
-		mcp::account account(it->first);
-		mcp::block_hash root(it->second);
-
-		mcp::unlink_info unlink;
-		mcp::block_hash latest_block_hash(0);
-		
-		bool rebuild = false;
-		while (true)
-		{
-			mcp::block_hash successor_hash;
-			bool exists(!m_local_cache->successor_get(timeout_tx.get_transaction(), root, successor_hash));
-			if (!exists)
-				break;
-
-			latest_block_hash = std::move(successor_hash);
-			root = latest_block_hash;
-			std::shared_ptr<mcp::unlink_block> light_block = m_local_cache->unlink_block_get(timeout_tx.get_transaction(), latest_block_hash);
-
-			if (light_block == nullptr)//clear
-				break;
-			if (unlink.earliest_unlink.is_zero())
-				unlink.earliest_unlink = latest_block_hash;
-			unlink.latest_unlink = latest_block_hash;
-			rebuild = true;
-		}
-
-		if (rebuild)
-			m_store.unlink_info_put(timeout_tx.get_transaction(), account, unlink);
-		else
-			m_store.unlink_info_del(timeout_tx.get_transaction(), account);
-	}
-}
-
-void mcp::block_processor::clear_unlinks_by_head(mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::unlink_block> head_block)
-{
-	mcp::block_hash head_hash(head_block->block->hash());
-	std::list<mcp::next_unlink> next_clears;
-	std::list<mcp::block_hash> block_clears;
-	block_clears.push_back(head_hash);
-	next_clears.push_back(mcp::next_unlink(head_block->block->root(), head_hash));
-
-	std::list<mcp::block_hash> nexts;
-	nexts.push_back(head_hash);
-	while (true)
-	{
-		std::list<mcp::next_unlink> ret = get_nexts_by_hashs(timeout_tx_a, nexts);
-		if (ret.empty())
-			break;
-		for (auto it = ret.begin(); it != ret.end(); it++)
-		{
-			nexts.clear();
-			nexts.push_back(it->next);
-			block_clears.push_front(it->next);
-			next_clears.push_back(*it);
-		}
-	}
-
-	//LOG(m_log.debug) << "clear unlink block:" << head_hash.to_string()
-	//	<< " ,next_clears:" << next_clears.size() << " ,block_clears:" << block_clears.size();
-	m_clear_size += block_clears.size();
-
-	m_store.head_unlink_del(timeout_tx_a.get_transaction(), mcp::head_unlink(head_block->time, head_hash));
-	for (auto it = block_clears.begin(); it != block_clears.end(); it++)
-	{
-		mcp::block_hash block_hash = *it;
-		mcp::block_hash successor_hash; 
-		auto clear_block = m_local_cache->unlink_block_get(timeout_tx_a.get_transaction(), block_hash);
-		if (nullptr != clear_block)
-		{
-			mcp::block_hash root = clear_block->block->root();
-			if (!m_local_cache->successor_get(timeout_tx_a.get_transaction(), root, successor_hash))
-			{
-				if (successor_hash == block_hash)
-				{
-					m_local_cache->successor_del(timeout_tx_a.get_transaction(), root);
-					//LOG(m_log.debug) << "successor_del root:" << root.to_string() << "block hash:" << block_hash.to_string();
-
-					//try change successor
-					if (block_hash == head_hash)//only eq head_hash,need change successor
-					{
-						m_head_successor_clear_size++;
-						m_change_successor.push_back(root);
-					}
-				}
-			}
-			m_local_cache->unlink_block_del(timeout_tx_a.get_transaction(), block_hash);
-			put_clear_block_filter(block_hash);
-			//LOG(m_log.debug) << "clear light block, hash:" << block_hash.to_string();
-		}
-	}
-	for (auto it = next_clears.begin(); it != next_clears.end(); it++)
-		m_store.next_unlink_del(timeout_tx_a.get_transaction(), *it);
-}
-
-std::list<mcp::next_unlink> mcp::block_processor::get_nexts_by_hashs(mcp::timeout_db_transaction & timeout_tx_a, std::list<mcp::block_hash> const& hashs)
-{
-	std::list<mcp::next_unlink> li;
-	for (auto it = hashs.begin(); it != hashs.end(); it++)
-	{
-		m_store.next_unlink_get(timeout_tx_a.get_transaction(),*it, li);
-	}
-	return li;
-}
-
-void mcp::block_processor::process_unlink_clear()
-{
-	if (m_stopped)
-		return;
-	auto snapshot = m_store.create_snapshot();
-	mcp::db::db_transaction transaction(m_store.create_transaction());
-	uint64_t now(static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::seconds>((std::chrono::system_clock::now()).time_since_epoch()).count()));
-
-	mcp::db::forward_iterator it = m_store.head_link_begin(transaction, snapshot);
-	while (it.valid() && m_clear_hash.size() < m_clear_max_size)
-	{
-		mcp::head_unlink head(it.key());
-		if (now - head.time.number() < 60)//60 seconds
-			break;
-
-		bool is_clear(false);
-		if (now - head.time.number() > 2 * 60)//2 minutes
-		{
-			auto block = m_cache->unlink_block_get(transaction, head.hash);
-			if (block 
-				&& (block->block->hashables->gas_price <= m_clear_min_gas_price 
-					|| block->block->hashables->light_version == 0)) //legacy light block
-			{
-				is_clear = true;
-				{
-					std::lock_guard<std::mutex> lock(m_clear_mutex);
-					m_clear_hash.push_back(head);
-				}
-				std::lock_guard<std::mutex> lock(m_process_mutex);
-				m_process_condition.notify_all();
-			}
-		}
-
-		if (!is_clear)
-		{
-			auto block = m_cache->unlink_block_get(transaction, head.hash);
-			if (block)
-			{
-				mcp::block_hash root_successor;
-				bool exists(!m_cache->successor_get(transaction, block->block->root(), root_successor));
-				if (exists)
-				{
-					if (root_successor != head.hash)
-					{
-						std::shared_ptr<mcp::block_state> root_successor_state(m_cache->block_state_get(transaction, root_successor));
-						if (root_successor_state && root_successor_state->is_stable)
-						{
-							std::lock_guard<std::mutex> lock(m_clear_mutex);
-							m_clear_hash.push_back(head);
-						}
-					}
-				}
-			}
-		}
-
-		++it;
-	}
-
-	m_clear_timer->expires_from_now(boost::posix_time::seconds(5));
-	m_clear_timer->async_wait([this](boost::system::error_code const & error)
-	{
-		process_unlink_clear();
-	});
-}
-
-bool mcp::block_processor::exist_in_clear_block_filter(mcp::block_hash const& clear_hash_a)
-{
-	std::lock_guard<std::mutex> lock(max_clear_block_mutex);
-	uint64_t now(m_steady_clock.now_since_epoch());
-	while (!m_clear_block.empty() && m_clear_block.begin()->m_time + 5 * 60 * 1000 < now)
-	{
-		m_clear_block.erase(m_clear_block.begin());
-	}
-	if (m_clear_block.get<1>().find(clear_hash_a) != m_clear_block.get<1>().end())
-		return true;
-	else
-		return false;
-}
-
-void mcp::block_processor::put_clear_block_filter(mcp::block_hash const& clear_hash_a)
-{
-	std::lock_guard<std::mutex> lock(max_clear_block_mutex);
-	if (m_clear_block.get<1>().find(clear_hash_a) != m_clear_block.get<1>().end())
-		m_clear_block.get<1>().erase(clear_hash_a);
-	uint64_t now(m_steady_clock.now_since_epoch());
-	m_clear_block.insert(mcp::put_clear_item{ now, clear_hash_a });
-}
-
-void mcp::block_processor::erase_clear_block_filter(mcp::block_hash const& clear_hash_a)
-{
-	m_clear_block.get<1>().erase(clear_hash_a);
 }
 
 void mcp::block_processor::ongoing_retry_late_message()

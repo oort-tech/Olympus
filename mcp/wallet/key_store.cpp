@@ -115,7 +115,6 @@ mcp::key_store::key_store(bool & error_a, boost::filesystem::path const& _path) 
 
 	int default_col = m_database->create_column_family(rocksdb::kDefaultColumnFamilyName, cfops);
 	m_keys = m_database->set_column_family(default_col, "k");
-	m_work = m_database->set_column_family(default_col, "w");
 	error_a = !m_database->open();
 	if(error_a)
 		std::cerr << "Key store db open error" << std::endl;
@@ -166,49 +165,5 @@ mcp::db::backward_iterator mcp::key_store::keys_rbegin(mcp::db::db_transaction& 
 	return transaction.rbegin(m_keys, mcp::account_to_slice(_k));
 }
 
-//work
-void mcp::key_store::work_put(mcp::db::db_transaction& transaction, mcp::account const & _k, mcp::value_previous_work const & _v)
-{
-	transaction.put(m_work, mcp::account_to_slice(_k), _v.val());
-}
-
-bool mcp::key_store::work_get(mcp::db::db_transaction& transaction, mcp::account const & _k, mcp::value_previous_work & _v)
-{
-	std::string result;
-	bool ret = transaction.get(m_work, mcp::account_to_slice(_k), result);
-	if (ret)
-		_v = mcp::value_previous_work(dev::Slice(result));
-	return !ret;
-}
-
-void mcp::key_store::work_del(mcp::db::db_transaction& transaction, mcp::account const & _k)
-{
-	transaction.del(m_work, mcp::account_to_slice(_k));
-}
-
-bool mcp::key_store::work_exists(mcp::db::db_transaction& transaction, mcp::account const & _k)
-{
-	return transaction.exists(m_work, mcp::account_to_slice(_k));;
-}
-
-mcp::db::forward_iterator mcp::key_store::work_begin(mcp::db::db_transaction& transaction)
-{
-	return transaction.begin(m_work);
-}
-
-mcp::db::forward_iterator mcp::key_store::work_begin(mcp::db::db_transaction& transaction, mcp::account const & _k)
-{
-	return transaction.begin(m_work, mcp::account_to_slice(_k));
-}
-
-mcp::db::backward_iterator mcp::key_store::work_rbegin(mcp::db::db_transaction& transaction)
-{
-	return transaction.rbegin(m_work);
-}
-
-mcp::db::backward_iterator mcp::key_store::work_rbegin(mcp::db::db_transaction& transaction, mcp::account const & _k)
-{
-	return transaction.rbegin(m_work, mcp::account_to_slice(_k));
-}
 
 
