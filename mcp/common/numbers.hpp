@@ -7,6 +7,7 @@
 
 #include <libdevcore/Common.h>
 #include <libdevcore/SHA3.h>
+#include <libdevcore/Address.h>
 
 #include <mcp/common/assert.hpp>
 
@@ -309,7 +310,7 @@ namespace p2p
 }
 
 //mcp::signature sign_message (mcp::raw_key const &, /*mcp::public_key const &,*/ mcp::uint256_union const &);
-//bool validate_message (mcp::account const &, mcp::uint256_union const &, mcp::signature const &);
+//bool validate_message (dev::Address const &, mcp::uint256_union const &, mcp::signature const &);
 }
 
 namespace std
@@ -382,3 +383,5 @@ namespace boost
         }
     };
 }
+
+dev::Address fromPublic(mcp::public_key & pubkey);

@@ -752,9 +752,9 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 		}
 		else
 		{
-			mcp::account witness;
-			if (witness.decode_account(config.witness.account_or_file))
+			if (dev::isAddress(config.witness.account_or_file))
 			{
+				dev::Address witness(config.witness.account_or_file);
 				std::string path = get_home_directory(config.witness.account_or_file);
 				config.witness.account_or_file.clear();
 				config.readfile2string(config.witness.account_or_file, path);

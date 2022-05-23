@@ -470,7 +470,7 @@ namespace mcp
 		uint64_t min_wl;
 
 		// Updated to 512, Daniel
-		std::unordered_set<mcp::account> witnesses;
+		std::unordered_set<dev::Address> witnesses;
 	};
 
 	//trace
@@ -615,14 +615,14 @@ namespace mcp
 	mcp::uint512_union slice_to_uint512(dev::Slice const & slice);
 
 	// added by michael at 1/13
-	dev::Slice account_to_slice(mcp::account const & value);
-	mcp::account slice_to_account(dev::Slice const & slice);
+	dev::Slice account_to_slice(dev::Address const & value);
+	dev::Address slice_to_account(dev::Slice const & slice);
 
 	dev::Slice address_to_slice(Address const & value);
 	Address slice_to_address(dev::Slice const & slice);
 
 
-	//mcp::account toAddress(mcp::account const& _from, u256 const& _nonce);
+	//dev::Address toAddress(dev::Address const& _from, u256 const& _nonce);
 
 	bool isZeroH256(u256 const& _r);
 

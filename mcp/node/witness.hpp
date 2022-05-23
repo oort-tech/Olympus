@@ -48,7 +48,7 @@ namespace mcp
 		std::shared_ptr<mcp::composer> m_composer;
 		std::shared_ptr<mcp::block_processor> m_block_processor;
 		std::shared_ptr<TransactionQueue> m_tq;
-		mcp::account m_account;
+		dev::Address m_account;
 		dev::Secret m_secret;
 
 		std::chrono::steady_clock::time_point m_last_witness_time;

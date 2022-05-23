@@ -23,7 +23,7 @@ mcp::witness::witness(mcp::error_message & error_msg,
     m_witness_get_current_chain(true),
     m_last_witness_block_hash(last_witness_block_hash_a)
 {
-	bool error(m_account.decode_account(account_or_file_text));
+	bool error(!dev::isAddress(account_or_file_text));
 	if (error)
 	{
 		mcp::key_content kc;
@@ -40,10 +40,14 @@ mcp::witness::witness(mcp::error_message & error_msg,
 		if (error)
 		{
 			error_msg.error = true;
-			LOG(m_log.error) << "Witness error: Account not exists, " << m_account.to_account();
+			LOG(m_log.error) << "Witness error: Account not exists, " << m_account.hexPrefixed();
 			return;
 		}
 		m_secret = dev::Secret(prv.data.ref());
+	}
+	else
+	{
+		m_account = dev::Address(account_or_file_text);
 	}
 
 	error = key_manager_a->unlock(m_account, password_a);
@@ -65,7 +69,7 @@ mcp::witness::witness(mcp::error_message & error_msg,
     }
 
     //std::cout << "Witness start success.\n" << std::flush;
-    LOG(m_log.info) << "witness account:" << m_account.to_account();
+    LOG(m_log.info) << "witness account:" << m_account.hexPrefixed();
 }
 
 void mcp::witness::start()
@@ -157,7 +161,7 @@ void mcp::witness::check_and_witness()
 	if (!mcp::param::is_witness(last_summary_mci, m_account))
 	{
 		m_is_witnessing.clear();
-		LOG(m_log.info) << "Not do witness, account:" << m_account.to_account() << " is not witness, last_summary_mci:" << last_summary_mci;
+		LOG(m_log.info) << "Not do witness, account:" << m_account.hexPrefixed() << " is not witness, last_summary_mci:" << last_summary_mci;
 		return;
 	}
 

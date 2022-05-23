@@ -10,7 +10,7 @@ bool mcp::handle_node_options(boost::program_options::variables_map & vm)
 		std::string password = mcp::createPassword("Enter a passphrase with which to secure this account:");
 		vm_instance instance(data_path);
 		auto account(instance.key_manager->create(password, true));
-		std::cout << boost::str(boost::format("\nAccount: %1%\n") % mcp::account(account).to_account());
+		std::cout << boost::str(boost::format("\nAccount: %1%\n") % dev::Address(account).hexPrefixed());
 	}
 	else if (vm.count("account_remove"))
 	{
@@ -18,9 +18,10 @@ bool mcp::handle_node_options(boost::program_options::variables_map & vm)
 		{
 			std::string password = mcp::getPassword("Enter the current passphrase for the remove account:");
 			vm_instance instance(data_path);
-			mcp::account account;
-			if (!account.decode_account(vm["account"].as<std::string>()))
+			std::string account_text = vm["account"].as<std::string>();
+			if (dev::isAddress(account_text))
 			{
+				dev::Address account(account_text);
 				bool exists(instance.key_manager->exists(account));
 				if (exists)
 				{
@@ -62,7 +63,7 @@ bool mcp::handle_node_options(boost::program_options::variables_map & vm)
 				bool error(instance.key_manager->import(contents.str(), kc, true));
 				if (!error)
 				{
-					std::cerr << "Import account " << kc.account.to_account() << std::endl;
+					std::cerr << "Import account " << kc.account.hexPrefixed() << std::endl;
 					result = false;
 				}
 				else
@@ -83,10 +84,10 @@ bool mcp::handle_node_options(boost::program_options::variables_map & vm)
 	else if (vm.count("account_list"))
 	{
 		vm_instance instance(data_path);
-		std::list<mcp::account> account_list(instance.key_manager->list());
-		for (mcp::account account : account_list)
+		std::list<dev::Address> account_list(instance.key_manager->list());
+		for (dev::Address account : account_list)
 		{
-			std::cout << account.to_account() << '\n';
+			std::cout << account.hexPrefixed() << '\n';
 		}
 	}
 	else

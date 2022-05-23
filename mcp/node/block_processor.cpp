@@ -293,7 +293,7 @@ void mcp::block_processor::mt_process_blocks()
 								case base_validate_result_codes::invalid_signature:
 								{
 									ok = false;
-									err_msg = "Invalid signature, hash:" + block_hash.to_string() + ",from:" + block->from().to_account() + ",signature:" + ((Signature)block->signature()).hex();
+									err_msg = "Invalid signature, hash:" + block_hash.to_string() + ",from:" + block->from().hexPrefixed() + ",signature:" + ((Signature)block->signature()).hex();
 									LOG(m_log.debug) << err_msg;
 
 									break;

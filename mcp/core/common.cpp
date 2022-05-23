@@ -713,16 +713,16 @@ mcp::uint512_union mcp::slice_to_uint512(dev::Slice const & slice)
 }
 
 // added by michael at 1/13
-dev::Slice mcp::account_to_slice(mcp::account const & value)
+dev::Slice mcp::account_to_slice(dev::Address const & value)
 {
-	return dev::Slice((char*)value.bytes.data(), value.bytes.size());
+	return dev::Slice((char*)value.data(), value.size);
 }
 
-mcp::account mcp::slice_to_account(dev::Slice const & slice)
+dev::Address mcp::slice_to_account(dev::Slice const & slice)
 {
-	mcp::account result;
+	dev::Address result;
 	assert_x(slice.size() == sizeof(result));
-	std::copy((byte *)slice.data(), (byte *)slice.data() + sizeof(result), result.bytes.data());
+	std::copy((byte *)slice.data(), (byte *)slice.data() + sizeof(result), result.data());
 	return result;
 }
 
@@ -751,10 +751,10 @@ Address mcp::slice_to_address(dev::Slice const & slice)
 //	s << time;
 //}
 
-//mcp::account mcp::toAddress(mcp::account const& _from, u256 const& _nonce)
+//dev::Address mcp::toAddress(dev::Address const& _from, u256 const& _nonce)
 //{
 //    // sichaoy: don't use rlpList here
-//    return mcp::account(sha3(rlpList(_from, _nonce)));
+//    return dev::Address(sha3(rlpList(_from, _nonce)));
 //}
 
 bool mcp::isZeroH256(u256 const& _r)
@@ -773,7 +773,6 @@ Address mcp::toAddress(std::string const& _s)
 	catch (BadHexCharacter&) {}
 	BOOST_THROW_EXCEPTION(InvalidAddress());
 }
-
 
 mcp::call_trace_action::call_trace_action(bool & error_a, dev::RLP const & r)
 {

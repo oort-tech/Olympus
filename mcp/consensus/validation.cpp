@@ -76,7 +76,7 @@ mcp::base_validate_result mcp::validation::base_validate(mcp::db::db_transaction
 
 	////check links
 	//auto links(block->links());
-	//std::unordered_set<mcp::account> link_accounts;
+	//std::unordered_set<dev::Address> link_accounts;
 	//mcp::block_hash pre_link_hash(0);
 	//for (auto it(links.begin()); it != links.end(); it++)
 	//{
@@ -94,7 +94,7 @@ mcp::base_validate_result mcp::validation::base_validate(mcp::db::db_transaction
 	//validate signature
 	dev::Public p = dev::recover(block->signature(), block_hash.number());
 	mcp::public_key pubkey(p);
-	if (mcp::account(pubkey) != block->from())   //todo used eth sign----------------------------------------
+	if (fromPublic(pubkey) != block->from())   //todo used eth sign----------------------------------------
 	{
 		result.code = mcp::base_validate_result_codes::invalid_signature;
 		return result;
@@ -140,7 +140,7 @@ mcp::validate_result mcp::validation::dag_validate(mcp::db::db_transaction & tra
 			if (previous_block->from() != block->from())
 			{
 				result.code = mcp::validate_result_codes::invalid_block;
-				result.err_msg = boost::str(boost::format("block from %1% not equal to previous from %2%") % block->from().to_account() % previous_block->from().to_account());
+				result.err_msg = boost::str(boost::format("block from %1% not equal to previous from %2%") % block->from().hexPrefixed() % previous_block->from().hexPrefixed());
 				return result;
 			}
 
@@ -211,7 +211,7 @@ mcp::validate_result mcp::validation::dag_validate(mcp::db::db_transaction & tra
 	if (!mcp::param::is_witness(last_summary_mci, block->from()))
 	{
 		result.code = mcp::validate_result_codes::invalid_block;
-		result.err_msg = boost::str(boost::format("account %1% is not witness") % block->from().to_account());
+		result.err_msg = boost::str(boost::format("account %1% is not witness") % block->from().hexPrefixed());
 		return result;
 	}
 
@@ -370,7 +370,7 @@ mcp::validate_result mcp::validation::dag_validate(mcp::db::db_transaction & tra
 				result.code = mcp::validate_result_codes::invalid_block;
 				result.err_msg = boost::str(boost::format("last stable block %1% is not stable in view of me, best parent: %2%, max parent last stable block: %3%, from: %4%, bp_block_state->earliest_bp_included_mc_index: %5%, bp_block_state->latest_bp_included_mc_index:%6%, bp_block_state->is_on_main_chain:%7%")
 					% block->last_stable_block().to_string()
-					% best_pblock_hash.to_string() % max_p_last_stable_block_hash.to_string() % block->from().to_account()
+					% best_pblock_hash.to_string() % max_p_last_stable_block_hash.to_string() % block->from().hexPrefixed()
 					% *bp_block_state->earliest_bp_included_mc_index % *bp_block_state->latest_bp_included_mc_index % bp_block_state->is_on_main_chain);
 				return result;
 			}
@@ -393,7 +393,7 @@ mcp::validate_result mcp::validation::dag_validate(mcp::db::db_transaction & tra
 					result.code = mcp::validate_result_codes::invalid_block;
 					result.err_msg = boost::str(boost::format("next mc block of last stable block %1% is stable in view of me, best parent: %2%, last stable block: %3%, from: %4%, bp_block_state->earliest_bp_included_mc_index: %5%, bp_block_state->latest_bp_included_mc_index:%6%, bp_block_state->is_on_main_chain:%7%")
 						% next_mc_hash.to_string()
-						% best_pblock_hash.to_string() % last_stable_block_hash.to_string() % block->from().to_account()
+						% best_pblock_hash.to_string() % last_stable_block_hash.to_string() % block->from().hexPrefixed()
 						% *bp_block_state->earliest_bp_included_mc_index % *bp_block_state->latest_bp_included_mc_index % bp_block_state->is_on_main_chain);
 					return result;
 				}

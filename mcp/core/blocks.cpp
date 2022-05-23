@@ -7,7 +7,7 @@
 #include <mcp/common/common.hpp>
 //#include <mcp/common/log.hpp>
 
-mcp::block::block(mcp::account from, mcp::block_hash const & previous, std::vector<mcp::block_hash> const & parents, h256s links,
+mcp::block::block(dev::Address from, mcp::block_hash const & previous, std::vector<mcp::block_hash> const & parents, h256s links,
 	mcp::block_hash const & last_summary, mcp::block_hash const & last_summary_block, mcp::block_hash const & last_stable_block,
 	uint64_t const & exec_timestamp, dev::Secret const& s) :
 	m_from(from),
@@ -37,7 +37,7 @@ mcp::block::block(dev::RLP const & rlp)
 
 		if (rlp.itemCount() != 9)
 			BOOST_THROW_EXCEPTION(InvalidBlockFormat() << errinfo_comment("too many or to low fields in the block RLP"));
-		m_from = rlp[0].isEmpty() ? mcp::account() : rlp[0].toHash<mcp::account>(RLP::VeryStrict);
+		m_from = rlp[0].isEmpty() ? dev::Address() : rlp[0].toHash<dev::Address>(RLP::VeryStrict);
 		m_previous = (mcp::block_hash)rlp[1];
 
 		dev::RLP const & parents_rlp = rlp[2];
@@ -102,7 +102,7 @@ void mcp::block::serialize_json(std::string & string_a) const
 void mcp::block::serialize_json(mcp::json & json_a) const
 {
 	json_a["hash"] = hash().to_string();
-	json_a["from"] = m_from.to_account();
+	json_a["from"] = m_from.hexPrefixed();
 
 	//previous
 	mcp::json content_l = mcp::json::object();
@@ -176,10 +176,10 @@ mcp::block_hash & mcp::block::hash() const
 
 mcp::block_hash mcp::block::root() const
 {
-	return isZeroH256(m_previous.is_zero()) ? (const mcp::block_hash)m_from : m_previous; //todo maybe error
+	return isZeroH256(m_previous.is_zero()) ? mcp::block_hash(((dev::Address::Arith) m_from).convert_to<unsigned>()) : m_previous; //todo maybe error
 }
 
-void mcp::block::init_from_genesis_transaction(mcp::account const& from, h256 const& hash, std::string time)
+void mcp::block::init_from_genesis_transaction(dev::Address const& from, h256 const& hash, std::string time)
 {
 	m_from = from;
 	m_previous = 0;

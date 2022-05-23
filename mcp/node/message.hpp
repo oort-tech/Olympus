@@ -180,7 +180,7 @@ class catchup_request_message
 	uint64_t last_known_mci;
 	mcp::block_hash unstable_mc_joints_tail;
 	mcp::summary_hash first_catchup_chain_summary;
-	std::set<mcp::account> arr_witnesses;
+	std::set<dev::Address> arr_witnesses;
 	uint64_t distinct_witness_size;
     mcp::sync_request_hash request_id;
 };
@@ -271,7 +271,7 @@ class peer_info_message
 	void stream_RLP(dev::RLPStream &s) const;
 	uint64_t min_retrievable_mci;
 	std::vector<mcp::block_hash> arr_tip_blocks;
-	//std::map<mcp::account, mcp::block_hash> arr_light_tip_blocks;
+	//std::map<dev::Address, mcp::block_hash> arr_light_tip_blocks;
 };
 
 class peer_info_request_message

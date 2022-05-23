@@ -10,7 +10,7 @@ namespace mcp
 	{
 	public:
 		block()= default;
-		block(mcp::account from, mcp::block_hash const & previous, std::vector<mcp::block_hash> const & parents, h256s links,
+		block(dev::Address from, mcp::block_hash const & previous, std::vector<mcp::block_hash> const & parents, h256s links,
 			mcp::block_hash const & last_summary, mcp::block_hash const & last_summary_block, mcp::block_hash const & last_stable_block,
 			uint64_t const & exec_timestamp, dev::Secret const& s);
 		block(dev::RLP const & rlp);
@@ -19,7 +19,7 @@ namespace mcp
 		virtual ~block() = default;
 		mcp::block_hash & hash() const;
 
-		mcp::account const& from() { return m_from; }
+		dev::Address const& from() { return m_from; }
 		mcp::block_hash const& previous() { return  m_previous; }
 		std::vector<mcp::block_hash> const& parents() { return  m_parents; }
 		h256s const& links() { return  m_links; }
@@ -34,7 +34,7 @@ namespace mcp
 
 		mcp::block_hash root() const;
 
-		void init_from_genesis_transaction(mcp::account const& from, h256 const& hash, std::string time);
+		void init_from_genesis_transaction(dev::Address const& from, h256 const& hash, std::string time);
 
 		//bool operator== (mcp::block const &) const;
 
@@ -49,7 +49,7 @@ namespace mcp
 		///// @throws TransactionIsUnsigned if signature was not initialized
 		//u256 rawV() const;
 	private:
-		mcp::account m_from;// Other fields maybe same with other witness,cause same hash. so that, block must used from fields
+		dev::Address m_from;// Other fields maybe same with other witness,cause same hash. so that, block must used from fields
 		mcp::block_hash m_previous;
 		std::vector<mcp::block_hash> m_parents;
 		h256s m_links;

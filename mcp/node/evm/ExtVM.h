@@ -65,13 +65,13 @@ public:
     }
 
     /// Read address's code.
-    bytes const& codeAt(Address _a) final { return m_s.code(_a); }
+    bytes const& codeAt(dev::Address _a) final { return m_s.code(_a); }
 
     /// @returns the size of the code in  bytes at the given address.
-    size_t codeSizeAt(Address _a) final;
+    size_t codeSizeAt(dev::Address _a) final;
 
     /// @returns the hash of the code at the given address.
-    h256 codeHashAt(Address _a) final;
+    h256 codeHashAt(dev::Address _a) final;
 
     /// Create a new contract.
     CreateResult create(u256 _endowment, u256& io_gas, bytesConstRef _code, Instruction _op, u256 _salt, OnOpFunc const& _onOp = {}) final;
@@ -80,19 +80,19 @@ public:
     CallResult call(CallParameters& _params) final;
 
     /// Read address's balance.
-    u256 balance(Address _a) final 
+    u256 balance(dev::Address _a) final
     {
         return m_s.balance(_a);
     }
 
     /// Does the account exist?
-    bool exists(Address _a) final
+    bool exists(dev::Address _a) final
     {
         return m_s.addressInUse(_a);
     }
 
     /// Suicide the associated contract to the given address.
-    void suicide(Address _a) final;
+    void suicide(dev::Address _a) final;
 
     /*
     /// Return the EVM gas-price schedule for this execution context.

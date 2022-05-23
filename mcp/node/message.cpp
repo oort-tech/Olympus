@@ -87,7 +87,7 @@ mcp::catchup_request_message::catchup_request_message(bool & error_a, dev::RLP c
 	unstable_mc_joints_tail = (mcp::block_hash)r[3];
 	first_catchup_chain_summary = (mcp::summary_hash)r[4];
 	for (auto witness : r[5])
-		arr_witnesses.insert((mcp::account)witness);
+		arr_witnesses.insert((dev::Address)witness);
 	distinct_witness_size = (uint64_t)r[6];
     request_id = (mcp::sync_request_hash)r[7];
 }
@@ -351,7 +351,7 @@ mcp::peer_info_message::peer_info_message(bool & error_a, dev::RLP const &r)
 	//	if (error_a)
 	//		return;
 
-	//	mcp::account account(r_account_hash[0]);
+	//	dev::Address account(r_account_hash[0]);
 	//	mcp::block_hash hash(r_account_hash[1]);
 	//	arr_light_tip_blocks.insert(std::make_pair(account, hash));
 	//}

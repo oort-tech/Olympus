@@ -34,7 +34,7 @@ h256 mcp::wallet::send_action(TransactionSkeleton t, boost::optional<std::string
 	if (!ar.first)
 	{
 		populateTransactionWithDefaults(t);
-		t.from = dev::toAddress(ar.second);
+		t.from = dev::Address((Address const &) ar.second);
 		Transaction ts(t, ar.second);
 		return importTransaction(ts);
 	}

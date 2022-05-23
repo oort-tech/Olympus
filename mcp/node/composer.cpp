@@ -19,7 +19,7 @@ mcp::composer::~composer()
 {
 }
 
-std::shared_ptr<mcp::block> mcp::composer::compose_block(mcp::account const & from_a, dev::Secret const& s)
+std::shared_ptr<mcp::block> mcp::composer::compose_block(dev::Address const & from_a, dev::Secret const& s)
 {
 	mcp::stopwatch_guard sw("compose:compose_block");
 
@@ -46,7 +46,7 @@ std::shared_ptr<mcp::block> mcp::composer::compose_block(mcp::account const & fr
 		last_summary, last_summary_block, last_stable_block, exec_timestamp,s);
 }
 
-void mcp::composer::pick_parents_and_last_summary_and_wl_block(mcp::db::db_transaction &  transaction_a, mcp::block_hash const & previous_a, mcp::account const & from_a, std::vector<mcp::block_hash>& parents, h256s& links, mcp::block_hash & last_summary_block, mcp::block_hash & last_summary, mcp::block_hash & last_stable_block)
+void mcp::composer::pick_parents_and_last_summary_and_wl_block(mcp::db::db_transaction &  transaction_a, mcp::block_hash const & previous_a, dev::Address const & from_a, std::vector<mcp::block_hash>& parents, h256s& links, mcp::block_hash & last_summary_block, mcp::block_hash & last_summary, mcp::block_hash & last_stable_block)
 {
 	mcp::stopwatch_guard sw("compose:pick_parents");
 
@@ -273,7 +273,7 @@ void mcp::composer::pick_parents_and_last_summary_and_wl_block(mcp::db::db_trans
 	}
 }
 
-mcp::block_hash mcp::composer::get_latest_block(mcp::db::db_transaction &  transaction_a, mcp::account const & account_a)
+mcp::block_hash mcp::composer::get_latest_block(mcp::db::db_transaction &  transaction_a, dev::Address const & account_a)
 {
 	mcp::block_hash previous;
 
@@ -282,7 +282,7 @@ mcp::block_hash mcp::composer::get_latest_block(mcp::db::db_transaction &  trans
 	previous = account_error ? 0 : info.latest_stable_block;
 
 	mcp::block_hash latest_block_hash(previous);
-	mcp::block_hash root(previous.is_zero() ? account_a.number() : previous);
+	mcp::block_hash root(previous.is_zero() ? ((dev::Address::Arith)account_a).convert_to<unsigned>() : previous);
 
 	//search in chain
 	while (true)

@@ -6,6 +6,7 @@
 #include <map>
 #include <utility>
 #include <mcp/common/numbers.hpp>
+#include <libdevcore/Address.h>
 
 namespace mcp
 {
@@ -43,7 +44,7 @@ class witness_param
 public:
 	size_t witness_count;
 	size_t majority_of_witnesses;
-	std::set<mcp::account> witness_list;
+	std::set<dev::Address> witness_list;
 };
 
 class param
@@ -69,7 +70,7 @@ public:
 		return w_param;
 	}
 
-	static bool is_witness(uint64_t const & last_summary_mci_a, mcp::account const & account_a)
+	static bool is_witness(uint64_t const & last_summary_mci_a, dev::Address const & account_a)
 	{
 		mcp::witness_param const & w_param = witness_param(last_summary_mci_a);
 		if (w_param.witness_list.count(account_a))
@@ -226,13 +227,12 @@ private:
 		}
 	}
 
-	static std::set<mcp::account> to_witness_list(std::vector<std::string> const & witness_strs)
+	static std::set<dev::Address> to_witness_list(std::vector<std::string> const & witness_strs)
 	{
-		std::set<mcp::account> witness_list;
+		std::set<dev::Address> witness_list;
 		for (std::string w_str : witness_strs)
 		{
-			mcp::account w_acc;
-			w_acc.decode_account(w_str);
+			dev::Address w_acc(w_str);
 			witness_list.insert(w_acc);
 		}
 		return witness_list;

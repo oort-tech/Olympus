@@ -247,7 +247,7 @@ void mcp::block_store::transaction_put(mcp::db::db_transaction & transaction_a, 
 }
 
 
-bool mcp::block_store::dag_account_get(mcp::db::db_transaction & transaction_a, mcp::account const & account_a, mcp::dag_account_info & info_a)
+bool mcp::block_store::dag_account_get(mcp::db::db_transaction & transaction_a, dev::Address const & account_a, mcp::dag_account_info & info_a)
 {
 	std::string value;
 	bool exists(transaction_a.get(dag_account_info, mcp::account_to_slice(account_a), value));
@@ -261,7 +261,7 @@ bool mcp::block_store::dag_account_get(mcp::db::db_transaction & transaction_a, 
 	return !exists;
 }
 
-void mcp::block_store::dag_account_put(mcp::db::db_transaction & transaction_a, mcp::account const & account_a, mcp::dag_account_info const & info_a)
+void mcp::block_store::dag_account_put(mcp::db::db_transaction & transaction_a, dev::Address const & account_a, mcp::dag_account_info const & info_a)
 {
 	dev::bytes b_value;
 	{

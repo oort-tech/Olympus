@@ -706,7 +706,7 @@ void mcp::chain::set_block_stable(mcp::timeout_db_transaction & timeout_tx_a, st
 
 		if (stable_block_state_copy->status == mcp::block_status::ok)
 		{
-			mcp::account const & account(stable_block->from());
+			dev::Address const & account(stable_block->from());
 			mcp::dag_account_info info;
 			m_store.dag_account_get(transaction_a, account, info);
 			info.latest_stable_block = stable_block_hash;

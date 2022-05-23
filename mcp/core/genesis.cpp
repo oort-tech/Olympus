@@ -64,9 +64,10 @@ bool mcp::genesis::try_initialize(mcp::db::db_transaction & transaction_a, mcp::
 	_t.nonce = 0;
 	Transaction ts(_t, dev::Secret());
 	
-	mcp::account from;
-	if (from.decode_account(json["from"]))
-		throw std::runtime_error("deserialize genesis block from error");
+	std::string from_account = json["from"];
+	dev::Address from(from_account);
+	//if (from.decode_account(json["from"]))
+	//	throw std::runtime_error("deserialize genesis block from error");
 	std::unique_ptr<mcp::block> block(std::make_unique<mcp::block>());
 	block->init_from_genesis_transaction(from, ts.sha3(IncludeSignature::WithoutSignature), json["exec_timestamp"]);
 
@@ -117,7 +118,7 @@ bool mcp::genesis::try_initialize(mcp::db::db_transaction & transaction_a, mcp::
 	store_a.dag_free_put(transaction_a, mcp::free_key(block_state.witnessed_level, block_state.level, block_hash));
 
 	//genesis account
-	mcp::account const & genesis_account(block->from());
+	dev::Address const & genesis_account(block->from());
 
 	//add dag account info
 	mcp::dag_account_info info;

@@ -51,13 +51,13 @@ void test_create_account()
 	std::cout << std::endl;
 	std::cout << "ciphertext:" << ciphertext.to_string() << std::endl;
 	std::cout << "pub:" << pub.to_string() << std::endl;
-	std::cout << "account:" << mcp::account(pub).to_account() << std::endl;
+	std::cout << "account:" << fromPublic(pub).hexPrefixed() << std::endl;
 	std::cout << "derive_pwd:" << derive_pwd.data.to_string() << std::endl;
 
 	std::cout << "------------------------------------------------------" << std::endl;
 
 	mcp::json js;
-	js["account"] = mcp::account(pub).to_account();
+	js["account"] = fromPublic(pub).hexPrefixed();
 	js["kdf_salt"] = kdf_salt.to_string();
 	js["iv"] = iv.to_string();
 	js["ciphertext"] = ciphertext.to_string();
@@ -68,7 +68,7 @@ void test_create_account()
 	// {
 	// 	if (ciphertext.to_string() == "4311A4B0C71B444FA37FA76FD62FC2957F9E139F51C8D584A4ECCAF1463C4E35"
 	// 		&&pub.to_string() == "01635E3763EED1E7C1B7611F5CA8CF90C340BEB79BF7DC674D5146D08D32DA976585E03660DB6008988E3B001F1797B717E31BAC6E8A211F674C4A4D83347129"
-	// 		&& mcp::account(pub).to_account() == "0x4B11E15F46EADC68E34ED9FC0A4170079A8A69C6")
+	// 		&& dev::Address(pub).to_account() == "0x4B11E15F46EADC68E34ED9FC0A4170079A8A69C6")
 	// 		std::cout << "create_account: ok" << std::endl;
 	// 	else
 	// 		std::cout << "create_account: fail" << std::endl;
@@ -77,7 +77,7 @@ void test_create_account()
 	// {
 	// 	if (ciphertext.to_string() == "4311A4B0C71B444FA37FA76FD62FC2957F9E139F51C8D584A4ECCAF1463C4E35"
 	// 		&&pub.to_string() == "01635E3763EED1E7C1B7611F5CA8CF90C340BEB79BF7DC674D5146D08D32DA976585E03660DB6008988E3B001F1797B717E31BAC6E8A211F674C4A4D83347129"
-	// 		&& mcp::account(pub).to_account() == "0x4B11E15F46EADC68E34ED9FC0A4170079A8A69C6")
+	// 		&& dev::Address(pub).to_account() == "0x4B11E15F46EADC68E34ED9FC0A4170079A8A69C6")
 	// 		std::cout << "create_account: ok" << std::endl;
 	// 	else
 	// 		std::cout << "create_account: fail" << std::endl;
@@ -92,18 +92,17 @@ void test_account_encoding()
 	pub.decode_hex("01635E3763EED1E7C1B7611F5CA8CF90C340BEB79BF7DC674D5146D08D32DA976585E03660DB6008988E3B001F1797B717E31BAC6E8A211F674C4A4D83347129");
 	std::cout << "pub: " << pub.to_string() << std::endl;
 
-	std::string account = mcp::account(pub).to_account();
+	std::string account = fromPublic(pub).hexPrefixed();
 	std::cout << "encode_account: " << account << std::endl;
 	if (account == "0x4B11E15F46EADC68E34ED9FC0A4170079A8A69C6")
 		std::cout << "encode_account: ok" << std::endl;
 	else
 		std::cout << "encode_account: fail" << std::endl;
 
-	mcp::account decode_account;
-	decode_account.decode_account(account);
-	std::cout << "decode_account: " << decode_account.to_account() << std::endl;
+	dev::Address decode_account(account);
+	std::cout << "decode_account: " << decode_account.hexPrefixed() << std::endl;
 
-	if (decode_account == mcp::account(pub))
+	if (decode_account == fromPublic(pub))
 		std::cout << "decode_account: ok" << std::endl;
 	else
 		std::cout << "decode_account: fail" << std::endl;
@@ -157,5 +156,5 @@ void test_account_decrypt()
 	mcp::encry::generate_public_from_secret(prv.data, compare);
 
 	std::cout << compare.to_string() << std::endl;
-	std::cout << "account:" << mcp::account(compare).to_account() << std::endl;
+	std::cout << "account:" << fromPublic(compare).hexPrefixed() << std::endl;
 }

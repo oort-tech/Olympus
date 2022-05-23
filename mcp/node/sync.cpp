@@ -374,7 +374,7 @@ void mcp::node_sync::prepare_catchup_chain(mcp::catchup_request_message const& r
 	uint64_t last_stable_mci_remote = request.last_stable_mci;
 	uint64_t last_known_mci_remote = request.last_known_mci;
 	mcp::summary_hash first_catchup_chain_summary = request.first_catchup_chain_summary;
-	std::set<mcp::account> arr_witnesses_remote = request.arr_witnesses;
+	std::set<dev::Address> arr_witnesses_remote = request.arr_witnesses;
 	size_t distinct_witness_size_remote = request.distinct_witness_size;
 
 	mcp::db::db_transaction transaction(m_store.create_transaction());
@@ -384,7 +384,7 @@ void mcp::node_sync::prepare_catchup_chain(mcp::catchup_request_message const& r
 	std::list<mcp::joint_message> arr_unstable_mc_joints;
 	std::list<mcp::joint_message> arr_stable_last_summary_joints;
 	mcp::block_hash last_summary_hash(0);
-	std::unordered_set<mcp::account> arr_found_witnesses;
+	std::unordered_set<dev::Address> arr_found_witnesses;
 
 	if (first_catchup_chain_summary == 0)
 	{
@@ -419,7 +419,7 @@ void mcp::node_sync::prepare_catchup_chain(mcp::catchup_request_message const& r
 			assert_x(mc_exists);
 
 			std::shared_ptr<mcp::block> mc_block = m_cache->block_get(transaction, mc_hash);
-			mcp::account acct = mc_block->from();
+			dev::Address acct = mc_block->from();
 
 			//find first honest witness
 			if (arr_found_witnesses.size() < distinct_witness_size_remote)
@@ -819,8 +819,8 @@ mcp::sync_result mcp::node_sync::process_catchup_chain(mcp::catchup_response_mes
 
 			uint64_t distinct_witness_size = m_current_catchup_request.distinct_witness_size;
 			assert_x(distinct_witness_size > 0);
-			std::set<mcp::account> const & arr_witnesses = m_current_catchup_request.arr_witnesses;
-			std::vector<mcp::account> arr_found_witnesses;
+			std::set<dev::Address> const & arr_witnesses = m_current_catchup_request.arr_witnesses;
+			std::vector<dev::Address> arr_found_witnesses;
 			std::vector<mcp::joint_message> arr_witness_joints;
 
 			std::vector<mcp::block_hash> arr_parent_blocks;
@@ -847,7 +847,7 @@ mcp::sync_result mcp::node_sync::process_catchup_chain(mcp::catchup_response_mes
 					return  process_catchup_result;
 				}
 
-				mcp::account acct = block->from();
+				dev::Address acct = block->from();
 				if (arr_witnesses.count(acct))
 				{
 					if (std::find(arr_found_witnesses.begin(), arr_found_witnesses.end(), acct) == arr_found_witnesses.end())
@@ -1651,7 +1651,7 @@ void mcp::node_sync::peer_info_request_handler(p2p::node_id const &id)
 	//	mcp::db::forward_iterator it = m_store.unlink_info_begin(transaction, snap);
 	//	if (it.valid())
 	//	{
-	//		mcp::account rand_account;
+	//		dev::Address rand_account;
 	//		mcp::random_pool.GenerateBlock(rand_account.bytes.data(), rand_account.bytes.size());
 	//		mcp::db::forward_iterator rand_it = m_store.unlink_info_begin(transaction, rand_account, snap);
 	//		if (rand_it.valid())
@@ -1659,13 +1659,13 @@ void mcp::node_sync::peer_info_request_handler(p2p::node_id const &id)
 	//			it = std::move(rand_it);
 	//		}
 
-	//		mcp::account start_account(0);
+	//		dev::Address start_account(0);
 	//		while (pi.arr_light_tip_blocks.size() < max_latest_unlink_send_count)
 	//		{
 	//			if (!it.valid())
 	//				it = m_store.unlink_info_begin(transaction, snap);
 
-	//			mcp::account current_account(mcp::slice_to_account(it.key()));
+	//			dev::Address current_account(mcp::slice_to_account(it.key()));
 	//			if (start_account == current_account)  // eq start ,break
 	//				break;
 	//			if (start_account.is_zero())

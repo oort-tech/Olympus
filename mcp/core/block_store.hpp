@@ -43,8 +43,8 @@ namespace mcp
 		bool contract_aux_state_key_get(mcp::db::db_transaction & transaction_a, dev::bytes const & key_a, dev::bytes & value_a);
 		void contract_aux_state_key_put(mcp::db::db_transaction & transaction_a, dev::bytes const & key_a, dev::bytes const & value_a);
 
-		bool dag_account_get(mcp::db::db_transaction & transaction_a, mcp::account const & account_a, mcp::dag_account_info & info_a);
-		void dag_account_put(mcp::db::db_transaction & transaction_a, mcp::account const & account_a, mcp::dag_account_info const & info_a);
+		bool dag_account_get(mcp::db::db_transaction & transaction_a, dev::Address const & account_a, mcp::dag_account_info & info_a);
+		void dag_account_put(mcp::db::db_transaction & transaction_a, dev::Address const & account_a, mcp::dag_account_info const & info_a);
 
 		bool block_summary_get(mcp::db::db_transaction &, mcp::block_hash const &, mcp::summary_hash &);
 		void block_summary_put(mcp::db::db_transaction &, mcp::block_hash const &, mcp::summary_hash const &);

@@ -513,10 +513,10 @@ std::string mcp::uint512_union::to_string() const
 //	return result;
 //}
 //
-//bool mcp::validate_message(mcp::account const & account, mcp::uint256_union const & message, mcp::signature const & signature)
+//bool mcp::validate_message(dev::Address const & account, mcp::uint256_union const & message, mcp::signature const & signature)
 //{
 //	mcp::public_key pubkey = mcp::encry::recover(signature, message.ref());
-//	if (account == mcp::account(pubkey)) {
+//	if (account == dev::Address(pubkey)) {
 //		return true;
 //	} else {
 //		return false;
@@ -1187,4 +1187,10 @@ mcp::compressed_pubkey_union::operator mcp::uint256_union() const
 	dev::bytesConstRef src(body, 32);
 	src.copyTo(r.ref());
 	return r;
+}
+
+dev::Address fromPublic(mcp::public_key & pubkey)
+{
+	dev::bytesConstRef bRef = sha3(pubkey.ref()).ref();
+	return dev::Address(bRef.cropped(12));
 }

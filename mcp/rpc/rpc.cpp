@@ -8,6 +8,8 @@
 #include <mcp/core/genesis.hpp>
 #include <mcp/node/evm/Executive.hpp>
 #include <libdevcore/CommonJS.h>
+#include <libdevcore/CommonData.h>
+
 #include "jsonHelper.hpp"
 
 mcp::rpc_config::rpc_config() : rpc_config(false)
@@ -436,10 +438,10 @@ void mcp::rpc_handler::account_list()
 	mcp::json j_response;
 	mcp::json j_accounts = mcp::json::array();
 
-	std::list<mcp::account> account_list(m_key_manager->list());
+	std::list<dev::Address> account_list(m_key_manager->list());
 	for (auto account : account_list)
 	{
-		j_accounts.push_back(account.to_account());
+		j_accounts.push_back(account.hexPrefixed());
 	}
 	j_response["accounts"] = j_accounts;
 	error_code_l = mcp::rpc_account_list_error_code::ok;
@@ -451,13 +453,15 @@ void mcp::rpc_handler::account_validate()
 	mcp::rpc_account_validate_error_code error_code_l;
 	if (request.count("account") && request["account"].is_string())
 	{
-		std::string account_text = request["account"];
-		mcp::account account;
-		bool error = account.decode_account(account_text);
-
 		mcp::json j_response;
-		j_response["valid"] = error ? 0 : 1;
-
+		std::string account_text = request["account"];
+		try {
+			dev::Address account(account_text);
+			j_response["valid"] = 1;
+		}
+		catch (...) {
+			j_response["valid"] = 0;
+		}
 		error_code_l = mcp::rpc_account_validate_error_code::ok;
 		error_response(response, (int)error_code_l, err.msg(error_code_l), j_response);
 	}
@@ -494,9 +498,9 @@ void mcp::rpc_handler::account_create()
 								return;
 							}
 						}
-						mcp::account new_account = m_key_manager->create(password, gen_next_work_l, backup_l);
+						dev::Address new_account = m_key_manager->create(password, gen_next_work_l, backup_l);
 						mcp::json j_response;
-						j_response["account"] = new_account.to_account();
+						j_response["account"] = new_account.hexPrefixed();
 						error_code_l = mcp::rpc_account_create_error_code::ok;
 						error_response(response, int(error_code_l), err.msg(error_code_l), j_response);
 					}
@@ -536,15 +540,15 @@ void mcp::rpc_handler::account_remove()
 	if (rpc.config.enable_control)
 	{
 		mcp::rpc_account_remove_error_code error_code_l;
-		mcp::account account;
-		bool error(false);
+		bool error(true);
 		if (request.count("account") && request["account"].is_string())
 		{
-			std::string account_text = request["account"];
-			error = account.decode_account(account_text);
+			error = !dev::isAddress(request["account"]);
 		}
 		if (!error)
 		{
+			std::string account_text = request["account"];
+			dev::Address account(account_text);
 			bool exists(m_key_manager->exists(account));
 			if (exists)
 			{
@@ -593,19 +597,15 @@ void mcp::rpc_handler::account_password_change()
 	if (rpc.config.enable_control)
 	{
 		mcp::rpc_account_password_change_error_code error_code_l;
-		bool error(false);
-		mcp::account account;
+		bool error(true);
 		if (request.count("account") && request["account"].is_string())
 		{
-			std::string account_text = request["account"];
-			error = account.decode_account(account_text);
-		}
-		else
-		{
-			error = true;
+			error = !dev::isAddress(request["account"]);
 		}
 		if (!error)
 		{
+			std::string account_text = request["account"];
+			dev::Address account(account_text);
 			auto exists(m_key_manager->exists(account));
 			if (exists)
 			{
@@ -679,9 +679,9 @@ void mcp::rpc_handler::account_unlock()
 		if (request.count("account") && request["account"].is_string())
 		{
 			std::string account_text = request["account"];
-			mcp::account account;
-			if (!account.decode_account(account_text))
+			if (dev::isAddress(account_text))
 			{
+				dev::Address account(account_text);
 				auto exists(m_key_manager->exists(account));
 				if (exists)
 				{
@@ -738,9 +738,9 @@ void mcp::rpc_handler::account_lock()
 		if (request.count("account") && request["account"].is_string())
 		{
 			std::string account_text = request["account"];
-			mcp::account account;
-			if (!account.decode_account(account_text))
+			if (dev::isAddress(account_text))
 			{
+				dev::Address account(account_text);
 				auto exists(m_key_manager->exists(account));
 				if (exists)
 				{
@@ -778,9 +778,9 @@ void mcp::rpc_handler::account_export()
 	if (request.count("account") && request["account"].is_string())
 	{
 		std::string account_text = request["account"];
-		mcp::account account;
-		if (!account.decode_account(account_text))
+		if (dev::isAddress(account_text))
 		{
+			dev::Address account(account_text);
 			mcp::key_content kc;
 			auto exists(m_key_manager->find(account, kc));
 			if (exists)
@@ -827,7 +827,7 @@ void mcp::rpc_handler::account_import()
 			if (!error)
 			{
 				mcp::json j_response;
-				j_response["account"] = kc.account.to_account();
+				j_response["account"] = kc.account.hexPrefixed();
 				error_code_l = mcp::rpc_account_import_error_code::ok;
 				error_response(response, (int)error_code_l, err.msg(error_code_l), j_response);
 			}
@@ -911,11 +911,11 @@ void mcp::rpc_handler::accounts_balances()
 
 	for (mcp::json const &j_account : request["accounts"])
 	{
-		mcp::account account;
 		std::string account_text = j_account;
-		auto error(account.decode_account(account_text));
+		auto error(!dev::isAddress(account_text));
 		if (!error)
 		{
+			dev::Address account(account_text);
 			mcp::db::db_transaction transaction(m_store.create_transaction());
 			chain_state c_state(transaction, 0, m_store, m_chain, m_cache);
 			auto balance(c_state.balance(account));
@@ -937,7 +937,6 @@ void mcp::rpc_handler::account_block_list()
 {
 	/*mcp::rpc_account_block_list_error_code error_code_l;
 
-	mcp::account account;
 	if (!request.count("account") || (!request["account"].is_string()))
 	{
 		error_code_l = mcp::rpc_account_block_list_error_code::invalid_account;
@@ -946,12 +945,14 @@ void mcp::rpc_handler::account_block_list()
 	}
 
 	std::string account_text = request["account"];
-	if (account.decode_account(account_text))
+	if (!dev::isAddress(account_text))
 	{
 		error_code_l = mcp::rpc_account_block_list_error_code::invalid_account;
 		error_response(response, (int)error_code_l, err.msg(error_code_l));
 		return;
 	}
+
+	dev::Address account(account_text);
 
 	uint64_t limit_l(0);
 	if (!request.count("limit"))
@@ -1052,7 +1053,6 @@ void mcp::rpc_handler::account_state_list()
 {
 	/*mcp::rpc_account_block_list_error_code error_code_l;
 
-	mcp::account account;
 	if (!request.count("account") || (!request["account"].is_string()))
 	{
 		error_code_l = mcp::rpc_account_block_list_error_code::invalid_account;
@@ -1061,12 +1061,14 @@ void mcp::rpc_handler::account_state_list()
 	}
 
 	std::string account_text = request["account"];
-	if (account.decode_account(account_text))
+	if (!dev::isAddress(account_text))
 	{
 		error_code_l = mcp::rpc_account_block_list_error_code::invalid_account;
 		error_response(response, (int)error_code_l, err.msg(error_code_l));
 		return;
 	}
+
+	dev::Address account(account_text);
 
 	uint64_t limit_l(0);
 	if (!request.count("limit"))
@@ -1143,7 +1145,7 @@ void mcp::rpc_handler::account_state_list()
 
 		mcp::json acc_state_l;
 		acc_state_l["hash"] = acc_state->hash().to_string();
-		acc_state_l["account"] = acc_state->account.to_account();
+		acc_state_l["account"] = acc_state->account.hexPrefixed();
 		acc_state_l["block_hash"] = acc_state->block_hash.to_string();
 		acc_state_l["previous"] = acc_state->previous.to_string();
 		acc_state_l["balance"] = acc_state->balance.str();
@@ -1286,7 +1288,7 @@ void mcp::rpc_handler::block_state()
 
 			mcp::json block_state_l;
 			block_state_l["hash"] = hash.to_string();
-			//mcp::account contract_account(0);
+			//dev::Address contract_account(0);
 			//if (block->type() == mcp::block_type::light && block->isCreation() && state->is_stable && (state->status == mcp::block_status::ok))
 			//{
 			//	std::shared_ptr<mcp::account_state> acc_state(m_store.account_state_get(transaction, state->receipt->from_state));
@@ -1345,7 +1347,7 @@ void mcp::rpc_handler::block_states()
 	//			assert_x(block);
 
 	//			state_l["hash"] = hash.to_string();
-	//			//mcp::account contract_address;
+	//			//dev::Address contract_address;
 	//			//if (block->type() == mcp::block_type::light && block->isCreation() && state->is_stable && (state->status == mcp::block_status::ok))
 	//			//{
 	//			//	std::shared_ptr<mcp::account_state> acc_state(m_store.account_state_get(transaction, state->receipt->from_state));
@@ -1528,7 +1530,7 @@ void mcp::rpc_handler::estimate_gas()
 	//}
 
 	//// sichaoy: remove the "from" field, and to pick it by default
-	//mcp::account from(0);
+	//dev::Address from(0);
 	//if (request.count("from"))
 	//{
 	//	if (!request["from"].is_string())
@@ -1548,7 +1550,7 @@ void mcp::rpc_handler::estimate_gas()
 	//	}
 	//}
 
-	//mcp::account to(0);
+	//dev::Address to(0);
 	//if (request.count("to"))
 	//{
 	//	if (!request["to"].is_string())
@@ -1663,7 +1665,7 @@ void mcp::rpc_handler::call()
 	//	return;
 	//}
 
-	//mcp::account from(0);
+	//dev::Address from(0);
 	//if (request.count("from"))
 	//{
 	//	if (!request["from"].is_string())
@@ -1692,7 +1694,7 @@ void mcp::rpc_handler::call()
 	//}
 
 	//std::string to_text = request["to"];
-	//mcp::account to;
+	//dev::Address to;
 	//bool error = to.decode_account(to_text);
 	//if (error)
 	//{
@@ -1731,8 +1733,8 @@ void mcp::rpc_handler::call()
 
 	//std::shared_ptr<mcp::block> block = std::make_shared<mcp::block>(
 	//	mcp::block_type::light,														// mcp::block_type type_a,
-	//	from,																		// mcp::account const & from_a,
-	//	to,																			// mcp::account const & to_a,
+	//	from,																		// dev::Address const & from_a,
+	//	to,																			// dev::Address const & to_a,
 	//	0,																			// mcp::amount const & amount_a,
 	//	0,																			// mcp::block_hash const & previous_a,
 	//	std::vector<mcp::block_hash>{},												// std::vector<mcp::block_hash> const & parents_a,
@@ -1786,7 +1788,7 @@ void mcp::rpc_handler::logs()
 	//	to_stable_block_index = m_chain->last_stable_index();
 	//}
 
-	//boost::optional<mcp::account> search_account;
+	//boost::optional<dev::Address> search_account;
 	//if (request.count("account") && !request["account"].is_null())
 	//{
 	//	if (!request["account"].is_string())
@@ -1797,7 +1799,7 @@ void mcp::rpc_handler::logs()
 	//	}
 
 	//	std::string account_text = request["account"];
-	//	mcp::account account;
+	//	dev::Address account;
 	//	bool error = account.decode_account(account_text);
 	//	if (error)
 	//	{
@@ -1969,7 +1971,7 @@ void mcp::rpc_handler::generate_offline_block()
 	//	return;
 	//}
 	//std::string from_text = request["from"];
-	//mcp::account from;
+	//dev::Address from;
 	//auto error(from.decode_account(from_text));
 	//if (error)
 	//{
@@ -1985,7 +1987,7 @@ void mcp::rpc_handler::generate_offline_block()
 	//	return;
 	//}
 	//std::string to_text = request["to"];
-	//mcp::account to;
+	//dev::Address to;
 	//error = to.decode_account(to_text);
 	//if (error)
 	//{
@@ -2064,8 +2066,8 @@ void mcp::rpc_handler::generate_offline_block()
 	//	mcp::json response_l;
 
 	//	response_l["hash"] = block->hash().to_string();
-	//	response_l["from"] = block->from().to_account();
-	//	response_l["to"] = block->hashables->to.to_account();
+	//	response_l["from"] = block->from().hexPrefixed();
+	//	response_l["to"] = block->hashables->to.hexPrefixed();
 	//	response_l["amount"] = block->hashables->amount.str();
 	//	response_l["previous"] = block->hashables->previous.to_string();
 	//	response_l["gas"] = block->hashables->gas.str();
@@ -2115,14 +2117,15 @@ void mcp::rpc_handler::send_offline_block()
 		return;
 	}
 	std::string from_text = request["from"];
-	mcp::account from;
-	auto error(from.decode_account(from_text));
+	auto error(!dev::isAddress(from_text));
 	if (error)
 	{
 		error_code_l = mcp::rpc_send_offline_block_error_code::invalid_account_from;
 		error_response(response, (int)error_code_l, err.msg(error_code_l));
 		return;
 	}
+
+	dev::Address from(from_text);
 
 	if (!request.count("to") || (!request["to"].is_string()))
 	{
@@ -2131,8 +2134,7 @@ void mcp::rpc_handler::send_offline_block()
 		return;
 	}
 	std::string to_text = request["to"];
-	mcp::account to;
-	error = to.decode_account(to_text);
+	error = !dev::isAddress(to_text);
 	if (error)
 	{
 		error_code_l = mcp::rpc_send_offline_block_error_code::invalid_account_to;
@@ -2140,12 +2142,15 @@ void mcp::rpc_handler::send_offline_block()
 		return;
 	}
 
+	dev::Address to(to_text);
+
 	if (!request.count("amount") || (!request["amount"].is_string()))
 	{
 		error_code_l = mcp::rpc_send_offline_block_error_code::invalid_amount;
 		error_response(response, (int)error_code_l, err.msg(error_code_l));
 		return;
 	}
+
 	std::string amount_text = request["amount"];
 	mcp::amount amount;
 	error = !boost::conversion::try_lexical_convert(amount_text, amount);
@@ -2431,14 +2436,15 @@ void mcp::rpc_handler::sign_msg()
 	}
 
 	std::string account_text = request["account"];
-	mcp::account account;
-	auto error(account.decode_account(account_text));
+	auto error(!dev::isAddress(account_text));
 	if (error)
 	{
 		error_code_l = mcp::rpc_sign_msg_error_code::invalid_public_key;
 		error_response(response, (int)error_code_l, err.msg(error_code_l));
 		return;
 	}
+
+	dev::Address account(account_text);
 
 	if (!request.count("msg") || (!request["msg"].is_string()))
 	{
@@ -2572,7 +2578,7 @@ void mcp::rpc_handler::witness_list()
 	mcp::json witness_list_l = mcp::json::array();
 	for (auto i : w_param.witness_list)
 	{
-		witness_list_l.push_back(i.to_account());
+		witness_list_l.push_back(i.hexPrefixed());
 	}
 	response_l["witness_list"] = witness_list_l;
 
@@ -2643,7 +2649,7 @@ void mcp::rpc_handler::debug_trace_transaction()
 
 	//	mcp::json trace = m_chain->traceTransaction(e, options);
 	//	//response_l["gas"] = block->hashables->gas.str();
-	//	response_l["return_value"] = toHexPrefixed(er.output);
+	//	response_l["return_value"] = er.output.hexPrefixed();
 	//	response_l["struct_logs"] = trace;
 
 	//	error_code_l = mcp::rpc_debug_trace_transaction_error_code::ok;
@@ -2674,7 +2680,7 @@ void mcp::rpc_handler::debug_storage_range_at()
 	//	return;
 	//}
 
-	//mcp::account acct(0);
+	//dev::Address acct(0);
 	//if (!request.count("account") || !request["account"].is_string() || acct.decode_account(request["account"]))
 	//{
 	//	error_code_l = mcp::rpc_debug_storage_range_at_error_code::invalid_account;
@@ -4332,7 +4338,8 @@ void mcp::rpc_handler::eth_call()
 		return;
 	}
 
-	mcp::account from(0);
+	dev::Address from;
+
 	if (params[0].count("from"))
 	{
 		if (!params[0]["from"].is_string())
@@ -4341,13 +4348,14 @@ void mcp::rpc_handler::eth_call()
 			return;
 		}
 		std::string from_text = params[0]["from"];
-		if (from.decode_account(from_text))
+		if (!dev::isAddress(from_text))
 		{
 			error_eth_response(response, rpc_eth_error_code::invalid_from_account, response_l);
 			return;
 		}
+		from = dev::Address(from_text);
 	}
-
+	
 	if (!params[0].count("to") || (!params[0]["to"].is_string()))
 	{
 		error_eth_response(response, rpc_eth_error_code::invalid_to_account, response_l);
@@ -4355,12 +4363,13 @@ void mcp::rpc_handler::eth_call()
 	}
 
 	std::string to_text = params[0]["to"];
-	mcp::account to;
-	if (to.decode_account(to_text))
+	if (!dev::isAddress(to_text))
 	{
 		error_eth_response(response, rpc_eth_error_code::invalid_to_account, response_l);
 		return;
 	}
+
+	dev::Address to(to_text);
 
 	dev::bytes data;
 	if (params[0].count("data"))
@@ -4418,8 +4427,8 @@ void mcp::rpc_handler::eth_call()
 
 	//std::shared_ptr<mcp::block> block = std::make_shared<mcp::block>(
 	//	mcp::block_type::light,														// mcp::block_type type_a,
-	//	from,																		// mcp::account const & from_a,
-	//	to,																			// mcp::account const & to_a,
+	//	from,																		// dev::Address const & from_a,
+	//	to,																			// dev::Address const & to_a,
 	//	0,																			// mcp::amount const & amount_a,
 	//	0,																			// mcp::block_hash const & previous_a,
 	//	std::vector<mcp::block_hash>{},												// std::vector<mcp::block_hash> const & parents_a,
@@ -4550,11 +4559,12 @@ void mcp::rpc_handler::eth_getStorageAt()
 		return;
 	}
 
-	mcp::account account;
-	if (account.decode_account(params[0])) {
+	if (!dev::isAddress(params[0])) {
 		error_eth_response(response, rpc_eth_error_code::invalid_account, response_l);
 		return;
 	}
+
+	dev::Address account(params[0]);
 
 	uint256_t position;
 	if (hex_to_uint256(params[1], position, true)) {
@@ -4808,10 +4818,10 @@ void mcp::rpc_handler::eth_accounts()
 	}
 
 	mcp::json j_accounts = mcp::json::array();
-	std::list<mcp::account> account_list(m_key_manager->list());
+	std::list<dev::Address> account_list(m_key_manager->list());
 	for (auto account : account_list)
 	{
-		j_accounts.push_back(account.to_account());
+		j_accounts.push_back(account.hexPrefixed());
 	}
 	response_l["result"] = j_accounts;
 
@@ -4833,13 +4843,14 @@ void mcp::rpc_handler::eth_sign()
 	}
 
 	std::string account_text = params[0];
-	mcp::account account;
-	if (account.decode_account(account_text))
+	if (!dev::isAddress(account_text))
 	{
 		error_eth_response(response, rpc_eth_error_code::invalid_account, response_l);
 		return;
 	}
-	else if (!m_key_manager->exists(account))
+	
+	dev::Address account(account_text);
+	if (!m_key_manager->exists(account))
 	{
 		error_eth_response(response, rpc_eth_error_code::invalid_account, response_l);
 		return;
@@ -4890,21 +4901,31 @@ void mcp::rpc_handler::eth_signTransaction()
 		return;
 	}
 
-	mcp::account from;
 	if (!params.count("from") ||
 		!params["from"].is_string() ||
-		from.decode_account(params["from"]) ||
-		!m_key_manager->exists(from))
+		!dev::isAddress(params["from"]))
 	{
 		error_eth_response(response, rpc_eth_error_code::invalid_from_account, response_l);
 		return;
 	}
 
-	mcp::account to;
-	to.clear();
-	if (params.count("to") &&
-		(!params["to"].is_string() ||
-		to.decode_account(params["to"])))
+	std::string from_account = params["from"];
+	dev::Address from(from_account);
+	if (!m_key_manager->exists(from))
+	{
+		error_eth_response(response, rpc_eth_error_code::invalid_from_account, response_l);
+		return;
+	}
+
+	if (params.count("to") && !params["to"].is_string())
+	{
+		error_eth_response(response, rpc_eth_error_code::invalid_to_account, response_l);
+		return;
+	}
+
+	std::string to_account = params["to"];
+	dev::Address to(to_account);
+	if (!m_key_manager->exists(to))
 	{
 		error_eth_response(response, rpc_eth_error_code::invalid_to_account, response_l);
 		return;
@@ -4978,7 +4999,7 @@ void mcp::rpc_handler::eth_signTransaction()
 	rlpStream << nonce;
 	rlpStream << gas_price;
 	rlpStream << gas;
-	if (to.is_zero()) {
+	if (to == dev::Address(0)) {
 		rlpStream << "";
 	}
 	else {
@@ -5108,19 +5129,19 @@ void mcp::rpc_handler::eth_getLogs()
 		}
 	}
 
-	std::vector<mcp::account> search_address;
+	std::vector<dev::Address> search_address;
 	if (params.count("address") && !params["address"].is_null())
 	{
 		if (request["address"].is_string())
 		{
 			std::string account_text = params["account"];
-			mcp::account account;
-			bool error = account.decode_account(account_text);
+			bool error = !dev::isAddress(account_text);
 			if (error)
 			{
 				error_eth_response(response, rpc_eth_error_code::invalid_params, response_l);
 				return;
 			}
+			dev::Address account(account_text);
 			search_address.push_back(account);
 		}
 		else if (params["address"].is_array())
@@ -5128,13 +5149,13 @@ void mcp::rpc_handler::eth_getLogs()
 			std::vector<std::string> address_l = params["address"];
 			for (std::string const &address_text : address_l)
 			{
-				mcp::account address;
-				auto error(address.decode_account(address_text));
+				auto error(!dev::isAddress(address_text));
 				if (error)
 				{
 					error_eth_response(response, rpc_eth_error_code::invalid_params, response_l);
 					return;
 				}
+				dev::Address address(address_text);
 				search_address.push_back(address);
 			}
 		}
@@ -5187,8 +5208,8 @@ void mcp::rpc_handler::eth_getLogs()
 		if (!block_state->receipt)
 			continue;
 
-		std::unordered_set<mcp::account> existed_addresses;
-		for (mcp::account const &address : search_address)
+		std::unordered_set<dev::Address> existed_addresses;
+		for (dev::Address const &address : search_address)
 		{
 			if (block_state->receipt->contains_bloom(address.ref()))
 				existed_addresses.insert(address);
@@ -5268,7 +5289,7 @@ void mcp::rpc_handler::personal_importRawKey()
 
 	mcp::key_content kc = m_key_manager->importRawKey(prv, password);
 
-	response_l["result"] = kc.account.to_account();
+	response_l["result"] = kc.account.hexPrefixed();
 	response(response_l);
 }
 
@@ -5281,10 +5302,10 @@ void mcp::rpc_handler::personal_listAccounts()
 	}
 
 	mcp::json j_accounts = mcp::json::array();
-	std::list<mcp::account> account_list(m_key_manager->list());
+	std::list<dev::Address> account_list(m_key_manager->list());
 	for (auto account : account_list)
 	{
-		j_accounts.push_back(account.to_account());
+		j_accounts.push_back(account.hexPrefixed());
 	}
 	response_l["result"] = j_accounts;
 
@@ -5301,11 +5322,16 @@ void mcp::rpc_handler::personal_lockAccount()
 
 	mcp::json params = request["params"];
 	std::string account_text = params[0];
-	mcp::account account;
-	if (account.decode_account(account_text) ||
-		!m_key_manager->exists(account))
+	if (!dev::isAddress(account_text))
 	{
 		error_eth_response(response, rpc_eth_error_code::invalid_params, response_l);
+		return;
+	}
+
+	dev::Address account(account_text);
+	if (!m_key_manager->exists(account)) {
+		error_eth_response(response, rpc_eth_error_code::invalid_params, response_l);
+		return;
 	}
 
 	m_key_manager->lock(account);
@@ -5338,9 +5364,9 @@ void mcp::rpc_handler::personal_newAccount()
 		return;
 	}
 
-	mcp::account account = m_key_manager->create(password, false, true);
+	dev::Address account = m_key_manager->create(password, false, true);
 
-	response_l["result"] = account.to_account();
+	response_l["result"] = account.hexPrefixed();
 	response(response_l);
 }
 
@@ -5360,11 +5386,16 @@ void mcp::rpc_handler::personal_unlockAccount()
 	}
 
 	std::string account_text = params[0];
-	mcp::account account;
-	if (account.decode_account(account_text) ||
-		!m_key_manager->exists(account))
+	if (!dev::isAddress(account_text))
 	{
 		error_eth_response(response, rpc_eth_error_code::invalid_params, response_l);
+		return;
+	}
+
+	dev::Address account(account_text);
+	if (!m_key_manager->exists(account)) {
+		error_eth_response(response, rpc_eth_error_code::invalid_params, response_l);
+		return;
 	}
 
 	std::string password_text = params[1];
@@ -5397,24 +5428,31 @@ void mcp::rpc_handler::personal_sendTransaction()
 	}
 	std::string password = params[1];
 
-	mcp::account from;
 	if (!tx.count("from") ||
 		!tx["from"].is_string() ||
-		from.decode_account(tx["from"]) ||
-		!m_key_manager->exists(from))
+		!dev::isAddress(tx["from"]))
 	{
 		error_eth_response(response, rpc_eth_error_code::invalid_from_account, response_l);
 		return;
 	}
 
-	mcp::account to;
-	to.clear();
-	if (tx.count("to") &&
-		(!tx["to"].is_string() ||
-			to.decode_account(tx["to"])))
+	std::string from_account = tx["from"];
+	dev::Address from(from_account);
+	if (!m_key_manager->exists(from))
 	{
-		error_eth_response(response, rpc_eth_error_code::invalid_to_account, response_l);
+		error_eth_response(response, rpc_eth_error_code::invalid_from_account, response_l);
 		return;
+	}
+
+	dev::Address to;
+	if (tx.count("to"))
+	{
+		if (!tx["to"].is_string() || dev::isAddress(tx["to"])) {
+			error_eth_response(response, rpc_eth_error_code::invalid_to_account, response_l);
+			return;
+		}
+		std::string to_account = tx["to"];
+		to = dev::Address(to_account);
 	}
 
 	uint256_t amount(0);
@@ -5537,13 +5575,14 @@ void mcp::rpc_handler::personal_sign()
 	}
 	
 	std::string account_text = params[1];
-	mcp::account account;
-	if (account.decode_account(account_text))
+	if (!dev::isAddress(account_text))
 	{
 		error_eth_response(response, rpc_eth_error_code::invalid_account, response_l);
 		return;
 	}
-	else if (!m_key_manager->exists(account))
+	
+	dev::Address account(account_text);
+	if (!m_key_manager->exists(account))
 	{
 		error_eth_response(response, rpc_eth_error_code::invalid_account, response_l);
 		return;
@@ -5597,8 +5636,8 @@ void mcp::rpc_handler::personal_ecRecover()
 	dev::bytes digest;
 	get_eth_signed_msg(data, digest);
 
-	mcp::account from(mcp::encry::recover(sig, dev::bytesConstRef(digest.data(), digest.size())));
-	response_l["result"] = from.to_account();
+	dev::Address from = fromPublic(mcp::encry::recover(sig, dev::bytesConstRef(digest.data(), digest.size())));
+	response_l["result"] = from.hexPrefixed();
 
 	response(response_l);
 }
