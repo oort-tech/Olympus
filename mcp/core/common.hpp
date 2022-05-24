@@ -627,6 +627,7 @@ namespace mcp
 	bool isZeroH256(u256 const& _r);
 
 	Address toAddress(std::string const& _s);
+	bool isAddress(std::string const& _s);
 
 	// OS-specific way of finding a path to a home directory.
 	boost::filesystem::path working_path();

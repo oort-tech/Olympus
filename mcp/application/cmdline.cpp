@@ -19,7 +19,7 @@ bool mcp::handle_node_options(boost::program_options::variables_map & vm)
 			std::string password = mcp::getPassword("Enter the current passphrase for the remove account:");
 			vm_instance instance(data_path);
 			std::string account_text = vm["account"].as<std::string>();
-			if (dev::isAddress(account_text))
+			if (mcp::isAddress(account_text))
 			{
 				dev::Address account(account_text);
 				bool exists(instance.key_manager->exists(account));

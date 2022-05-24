@@ -93,7 +93,7 @@ bool mcp::Executive::call(Address const& _receiveAddress, Address const& _sender
     return call(params, _gasPrice, _senderAddress);
 }
 
-bool mcp::Executive::call(dev::eth::CallParameters const& _p, u256 const& _gasPrice, mcp::Address const& _origin)
+bool mcp::Executive::call(dev::eth::CallParameters const& _p, u256 const& _gasPrice, Address const& _origin)
 {
 	// If external transaction.
     if (m_t)

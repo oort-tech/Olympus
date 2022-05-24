@@ -543,7 +543,7 @@ void mcp::rpc_handler::account_remove()
 		bool error(true);
 		if (request.count("account") && request["account"].is_string())
 		{
-			error = !dev::isAddress(request["account"]);
+			error = !mcp::isAddress(request["account"]);
 		}
 		if (!error)
 		{
@@ -600,7 +600,7 @@ void mcp::rpc_handler::account_password_change()
 		bool error(true);
 		if (request.count("account") && request["account"].is_string())
 		{
-			error = !dev::isAddress(request["account"]);
+			error = !mcp::isAddress(request["account"]);
 		}
 		if (!error)
 		{
@@ -679,7 +679,7 @@ void mcp::rpc_handler::account_unlock()
 		if (request.count("account") && request["account"].is_string())
 		{
 			std::string account_text = request["account"];
-			if (dev::isAddress(account_text))
+			if (mcp::isAddress(account_text))
 			{
 				dev::Address account(account_text);
 				auto exists(m_key_manager->exists(account));
@@ -738,7 +738,7 @@ void mcp::rpc_handler::account_lock()
 		if (request.count("account") && request["account"].is_string())
 		{
 			std::string account_text = request["account"];
-			if (dev::isAddress(account_text))
+			if (mcp::isAddress(account_text))
 			{
 				dev::Address account(account_text);
 				auto exists(m_key_manager->exists(account));
@@ -778,7 +778,7 @@ void mcp::rpc_handler::account_export()
 	if (request.count("account") && request["account"].is_string())
 	{
 		std::string account_text = request["account"];
-		if (dev::isAddress(account_text))
+		if (mcp::isAddress(account_text))
 		{
 			dev::Address account(account_text);
 			mcp::key_content kc;
@@ -912,7 +912,7 @@ void mcp::rpc_handler::accounts_balances()
 	for (mcp::json const &j_account : request["accounts"])
 	{
 		std::string account_text = j_account;
-		auto error(!dev::isAddress(account_text));
+		auto error(!mcp::isAddress(account_text));
 		if (!error)
 		{
 			dev::Address account(account_text);
@@ -945,7 +945,7 @@ void mcp::rpc_handler::account_block_list()
 	}
 
 	std::string account_text = request["account"];
-	if (!dev::isAddress(account_text))
+	if (!mcp::isAddress(account_text))
 	{
 		error_code_l = mcp::rpc_account_block_list_error_code::invalid_account;
 		error_response(response, (int)error_code_l, err.msg(error_code_l));
@@ -1061,7 +1061,7 @@ void mcp::rpc_handler::account_state_list()
 	}
 
 	std::string account_text = request["account"];
-	if (!dev::isAddress(account_text))
+	if (!mcp::isAddress(account_text))
 	{
 		error_code_l = mcp::rpc_account_block_list_error_code::invalid_account;
 		error_response(response, (int)error_code_l, err.msg(error_code_l));
@@ -2117,7 +2117,7 @@ void mcp::rpc_handler::send_offline_block()
 		return;
 	}
 	std::string from_text = request["from"];
-	auto error(!dev::isAddress(from_text));
+	auto error(!mcp::isAddress(from_text));
 	if (error)
 	{
 		error_code_l = mcp::rpc_send_offline_block_error_code::invalid_account_from;
@@ -2134,7 +2134,7 @@ void mcp::rpc_handler::send_offline_block()
 		return;
 	}
 	std::string to_text = request["to"];
-	error = !dev::isAddress(to_text);
+	error = !mcp::isAddress(to_text);
 	if (error)
 	{
 		error_code_l = mcp::rpc_send_offline_block_error_code::invalid_account_to;
@@ -2436,7 +2436,7 @@ void mcp::rpc_handler::sign_msg()
 	}
 
 	std::string account_text = request["account"];
-	auto error(!dev::isAddress(account_text));
+	auto error(!mcp::isAddress(account_text));
 	if (error)
 	{
 		error_code_l = mcp::rpc_sign_msg_error_code::invalid_public_key;
@@ -4348,7 +4348,7 @@ void mcp::rpc_handler::eth_call()
 			return;
 		}
 		std::string from_text = params[0]["from"];
-		if (!dev::isAddress(from_text))
+		if (!mcp::isAddress(from_text))
 		{
 			error_eth_response(response, rpc_eth_error_code::invalid_from_account, response_l);
 			return;
@@ -4363,7 +4363,7 @@ void mcp::rpc_handler::eth_call()
 	}
 
 	std::string to_text = params[0]["to"];
-	if (!dev::isAddress(to_text))
+	if (!mcp::isAddress(to_text))
 	{
 		error_eth_response(response, rpc_eth_error_code::invalid_to_account, response_l);
 		return;
@@ -4559,7 +4559,7 @@ void mcp::rpc_handler::eth_getStorageAt()
 		return;
 	}
 
-	if (!dev::isAddress(params[0])) {
+	if (!mcp::isAddress(params[0])) {
 		error_eth_response(response, rpc_eth_error_code::invalid_account, response_l);
 		return;
 	}
@@ -4604,6 +4604,185 @@ void mcp::rpc_handler::eth_getTransactionByHash()
 	{
 		//throw JsonRpcException(exceptionToErrorMessage());
 	}
+}
+
+void mcp::rpc_handler::eth_getTransactionByBlockHashAndIndex()
+{
+	mcp::json response_l;
+	if (!is_eth_rpc(response_l))
+	{
+		return;
+	}
+
+	mcp::json params = request["params"];
+	if (params.size() != 2) {
+		error_eth_response(response, rpc_eth_error_code::invalid_params, response_l);
+		return;
+	}
+
+	if (params[1] != "0x0") {
+		error_eth_response(response, rpc_eth_error_code::invalid_params, response_l);
+		return;
+	}
+
+	mcp::block_hash block_hash;
+	if (block_hash.decode_hex(params[0], true)) {
+		error_eth_response(response, rpc_eth_error_code::invalid_params, response_l);
+		return;
+	}
+
+	mcp::db::db_transaction transaction(m_store.create_transaction());
+	std::shared_ptr<mcp::block_state> state(m_cache->block_state_get(transaction, block_hash));
+	if (block_hash != mcp::genesis::block_hash && state != nullptr)
+	{
+		auto block(m_cache->block_get(transaction, block_hash));
+		if (block != nullptr) {
+			if (state->is_stable)
+			{
+				/*if (state->status == mcp::block_status::ok) {
+					mcp::json json_receipt;
+					json_receipt["hash"] = block_hash.to_string(true);
+					json_receipt["nonce"] = 0;
+					if (state->receipt != boost::none) {
+						std::shared_ptr<mcp::account_state> acc_state(m_store.account_state_get(transaction, state->receipt->from_state));
+						assert_x(acc_state);
+						json_receipt["nonce"] = uint256_to_hex_nofill(acc_state->nonce() - 1);
+					}
+					json_receipt["blockHash"] = block_hash.to_string(true);
+					json_receipt["blockNumber"] = uint64_to_hex_nofill(state->main_chain_index.get());
+					json_receipt["transactionIndex"] = "0x0";
+					json_receipt["from"] = block->hashables->from.to_account();
+					if (block->isCreation()) {
+						json_receipt["to"] = nullptr;
+					}
+					else {
+						json_receipt["to"] = block->hashables->to.to_account();
+					}
+					json_receipt["value"] = uint256_to_hex_nofill(block->hashables->amount);
+					json_receipt["gas"] = uint256_to_hex_nofill(block->hashables->gas);
+					json_receipt["input"] = "0x" + bytes_to_hex(block->data);
+					json_receipt["gasPrice"] = uint64_to_hex_nofill(1000000000);
+					json_receipt["v"] = block->signature.v;
+					json_receipt["r"] = block->signature.r.to_string_no_fill(true);
+					json_receipt["s"] = block->signature.s.to_string_no_fill(true);
+					response_l["result"] = json_receipt;
+				}
+				else if (state->status == mcp::block_status::fail) {
+					error_eth_response(response, rpc_eth_error_code::TRANSACTION_REJECTED, response_l);
+					return;
+				}*/
+			}
+		}
+	}
+
+	response(response_l);
+}
+
+void mcp::rpc_handler::eth_getTransactionByBlockNumberAndIndex()
+{
+	mcp::json response_l;
+	if (!is_eth_rpc(response_l))
+	{
+		return;
+	}
+
+	mcp::json params = request["params"];
+	if (params.size() != 2)
+	{
+		error_eth_response(response, rpc_eth_error_code::invalid_params, response_l);
+		return;
+	}
+
+	if (params[1] != "0x0") {
+		error_eth_response(response, rpc_eth_error_code::invalid_params, response_l);
+		return;
+	}
+
+	uint64_t block_number;
+	if (params[0].is_string())
+	{
+		std::string block_numberText = params[0];
+		if (block_numberText == "latest")
+		{
+			block_number = m_chain->last_stable_mci();
+		}
+		else if (block_numberText == "earliest")
+		{
+			block_number = 0;
+		}
+		else if (block_numberText.find("0x") == 0)
+		{
+			if (hex_to_uint64(block_numberText, block_number, true))
+			{
+				error_eth_response(response, rpc_eth_error_code::invalid_block_number, response_l);
+				return;
+			}
+		}
+		else
+		{
+			error_eth_response(response, rpc_eth_error_code::invalid_block_number, response_l);
+			return;
+		}
+	}
+	else
+	{
+		error_eth_response(response, rpc_eth_error_code::invalid_block_number, response_l);
+		return;
+	}
+
+	mcp::db::db_transaction transaction(m_store.create_transaction());
+	mcp::block_hash block_hash;
+	if (m_store.main_chain_get(transaction, block_number, block_hash))
+	{
+		error_eth_response(response, rpc_eth_error_code::invalid_block_number, response_l);
+		return;
+	}
+
+	std::shared_ptr<mcp::block_state> state(m_cache->block_state_get(transaction, block_hash));
+
+	if (block_hash != mcp::genesis::block_hash && state != nullptr)
+	{
+		auto block(m_cache->block_get(transaction, block_hash));
+		if (block != nullptr) {
+			if (state->is_stable)
+			{
+				/*if (state->status == mcp::block_status::ok) {
+					mcp::json json_receipt;
+					json_receipt["hash"] = block_hash.to_string(true);
+					json_receipt["nonce"] = 0;
+					if (state->receipt != boost::none) {
+						std::shared_ptr<mcp::account_state> acc_state(m_store.account_state_get(transaction, state->receipt->from_state));
+						assert_x(acc_state);
+						json_receipt["nonce"] = uint256_to_hex_nofill(acc_state->nonce() - 1);
+					}
+					json_receipt["blockHash"] = block_hash.to_string(true);
+					json_receipt["blockNumber"] = uint64_to_hex_nofill(state->main_chain_index.get());
+					json_receipt["transactionIndex"] = "0x0";
+					json_receipt["from"] = block->hashables->from.to_account();
+					if (block->isCreation()) {
+						json_receipt["to"] = nullptr;
+					}
+					else {
+						json_receipt["to"] = block->hashables->to.to_account();
+					}
+					json_receipt["value"] = uint256_to_hex_nofill(block->hashables->amount);
+					json_receipt["gas"] = uint256_to_hex_nofill(block->hashables->gas);
+					json_receipt["input"] = "0x" + bytes_to_hex(block->data);
+					json_receipt["gasPrice"] = uint64_to_hex_nofill(1000000000);
+					json_receipt["v"] = block->signature.v;
+					json_receipt["r"] = block->signature.r.to_string_no_fill(true);
+					json_receipt["s"] = block->signature.s.to_string_no_fill(true);
+					response_l["result"] = json_receipt;
+				}
+				else if (state->status == mcp::block_status::fail) {
+					error_eth_response(response, rpc_eth_error_code::TRANSACTION_REJECTED, response_l);
+					return;
+				}*/
+			}
+		}
+	}
+
+	response(response_l);
 }
 
 void mcp::rpc_handler::eth_getBalance() {
@@ -4843,7 +5022,7 @@ void mcp::rpc_handler::eth_sign()
 	}
 
 	std::string account_text = params[0];
-	if (!dev::isAddress(account_text))
+	if (!mcp::isAddress(account_text))
 	{
 		error_eth_response(response, rpc_eth_error_code::invalid_account, response_l);
 		return;
@@ -4903,7 +5082,7 @@ void mcp::rpc_handler::eth_signTransaction()
 
 	if (!params.count("from") ||
 		!params["from"].is_string() ||
-		!dev::isAddress(params["from"]))
+		!mcp::isAddress(params["from"]))
 	{
 		error_eth_response(response, rpc_eth_error_code::invalid_from_account, response_l);
 		return;
@@ -5135,7 +5314,7 @@ void mcp::rpc_handler::eth_getLogs()
 		if (request["address"].is_string())
 		{
 			std::string account_text = params["account"];
-			bool error = !dev::isAddress(account_text);
+			bool error = !mcp::isAddress(account_text);
 			if (error)
 			{
 				error_eth_response(response, rpc_eth_error_code::invalid_params, response_l);
@@ -5149,7 +5328,7 @@ void mcp::rpc_handler::eth_getLogs()
 			std::vector<std::string> address_l = params["address"];
 			for (std::string const &address_text : address_l)
 			{
-				auto error(!dev::isAddress(address_text));
+				auto error(!mcp::isAddress(address_text));
 				if (error)
 				{
 					error_eth_response(response, rpc_eth_error_code::invalid_params, response_l);
@@ -5202,17 +5381,17 @@ void mcp::rpc_handler::eth_getLogs()
 		std::shared_ptr<mcp::block_state> block_state(m_cache->block_state_get(transaction, block_hash));
 		assert_x(block_state);
 
-		if (block_state->block_type != mcp::block_type::light)
-			continue;
+		//if (block_state->block_type != mcp::block_type::light)
+		//	continue;
 
-		if (!block_state->receipt)
-			continue;
+		//if (!block_state->receipt)
+		//	continue;
 
 		std::unordered_set<dev::Address> existed_addresses;
 		for (dev::Address const &address : search_address)
 		{
-			if (block_state->receipt->contains_bloom(address.ref()))
-				existed_addresses.insert(address);
+			//if (block_state->receipt->contains_bloom(address.ref()))
+			//	existed_addresses.insert(address);
 		}
 		if (search_address.size() > 0 && existed_addresses.size() == 0)
 			continue;
@@ -5220,14 +5399,14 @@ void mcp::rpc_handler::eth_getLogs()
 		std::unordered_set<dev::h256> existed_topics;
 		for (dev::h256 const &topic : search_topics)
 		{
-			if (block_state->receipt->contains_bloom(topic))
-				existed_topics.insert(topic);
+			//if (block_state->receipt->contains_bloom(topic))
+			//	existed_topics.insert(topic);
 		}
 
 		if (search_topics.size() > 0 && existed_topics.size() == 0)
 			continue;
 
-		for (auto const &log : block_state->receipt->log)
+		/*for (auto const &log : block_state->receipt->log)
 		{
 			if (search_address.empty() || existed_addresses.count(log.acct))
 			{
@@ -5249,7 +5428,7 @@ void mcp::rpc_handler::eth_getLogs()
 					}
 				}
 			}
-		}
+		}*/
 	}
 
 	response_l["result"] = logs_l;
@@ -5322,7 +5501,7 @@ void mcp::rpc_handler::personal_lockAccount()
 
 	mcp::json params = request["params"];
 	std::string account_text = params[0];
-	if (!dev::isAddress(account_text))
+	if (!mcp::isAddress(account_text))
 	{
 		error_eth_response(response, rpc_eth_error_code::invalid_params, response_l);
 		return;
@@ -5386,7 +5565,7 @@ void mcp::rpc_handler::personal_unlockAccount()
 	}
 
 	std::string account_text = params[0];
-	if (!dev::isAddress(account_text))
+	if (!mcp::isAddress(account_text))
 	{
 		error_eth_response(response, rpc_eth_error_code::invalid_params, response_l);
 		return;
@@ -5430,7 +5609,7 @@ void mcp::rpc_handler::personal_sendTransaction()
 
 	if (!tx.count("from") ||
 		!tx["from"].is_string() ||
-		!dev::isAddress(tx["from"]))
+		!mcp::isAddress(tx["from"]))
 	{
 		error_eth_response(response, rpc_eth_error_code::invalid_from_account, response_l);
 		return;
@@ -5447,7 +5626,7 @@ void mcp::rpc_handler::personal_sendTransaction()
 	dev::Address to;
 	if (tx.count("to"))
 	{
-		if (!tx["to"].is_string() || dev::isAddress(tx["to"])) {
+		if (!tx["to"].is_string() || mcp::isAddress(tx["to"])) {
 			error_eth_response(response, rpc_eth_error_code::invalid_to_account, response_l);
 			return;
 		}
@@ -5507,7 +5686,7 @@ void mcp::rpc_handler::personal_sendTransaction()
 	bool gen_next_work_l(false);
 	bool async(false);
 	auto rpc_l(shared_from_this());
-	m_wallet->send_async(
+	/*m_wallet->send_async(
 		mcp::block_type::light, previous_opt, from, to, amount, gas, gas_price, data, password, [response_l, rpc_l, this](mcp::send_result result)
 	{
 		mcp::json response_j = response_l;
@@ -5544,7 +5723,7 @@ void mcp::rpc_handler::personal_sendTransaction()
 			error_eth_response(response, rpc_eth_error_code::unknown_error, response_j);
 			break;
 		} },
-		gen_next_work_l, async);
+		gen_next_work_l, async);*/
 }
 
 void mcp::rpc_handler::personal_sign()
@@ -5575,7 +5754,7 @@ void mcp::rpc_handler::personal_sign()
 	}
 	
 	std::string account_text = params[1];
-	if (!dev::isAddress(account_text))
+	if (!mcp::isAddress(account_text))
 	{
 		error_eth_response(response, rpc_eth_error_code::invalid_account, response_l);
 		return;

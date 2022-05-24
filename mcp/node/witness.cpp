@@ -23,7 +23,7 @@ mcp::witness::witness(mcp::error_message & error_msg,
     m_witness_get_current_chain(true),
     m_last_witness_block_hash(last_witness_block_hash_a)
 {
-	bool error(!dev::isAddress(account_or_file_text));
+	bool error(!mcp::isAddress(account_or_file_text));
 	if (error)
 	{
 		mcp::key_content kc;

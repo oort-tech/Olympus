@@ -774,6 +774,16 @@ Address mcp::toAddress(std::string const& _s)
 	BOOST_THROW_EXCEPTION(InvalidAddress());
 }
 
+bool mcp::isAddress(std::string const& _s)
+{
+	if (dev::isHex(_s)) {
+		return (_s.length() + (_s.substr(0, 2) == "0x" ? 0 : 2) == 42) ? true : false;
+	}
+	else {
+		return false;
+	}
+}
+
 mcp::call_trace_action::call_trace_action(bool & error_a, dev::RLP const & r)
 {
 	error_a = r.itemCount() != 6;
