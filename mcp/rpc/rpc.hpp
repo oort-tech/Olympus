@@ -3,21 +3,24 @@
 #include <atomic>
 #include <boost/asio.hpp>
 #include <boost/beast.hpp>
-#include <mcp/common/utility.hpp>
 #include <unordered_map>
+#include <libevm/ExtVMFace.h>
+
+#include <mcp/common/utility.hpp>
 #include <mcp/common/log.hpp>
 #include <mcp/common/mcp_json.hpp>
 #include <mcp/db/database.hpp>
-#include <libevm/ExtVMFace.h>
 #include <mcp/node/chain.hpp>
 #include <mcp/wallet/key_manager.hpp>
 #include <mcp/wallet/wallet.hpp>
 
+#include <libdevcore/Exceptions.h>
+
 namespace mcp
 {
-void error_response(std::function<void(mcp::json const &)> response_a, int const& error_code, std::string const & message_a, mcp::json& json_a);
-void error_response(std::function<void(mcp::json const &)> response_a, int const& error_code, std::string const & message_a);
-void error_response(std::function<void(mcp::json const &)> response_a, std::string const & message_a);
+void rpc_response(std::function<void(mcp::json const &)> response_a, int const& error_code, std::string const & message_a, mcp::json& json_a);
+void rpc_response(std::function<void(mcp::json const &)> response_a, int const& error_code, std::string const & message_a);
+void rpc_response(std::function<void(mcp::json const &)> response_a, std::string const & message_a);
 
 class rpc_config
 {
@@ -33,6 +36,7 @@ public:
 	bool enable_control;
     bool rpc_enable;
 };
+
 enum class payment_status
 {
 	not_a_status,
@@ -69,6 +73,7 @@ public:
 	mcp::block_store m_store;
     mcp::log m_log = { mcp::log("rpc") };
 };
+
 class rpc_connection : public std::enable_shared_from_this<mcp::rpc_connection>
 {
 public:
@@ -396,14 +401,13 @@ enum class rpc_eth_error_code
 	invalid_from_account = 11,
 	invalid_to_account = 12,
 	invalid_hash = 13,
-	insufficient_balance = 14,
-	data_size_too_large = 15,
+	invalid_nonce = 14,
+	insufficient_balance = 15,
+	data_size_too_large = 16,
 
-	validate_error = 16,
-	block_error = 17,
-	unknown_error = 18,
-
-	invalid_nonce = 21,
+	validate_error = 21,
+	block_error = 22,
+	unknown_error = 23,
 
 	PARSE_ERROR = -32700,
 	INVALID_REQUEST = -32600,
@@ -417,6 +421,21 @@ enum class rpc_eth_error_code
 // added by michael at 3/7
 void error_eth_response(std::function<void(mcp::json const &)> response_a, mcp::rpc_eth_error_code error_code, mcp::json& json_a);
 //
+
+struct RpcException : virtual Exception
+{                            
+	const char* what() const noexcept override { return "OK"; }
+	const int virtual code() const noexcept { return 0; }
+};
+
+#define RPC_ERROR_EXCEPTION(X, C, M)  \
+    struct X : virtual RpcException \
+    {                            \
+		const char* what() const noexcept override { return M; } \
+		const int code() const noexcept override { return C; } \
+    }
+
+RPC_ERROR_EXCEPTION(RPC_Error_InvalidAccount, 1, "Invalid account");
 
 class rpc_error_msg 
 {
@@ -457,99 +476,105 @@ public:
 	std::string msg(mcp::rpc_web3_sha3_error_code const & err_a);
 };
 
+template <class I> using AbstractRPCMethodPointer = void(I::*)(mcp::json &);
+
 class rpc_handler : public std::enable_shared_from_this<mcp::rpc_handler>
 {
+	using RPCMethodPointer = AbstractRPCMethodPointer<rpc_handler>;
+
 public:
     rpc_handler(mcp::rpc &, std::string const &, std::function<void(mcp::json const &)>const & ,int m_cap);
-    void process_request ();
+    void process_request();
 
-	void account_list();
-	void account_validate();
-	void account_create();
-	void account_remove();
-	void account_unlock();
-	void account_lock();
-	void account_export();
-	void account_import();
-	void account_password_change();
-	void account_code();
-	void account_balance();
-	void accounts_balances();
-	void account_block_list();
-	void account_state_list();
+	void account_list(mcp::json & j_response);
+	void account_validate(mcp::json & j_response);
+	void account_create(mcp::json & j_response);
+	void account_remove(mcp::json & j_response);
+	void account_unlock(mcp::json & j_response);
+	void account_lock(mcp::json & j_response);
+	void account_export(mcp::json & j_response);
+	void account_import(mcp::json & j_response);
+	void account_password_change(mcp::json & j_response);
+	void account_code(mcp::json & j_response);
+	void account_balance(mcp::json & j_response);
+	void accounts_balances(mcp::json & j_response);
+	void account_block_list(mcp::json & j_response);
+	void account_state_list(mcp::json & j_response);
 
-	void block ();
-	void blocks();
-	void block_state();
-	void block_states();
-	void block_traces();
-	void stable_blocks();
+	void block (mcp::json & j_response);
+	void blocks(mcp::json & j_response);
+	void block_state(mcp::json & j_response);
+	void block_states(mcp::json & j_response);
+	void block_traces(mcp::json & j_response);
+	void stable_blocks(mcp::json & j_response);
 
-	void send_block();
-	void generate_offline_block();
-	void send_offline_block();
-	void block_summary();
-	void sign_msg();
+	void send_block(mcp::json & j_response);
+	void generate_offline_block(mcp::json & j_response);
+	void send_offline_block(mcp::json & j_response);
+	void block_summary(mcp::json & j_response);
+	void sign_msg(mcp::json & j_response);
 
-	void version();
-	void status();
-	void peers();
-	void nodes();
-	void witness_list();
+	void version(mcp::json & j_response);
+	void status(mcp::json & j_response);
+	void peers(mcp::json & j_response);
+	void nodes(mcp::json & j_response);
+	void witness_list(mcp::json & j_response);
 
-    void estimate_gas();
-    void call();
+    void estimate_gas(mcp::json & j_response);
+    void call(mcp::json & j_response);
 
-	void debug_trace_transaction();
-	void debug_storage_range_at();
+	void debug_trace_transaction(mcp::json & j_response);
+	void debug_storage_range_at(mcp::json & j_response);
 
-	void logs();
+	void logs(mcp::json & j_response);
 
-    // added by michael
     bool is_eth_rpc(mcp::json &response);
 	void get_eth_signed_msg(dev::bytes & data, dev::bytes & digest);
-    void eth_blockNumber();
-    void eth_getTransactionCount();
-    void eth_chainId();
-    void eth_gasPrice();
-    void eth_estimateGas();
-    void eth_getBlockByNumber();
-	void eth_getBlockTransactionCountByHash();
-	void eth_getBlockTransactionCountByNumber();
-    void eth_sendRawTransaction();
-    void eth_sendTransaction();
-    void eth_call();
-    void net_version();
-	void net_listening();
-	void net_peerCount();
-	void eth_protocolVersion();
-	void eth_syncing();
-	void eth_getLogs();
-    bool try_get_mc_info(dev::eth::McInfo &mc_info_a, uint64_t &mci);
+	bool try_get_mc_info(dev::eth::McInfo &mc_info_a, uint64_t &mci);
+
+	void web3_clientVersion(mcp::json & j_response);
+	void web3_sha3(mcp::json & j_response);
+
+    void eth_blockNumber(mcp::json & j_response);
+    void eth_getTransactionCount(mcp::json & j_response);
+    void eth_chainId(mcp::json & j_response);
+    void eth_gasPrice(mcp::json & j_response);
+    void eth_estimateGas(mcp::json & j_response);
+    void eth_getBlockByNumber(mcp::json & j_response);
+	void eth_getBlockTransactionCountByHash(mcp::json & j_response);
+	void eth_getBlockTransactionCountByNumber(mcp::json & j_response);
+    void eth_sendRawTransaction(mcp::json & j_response);
+    void eth_sendTransaction(mcp::json & j_response);
+    void eth_call(mcp::json & j_response);
+    void net_version(mcp::json & j_response);
+	void net_listening(mcp::json & j_response);
+	void net_peerCount(mcp::json & j_response);
+	void eth_protocolVersion(mcp::json & j_response);
+	void eth_syncing(mcp::json & j_response);
+	void eth_getLogs(mcp::json & j_response);
     // related to the upgrades
-    void web3_clientVersion();
-	void web3_sha3();
-    void eth_getCode();
-    void eth_getStorageAt();
-    void eth_getTransactionByHash();
-	void eth_getTransactionByBlockHashAndIndex();
-	void eth_getTransactionByBlockNumberAndIndex();
-    void eth_getTransactionReceipt();
-	void eth_getBalance();
+    void eth_getCode(mcp::json & j_response);
+    void eth_getStorageAt(mcp::json & j_response);
+	void eth_getTransactionByHash(mcp::json & j_response);
+	//
+	void eth_getTransactionByBlockHashAndIndex(mcp::json & j_response);
+	void eth_getTransactionByBlockNumberAndIndex(mcp::json & j_response);
+    void eth_getTransactionReceipt(mcp::json & j_response);
+	void eth_getBalance(mcp::json & j_response);
 	// related to the metamask
-	void eth_getBlockByHash();
-	void eth_accounts();
-	void eth_sign();
-	void eth_signTransaction();
+	void eth_getBlockByHash(mcp::json & j_response);
+	void eth_accounts(mcp::json & j_response);
+	void eth_sign(mcp::json & j_response);
+	void eth_signTransaction(mcp::json & j_response);
 	// related to personal
-	void personal_importRawKey();
-	void personal_listAccounts();
-	void personal_lockAccount();
-	void personal_newAccount();
-	void personal_unlockAccount();
-	void personal_sendTransaction();
-	void personal_sign();
-	void personal_ecRecover();
+	void personal_importRawKey(mcp::json & j_response);
+	void personal_listAccounts(mcp::json & j_response);
+	void personal_lockAccount(mcp::json & j_response);
+	void personal_newAccount(mcp::json & j_response);
+	void personal_unlockAccount(mcp::json & j_response);
+	void personal_sendTransaction(mcp::json & j_response);
+	void personal_sign(mcp::json & j_response);
+	void personal_ecRecover(mcp::json & j_response);
 
 	std::string body;
 	mcp::rpc & rpc;
@@ -568,6 +593,9 @@ private:
 	std::shared_ptr<mcp::composer> m_composer;
 	std::shared_ptr<mcp::async_task> m_background;
 	mcp::block_store m_store;
+
+	// added by michael at 5/24
+	std::map<std::string, RPCMethodPointer> m_rpcMethods;
 	
 	bool try_get_bool_from_json(std::string const& field_name_a,bool & value_a );
     bool try_get_uint64_t_from_json(std::string const& field_name_a, uint64_t & value_a);
