@@ -523,7 +523,7 @@ void mcp::rpc_handler::account_validate(mcp::json & j_response)
 	mcp::rpc_account_validate_error_code error_code_l;
 	if (!request.count("account") || !request["account"].is_string())
 	{
-		throw RPC_Error_InvalidAccount();
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccount());
 	}
 
 	std::string account_text = request["account"];
