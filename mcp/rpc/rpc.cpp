@@ -1971,7 +1971,7 @@ void mcp::rpc_handler::send_block(mcp::json & j_response)
 		auto fun = [rpc_l, &j_response, this](h256 h)
 		{
 			j_response["result"] = toJS(h);
-			response(j_response);
+			//response(j_response);
 		};
 
 		TransactionSkeleton t = mcp::toTransactionSkeleton(request);
