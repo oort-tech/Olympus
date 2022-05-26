@@ -129,7 +129,7 @@ int main(int argc, char * const * argv)
 	h256 s_max1{ "0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141" };
 	std::cout << s_max1.hex() << std::endl;
 	*/
-	// test_encrypt_decrypt();
+	test_encrypt_decrypt();
 	// test_eth_sign();
 
 	std::cout << std::endl;

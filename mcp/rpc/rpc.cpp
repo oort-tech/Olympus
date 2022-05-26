@@ -10,6 +10,7 @@
 #include <libdevcore/CommonJS.h>
 #include <libdevcore/CommonData.h>
 
+#include "exceptions.hpp"
 #include "jsonHelper.hpp"
 
 mcp::rpc_config::rpc_config() : rpc_config(false)
@@ -1095,18 +1096,13 @@ void mcp::rpc_handler::account_balance(mcp::json & j_response)
 		std::string account_text = request["account"];
 		mcp::db::db_transaction transaction(m_store.create_transaction());
 		chain_state c_state(transaction, 0, m_store, m_chain, m_cache);
+
 		auto balance(c_state.balance(jsToAddress(account_text)));
-
 		j_response["balance"] = balance.convert_to<std::string>();
-
-		auto error_code_l = mcp::rpc_account_balance_error_code::ok;
-		rpc_response(response, (int)error_code_l, err.msg(error_code_l), j_response);
 	}
 	catch (...)
 	{
-		mcp::json j_response;
-		error_eth_response(response, rpc_eth_error_code::invalid_params, j_response);
-		//BOOST_THROW_EXCEPTION(JsonRpcException(Errors::ERROR_RPC_INVALID_PARAMS));
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams());
 	}
 }
 
@@ -2120,19 +2116,18 @@ void mcp::rpc_handler::send_block(mcp::json & j_response)
 {
 	try
 	{
-		//optional,account locked but input password will unlock.or else return account locked.
+		// optional, account locked but input password will unlock.or else return account locked.
 		boost::optional<std::string> password;
-		if (request.count("password") && request["password"].is_string())
-		{
-			std::string password_str = request["password"];
-			password = password_str;
+		if (request.count("password") && request["password"].is_string()) {
+			password = request["password"].get<std::string>();
 		}
 
 		auto rpc_l(shared_from_this());
-		auto fun = [rpc_l, &j_response, this](h256 h)
+		auto fun = [rpc_l, j_response, this](h256 h)
 		{
-			j_response["result"] = toJS(h);
-			//response(j_response);
+			mcp::json j_res = j_response;
+			j_res["result"] = toJS(h);
+			response(j_res);
 		};
 
 		TransactionSkeleton t = mcp::toTransactionSkeleton(request);

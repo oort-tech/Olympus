@@ -13,6 +13,7 @@ namespace mcp
 
 		if (_json.count("from") && !_json["from"].empty() && _json["from"].is_string())
 			ret.from = jsToAddress(_json["from"]);
+
 		if (_json.count("to") && !_json["to"].empty() && _json["to"].is_string())
 			ret.to = jsToAddress(_json["to"]);
 
@@ -33,6 +34,7 @@ namespace mcp
 
 		if (_json.count("nonce") && !_json["nonce"].empty() && _json["nonce"].is_string())
 			ret.nonce = jsToU256(_json["nonce"]);
+
 		return ret;
 	}
 

@@ -405,90 +405,37 @@ void test_signature()
 	}
 	*/
 }
-/*
-int get_encrypt_key(dev::Secret &key, const dev::PublicCompressed &pk, const dev::Secret &sk)
-{
-	auto* ctx = mcp::encry::get_secp256k1_ctx();
-
-	secp256k1_pubkey rawPubKey;
-	if (!secp256k1_ec_pubkey_parse(ctx, &rawPubKey, pk.data(), pk.size)) {
-		return 1;
-	}
-	if (!secp256k1_ec_pubkey_tweak_mul(ctx, &rawPubKey, sk.bytes.data())) {
-		return 1;
-	}
-
-	std::array<byte, 65> serializedPubkey;
-	auto serializedPubkeySize = serializedPubkey.size();
-	secp256k1_ec_pubkey_serialize(
-		ctx,
-		serializedPubkey.data(),
-		&serializedPubkeySize,
-		&rawPubKey,
-		SECP256K1_EC_UNCOMPRESSED
-	);
-
-	if (serializedPubkeySize != serializedPubkey.size() ||
-		serializedPubkey[0] != 0x04
-		) {
-		return 1;
-	}
-
-	CryptoPP::HKDF<CryptoPP::SHA256> hkdf;
-	hkdf.DeriveKey(key.bytes.data(), key.bytes.size(), &serializedPubkey[1], 64, NULL, 0, NULL, 0);
-
-	return 0;
-}
-*/
-
-void encryption(unsigned char *cipher, const unsigned char *msg, unsigned long long msgLen, const unsigned char *iv, const unsigned char *key)
-{
-	CryptoPP::AES::Encryption alg(key, 32);
-	CryptoPP::CTR_Mode_ExternalCipher::Encryption enc(alg, iv);
-	enc.ProcessData(cipher, msg, msgLen);
-}
-
-void decryption(unsigned char *msg, const unsigned char *cipher, unsigned long long cipherLen, const unsigned char *iv, const unsigned char *key)
-{
-	CryptoPP::AES::Encryption alg(key, 32);
-	CryptoPP::CTR_Mode_ExternalCipher::Decryption dec(alg, iv);
-	dec.ProcessData(msg, cipher, cipherLen);
-}
 
 void test_encrypt_decrypt()
 {
-	/*
 	mcp::key_pair senderKey = mcp::key_pair::create();
 	mcp::key_pair receiverKey = mcp::key_pair::create();
 
 	dev::Secret encKey;
-	if (get_encrypt_key(encKey, receiverKey.pub_comp(), senderKey.secret())) {
+	if (mcp::encry::get_encryption_key(encKey, receiverKey.pub_comp().data(), receiverKey.pub_comp().size, senderKey.secret())) {
 		return;
 	}
 
-	mcp::uint128_union iv;
-	iv.decode_hex("A695DDC35ED9F3183A09FED1E6D92083");
+	dev::h128 iv = dev::h128("A695DDC35ED9F3183A09FED1E6D92083");
 
-	mcp::uint256_union plaintext;
-	plaintext.decode_hex("AF8460A7D28A396C62D6C51620B87789C862ED8783374EEF7B783145F540EB19");
+	dev::h256 plaintext = dev::h256("AF8460A7D28A396C62D6C51620B87789C862ED8783374EEF7B783145F540EB19");
 
-	mcp::uint256_union ciphertext;
-	encryption(ciphertext.bytes.data(), plaintext.bytes.data(), plaintext.bytes.size(), iv.bytes.data(), encKey.bytes.data());
+	dev::h256 ciphertext;
+	mcp::encry::encryption(ciphertext.data(), plaintext.data(), plaintext.size, iv.data(), encKey.data());
 
 	dev::Secret decKey;
-	if (get_encrypt_key(decKey, senderKey.pub_comp(), receiverKey.secret())) {
+	if (mcp::encry::get_encryption_key(decKey, senderKey.pub_comp().data(), senderKey.pub_comp().size, receiverKey.secret())) {
 		return;
 	}
 
-	std::cout << "encKey Text:" << encKey.to_string() << std::endl;
-	std::cout << "decKey Text:" << decKey.to_string() << std::endl;
+	std::cout << "encKey Text:" << dev::toHex(encKey.ref()) << std::endl;
+	std::cout << "decKey Text:" << dev::toHex(decKey.ref()) << std::endl;
 
-	mcp::uint256_union decrypttext;
-	decryption(decrypttext.bytes.data(), ciphertext.bytes.data(), ciphertext.bytes.size(), iv.bytes.data(), decKey.bytes.data());
+	dev::h256 decrypttext;
+	mcp::encry::dencryption(decrypttext.data(), ciphertext.data(), ciphertext.size, iv.data(), decKey.data());
 
-	std::cout << "Plain Text:" << plaintext.to_string() << std::endl;
-	std::cout << "Decrypted Text:" << decrypttext.to_string() << std::endl;
-	*/
+	std::cout << "Plain Text:" << plaintext.hex() << std::endl;
+	std::cout << "Decrypted Text:" << decrypttext.hex() << std::endl;
 }
 
 void test_eth_sign()
