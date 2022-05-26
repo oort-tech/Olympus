@@ -2277,14 +2277,9 @@ void mcp::rpc_handler::send_offline_block(mcp::json & j_response)
 		rpc_response(response, (int)error_code_l, err.msg(error_code_l));
 		return;
 	}
+
 	std::string signature_text = request["signature"];
-	mcp::signature signature;
-	if (signature.decode_hex(signature_text))
-	{
-		error_code_l = mcp::rpc_send_offline_block_error_code::invalid_signature;
-		rpc_response(response, (int)error_code_l, err.msg(error_code_l));
-		return;
-	}
+	dev::Signature signature(signature_text);
 
 	std::vector<mcp::block_hash> parents;
 	std::shared_ptr<std::list<mcp::block_hash>> links = std::make_shared<std::list<mcp::block_hash>>();
@@ -2541,7 +2536,7 @@ void mcp::rpc_handler::sign_msg(mcp::json & j_response)
 		}
 	}
 	mcp::json response_l;
-	mcp::signature sig(mcp::sign_message(prv, sign_msg));
+	dev::Signature sig(mcp::sign_message(prv, sign_msg));
 	response_l["signature"] = sig.to_string();
 	error_code_l = mcp::rpc_sign_msg_error_code::ok;
 	rpc_response(response, (int)error_code_l, err.msg(error_code_l), response_l);*/
@@ -2588,7 +2583,7 @@ void mcp::rpc_handler::peers(mcp::json & j_response)
 		bi::tcp::endpoint endpoint(i.second);
 
 		mcp::json peer_l;
-		peer_l["id"] = id.to_string();
+		peer_l["id"] = id.hex();
 		std::stringstream ss_endpoint;
 		ss_endpoint << endpoint;
 		peer_l["endpoint"] = ss_endpoint.str();
@@ -2610,7 +2605,7 @@ void mcp::rpc_handler::nodes(mcp::json & j_response)
 	for (p2p::node_info node : nodes)
 	{
 		mcp::json node_l;
-		node_l["id"] = node.id.to_string();
+		node_l["id"] = node.id.hex();
 		std::stringstream ss_endpoint;
 		ss_endpoint << (bi::tcp::endpoint)node.endpoint;
 		node_l["endpoint"] = ss_endpoint.str();
@@ -5085,19 +5080,17 @@ void mcp::rpc_handler::eth_sign(mcp::json & j_response)
 		return;
 	}
 
-	mcp::raw_key prv;
+	mcp::Secret prv;
 	if (!m_key_manager->find_unlocked_prv(account, prv)) {
 		error_eth_response(response, rpc_eth_error_code::locked_account, j_response);
 		return;
 	}
 
-	dev::bytes digest;
-	get_eth_signed_msg(data, digest);
+	dev::h256 hash;
+	get_eth_signed_msg(data, hash);
 	
-	mcp::signature signature;
-	if (mcp::encry::sign(prv.data, dev::bytesConstRef(digest.data(), digest.size()), signature)) {
-		j_response["result"] = "0x" + signature.to_string();
-	}
+	dev::Signature signature = dev::sign(prv, hash);
+	j_response["result"] = signature.hexPrefixed();
 
 	response(j_response);
 }
@@ -5203,7 +5196,7 @@ void mcp::rpc_handler::eth_signTransaction(mcp::json & j_response)
 		return;
 	}
 
-	mcp::raw_key prv;
+	dev::Secret prv;
 	if (!m_key_manager->find_unlocked_prv(from, prv)) {
 		error_eth_response(response, rpc_eth_error_code::locked_account, j_response);
 		return;
@@ -5224,10 +5217,8 @@ void mcp::rpc_handler::eth_signTransaction(mcp::json & j_response)
 	rlpStream << data;
 	rlpStream << (uint64_t)((int)mcp::mcp_network + 800) << 0 << 0;
 	
-	mcp::signature signature;
-	if (mcp::encry::sign(prv.data, dev::sha3(rlpStream.out()).ref(), signature)) {
-		j_response["result"] = "0x" + signature.to_string();
-	}
+	dev::Signature signature = dev::sign(prv, dev::sha3(rlpStream.out()));
+	j_response["result"] = signature.hexPrefixed();
 
 	response(j_response);
 }
@@ -5482,13 +5473,13 @@ void mcp::rpc_handler::personal_importRawKey(mcp::json & j_response)
 		return;
 	}
 
-	mcp::raw_key prv;
-	if (!params[0].is_string() || prv.data.decode_hex(params[0], true))
+	if (!params[0].is_string())
 	{
 		error_eth_response(response, rpc_eth_error_code::invalid_params, j_response);
 		return;
 	}
 
+	mcp::Secret prv(params[0].get<std::string>());
 	std::string password = params[1];
 	if (password.empty() ||
 		!mcp::validatePasswordSize(password) ||
@@ -5499,7 +5490,6 @@ void mcp::rpc_handler::personal_importRawKey(mcp::json & j_response)
 	}
 
 	mcp::key_content kc = m_key_manager->importRawKey(prv, password);
-
 	j_response["result"] = kc.account.hexPrefixed();
 	response(j_response);
 }
@@ -5795,19 +5785,17 @@ void mcp::rpc_handler::personal_sign(mcp::json & j_response)
 
 	std::string password_text = params[2];
 
-	mcp::raw_key prv;
+	mcp::Secret prv;
 	if (m_key_manager->decrypt_prv(account, password_text, prv)) {
 		error_eth_response(response, rpc_eth_error_code::invalid_password, j_response);
 		return;
 	}
 
-	dev::bytes digest;
-	get_eth_signed_msg(data, digest);
+	dev::h256 hash;
+	get_eth_signed_msg(data, hash);
 
-	mcp::signature signature;
-	if (mcp::encry::sign(prv.data, dev::bytesConstRef(digest.data(), digest.size()), signature)) {
-		j_response["result"] = "0x" + signature.to_string();
-	}
+	dev::Signature signature = dev::sign(prv, hash);
+	j_response["result"] = signature.hexPrefixed();
 
 	response(j_response);
 }
@@ -5831,22 +5819,17 @@ void mcp::rpc_handler::personal_ecRecover(mcp::json & j_response)
 		return;
 	}
 
-	mcp::signature sig;
-	if (sig.decode_hex(params[1])) {
-		error_eth_response(response, rpc_eth_error_code::invalid_params, j_response);
-		return;
-	}
+	dev::Signature sig(params[1].get<std::string>());
+	dev::h256 hash;
+	get_eth_signed_msg(data, hash);
 
-	dev::bytes digest;
-	get_eth_signed_msg(data, digest);
-
-	dev::Address from = fromPublic(mcp::encry::recover(sig, dev::bytesConstRef(digest.data(), digest.size())));
+	dev::Address from = dev::toAddress(dev::recover(sig, hash));
 	j_response["result"] = from.hexPrefixed();
 
 	response(j_response);
 }
 
-void mcp::rpc_handler::get_eth_signed_msg(dev::bytes & data, dev::bytes & digest)
+void mcp::rpc_handler::get_eth_signed_msg(dev::bytes & data, dev::h256 & hash)
 {
 	dev::bytes msg;
 	std::string prefix = "Ethereum Signed Message:\n" + std::to_string(data.size());
@@ -5856,8 +5839,7 @@ void mcp::rpc_handler::get_eth_signed_msg(dev::bytes & data, dev::bytes & digest
 	dev::bytesRef((unsigned char*)prefix.data(), prefix.size()).copyTo(dev::bytesRef(msg.data() + 1, prefix.size()));
 	dev::bytesRef(data.data(), data.size()).copyTo(dev::bytesRef(msg.data() + prefix.size() + 1, data.size()));
 
-	CryptoPP::Keccak_256 hash;
-	hash.Update((const byte*)msg.data(), msg.size());
-	digest.resize(hash.DigestSize());
-	hash.Final(digest.data());
+	CryptoPP::Keccak_256 kHash;
+	kHash.Update((const byte*)msg.data(), msg.size());
+	kHash.Final(hash.data());
 }

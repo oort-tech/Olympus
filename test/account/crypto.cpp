@@ -128,12 +128,12 @@ void test_sha512()
 
 void test_ed25519()
 {
-	std::cout << "-------------ed25519---------------" << std::endl;
+	/*std::cout << "-------------ed25519---------------" << std::endl;
 
 	mcp::uint256_union prv;
 	prv.decode_hex("0000000000000000000000000000000000000000000000000000000000000000");
 
-	mcp::public_key pub;
+	dev::Public pub;
 
 	{
 		std::chrono::time_point<std::chrono::high_resolution_clock> start = std::chrono::high_resolution_clock::now();
@@ -152,7 +152,7 @@ void test_ed25519()
 	mcp::uint256_union message;
 	message.decode_hex("5E844EE4D2E26920F8B0C4B7846929057CFCE48BF40BA269B173648999630053");
 
-	mcp::signature signature;
+	dev::Signature signature;
 
 	{
 		std::chrono::time_point<std::chrono::high_resolution_clock> start = std::chrono::high_resolution_clock::now();
@@ -181,11 +181,12 @@ void test_ed25519()
 			std::cout << "ed25519 sign verify fail";
 			return;
 		}
-	}
+	}*/
 }
 
 void test_aes()
 {
+	/*
 	std::cout << "-------------aes-256-ctr---------------" << std::endl;
 
 	mcp::uint256_union key;
@@ -268,13 +269,14 @@ void test_aes()
 			std::cout << "Decryption fail" << std::endl;
 		}
 	}
+	*/
 }
 
 void test_secp256k1()
 {
 	std::cout << "-------------secp256k1---------------" << std::endl;
 
-	// mcp::signature sig;
+	// dev::Signature sig;
 	// sig.decode_hex("01635E3763EED1E7C1B7611F5CA8CF90C340BEB79BF7DC674D5146D08D32DA976585E03660DB6008988E3B001F1797B717E31BAC6E8A211F674C4A4D83347129FA");
 	// std::string text = "01635E3763EED1E7C1B7611F5CA8CF90C340BEB79BF7DC674D5146D08D32DA976585E03660DB6008988E3B001F1797B717E31BAC6E8A211F674C4A4D83347129FA";
 
@@ -292,12 +294,12 @@ void test_secp256k1()
 	// std::cout << "s: " << sig.s.to_string() << std::endl;
 	// std::cout << "v: " << std::hex << (uint) sig.v << std::endl;
 	// std::cout << "signature: " << sig.to_string() << std::endl;
-
-	mcp::secret_key prv;
+	/*
+	dev::Secret prv;
 	prv.decode_hex("72A4E26A6EEFB3B91247FC866A0613E48C37546F1E3B212B455FA5D305B4F9BF");
 
-	mcp::public_key pub;
-	mcp::public_key_comp pub_comp;
+	dev::Public pub;
+	dev::PublicCompressed pub_comp;
 
 	{
 		std::chrono::time_point<std::chrono::high_resolution_clock> start = std::chrono::high_resolution_clock::now();
@@ -319,7 +321,7 @@ void test_secp256k1()
 	mcp::uint256_union message;
 	dev::sha3("msg").ref().copyTo(message.ref());
 
-	mcp::signature signature;
+	dev::Signature signature;
 
 	{
 		std::chrono::time_point<std::chrono::high_resolution_clock> start = std::chrono::high_resolution_clock::now();
@@ -352,19 +354,21 @@ void test_secp256k1()
 			return;
 		}
 	}
+	*/
 }
 
 void test_x25519()
 {
-	mcp::secret_key prv;
+	/*
+	dev::Secret prv;
 	prv.decode_hex("BC1C100CA9C2B7E2DF6D1F46744AD3F51D0532BF6ACA5063D382EFFF8A5E28C7");
 
 	mcp::uint256_union message;
 	message.decode_hex("AF8460A7D28A396C62D6C51620B87789C862ED8783374EEF7B783145F540EB19");
 
 	/*
-	mcp::secret_key sec;
-	mcp::public_key_comp pub_comp;
+	dev::Secret sec;
+	dev::PublicCompressed pub_comp;
 	if (crypto_sign_seed_keypair(pub_comp.ref().data(), sec.ref().data(), prv.ref().data()) == 0) {
 		dev::bytes cipher;
 		mcp::p2p::encrypt_dh(pub_comp, message.ref(), cipher);
@@ -375,7 +379,7 @@ void test_x25519()
 		std::cout << "Decrypted: " << mcp::bytes_to_hex(plain) << std::endl;
 	}
 	*/
-	mcp::key_pair keys = mcp::key_pair::create();
+	/*mcp::key_pair keys = mcp::key_pair::create();
 
 	dev::bytes cipher;
 	mcp::p2p::encrypt_dh(keys.pub_comp(), message.ref(), cipher);
@@ -384,12 +388,14 @@ void test_x25519()
 	dev::bytes plain;
 	mcp::p2p::dencrypt_dh(keys.secret(), dev::bytesConstRef(cipher.data(), cipher.size()), plain);
 	std::cout << "Decrypted: " << mcp::bytes_to_hex(plain) << std::endl;
+	*/
 }
 
 void test_signature()
 {
+	/*
 	std::string sig = "32a203eacdfd2647981dff155082e9d6d1c4c96cd0473de347ff7589c64118c91d84caa88930ce61121e1b160d1a1cd11401896b67380a7fc870d1cc3d6d679401";
-	mcp::signature signature;
+	dev::Signature signature;
 
 	if (signature.decode_hex(sig)) {
 		std::cout << "decode error" << std::endl;
@@ -397,9 +403,10 @@ void test_signature()
 	else {
 		std::cout << signature.to_string() << std::endl;
 	}
+	*/
 }
-
-int get_encrypt_key(mcp::secret_encry &key, const mcp::public_key_comp &pk, const mcp::secret_key &sk)
+/*
+int get_encrypt_key(dev::Secret &key, const dev::PublicCompressed &pk, const dev::Secret &sk)
 {
 	auto* ctx = mcp::encry::get_secp256k1_ctx();
 
@@ -432,6 +439,7 @@ int get_encrypt_key(mcp::secret_encry &key, const mcp::public_key_comp &pk, cons
 
 	return 0;
 }
+*/
 
 void encryption(unsigned char *cipher, const unsigned char *msg, unsigned long long msgLen, const unsigned char *iv, const unsigned char *key)
 {
@@ -449,10 +457,11 @@ void decryption(unsigned char *msg, const unsigned char *cipher, unsigned long l
 
 void test_encrypt_decrypt()
 {
+	/*
 	mcp::key_pair senderKey = mcp::key_pair::create();
 	mcp::key_pair receiverKey = mcp::key_pair::create();
 
-	mcp::secret_encry encKey;
+	dev::Secret encKey;
 	if (get_encrypt_key(encKey, receiverKey.pub_comp(), senderKey.secret())) {
 		return;
 	}
@@ -466,7 +475,7 @@ void test_encrypt_decrypt()
 	mcp::uint256_union ciphertext;
 	encryption(ciphertext.bytes.data(), plaintext.bytes.data(), plaintext.bytes.size(), iv.bytes.data(), encKey.bytes.data());
 
-	mcp::secret_encry decKey;
+	dev::Secret decKey;
 	if (get_encrypt_key(decKey, senderKey.pub_comp(), receiverKey.secret())) {
 		return;
 	}
@@ -479,6 +488,7 @@ void test_encrypt_decrypt()
 
 	std::cout << "Plain Text:" << plaintext.to_string() << std::endl;
 	std::cout << "Decrypted Text:" << decrypttext.to_string() << std::endl;
+	*/
 }
 
 void test_eth_sign()

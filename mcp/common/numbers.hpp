@@ -8,6 +8,7 @@
 #include <libdevcore/Common.h>
 #include <libdevcore/SHA3.h>
 #include <libdevcore/Address.h>
+#include <libdevcrypto/Common.h>
 
 #include <mcp/common/assert.hpp>
 
@@ -98,7 +99,7 @@ public:
 // Balances are 128 bit.
 
 class raw_key;
-struct account20_struct;
+// struct account20_struct;
 
 union uint256_union
 {
@@ -106,10 +107,8 @@ union uint256_union
 	uint256_union (std::string const &);
 	uint256_union (uint64_t);
 	uint256_union (mcp::uint256_t const &);
-	// added by michael at 1/14
-	uint256_union (account20_struct const & account);
-	//
-	void encrypt (mcp::raw_key const &, mcp::raw_key const &, uint128_union const &);
+	
+	// void encrypt (mcp::raw_key const &, mcp::raw_key const &, uint128_union const &);
 	uint256_union & operator^= (mcp::uint256_union const &);
 	uint256_union operator^ (mcp::uint256_union const &) const;
 	bool operator== (mcp::uint256_union const &) const;
@@ -124,11 +123,6 @@ union uint256_union
 	void encode_dec (std::string &) const;
 	bool decode_dec (std::string const &);
 	
-	// void encode_account (std::string &) const;
-	// std::string to_account () const;
-	// std::string to_account_split () const;
-	// bool decode_account (std::string const &);
-
 	byte* data() { return bytes.data(); }
 	byte const* data() const { return bytes.data(); }
 
@@ -158,20 +152,21 @@ using summary_hash = uint256_union;
 /// A hash set of mcp accounts
 // using AccountHash = std::unordered_set<account>;
 // using public_key = uint256_union;
-using private_key = uint256_union;
-using secret_ciphertext = uint256_union;
+// using private_key = uint256_union;
+// using secret_ciphertext = uint256_union;
 using data_hash = uint256_union;
 using code_hash = uint256_union;
 using state_root = uint256_union;
 using sync_request_hash = uint256_union;
-using seed_key = uint256_union;
-using secret_encry = uint256_union;		//p2p encryption
+// using seed_key = uint256_union;
+// using secret_encry = uint256_union;		//p2p encryption
 
+/*
 class raw_key
 {
 public:
 	raw_key () = default;
-	raw_key(mcp::private_key const & prv_a);
+	raw_key(dev::Secret const & prv_a);
 	~raw_key ();
 	void decrypt (mcp::uint256_union const &, mcp::raw_key const &, uint128_union const &);
 	raw_key(mcp::raw_key const &) = delete;
@@ -181,6 +176,7 @@ public:
 	bool operator!= (mcp::raw_key const &) const;
 	mcp::uint256_union data;
 };
+*/
 
 union uint512_union
 {
@@ -217,6 +213,7 @@ union uint512_union
 };
 
 // added by michael at 1/7
+/*
 struct signature_struct
 {
     signature_struct() = default;
@@ -237,17 +234,19 @@ struct signature_struct
 	dev::bytesRef ref();
 	dev::bytesConstRef ref() const;
 };
+*/
 
 // added by michael at 1/8
 // using signature = uint512_union;
-using signature = signature_struct;
+// using signature = signature_struct;
 
 // added by michael at 1/5
 // using secret_key = uint512_union;
-using secret_key = uint256_union;
-using public_key = uint512_union;
+// using secret_key = uint256_union;
+// using public_key = uint512_union;
 
 // added by michael at 4/5
+/*
 union compressed_pubkey_union {
 	compressed_pubkey_union() = default;
 	
@@ -274,7 +273,7 @@ using public_key_comp = compressed_pubkey_union;
 
 struct account20_struct {
 	account20_struct()  = default;
-	account20_struct(mcp::public_key const& pubkey);
+	account20_struct(dev::Public const& pubkey);
 	account20_struct(uint64_t value0);
 	account20_struct (mcp::uint256_t const & number_a);
 	account20_struct (mcp::uint256_union const & uint256_a);
@@ -302,15 +301,18 @@ struct account20_struct {
 
 using account = account20_struct;
 //using AccountHash = std::unordered_set<account>;
+*/
 
 namespace p2p
 {
-	using node_id = mcp::uint256_union;
+	using node_id = dev::h256;
 	using hash256 = mcp::uint256_union;
+
+	node_id toNodeId(dev::PublicCompressed const & pubkey);
 }
 
-//mcp::signature sign_message (mcp::raw_key const &, /*mcp::public_key const &,*/ mcp::uint256_union const &);
-//bool validate_message (dev::Address const &, mcp::uint256_union const &, mcp::signature const &);
+//dev::Signature sign_message (mcp::raw_key const &, /*dev::Public const &,*/ mcp::uint256_union const &);
+//bool validate_message (dev::Address const &, mcp::uint256_union const &, dev::Signature const &);
 }
 
 namespace std
@@ -351,7 +353,7 @@ struct hash<mcp::uint512_union>
 		//return XXH64(data_a.bytes.data(), data_a.bytes.size(), 0);
 	}
 };
-template <>
+/*template <>
 struct hash<mcp::account20_struct>
 {
 	size_t operator() (mcp::account20_struct const & data_a) const
@@ -359,7 +361,7 @@ struct hash<mcp::account20_struct>
 		return *reinterpret_cast<size_t const *> (data_a.bytes.data ());
 		//return XXH64(data_a.bytes.data(), data_a.bytes.size(), 0);
 	}
-};
+};*/
 }
 
 namespace boost
@@ -373,6 +375,7 @@ namespace boost
             return hash(value_a);
         }
     };
+	/*
 	template <>
     struct hash<mcp::account20_struct>
     {
@@ -382,6 +385,5 @@ namespace boost
             return hash(value_a);
         }
     };
+	*/
 }
-
-dev::Address fromPublic(mcp::public_key & pubkey);

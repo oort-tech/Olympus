@@ -92,9 +92,8 @@ mcp::base_validate_result mcp::validation::base_validate(mcp::db::db_transaction
 	//}
 
 	//validate signature
-	dev::Public p = dev::recover(block->signature(), block_hash.number());
-	mcp::public_key pubkey(p);
-	if (fromPublic(pubkey) != block->from())   //todo used eth sign----------------------------------------
+	dev::Public pubkey = dev::recover(block->signature(), block_hash.number());
+	if (dev::toAddress(pubkey) != block->from())   //todo used eth sign----------------------------------------
 	{
 		result.code = mcp::base_validate_result_codes::invalid_signature;
 		return result;

@@ -16,27 +16,10 @@ mcp::key_content::key_content(bool & error_a, std::string const & json_a)
 	try
 	{
 		mcp::json js = mcp::json::parse(json_a);
-
-		if (!error_a)
-		{
-			std::string account_text = js["account"];
-			account = dev::Address(account_text);
-
-			std::string kdf_salt_text = js["kdf_salt"];
-			error_a = kdf_salt.decode_hex(kdf_salt_text);
-
-			if (!error_a)
-			{
-				std::string iv_text = js["iv"];
-				error_a = iv.decode_hex(iv_text);
-
-				if (!error_a)
-				{
-					std::string ciphertext_text = js["ciphertext"];
-					error_a = ciphertext.decode_hex(ciphertext_text);
-				}
-			}
-		}
+		account = dev::Address(js["account"].get<std::string>());
+		kdf_salt = dev::h128(js["kdf_salt"].get<std::string>());
+		iv = dev::h128(js["iv"].get<std::string>());
+		ciphertext = dev::h256(js["ciphertext"].get<std::string>());
 	}
 	catch (...)
 	{
@@ -44,10 +27,12 @@ mcp::key_content::key_content(bool & error_a, std::string const & json_a)
 	}
 }
 
-mcp::key_content::key_content(dev::Address const & account, mcp::uint128_union const & kdf_salt_a,
-	mcp::uint128_union const & iv_a, mcp::secret_ciphertext const & ciphertext_a) :
+mcp::key_content::key_content(
+	dev::Address const & account,
+	dev::h128 const & kdf_salt_a,
+	dev::h128 const & iv_a,
+	dev::h256 const & ciphertext_a) :
 	account(account),
-	// public_key(pubic_key),
 	kdf_salt(kdf_salt_a),
 	iv(iv_a),
 	ciphertext(ciphertext_a)
@@ -56,7 +41,6 @@ mcp::key_content::key_content(dev::Address const & account, mcp::uint128_union c
 
 dev::Slice mcp::key_content::val() const
 {
-	//return mcp::mdb_val(sizeof(*this), const_cast<mcp::key_content *> (this));
 	return dev::Slice((char*)this, sizeof(*this));
 }
 
@@ -64,13 +48,10 @@ std::string mcp::key_content::to_json() const
 {
 	mcp::json js;
 	js["account"] = account.hexPrefixed();
-	// js["public_key"] = public_key.to_string();
-	js["kdf_salt"] = kdf_salt.to_string();
-	js["iv"] = iv.to_string();
-	js["ciphertext"] = ciphertext.to_string();
-
-	std::string str_json = js.dump();
-	return str_json;
+	js["kdf_salt"] = kdf_salt.hex();
+	js["iv"] = iv.hex();
+	js["ciphertext"] = ciphertext.hex();
+	return js.dump();
 }
 
 mcp::value_previous_work::value_previous_work(dev::Slice const & val_a)
@@ -91,7 +72,6 @@ dev::Slice mcp::value_previous_work::val() const
 	static_assert (sizeof(*this) == sizeof(previous) + sizeof(work), "Class not packed");
 	return dev::Slice((char*)this, sizeof(*this));
 }
-
 
 //store
 mcp::key_store::key_store(bool & error_a, boost::filesystem::path const& _path) :

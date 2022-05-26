@@ -29,7 +29,7 @@ namespace mcp
 			{
 			}
 
-			hash256 add_packet_and_sign(mcp::secret_key const & prv_a, discover_packet const & packet_a)
+			hash256 add_packet_and_sign(dev::Secret const & prv_a, discover_packet const & packet_a)
 			{
 				assert_x((byte)packet_a.packet_type());
 				//rlp: network type || packet type || packet
@@ -50,20 +50,19 @@ namespace mcp
 				hash256 rlp_hash(mcp::blake2b_hash(rlp_cref));
 
 				//rlp sig : S(H(packet type || packet))
-				mcp::signature rlp_sig;
-				mcp::encry::sign(prv_a, rlp_hash.ref(), rlp_sig);
+				dev::Signature rlp_sig = dev::sign(prv_a, dev::h256(rlp_hash.ref()));
 
 				//BOOST_LOG_TRIVIAL(debug) << boost::str(boost::format("send packet sig, node id:%1%, hash:%2%, sig:%3%") 
 				//	% packet_a.source_id.to_string() % rlp_hash.to_string() % rlp_sig.to_string());
 
 				//data:  H( node id || rlp sig || rlp ) || node id || rlp sig || rlp 
-				data.resize(sizeof(hash256) + sizeof(node_id) + sizeof(mcp::signature) + rlp.size());
+				data.resize(sizeof(hash256) + node_id::size + dev::Signature::size + rlp.size());
 				dev::bytesRef data_hash_ref(&data[0], sizeof(hash256));
-				dev::bytesRef data_node_id_ref(&data[sizeof(hash256)], sizeof(node_id));
-				dev::bytesRef data_sig_ref(&data[sizeof(hash256) + sizeof(node_id)], sizeof(mcp::signature));
-				dev::bytesRef data_rlp_ref(&data[sizeof(hash256) + sizeof(node_id) + sizeof(mcp::signature)], rlp_cref.size());
+				dev::bytesRef data_node_id_ref(&data[sizeof(hash256)], node_id::size);
+				dev::bytesRef data_sig_ref(&data[sizeof(hash256) + node_id::size], dev::Signature::size);
+				dev::bytesRef data_rlp_ref(&data[sizeof(hash256) + node_id::size + dev::Signature::size], rlp_cref.size());
 
-				dev::bytesConstRef node_id_cref(packet_a.source_id.bytes.data(), packet_a.source_id.bytes.size());
+				dev::bytesConstRef node_id_cref(packet_a.source_id.data(), packet_a.source_id.size);
 				node_id_cref.copyTo(data_node_id_ref);
 
 				rlp_sig.ref().copyTo(data_sig_ref);
@@ -200,7 +199,7 @@ namespace mcp
 
 			ba::io_service io_service;
 			node_info my_node_info;
-			mcp::secret_key secret;
+			dev::Secret secret;
 			node_endpoint my_endpoint;
 
 			std::unique_ptr<bi::udp::socket> socket;

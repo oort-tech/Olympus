@@ -49,7 +49,7 @@ void node_table::start()
 		auto it = m_store.node_begin(transaction);
 		while (it.valid())
 		{
-			mcp::p2p::node_id id(mcp::slice_to_uint256(it.value()));
+			mcp::p2p::node_id id(it.value().data());
 
 			dev::bytes result(it.key().size());
 			std::copy((byte *)it.key().data(), (byte *)it.key().data() + sizeof(result), result.data());
@@ -98,7 +98,7 @@ void node_table::discover_loop()
 		}
 
 		node_id rand_node_id;
-		mcp::random_pool.GenerateBlock(rand_node_id.bytes.data(), rand_node_id.bytes.size());
+		mcp::random_pool.GenerateBlock(rand_node_id.data(), rand_node_id.size);
 		do_discover(rand_node_id);
 	});
 }
@@ -314,16 +314,16 @@ std::unique_ptr<discover_packet> node_table::interpret_packet(bi::udp::endpoint 
 {
 	std::unique_ptr<discover_packet> packet = std::unique_ptr<discover_packet>();
 	// hash + node id + sig + network + packet type + packet (smallest possible packet is ping packet which is 5 bytes)
-	if (data.size() < sizeof(hash256) + sizeof(node_id) + sizeof(mcp::signature) + 1 + 1 + 5)
+	if (data.size() < sizeof(hash256) + node_id::size + dev::Signature::size + 1 + 1 + 5)
 	{
         LOG(m_log.debug) << "Invalid packet (too small) from " << from.address().to_string() << ":" << from.port();
 		return packet;
 	}
 	dev::bytesConstRef hash(data.cropped(0, sizeof(hash256)));
 	dev::bytesConstRef bytes_to_hash_cref(data.cropped(sizeof(hash256), data.size() - sizeof(hash256)));
-	dev::bytesConstRef node_id_cref(bytes_to_hash_cref.cropped(0, sizeof(node_id)));
-	dev::bytesConstRef rlp_sig_cref(bytes_to_hash_cref.cropped(sizeof(node_id), sizeof(mcp::signature)));
-	dev::bytesConstRef rlp_cref(bytes_to_hash_cref.cropped(sizeof(node_id) + sizeof(mcp::signature)));
+	dev::bytesConstRef node_id_cref(bytes_to_hash_cref.cropped(0, node_id::size));
+	dev::bytesConstRef rlp_sig_cref(bytes_to_hash_cref.cropped(node_id::size, dev::Signature::size));
+	dev::bytesConstRef rlp_cref(bytes_to_hash_cref.cropped(node_id::size + dev::Signature::size));
 
 	hash256 echo(mcp::blake2b_hash(bytes_to_hash_cref));
 	dev::bytes echo_bytes(&echo.bytes[0], &echo.bytes[0] + echo.bytes.size());
@@ -334,12 +334,10 @@ std::unique_ptr<discover_packet> node_table::interpret_packet(bi::udp::endpoint 
 	}
 
 	node_id from_node_id;
-	dev::bytesRef from_node_id_ref(from_node_id.bytes.data(), from_node_id.bytes.size());
+	dev::bytesRef from_node_id_ref(from_node_id.data(), from_node_id.size);
 	node_id_cref.copyTo(from_node_id_ref);
 
-	mcp::signature rlp_sig;
-	// updated by michael at 1/13
-	// dev::bytesRef rlp_sig_ref(rlp_sig.bytes.data(), rlp_sig.bytes.size());
+	dev::Signature rlp_sig;
 	rlp_sig_cref.copyTo(rlp_sig.ref());
 
 	hash256 rlp_hash(mcp::blake2b_hash(rlp_cref));
@@ -347,7 +345,7 @@ std::unique_ptr<discover_packet> node_table::interpret_packet(bi::udp::endpoint 
 	//LOG(m_log.debug) << boost::str(boost::format("receive packet sig, node id:%1%, hash:%2%, sig:%3%") % from_node_id.to_string() % rlp_hash.to_string() % rlp_sig.to_string());
 
 	///
-	bool is_bad_sig(!mcp::encry::verify(from_node_id, rlp_sig, rlp_hash.ref()));
+	bool is_bad_sig(!mcp::encry::verify(from_node_id, rlp_sig, dev::h256(rlp_hash.ref())));
 
 	if (is_bad_sig)
 	{
@@ -670,7 +668,7 @@ void node_table::drop_node(std::shared_ptr<node_entry> node_a)
 	}
 
 	// notify host
-    LOG(m_log.debug) << "p2p.nodes.drop " << node_a->id.to_string();
+    LOG(m_log.debug) << "p2p.nodes.drop " << node_a->id.hex();
 	if (node_event_handler)
 		node_event_handler->append_event(node_a->id, node_table_event_type::node_entry_dropped);
 }

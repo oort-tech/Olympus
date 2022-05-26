@@ -95,7 +95,7 @@ class block_processor_item
 
 	bool is_local() const
 	{
-		return m_remote_node_id.is_zero();
+		return m_remote_node_id == mcp::p2p::node_id(0);
 	}
 
 	mcp::p2p::node_id remote_node_id() const

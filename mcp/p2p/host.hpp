@@ -42,7 +42,7 @@ namespace mcp
         class host : public std::enable_shared_from_this<host>
         {
         public:
-            host(bool & error_a, p2p_config const & config_a, boost::asio::io_service & io_service_a, mcp::seed_key const & node_key,
+            host(bool & error_a, p2p_config const & config_a, boost::asio::io_service & io_service_a, dev::Secret const & node_key,
 				 boost::filesystem::path const & application_path_a);
 			~host() { stop(); }
             void start();
@@ -52,7 +52,7 @@ namespace mcp
             std::unordered_map<node_id, bi::tcp::endpoint> peers() const;
             std::list<node_info> nodes() const;
 
-			node_id id() const { return (node_id) alias.pub_comp(); }
+			node_id id() const { return toNodeId(alias.pub_comp()); }
 
 			std::list<capability_desc> caps() const { std::list<capability_desc> ret; for (auto const& i : capabilities) ret.push_back(i.first); return ret; }
 			void start_peer(mcp::p2p::node_id const& _id, dev::RLP const& _hello, std::unique_ptr<mcp::p2p::frame_coder>&& _io, std::shared_ptr<bi::tcp::socket> const & socket);

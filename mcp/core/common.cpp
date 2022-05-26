@@ -698,7 +698,6 @@ h256 mcp::slice_to_h256(dev::Slice const & slice)
 	return h256(slice.toBytes());
 }
 
-// Added by Raul
 dev::Slice mcp::uint512_to_slice(mcp::uint512_union const & value)
 {
 	return dev::Slice((char*)value.bytes.data(), value.bytes.size());
@@ -712,7 +711,6 @@ mcp::uint512_union mcp::slice_to_uint512(dev::Slice const & slice)
 	return result;
 }
 
-// added by michael at 1/13
 dev::Slice mcp::account_to_slice(dev::Address const & value)
 {
 	return dev::Slice((char*)value.data(), value.size);
@@ -720,12 +718,9 @@ dev::Slice mcp::account_to_slice(dev::Address const & value)
 
 dev::Address mcp::slice_to_account(dev::Slice const & slice)
 {
-	dev::Address result;
-	assert_x(slice.size() == sizeof(result));
-	std::copy((byte *)slice.data(), (byte *)slice.data() + sizeof(result), result.data());
-	return result;
+	return Address(slice.toBytes());
 }
-
+/*
 dev::Slice mcp::address_to_slice(Address const & value)
 {
 	return dev::Slice(reinterpret_cast<char const*>(value.data()), value.size);
@@ -735,7 +730,7 @@ Address mcp::slice_to_address(dev::Slice const & slice)
 {
 	return Address(slice.toBytes());
 }
-
+*/
 //mcp::unlink_block::unlink_block(bool & error_a, dev::RLP const & r)
 //{
 //	error_a = r.itemCount() != 2;

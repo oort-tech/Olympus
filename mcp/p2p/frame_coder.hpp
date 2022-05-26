@@ -16,7 +16,7 @@ namespace mcp
 		{
 		public:
 			/// set key and nonce.
-			void set_key(bool _originated, public_key_comp const&_pub, key_pair const&_key);
+			void set_key(bool _originated, dev::PublicCompressed const&_pub, key_pair const&_key);
 			void set_nonce(nonce const&_remote_nonce, nonce const&_nonce);
 
 			//encry
@@ -30,7 +30,7 @@ namespace mcp
 
 		private:
 			//Mutex x_macEnc;  ///< Mutex.
-			secret_encry in_key, out_key;
+			dev::Secret in_key, out_key;
 			nonce local_nonce;
 			nonce remote_nonce;
             mcp::log m_log = { mcp::log("p2p") };
@@ -47,12 +47,12 @@ namespace mcp
 			frame_coder(hankshake const& _init);
 
 			/// Construct with external key material.
-			frame_coder(bool _originated, public_key_comp const& _remoteEphemeral, nonce const& _remoteNonce, key_pair const& _ecdheLocal, nonce const& _nonce);
+			frame_coder(bool _originated, dev::PublicCompressed const& _remoteEphemeral, nonce const& _remoteNonce, key_pair const& _ecdheLocal, nonce const& _nonce);
 
 			~frame_coder();
 
 			/// Establish shared secrets and setup AES and MAC states.
-			void setup(bool _originated, public_key_comp const& _remoteEphemeral, nonce const& _remoteNonce, key_pair const& _ecdheLocal, nonce const& _nonce);
+			void setup(bool _originated, dev::PublicCompressed const& _remoteEphemeral, nonce const& _remoteNonce, key_pair const& _ecdheLocal, nonce const& _nonce);
 
 			/// Legacy. Encrypt _packet header and frame.
 			void write_single_frame_packet(bytesConstRef _packet, bytes& o_bytes);

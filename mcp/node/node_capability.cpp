@@ -555,7 +555,7 @@ bool mcp::node_capability::read_packet(std::shared_ptr<p2p::peer> peer_a, unsign
             }
             else
             {
-                LOG(m_log.error) << "check_remotenode_genesis error: remote_node_id = " << peer_a->remote_node_id().to_string();
+                LOG(m_log.error) << "check_remotenode_genesis error: remote_node_id = " << peer_a->remote_node_id().hex();
                 peer_a->disconnect(p2p::disconnect_reason::bad_protocol);
             }
 
@@ -583,7 +583,7 @@ bool mcp::node_capability::read_packet(std::shared_ptr<p2p::peer> peer_a, unsign
     }
     catch (std::exception const & e)
     {
-        LOG(m_log.trace) << "Peer error, node id: " << peer_a->remote_node_id().to_string()
+        LOG(m_log.trace) << "Peer error, node id: " << peer_a->remote_node_id().hex()
             << ", packet type: " << type << ", rlp: " << *rlp << ", message: " << e.what();
         throw;
     }
@@ -719,7 +719,7 @@ mcp::sync_request_hash  mcp::node_capability::gen_sync_request_hash(p2p::node_id
 
 	assert_x(status == 0);
 	size_t random_l = mcp::random_pool.GenerateWord32();
-	blake2b_update(&hash_l, id.bytes.data(), sizeof(id.bytes));
+	blake2b_update(&hash_l, id.data(), id.size);
 	blake2b_update(&hash_l, &random, sizeof(random));
 	blake2b_update(&hash_l, &request_type_a, sizeof(request_type_a));
 	blake2b_update(&hash_l, &random_l, sizeof(random_l));

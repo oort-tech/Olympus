@@ -38,7 +38,7 @@ void mcp::sync_info::clear()
 	catchup_del_index.clear();
 	current_del_catchup = 0;
 	to_summary_index.clear();
-	id = 0;
+	id.clear();
 	del_catchup_index = 0;
 }
 
@@ -154,7 +154,7 @@ void mcp::node_sync::request_catchup(p2p::node_id const& id)
 					mcp::peer_info &pi(m_capability->m_peers.at(id));
 					if (auto p = pi.try_lock_peer())
 					{
-						LOG(log_sync.info) << "id:" << id.to_string() << " ,ip:" << p->remote_endpoint();
+						LOG(log_sync.info) << "id:" << id.hex() << " ,ip:" << p->remote_endpoint();
 					}
 				}
 			}
@@ -1857,7 +1857,7 @@ void mcp::node_sync::add_task_sync_request_timer(p2p::node_id const & request_no
 			if (m_task_clear_flag)
 				return;
 
-            LOG(log_sync.info) << "timeout_for_sync_request : node_id:" << request_node_id_a.to_string();
+            LOG(log_sync.info) << "timeout_for_sync_request : node_id:" << request_node_id_a.hex();
 			clear_catchup_info();
 		}
 	});
@@ -1974,7 +1974,7 @@ void mcp::node_sync::send_peer_info_request(p2p::node_id id)
 					mcp::peer_info_request_message message;
 					message.stream_RLP(s);
 					p->send(s);
-					LOG(log_sync.debug) << "send_peer_info_request:node id:" << id.to_string();
+					LOG(log_sync.debug) << "send_peer_info_request:node id:" << id.hex();
 				}
 			}
 		}
@@ -1997,14 +1997,14 @@ void mcp::node_sync::send_peer_info_request(p2p::node_id id)
 				}
 				else
 				{
-					LOG(log_sync.info) << "send_peer_info_request : error:code:" << error.value() << ",msg:" << error.message() << ",node id:" << id.to_string();
+					LOG(log_sync.info) << "send_peer_info_request : error:code:" << error.value() << ",msg:" << error.message() << ",node id:" << id.hex();
 				}
 
 			});
 		}
 		else
 		{
-			LOG(log_sync.info) << "send_peer_info_request : add not success:" << ",node id:" << id.to_string();
+			LOG(log_sync.info) << "send_peer_info_request : add not success:" << ",node id:" << id.hex();
 		}
 	}
 

@@ -618,8 +618,8 @@ namespace mcp
 	dev::Slice account_to_slice(dev::Address const & value);
 	dev::Address slice_to_account(dev::Slice const & slice);
 
-	dev::Slice address_to_slice(Address const & value);
-	Address slice_to_address(dev::Slice const & slice);
+	// dev::Slice address_to_slice(Address const & value);
+	// Address slice_to_address(dev::Slice const & slice);
 
 
 	//dev::Address toAddress(dev::Address const& _from, u256 const& _nonce);

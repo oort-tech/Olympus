@@ -791,16 +791,22 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 	try
 	{
 		//node key
-		mcp::seed_key seed;
 		boost::filesystem::path nodekey_path(data_path / "nodekey");
 		std::string nodekey_str;
 		config.readfile2string(nodekey_str, nodekey_path);
 
-		bool nodekey_error(seed.decode_hex(nodekey_str));
-		if (nodekey_error)
-		{
-			mcp::random_pool.GenerateBlock(seed.ref().data(), seed.ref().size());
-			config.writestring2file(seed.to_string(), nodekey_path);
+		dev::Secret seed;
+		try {
+			if (!nodekey_str.empty()) {
+				seed = dev::Secret(nodekey_str);
+			}
+			else {
+				throw "Nodekey is empty";
+			}
+		}
+		catch (...) {
+			mcp::random_pool.GenerateBlock((byte*)seed.data(), seed.size);
+			config.writestring2file(dev::toHex(seed.ref()), nodekey_path);
 		}
 
 		/*if (sodium_init() < 0)

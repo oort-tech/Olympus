@@ -306,7 +306,7 @@ void mcp::block_store::account_state_put(mcp::db::db_transaction & transaction_a
 bool mcp::block_store::latest_account_state_get(mcp::db::db_transaction & transaction_a, Address const & account_a, h256& hash_a)
 {
 	std::string value;
-	bool exists(transaction_a.get(latest_account_state, mcp::address_to_slice(account_a), value));
+	bool exists(transaction_a.get(latest_account_state, mcp::account_to_slice(account_a), value));
 	if (exists)
 		hash_a = mcp::slice_to_h256(value);
 	return !exists;
@@ -314,7 +314,7 @@ bool mcp::block_store::latest_account_state_get(mcp::db::db_transaction & transa
 
 void mcp::block_store::latest_account_state_put(mcp::db::db_transaction & transaction_a, Address const & account_a, h256 const& hash_a)
 {
-	transaction_a.put(latest_account_state, mcp::address_to_slice(account_a), mcp::h256_to_slice(hash_a));
+	transaction_a.put(latest_account_state, mcp::account_to_slice(account_a), mcp::h256_to_slice(hash_a));
 }
 
 bool mcp::block_store::block_summary_get(mcp::db::db_transaction & transaction_a, mcp::block_hash const & block_hash_a, mcp::summary_hash & summary_hash_a)

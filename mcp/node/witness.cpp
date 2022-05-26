@@ -35,15 +35,13 @@ mcp::witness::witness(mcp::error_message & error_msg,
 			return;
 		}
 		m_account = kc.account;
-		mcp::raw_key prv;
-		error  = key_manager_a->decrypt_prv(m_account, password_a, prv);
+		error  = key_manager_a->decrypt_prv(m_account, password_a, m_secret);
 		if (error)
 		{
 			error_msg.error = true;
 			LOG(m_log.error) << "Witness error: Account not exists, " << m_account.hexPrefixed();
 			return;
 		}
-		m_secret = dev::Secret(prv.data.ref());
 	}
 	else
 	{

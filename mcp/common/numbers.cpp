@@ -8,74 +8,9 @@
 #include <mcp/common/base58.h>
 #include <mcp/common/common.hpp>
 
-// added by michael at 1/24
 #include <libdevcore/CommonData.h>
 
 thread_local CryptoPP::AutoSeededRandomPool mcp::random_pool;
-
-// void mcp::uint256_union::encode_account(std::string & destination_a) const
-// {
-// 	if (is_zero())
-// 	{
-// 		destination_a = "";
-// 		return;
-// 	}
-
-// 	std::vector<uint8_t> vch;
-// 	vch.reserve(33);
-// 	vch.push_back(0x01); //version
-// 	vch.insert(vch.end(), bytes.begin(), bytes.end());
-// 	std::string encoded = EncodeBase58Check(vch);
-// 	destination_a = "mcp" + encoded;
-// }
-
-// bool mcp::uint256_union::decode_account(std::string const & source_a)
-// {
-// 	bool error(false);
-// 	if (source_a.empty())
-// 	{
-// 		bytes.fill(0);
-// 	}
-// 	else if (source_a[0] == 'm' && source_a[1] == 'c' && source_a[2] == 'p')
-// 	{
-// 		std::vector<uint8_t> vch;
-// 		error = !DecodeBase58Check(source_a.substr(3), vch);
-// 		if (!error)
-// 		{
-// 			if (vch.size() == 33) 
-// 			{
-// 				if (vch[0] == 0x01) // check version
-// 					std::copy(vch.begin() + 1, vch.end(), bytes.begin());
-// 				else
-// 					error = true;
-// 			}
-// 			else
-// 			{
-// 				error = true;
-// 			}
-// 		}
-// 	}
-// 	else
-// 	{
-// 		error = true;
-// 	}
-// 	return error;
-// }
-
-// std::string mcp::uint256_union::to_account_split() const
-// {
-// 	auto result(to_account());
-// 	assert_x(result.size() == 64);
-// 	result.insert(32, "\n");
-// 	return result;
-// }
-
-// std::string mcp::uint256_union::to_account() const
-// {
-// 	std::string result;
-// 	encode_account(result);
-// 	return result;
-// }
 
 mcp::uint256_union::uint256_union(uint64_t value0)
 {
@@ -99,24 +34,20 @@ mcp::uint256_union::uint256_union(mcp::uint256_t const & number_a)
 	}
 }
 
-// added by michael at 1/14
-mcp::uint256_union::uint256_union(mcp::account20_struct const & account) {
-	*this = account.number();
-}
-//
-
 bool mcp::uint256_union::operator== (mcp::uint256_union const & other_a) const
 {
 	return bytes == other_a.bytes;
 }
 
 // Construct a uint256_union = AES_ENC_CTR (cleartext, key, iv)
+/*
 void mcp::uint256_union::encrypt(mcp::raw_key const & cleartext, mcp::raw_key const & key, uint128_union const & iv)
 {
 	CryptoPP::AES::Encryption alg(key.data.bytes.data(), sizeof(key.data.bytes));
 	CryptoPP::CTR_Mode_ExternalCipher::Encryption enc(alg, iv.bytes.data());
 	enc.ProcessData(bytes.data(), cleartext.data.bytes.data(), sizeof(cleartext.data.bytes));
 }
+*/
 
 bool mcp::uint256_union::is_zero() const
 {
@@ -324,8 +255,8 @@ std::string mcp::uint256_union::to_string_dec() const
 	return result;
 }
 
-
-mcp::raw_key::raw_key(mcp::private_key const & prv_a) :
+/*
+mcp::raw_key::raw_key(dev::Secret const & prv_a) :
 	data(prv_a)
 {
 }
@@ -352,7 +283,7 @@ void mcp::raw_key::decrypt(mcp::uint256_union const & ciphertext, mcp::raw_key c
 	CryptoPP::CTR_Mode_ExternalCipher::Decryption dec(alg, iv.bytes.data());
 	dec.ProcessData(data.bytes.data(), ciphertext.bytes.data(), sizeof(ciphertext.bytes));
 }
-
+*/
 
 bool mcp::uint512_union::operator== (mcp::uint512_union const & other_a) const
 {
@@ -505,23 +436,6 @@ std::string mcp::uint512_union::to_string() const
 	encode_hex(result);
 	return result;
 }
-
-//mcp::signature mcp::sign_message(mcp::raw_key const & private_key, /*mcp::public_key const & public_key,*/ mcp::uint256_union const & message)
-//{
-//	mcp::signature result;
-//	mcp::encry::sign(private_key.data, /*public_key,*/ message.ref(), result);
-//	return result;
-//}
-//
-//bool mcp::validate_message(dev::Address const & account, mcp::uint256_union const & message, mcp::signature const & signature)
-//{
-//	mcp::public_key pubkey = mcp::encry::recover(signature, message.ref());
-//	if (account == dev::Address(pubkey)) {
-//		return true;
-//	} else {
-//		return false;
-//	}
-//}
 
 mcp::uint128_union::uint128_union(std::string const & string_a)
 {
@@ -952,6 +866,7 @@ std::string mcp::uint64_union::to_string_no_fill(bool show_base) const
 	return result;
 }
 
+/*
 mcp::signature_struct::signature_struct(uint256_union const& _r, uint256_union const& _s, byte _v): r(_r), s(_s), v(_v) {
 
 }
@@ -1004,7 +919,7 @@ dev::bytesConstRef mcp::signature_struct::ref() const {
 	return dev::bytesConstRef(r.data(), size);
 }
 
-mcp::account20_struct::account20_struct(mcp::public_key const& pubkey) {
+mcp::account20_struct::account20_struct(dev::Public const& pubkey) {
 	dev::bytesConstRef bRef = sha3(pubkey.ref()).ref();
 	dev::bytesConstRef(bRef.data() + 12, size).copyTo(ref());
 }
@@ -1188,9 +1103,8 @@ mcp::compressed_pubkey_union::operator mcp::uint256_union() const
 	src.copyTo(r.ref());
 	return r;
 }
+*/
 
-dev::Address fromPublic(mcp::public_key & pubkey)
-{
-	dev::bytesConstRef bRef = sha3(pubkey.ref()).ref();
-	return dev::Address(bRef.cropped(12));
+mcp::p2p::node_id mcp::p2p::toNodeId(dev::PublicCompressed const & pubkey) {
+	return (mcp::p2p::node_id) pubkey.ref().cropped(1);
 }

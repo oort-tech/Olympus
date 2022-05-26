@@ -21,6 +21,8 @@
 
 #include <secp256k1.h>
 
+#include <libdevcrypto/Common.h>
+
 // #define crypto_cipher_len crypto_box_MACBYTES
 // #define crypto_sign_len crypto_sign_BYTES
 
@@ -159,31 +161,32 @@ namespace mcp
 	{
 	public:
 		key_pair() = default;
-		key_pair(seed_key const & seed);
+		key_pair(dev::Secret const & seed);
 		~key_pair();
+
 		static key_pair create();
 
 		// get the secret key.
-		secret_key const& secret() const { return m_secret; }
+		dev::Secret const& secret() const { return m_secret; }
 
 		// get the public key.
-		public_key const& pub() const { return m_public; }
+		dev::Public const& pub() const { return m_public; }
 
 		// get the public key compressed
-		public_key_comp const& pub_comp() const { return m_public_comp; }
+		dev::PublicCompressed const& pub_comp() const { return m_public_comp; }
 
 		// get the account's address
-		account20_struct const& account() const { return m_account; }
-
+		dev::Address const& account() const { return m_account; }
+		
 		bool operator==(key_pair const& _c) const { return m_public == _c.m_public; }
 		bool operator!=(key_pair const& _c) const { return m_public != _c.m_public; }
 		bool flag = false;
 
 	private:
-		secret_key m_secret;
-		public_key m_public;
-		public_key_comp m_public_comp;
-		account20_struct m_account;
+		dev::Secret m_secret;
+		dev::Public m_public;
+		dev::PublicCompressed m_public_comp;
+		dev::Address m_account;
 	};
 
 	class nonce
@@ -192,7 +195,6 @@ namespace mcp
 		static nonce get()
 		{
 			static nonce s;
-			// randombytes_buf(s.data.data(), s.data.size());
 			random_pool.GenerateBlock(s.data.data(), s.data.size());
 			return s;
 		}
@@ -210,29 +212,7 @@ namespace mcp
 
 	namespace encry
 	{
-		/*
-		//encryption curve 25519
-		int encryption(unsigned char *c, const unsigned char *m,
-			unsigned long long mlen, const unsigned char *n,
-			const unsigned char *pk, const unsigned char *sk);
-
-		//dencryption curve 25519
-		int dencryption(unsigned char *m, const unsigned char *c,
-			unsigned long long clen, const unsigned char *n,
-			const unsigned char *pk, const unsigned char *sk);
-
-		//used in-out key(seem AES), more efficiency than pk-sk
-		int encryption(unsigned char *c, const unsigned char *m,
-			unsigned long long mlen, const unsigned char *n,
-			const unsigned char *k);
-
-		int dencryption(unsigned char *m, const unsigned char *c,
-			unsigned long long clen, const unsigned char *n,
-			const unsigned char *k);
-		*/
-
-		// added by michael at 4/5
-		int get_encryption_key(mcp::secret_encry &key, const unsigned char* pk, const size_t pkLen, const mcp::secret_key &sk);
+		int get_encryption_key(dev::Secret &key, const unsigned char* pk, const size_t pkLen, const dev::Secret &sk);
 
 		int encryption(unsigned char *c, const unsigned char *m,
 			unsigned long long mlen, const unsigned char *n,
@@ -242,36 +222,6 @@ namespace mcp
 			unsigned long long clen, const unsigned char *n,
 			const unsigned char *ek);
 
-		/// Returns siganture of message hash.
-		bool sign(secret_key const& _k, dev::bytesConstRef _hash, mcp::signature& sig);
-		// this is curious for purpose, right now (commented by michael)
-		// bool sign(private_key const& _k, public_key const& _pk, dev::bytesConstRef _hash, mcp::signature& sig);
-
-		/// Verify signature.
-		// updated by michael at 1/10
-		bool verify(public_key const& _k, dev::bytesConstRef const& _s);
-		bool verify(public_key const& _k, mcp::signature const& _s, dev::bytesConstRef const& _o);
-		// added by michael
-		bool verify(uint256_union const& _k, mcp::signature const& _s, dev::bytesConstRef const& _o);
-		bool verify(public_key_comp const& _k, mcp::signature const& _s, dev::bytesConstRef const& _o);
-
-		// added by michael at 1/10
-		public_key recover(mcp::signature const& _s, dev::bytesConstRef const& _o);
-
-		// ed25519 secret key to curve25519 secret key
-		// bool get_encry_secret_key_from_sign_key(secret_encry & curve, secret_key const & ed25519);
-		// ed25519 public key to curve25519 public key
-		// bool get_encry_public_key_from_sign_key(public_key_comp & curve, public_key_comp const & ed25519);
-		// bool get_encry_public_key_from_sign_key(public_key_comp & curve, dev::bytesConstRef ed25519);
-
-		// commented by michael at 1/5
-		// ed25519 get public key from secret key
-		// bool generate_public_from_secret(mcp::uint256_union const& _sk, mcp::uint256_union& _pk);
-		
-		// added by michael at 1/5
-		bool generate_public_from_secret(secret_key const& _sk, public_key& _pk);
-		// added by michael at 4 / 5
-		bool generate_public_from_secret(secret_key const& _sk, public_key& _pk, public_key_comp& _pk_comp);
-		secp256k1_context const* get_secp256k1_ctx();
+		bool verify(dev::h256 const &pkSlice, dev::Signature const &sig, dev::h256 const &hash);
 	}
 }

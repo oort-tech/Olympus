@@ -16,7 +16,7 @@ peer::peer(std::shared_ptr<bi::tcp::socket> const & socket_a, node_id const & no
 
 peer::~peer()
 {
-    LOG(m_log.info) << "Peer deconstruction:" << m_node_id.to_string();
+    LOG(m_log.info) << "Peer deconstruction:" << m_node_id.hex();
 
     try {
         if (socket->is_open())
@@ -33,7 +33,7 @@ void peer::register_capability(std::shared_ptr<peer_capability> const & cap)
 void peer::start()
 {
     boost::system::error_code ec;
-    LOG(m_log.info) << "Peer start, node id: " << m_node_id.to_string() << "@" << socket->remote_endpoint(ec);
+    LOG(m_log.info) << "Peer start, node id: " << m_node_id.hex() << "@" << socket->remote_endpoint(ec);
 
     auto this_l(shared_from_this());
     for (auto pc : capabilities)
@@ -368,7 +368,7 @@ void peer::send(dev::RLPStream & s)
 	if (!socket->is_open())
 	{
 		boost::system::error_code ec;
-        LOG(m_log.debug) << "remote socket is closed: " << m_node_id.to_string()
+        LOG(m_log.debug) << "remote socket is closed: " << m_node_id.hex()
 			<< "@" << socket->remote_endpoint(ec);
 
 		return;
@@ -379,7 +379,7 @@ void peer::send(dev::RLPStream & s)
 		if (!bprintf)
 		{
 			boost::system::error_code ec;
-            LOG(m_log.debug) << "Peer write too slow " << m_node_id.to_string()
+            LOG(m_log.debug) << "Peer write too slow " << m_node_id.hex()
 				<< "@" << socket->remote_endpoint(ec) << " , surplus_size: " << surplus_size;
 
 			bprintf = true;
@@ -537,7 +537,7 @@ void peer::drop(disconnect_reason const & reason)
 		pc->cap->on_disconnect(this_l);
 
     boost::system::error_code ec;
-    LOG(m_log.info) << "Peer dropped " << m_node_id.to_string() << "@" << socket->remote_endpoint(ec);
+    LOG(m_log.info) << "Peer dropped " << m_node_id.hex() << "@" << socket->remote_endpoint(ec);
 
 	if (reason != disconnect_reason::client_quit)
 	{

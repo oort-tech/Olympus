@@ -7,7 +7,7 @@ namespace mcp
 	class kdf
 	{
 	public:
-		void phs(mcp::raw_key &, std::string const &, mcp::uint128_union const &);
+		void phs(dev::Secret &, std::string const &, dev::h128 const &);
 		std::mutex mutex;
 	};
 
@@ -22,17 +22,17 @@ namespace mcp
 		bool change_password(dev::Address const & account_a, std::string const & old_password_a, std::string const & new_password_a);
 		bool remove(dev::Address const & account_a, std::string const & password_a);
 		bool import(std::string const & json_a, key_content & kc_a, bool gen_next_work_a);
-		mcp::key_content importRawKey(mcp::raw_key & prv, std::string const & password);
-		bool decrypt_prv(dev::Address const & account_a, std::string const & password_a, mcp::raw_key & prv);
-		bool decrypt_prv(mcp::key_content const & kc, std::string const & password_a, mcp::raw_key & prv);
+		mcp::key_content importRawKey(dev::Secret & prv, std::string const & password);
+		bool decrypt_prv(dev::Address const & account_a, std::string const & password_a, dev::Secret & prv);
+		bool decrypt_prv(mcp::key_content const & kc, std::string const & password_a, dev::Secret & prv);
 		bool is_locked(dev::Address const & pub_a);
-		bool find_unlocked_prv(dev::Address const & account_a, mcp::raw_key & prv);
+		bool find_unlocked_prv(dev::Address const & account_a, dev::Secret & prv);
 		bool unlock(dev::Address const & account_a, std::string const & password_a);
 		void write_backup(dev::Address const & account, std::string const & json);
 		void lock(dev::Address const & account_a);
-		std::pair<bool, Secret> authenticate(Address, boost::optional<std::string> const & password);
+		std::pair<bool, Secret> authenticate(dev::Address, boost::optional<std::string> const & password);
 	private:
-		mcp::key_content gen_key_content(mcp::raw_key const & prv, std::string const & password_a);
+		mcp::key_content gen_key_content(dev::Secret const & prv, std::string const & password_a);
 		void add_or_update_key(mcp::key_content const & kc, bool const & is_backup_a = true);
 
 		mcp::kdf m_kdf;
@@ -41,7 +41,7 @@ namespace mcp
 		std::unordered_map<dev::Address, mcp::key_content> m_key_contents;
 		std::mutex m_key_contents_mutex;
 
-		std::unordered_map<dev::Address, mcp::private_key> m_unlocked;
+		std::unordered_map<dev::Address, dev::Secret> m_unlocked;
 		std::mutex m_unlocked_mutex;
 		mcp::key_store m_store;
 	};

@@ -529,7 +529,7 @@ public:
 	void logs(mcp::json & j_response);
 
     bool is_eth_rpc(mcp::json &response);
-	void get_eth_signed_msg(dev::bytes & data, dev::bytes & digest);
+	void get_eth_signed_msg(dev::bytes & data, dev::h256 & hash);
 	bool try_get_mc_info(dev::eth::McInfo &mc_info_a, uint64_t &mci);
 
 	void web3_clientVersion(mcp::json & j_response);
