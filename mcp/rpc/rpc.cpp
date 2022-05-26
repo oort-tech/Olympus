@@ -557,7 +557,6 @@ void mcp::rpc_handler::account_create(mcp::json & j_response)
 	dev::Address new_account = m_key_manager->create(password, gen_next_work_l, backup_l);
 	j_response["account"] = new_account.hexPrefixed();
 	
-
 	/*if (rpc.config.enable_control)
 	{
 		if (request.count("password") && request["password"].is_string())
@@ -619,21 +618,17 @@ void mcp::rpc_handler::account_create(mcp::json & j_response)
 
 void mcp::rpc_handler::account_remove(mcp::json & j_response)
 {
-	
-	if (!request.count("account") || !request["account"].is_string())
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccount());
-	}
-
-	if (!mcp::isAddress(request["account"])) {
+	if (!request.count("account") || !request["account"].is_string()) {
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccount());
 	}
 
 	std::string account_text = request["account"];
-	dev::Address account(account_text);
-	bool exists(m_key_manager->exists(account));
+	if (!mcp::isAddress(account_text)) {
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccount());
+	}
 
-	if (!exists) {
+	dev::Address account(account_text);
+	if (!m_key_manager->exists(account)) {
 		BOOST_THROW_EXCEPTION(RPC_Error_AccountNotExist());
 	}
 
@@ -642,14 +637,11 @@ void mcp::rpc_handler::account_remove(mcp::json & j_response)
 	}
 
 	std::string password_text = request["password"];
-
 	if (password_text.empty()) {
 		BOOST_THROW_EXCEPTION(RPC_Error_EmptyPassword());
 	}
 
-	bool error(m_key_manager->remove(account, password_text));
-
-	if (error) {
+	if (m_key_manager->remove(account, password_text)) {
 		BOOST_THROW_EXCEPTION(RPC_Error_WrongPassword());
 	}
 
@@ -710,25 +702,21 @@ void mcp::rpc_handler::account_remove(mcp::json & j_response)
 
 void mcp::rpc_handler::account_password_change(mcp::json & j_response)
 {
-	if (!request.count("account") || !request["account"].is_string())
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccount());
-	}
-
-	if (!mcp::isAddress(request["account"])) {
+	if (!request.count("account") || !request["account"].is_string()) {
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccount());
 	}
 
 	std::string account_text = request["account"];
-	dev::Address account(account_text);
-	bool exists(m_key_manager->exists(account));
+	if (!mcp::isAddress(account_text)) {
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccount());
+	}
 
-	if (!exists) {
+	dev::Address account(account_text);
+	if (!m_key_manager->exists(account)) {
 		BOOST_THROW_EXCEPTION(RPC_Error_AccountNotExist());
 	}
 
-	if (!request.count("old_password") || !request["old_password"].is_string())
-	{
+	if (!request.count("old_password") || !request["old_password"].is_string()) {
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidOldPassword());
 	}
 	std::string old_password_text = request["old_password"];
@@ -747,12 +735,10 @@ void mcp::rpc_handler::account_password_change(mcp::json & j_response)
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidCharactersPassword());
 	}
 
-	bool error(m_key_manager->change_password(account, old_password_text, new_password_text));
-	if (error) {
+	if (m_key_manager->change_password(account, old_password_text, new_password_text)) {
 		BOOST_THROW_EXCEPTION(RPC_Error_WrongPassword());
 	}
-
-
+	
 	/*if (rpc.config.enable_control)
 	{
 		mcp::rpc_account_password_change_error_code error_code_l;
@@ -832,37 +818,30 @@ void mcp::rpc_handler::account_password_change(mcp::json & j_response)
 
 void mcp::rpc_handler::account_unlock(mcp::json & j_response)
 {
-	if (!request.count("account") || !request["account"].is_string())
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccount());
-	}
-
-	if (!mcp::isAddress(request["account"])) {
+	if (!request.count("account") || !request["account"].is_string()) {
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccount());
 	}
 
 	std::string account_text = request["account"];
-	dev::Address account(account_text);
-	bool exists(m_key_manager->exists(account));
+	if (!mcp::isAddress(account_text)) {
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccount());
+	}
 
-	if (!exists) {
+	dev::Address account(account_text);
+	if (!m_key_manager->exists(account)) {
 		BOOST_THROW_EXCEPTION(RPC_Error_AccountNotExist());
 	}
 
-	if (!request.count("password") || !request["password"].is_string())
-	{
+	if (!request.count("password") || !request["password"].is_string()) {
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidPassword());
 	}
 
 	std::string password_text = request["password"];
-
 	if (password_text.empty()) {
 		BOOST_THROW_EXCEPTION(RPC_Error_EmptyPassword());
 	}
 
-	bool error(m_key_manager->unlock(account, password_text));
-
-	if (error) {
+	if (m_key_manager->unlock(account, password_text)) {
 		BOOST_THROW_EXCEPTION(RPC_Error_WrongPassword());
 	}
 
@@ -925,20 +904,17 @@ void mcp::rpc_handler::account_unlock(mcp::json & j_response)
 
 void mcp::rpc_handler::account_lock(mcp::json & j_response)
 {
-	if (!request.count("account") || !request["account"].is_string())
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccount());
-	}
-
-	if (!mcp::isAddress(request["account"])) {
+	if (!request.count("account") || !request["account"].is_string()) {
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccount());
 	}
 
 	std::string account_text = request["account"];
-	dev::Address account(account_text);
-	bool exists(m_key_manager->exists(account));
+	if (!mcp::isAddress(account_text)) {
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccount());
+	}
 
-	if (!exists) {
+	dev::Address account(account_text);
+	if (!m_key_manager->exists(account)) {
 		BOOST_THROW_EXCEPTION(RPC_Error_AccountNotExist());
 	}
 
@@ -986,26 +962,22 @@ void mcp::rpc_handler::account_lock(mcp::json & j_response)
 
 void mcp::rpc_handler::account_export(mcp::json & j_response)
 {
-	if (!request.count("account") || !request["account"].is_string())
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccount());
-	}
-
-	if (!mcp::isAddress(request["account"])) {
+	if (!request.count("account") || !request["account"].is_string()) {
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccount());
 	}
 
 	std::string account_text = request["account"];
+	if (!mcp::isAddress(account_text)) {
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccount());
+	}
+
 	dev::Address account(account_text);
 	mcp::key_content kc;
-	bool exists(m_key_manager->find(account, kc));
-
-	if (!exists) {
+	if (!m_key_manager->find(account, kc)) {
 		BOOST_THROW_EXCEPTION(RPC_Error_AccountNotExist());
 	}
 	
-	std::string const &json(kc.to_json());
-	j_response["json"] = json;
+	j_response["json"] = kc.to_json();
 
 /*
 	mcp::rpc_account_export_error_code error_code_l;
@@ -1052,15 +1024,12 @@ void mcp::rpc_handler::account_import(mcp::json & j_response)
 
 	std::string json_text = request["json"];
 	bool gen_next_work_l(false);
-
 	mcp::key_content kc;
-	bool error(m_key_manager->import(json_text, kc, gen_next_work_l));
 
-	if (error) {
+	if (m_key_manager->import(json_text, kc, gen_next_work_l)) {
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidJson());
 	}
-
-
+	
 	//if (rpc.config.enable_control)
 	//{
 	//	mcp::rpc_account_import_error_code error_code_l;
