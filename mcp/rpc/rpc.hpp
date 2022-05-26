@@ -442,7 +442,7 @@ RPC_ERROR_EXCEPTION(RPC_Error_InvalidCharactersPassword, 3, "Invalid password! A
 RPC_ERROR_EXCEPTION(RPC_Error_InvalidGenNextWorkValue, 4, "Invalid gen_next_work format");
 RPC_ERROR_EXCEPTION(RPC_Error_InvalidPassword, 5, "Invalid password");
 RPC_ERROR_EXCEPTION(RPC_Error_InvalidBackup, 6, "Invalid backup");
-RPC_ERROR_EXCEPTION(RPC_Error_AccountNotExisit, 7, "Account not found");
+RPC_ERROR_EXCEPTION(RPC_Error_AccountNotExist, 7, "Account not found");
 RPC_ERROR_EXCEPTION(RPC_Error_WrongPassword, 8, "Wrong password");
 RPC_ERROR_EXCEPTION(RPC_Error_InvalidJson, 9, "Invalid json");
 RPC_ERROR_EXCEPTION(RPC_Error_InvalidOldPassword, 10, "Invalid old password");
