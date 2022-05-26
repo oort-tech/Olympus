@@ -520,7 +520,6 @@ void mcp::rpc_handler::account_list(mcp::json & j_response)
 
 void mcp::rpc_handler::account_validate(mcp::json & j_response)
 {
-	mcp::rpc_account_validate_error_code error_code_l;
 	if (!request.count("account") || !request["account"].is_string())
 	{
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccount());
@@ -532,8 +531,34 @@ void mcp::rpc_handler::account_validate(mcp::json & j_response)
 
 void mcp::rpc_handler::account_create(mcp::json & j_response)
 {
-	mcp::rpc_account_create_error_code error_code_l;
-	if (rpc.config.enable_control)
+	if (!request.count("password") || !request["password"].is_string()) {
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidPassword());
+	}
+
+	std::string password = request["password"];
+	if (password.empty()) {
+		BOOST_THROW_EXCEPTION(RPC_Error_EmptyPassword());
+	}
+
+	if (!mcp::validatePasswordSize(password)) {
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidLengthPassword());
+	}
+
+	if (!mcp::validatePassword(password)) {
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidCharactersPassword());
+	}
+
+	bool backup_l(true);
+	if (request.count("backup") && try_get_bool_from_json("backup", backup_l)) {
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidGenNextWorkValue());
+	}
+
+	bool gen_next_work_l(false);
+	dev::Address new_account = m_key_manager->create(password, gen_next_work_l, backup_l);
+	j_response["account"] = new_account.hexPrefixed();
+	
+
+	/*if (rpc.config.enable_control)
 	{
 		if (request.count("password") && request["password"].is_string())
 		{
@@ -589,12 +614,46 @@ void mcp::rpc_handler::account_create(mcp::json & j_response)
 	else
 	{
 		rpc_response(response, "HTTP RPC control is disabled");
-	}
+	}*/
 }
 
 void mcp::rpc_handler::account_remove(mcp::json & j_response)
 {
-	if (rpc.config.enable_control)
+	
+	if (!request.count("account") || !request["account"].is_string())
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccount());
+	}
+
+	if (!mcp::isAddress(request["account"])) {
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccount());
+	}
+
+	std::string account_text = request["account"];
+	dev::Address account(account_text);
+	bool exists(m_key_manager->exists(account));
+
+	if (!exists) {
+		BOOST_THROW_EXCEPTION(RPC_Error_AccountNotExist());
+	}
+
+	if (!request.count("password") || !request["password"].is_string()) {
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidPassword());
+	}
+
+	std::string password_text = request["password"];
+
+	if (password_text.empty()) {
+		BOOST_THROW_EXCEPTION(RPC_Error_EmptyPassword());
+	}
+
+	bool error(m_key_manager->remove(account, password_text));
+
+	if (error) {
+		BOOST_THROW_EXCEPTION(RPC_Error_WrongPassword());
+	}
+
+	/*if (rpc.config.enable_control)
 	{
 		mcp::rpc_account_remove_error_code error_code_l;
 		bool error(true);
@@ -646,12 +705,55 @@ void mcp::rpc_handler::account_remove(mcp::json & j_response)
 	else
 	{
 		rpc_response(response, "HTTP RPC control is disabled");
-	}
+	}*/
 }
 
 void mcp::rpc_handler::account_password_change(mcp::json & j_response)
 {
-	if (rpc.config.enable_control)
+	if (!request.count("account") || !request["account"].is_string())
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccount());
+	}
+
+	if (!mcp::isAddress(request["account"])) {
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccount());
+	}
+
+	std::string account_text = request["account"];
+	dev::Address account(account_text);
+	bool exists(m_key_manager->exists(account));
+
+	if (!exists) {
+		BOOST_THROW_EXCEPTION(RPC_Error_AccountNotExist());
+	}
+
+	if (!request.count("old_password") || !request["old_password"].is_string())
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidOldPassword());
+	}
+	std::string old_password_text = request["old_password"];
+
+	if (!request.count("new_password") || (!request["new_password"].is_string()))
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidNewPassword());
+	}
+	std::string new_password_text = request["new_password"];
+
+	if (!mcp::validatePasswordSize(new_password_text)) {
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidLengthPassword());
+	}
+
+	if (!mcp::validatePassword(new_password_text)) {
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidCharactersPassword());
+	}
+
+	bool error(m_key_manager->change_password(account, old_password_text, new_password_text));
+	if (error) {
+		BOOST_THROW_EXCEPTION(RPC_Error_WrongPassword());
+	}
+
+
+	/*if (rpc.config.enable_control)
 	{
 		mcp::rpc_account_password_change_error_code error_code_l;
 		bool error(true);
@@ -725,12 +827,46 @@ void mcp::rpc_handler::account_password_change(mcp::json & j_response)
 	else
 	{
 		rpc_response(response, "HTTP RPC control is disabled");
-	}
+	}*/
 }
 
 void mcp::rpc_handler::account_unlock(mcp::json & j_response)
 {
-	if (rpc.config.enable_control)
+	if (!request.count("account") || !request["account"].is_string())
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccount());
+	}
+
+	if (!mcp::isAddress(request["account"])) {
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccount());
+	}
+
+	std::string account_text = request["account"];
+	dev::Address account(account_text);
+	bool exists(m_key_manager->exists(account));
+
+	if (!exists) {
+		BOOST_THROW_EXCEPTION(RPC_Error_AccountNotExist());
+	}
+
+	if (!request.count("password") || !request["password"].is_string())
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidPassword());
+	}
+
+	std::string password_text = request["password"];
+
+	if (password_text.empty()) {
+		BOOST_THROW_EXCEPTION(RPC_Error_EmptyPassword());
+	}
+
+	bool error(m_key_manager->unlock(account, password_text));
+
+	if (error) {
+		BOOST_THROW_EXCEPTION(RPC_Error_WrongPassword());
+	}
+
+	/*if (rpc.config.enable_control)
 	{
 		mcp::rpc_account_unlock_error_code error_code_l;
 		if (request.count("account") && request["account"].is_string())
@@ -784,12 +920,31 @@ void mcp::rpc_handler::account_unlock(mcp::json & j_response)
 	else
 	{
 		rpc_response(response, "HTTP RPC control is disabled");
-	}
+	}*/
 }
 
 void mcp::rpc_handler::account_lock(mcp::json & j_response)
 {
-	if (rpc.config.enable_control)
+	if (!request.count("account") || !request["account"].is_string())
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccount());
+	}
+
+	if (!mcp::isAddress(request["account"])) {
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccount());
+	}
+
+	std::string account_text = request["account"];
+	dev::Address account(account_text);
+	bool exists(m_key_manager->exists(account));
+
+	if (!exists) {
+		BOOST_THROW_EXCEPTION(RPC_Error_AccountNotExist());
+	}
+
+	m_key_manager->lock(account);
+
+	/*if (rpc.config.enable_control)
 	{
 		mcp::rpc_account_lock_error_code error_code_l;
 		if (request.count("account") && request["account"].is_string())
@@ -826,11 +981,33 @@ void mcp::rpc_handler::account_lock(mcp::json & j_response)
 	else
 	{
 		rpc_response(response, "HTTP RPC control is disabled");
-	}
+	}*/
 }
 
 void mcp::rpc_handler::account_export(mcp::json & j_response)
 {
+	if (!request.count("account") || !request["account"].is_string())
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccount());
+	}
+
+	if (!mcp::isAddress(request["account"])) {
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccount());
+	}
+
+	std::string account_text = request["account"];
+	dev::Address account(account_text);
+	mcp::key_content kc;
+	bool exists(m_key_manager->find(account, kc));
+
+	if (!exists) {
+		BOOST_THROW_EXCEPTION(RPC_Error_AccountNotExist());
+	}
+	
+	std::string const &json(kc.to_json());
+	j_response["json"] = json;
+
+/*
 	mcp::rpc_account_export_error_code error_code_l;
 	if (request.count("account") && request["account"].is_string())
 	{
@@ -864,44 +1041,59 @@ void mcp::rpc_handler::account_export(mcp::json & j_response)
 	{
 		error_code_l = mcp::rpc_account_export_error_code::invalid_account;
 		rpc_response(response, (int)error_code_l, err.msg(error_code_l));
-	}
+	}*/
 }
 
 void mcp::rpc_handler::account_import(mcp::json & j_response)
 {
-	if (rpc.config.enable_control)
-	{
-		mcp::rpc_account_import_error_code error_code_l;
-
-		if (request.count("json") && request["json"].is_string())
-		{
-			std::string json_text = request["json"];
-			bool gen_next_work_l(false);
-
-			mcp::key_content kc;
-			auto error(m_key_manager->import(json_text, kc, gen_next_work_l));
-			if (!error)
-			{
-				j_response["account"] = kc.account.hexPrefixed();
-				error_code_l = mcp::rpc_account_import_error_code::ok;
-				rpc_response(response, (int)error_code_l, err.msg(error_code_l), j_response);
-			}
-			else
-			{
-				error_code_l = mcp::rpc_account_import_error_code::invalid_json;
-				rpc_response(response, (int)error_code_l, err.msg(error_code_l));
-			}
-		}
-		else
-		{
-			error_code_l = mcp::rpc_account_import_error_code::invalid_json;
-			rpc_response(response, (int)error_code_l, err.msg(error_code_l));
-		}
+	if (!request.count("json") || !request["json"].is_string()) {
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidJson());
 	}
-	else
-	{
-		rpc_response(response, "HTTP RPC control is disabled");
+
+	std::string json_text = request["json"];
+	bool gen_next_work_l(false);
+
+	mcp::key_content kc;
+	bool error(m_key_manager->import(json_text, kc, gen_next_work_l));
+
+	if (error) {
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidJson());
 	}
+
+
+	//if (rpc.config.enable_control)
+	//{
+	//	mcp::rpc_account_import_error_code error_code_l;
+
+	//	if (request.count("json") && request["json"].is_string())
+	//	{
+	//		std::string json_text = request["json"];
+	//		bool gen_next_work_l(false);
+
+	//		mcp::key_content kc;
+	//		auto error(m_key_manager->import(json_text, kc, gen_next_work_l));
+	//		if (!error)
+	//		{
+	//			j_response["account"] = kc.account.hexPrefixed();
+	//			error_code_l = mcp::rpc_account_import_error_code::ok;
+	//			//rpc_response(response, (int)error_code_l, err.msg(error_code_l), j_response);
+	//		}
+	//		else
+	//		{
+	//			error_code_l = mcp::rpc_account_import_error_code::invalid_json;
+	//			rpc_response(response, (int)error_code_l, err.msg(error_code_l));
+	//		}
+	//	}
+	//	else
+	//	{
+	//		error_code_l = mcp::rpc_account_import_error_code::invalid_json;
+	//		rpc_response(response, (int)error_code_l, err.msg(error_code_l));
+	//	}
+	//}
+	//else
+	//{
+	//	rpc_response(response, "HTTP RPC control is disabled");
+	//}
 }
 
 void mcp::rpc_handler::account_code(mcp::json & j_response)
@@ -1971,7 +2163,7 @@ void mcp::rpc_handler::send_block(mcp::json & j_response)
 		auto fun = [rpc_l, &j_response, this](h256 h)
 		{
 			j_response["result"] = toJS(h);
-			response(j_response);
+			//response(j_response);
 		};
 
 		TransactionSkeleton t = mcp::toTransactionSkeleton(request);
