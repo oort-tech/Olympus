@@ -435,6 +435,7 @@ struct RpcException : virtual Exception
 		const int code() const noexcept override { return C; } \
     }
 
+RPC_ERROR_EXCEPTION(RPC_Error_OK, 0, "OK");
 RPC_ERROR_EXCEPTION(RPC_Error_InvalidAccount, 1, "Invalid account");
 RPC_ERROR_EXCEPTION(RPC_Error_InvalidLengthPassword, 2, "Invalid password! A valid password length must between 8 and 100");
 RPC_ERROR_EXCEPTION(RPC_Error_InvalidCharactersPassword, 3, "Invalid password! A valid password must contain characters from letters (a-Z, A-Z), digits (0-9) and special characters (!@#$%^&*)");
@@ -479,7 +480,9 @@ RPC_ERROR_EXCEPTION(RPC_Error_InvalidMaxResults, 41, "Invalid value of max resul
 RPC_ERROR_EXCEPTION(RPC_Error_InvalidFromStableBlockIndex, 42, "Invalid from stable block index");
 RPC_ERROR_EXCEPTION(RPC_Error_InvalidToStableBlockIndex, 43, "Invalid to stable block index");
 RPC_ERROR_EXCEPTION(RPC_Error_InvalidTopics, 44, "Invalid topics");
-RPC_ERROR_EXCEPTION(RPC_Error_InvalidParams, 4, "Invalid params");
+RPC_ERROR_EXCEPTION(RPC_Error_InvalidParams, 45, "Invalid params");
+
+RPC_ERROR_EXCEPTION(RPC_Error_EmptyPassword, 46, "Password can not be empty");
 // RPC_ERROR_EXCEPTION(RPC_Error_, 4, "");
 // RPC_ERROR_EXCEPTION(RPC_Error_, 4, "");
 // RPC_ERROR_EXCEPTION(RPC_Error_, 4, "");

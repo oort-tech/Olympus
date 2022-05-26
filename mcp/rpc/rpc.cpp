@@ -520,7 +520,6 @@ void mcp::rpc_handler::account_list(mcp::json & j_response)
 
 void mcp::rpc_handler::account_validate(mcp::json & j_response)
 {
-	mcp::rpc_account_validate_error_code error_code_l;
 	if (!request.count("account") || !request["account"].is_string())
 	{
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccount());
@@ -533,7 +532,35 @@ void mcp::rpc_handler::account_validate(mcp::json & j_response)
 void mcp::rpc_handler::account_create(mcp::json & j_response)
 {
 	mcp::rpc_account_create_error_code error_code_l;
-	if (rpc.config.enable_control)
+
+	if (!request.count("password") || !request["password"].is_string()) {
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidPassword());
+	}
+
+	std::string password = request["password"];
+	if (password.empty()) {
+		BOOST_THROW_EXCEPTION(RPC_Error_EmptyPassword());
+	}
+
+	if (!mcp::validatePasswordSize(password)) {
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidLengthPassword());
+	}
+
+	if (!mcp::validatePassword(password)) {
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidCharactersPassword());
+	}
+
+	bool backup_l(true);
+	if (request.count("backup") && try_get_bool_from_json("backup", backup_l)) {
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidGenNextWorkValue());
+	}
+
+	bool gen_next_work_l(false);
+	dev::Address new_account = m_key_manager->create(password, gen_next_work_l, backup_l);
+	j_response["account"] = new_account.hexPrefixed();
+	
+
+	/*if (rpc.config.enable_control)
 	{
 		if (request.count("password") && request["password"].is_string())
 		{
@@ -589,7 +616,7 @@ void mcp::rpc_handler::account_create(mcp::json & j_response)
 	else
 	{
 		rpc_response(response, "HTTP RPC control is disabled");
-	}
+	}*/
 }
 
 void mcp::rpc_handler::account_remove(mcp::json & j_response)
