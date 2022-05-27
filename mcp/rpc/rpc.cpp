@@ -1532,20 +1532,20 @@ void mcp::rpc_handler::block_state(mcp::json & j_response)
 			state->serialize_json(block_state_l);
 
 			j_response["block_state"] = block_state_l;
-			error_code_l = mcp::rpc_block_error_code::ok;
-			rpc_response(response, (int)error_code_l, err.msg(error_code_l), j_response);
+			/*error_code_l = mcp::rpc_block_error_code::ok;
+			rpc_response(response, (int)error_code_l, err.msg(error_code_l), j_response);*/
 		}
 		else
 		{
 			j_response["block_state"] = nullptr;
-			error_code_l = mcp::rpc_block_error_code::ok;
-			rpc_response(response, (int)error_code_l, err.msg(error_code_l), j_response);
+			/*error_code_l = mcp::rpc_block_error_code::ok;
+			rpc_response(response, (int)error_code_l, err.msg(error_code_l), j_response);*/
 		}
 	}
 	else
 	{
-		error_code_l = mcp::rpc_block_error_code::invalid_hash;
-		rpc_response(response, (int)error_code_l, err.msg(error_code_l));
+		/*error_code_l = mcp::rpc_block_error_code::invalid_hash;
+		rpc_response(response, (int)error_code_l, err.msg(error_code_l));*/
 	}
 }
 
