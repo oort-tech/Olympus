@@ -1068,78 +1068,66 @@ void mcp::rpc_handler::account_import(mcp::json & j_response)
 
 void mcp::rpc_handler::account_code(mcp::json & j_response)
 {
-	//mcp::rpc_account_code_error_code error_code_l;
-	//if (request.count("account") && request["account"].is_string())
-	//{
-	//	std::string account_text = request["account"];
-	//	Address account = jsToAddress(account_text);
-	//	mcp::db::db_transaction transaction(m_store.create_transaction());
-	//	chain_state c_state(transaction, 0, m_store, m_chain, m_cache);
-	//	auto code(c_state.code(account));
+	if (!request.count("account") || !request["account"].is_string()) {
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccount());
+	}
 
-	//	j_response["account_code"] = bytes_to_hex(code);
+	std::string account_text = request["account"];
+	if (!mcp::isAddress(account_text)) {
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccount());
+	}
 
-	//	error_code_l = mcp::rpc_account_code_error_code::ok;
-	//	rpc_response(response, (int)error_code_l, err.msg(error_code_l), j_response);
-	//}
-	//else
-	//{
-	//	error_code_l = mcp::rpc_account_code_error_code::invalid_account;
-	//	rpc_response(response, (int)error_code_l, err.msg(error_code_l));
-	//}
+	Address account(account_text);
+	mcp::db::db_transaction transaction(m_store.create_transaction());
+	chain_state c_state(transaction, 0, m_store, m_chain, m_cache);
+	
+	j_response["account_code"] = bytes_to_hex(c_state.code(account));
 }
 
 void mcp::rpc_handler::account_balance(mcp::json & j_response)
 {
-	try
-	{
-		std::string account_text = request["account"];
-		mcp::db::db_transaction transaction(m_store.create_transaction());
-		chain_state c_state(transaction, 0, m_store, m_chain, m_cache);
+	if (!request.count("account") || !request["account"].is_string()) {
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccount());
+	}
 
-		auto balance(c_state.balance(jsToAddress(account_text)));
-		j_response["balance"] = balance.convert_to<std::string>();
+	std::string account_text = request["account"];
+	if (!mcp::isAddress(account_text)) {
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccount());
 	}
-	catch (...)
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams());
-	}
+
+	mcp::db::db_transaction transaction(m_store.create_transaction());
+	chain_state c_state(transaction, 0, m_store, m_chain, m_cache);
+
+	auto balance(c_state.balance(dev::Address(account_text)));
+	j_response["balance"] = balance.convert_to<std::string>();
 }
 
 void mcp::rpc_handler::accounts_balances(mcp::json & j_response)
 {
-	/*mcp::rpc_accounts_balances_error_code error_code_l;
+	mcp::rpc_accounts_balances_error_code error_code_l;
 
 	mcp::json j_balances = mcp::json::array();
 	if (request.count("accounts") == 0)
 	{
-		error_code_l = mcp::rpc_accounts_balances_error_code::invalid_account;
-		rpc_response(response, (int)error_code_l, err.msg(error_code_l));
-		return;
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccount());
 	}
 
 	for (mcp::json const &j_account : request["accounts"])
 	{
 		std::string account_text = j_account;
-		auto error(!mcp::isAddress(account_text));
-		if (!error)
+		if (!mcp::isAddress(account_text))
 		{
-			dev::Address account(account_text);
-			mcp::db::db_transaction transaction(m_store.create_transaction());
-			chain_state c_state(transaction, 0, m_store, m_chain, m_cache);
-			auto balance(c_state.balance(account));
-			j_balances.push_back(balance.convert_to<std::string>());
+			BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccount());
 		}
-		else
-		{
-			error_code_l = mcp::rpc_accounts_balances_error_code::invalid_account;
-			rpc_response(response, (int)error_code_l, err.msg(error_code_l) + ":" + account_text);
-			return;
-		}
+		
+		dev::Address account(account_text);
+		mcp::db::db_transaction transaction(m_store.create_transaction());
+		chain_state c_state(transaction, 0, m_store, m_chain, m_cache);
+		auto balance(c_state.balance(account));
+		j_balances.push_back(balance.convert_to<std::string>());
 	}
+
 	j_response["balances"] = j_balances;
-	error_code_l = mcp::rpc_accounts_balances_error_code::ok;
-	rpc_response(response, (int)error_code_l, err.msg(error_code_l), j_response);*/
 }
 
 void mcp::rpc_handler::account_block_list(mcp::json & j_response)
@@ -2133,7 +2121,7 @@ void mcp::rpc_handler::send_block(mcp::json & j_response)
 		TransactionSkeleton t = mcp::toTransactionSkeleton(request);
 		m_wallet->send_async(t, fun, password);
 	}
-	catch (Exception const&)
+	catch (...)
 	{
 		//throw JsonRpcException(exceptionToErrorMessage());
 	}

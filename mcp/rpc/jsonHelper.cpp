@@ -1,6 +1,8 @@
 #include <boost/throw_exception.hpp>
 #include <libdevcore/CommonJS.h>
+
 #include "jsonHelper.hpp"
+#include "exceptions.hpp"
 
 namespace mcp
 {
@@ -11,14 +13,27 @@ namespace mcp
 		if (!_json.is_object() || _json.empty())
 			return ret;
 
-		if (_json.count("from") && !_json["from"].empty() && _json["from"].is_string())
-			ret.from = jsToAddress(_json["from"]);
+		if (_json.count("from") && !_json["from"].empty() && _json["from"].is_string()) {
+			try {
+				ret.from = jsToAddress(_json["from"]);
+			}
+			catch (...) {
+				BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccountFrom());
+			}
+		}
 
-		if (_json.count("to") && !_json["to"].empty() && _json["to"].is_string())
-			ret.to = jsToAddress(_json["to"]);
+		if (_json.count("to") && !_json["to"].empty() && _json["to"].is_string()) {
+			try {
+				ret.to = jsToAddress(_json["to"]);
+			}
+			catch (...) {
+				BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccountTo());
+			}
+		}
 
-		if (_json.count("value") && !_json["value"].empty() && _json["value"].is_string())
+		if (_json.count("value") && !_json["value"].empty() && _json["value"].is_string()) {
 			ret.value = jsToU256(_json["value"]);
+		}
 
 		if (_json.count("gas") && !_json["gas"].empty() && _json["gas"].is_string())
 			ret.gas = jsToU256(_json["gas"]);
@@ -26,8 +41,14 @@ namespace mcp
 		if (_json.count("gasPrice") && !_json["gasPrice"].empty() && _json["gasPrice"].is_string())
 			ret.gasPrice = jsToU256(_json["gasPrice"]);
 
-		if (_json.count("data") && !_json["data"].empty() && _json["data"].is_string())
-			ret.data = jsToBytes(_json["data"], OnFailed::Throw);
+		if (_json.count("data") && !_json["data"].empty() && _json["data"].is_string()) {
+			try {
+				ret.data = jsToBytes(_json["data"], OnFailed::Throw);
+			}
+			catch (...) {
+				BOOST_THROW_EXCEPTION(RPC_Error_InvalidData());
+			}
+		}
 
 		//if (!_json["code"].empty() && _json["gasPrice"].is_string())
 		//	ret.data = jsToBytes(_json["code"].asString(), OnFailed::Throw);
