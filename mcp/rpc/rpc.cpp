@@ -1370,50 +1370,75 @@ void mcp::rpc_handler::account_state_list(mcp::json & j_response)
 
 void mcp::rpc_handler::block(mcp::json & j_response)
 {
-	mcp::rpc_block_error_code error_code_l;
-
-	if (!request.count("hash") || (!request["hash"].is_string()))
-	{
-		error_code_l = mcp::rpc_block_error_code::invalid_hash;
-		rpc_response(response, (int)error_code_l, err.msg(error_code_l));
-		return;
+	if (!request.count("hash") || !request["hash"].is_string()) {
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidHash());
 	}
-
 	std::string hash_text = request["hash"];
 	mcp::uint256_union hash;
-	auto error(hash.decode_hex(hash_text));
-	if (!error)
-	{
-		mcp::json response_l;
-		mcp::db::db_transaction transaction(m_store.create_transaction());
-		auto block(m_cache->block_get(transaction, hash));
-		//if (block == nullptr)
-		//{
-		//	auto unlink_block(m_cache->unlink_block_get(transaction, hash));
-		//	if (unlink_block)
-		//		block = unlink_block->block;
-		//}
+	bool error(hash.decode_hex(hash_text));
 
-		if (block != nullptr)
-		{
-			mcp::json block_l;
-			block->serialize_json(block_l);
-			response_l["block"] = block_l;
-			error_code_l = mcp::rpc_block_error_code::ok;
-			rpc_response(response, (int)error_code_l, err.msg(error_code_l), response_l);
-		}
-		else
-		{
-			response_l["block"] = nullptr;
-			error_code_l = mcp::rpc_block_error_code::ok;
-			rpc_response(response, (int)error_code_l, err.msg(error_code_l), response_l);
-		}
+	if (error) {
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidHash());
+	}
+
+	mcp::db::db_transaction transaction(m_store.create_transaction());
+	auto block(m_cache->block_get(transaction, hash));
+
+	if (block != nullptr)
+	{
+		mcp::json block_l;
+		block->serialize_json(block_l);
+		j_response["block"] = block_l;
 	}
 	else
 	{
-		error_code_l = mcp::rpc_block_error_code::invalid_hash;
-		rpc_response(response, (int)error_code_l, err.msg(error_code_l));
+		j_response["block"] = nullptr;
 	}
+
+	//mcp::rpc_block_error_code error_code_l;
+
+	//if (!request.count("hash") || (!request["hash"].is_string()))
+	//{
+	//	error_code_l = mcp::rpc_block_error_code::invalid_hash;
+	//	rpc_response(response, (int)error_code_l, err.msg(error_code_l));
+	//	return;
+	//}
+
+	//std::string hash_text = request["hash"];
+	//mcp::uint256_union hash;
+	//auto error(hash.decode_hex(hash_text));
+	//if (!error)
+	//{
+	//	mcp::json response_l;
+	//	mcp::db::db_transaction transaction(m_store.create_transaction());
+	//	auto block(m_cache->block_get(transaction, hash));
+	//	//if (block == nullptr)
+	//	//{
+	//	//	auto unlink_block(m_cache->unlink_block_get(transaction, hash));
+	//	//	if (unlink_block)
+	//	//		block = unlink_block->block;
+	//	//}
+
+	//	if (block != nullptr)
+	//	{
+	//		mcp::json block_l;
+	//		block->serialize_json(block_l);
+	//		response_l["block"] = block_l;
+	//		error_code_l = mcp::rpc_block_error_code::ok;
+	//		rpc_response(response, (int)error_code_l, err.msg(error_code_l), response_l);
+	//	}
+	//	else
+	//	{
+	//		response_l["block"] = nullptr;
+	//		error_code_l = mcp::rpc_block_error_code::ok;
+	//		rpc_response(response, (int)error_code_l, err.msg(error_code_l), response_l);
+	//	}
+	//}
+	//else
+	//{
+	//	error_code_l = mcp::rpc_block_error_code::invalid_hash;
+	//	rpc_response(response, (int)error_code_l, err.msg(error_code_l));
+	//}
 }
 
 void mcp::rpc_handler::blocks(mcp::json & j_response)
