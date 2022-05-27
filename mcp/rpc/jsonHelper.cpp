@@ -1,5 +1,4 @@
 #include <boost/throw_exception.hpp>
-#include <libdevcore/CommonJS.h>
 
 #include "jsonHelper.hpp"
 #include "exceptions.hpp"
@@ -59,6 +58,7 @@ namespace mcp
 		return ret;
 	}
 
+	/*
 	bytes jsToBytes(std::string const & _s, OnFailed _f)
 	{
 		try
@@ -74,7 +74,7 @@ namespace mcp
 		}
 		return bytes();
 	}
-
+	*/
 
 	mcp::json toJson(Transaction const& _t)
 	{

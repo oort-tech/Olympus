@@ -1,4 +1,6 @@
 #pragma once
+#include <libdevcore/CommonJS.h>
+
 #include <mcp/common/mcp_json.hpp>
 #include <mcp/core/common.hpp>
 #include <mcp/core/transaction_receipt.hpp>
@@ -7,11 +9,16 @@ namespace mcp
 {
 	TransactionSkeleton toTransactionSkeleton(mcp::json const& _json);
 
-	inline Address jsToAddress(std::string const& _s) { return mcp::toAddress(_s); }
+	inline Address jsToAddress(std::string const& _s) { return jsToFixed<20>(_s); }
 
-	enum class OnFailed { InterpretRaw, Empty, Throw };
-	bytes jsToBytes(std::string const& _s, OnFailed _f = OnFailed::Empty);
+	inline h256 jsToHash(std::string const& _s) { return jsToFixed<32>(_s);  }
 
+	inline u128 jsToU128(std::string const& _s) { return jsToInt<16>(_s); }
+
+	inline u64 jsToU64(std::string const& _s) { return jsToInt<8>(_s); }
+
+	//enum class OnFailed { InterpretRaw, Empty, Throw };
+	//bytes jsToBytes(std::string const& _s, OnFailed _f = OnFailed::Empty);
 
 	//response
 	mcp::json toJson(Transaction const& _t);

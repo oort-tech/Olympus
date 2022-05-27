@@ -1132,6 +1132,64 @@ void mcp::rpc_handler::accounts_balances(mcp::json & j_response)
 
 void mcp::rpc_handler::account_block_list(mcp::json & j_response)
 {
+	if (!request.count("account") || !request["account"].is_string())
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccount());
+	}
+
+	dev::Address account(0);
+	try
+	{
+		account = jsToAddress(request["account"]);
+	}
+	catch (...)
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccount());
+	}
+	
+	if (!request.count("limit"))
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidLimit());
+	}
+
+	u64 limit_l = jsToU64(request["limit"]);
+	if (limit_l > list_max_limit)
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidLimitTooLarge());
+	}
+	
+	mcp::db::db_transaction transaction(m_store.create_transaction());
+	dev::h256 search_hash(0);
+
+	if (request.count("index"))
+	{
+		if (!request["index"].is_string())
+			BOOST_THROW_EXCEPTION(RPC_Error_InvalidIndex());
+		
+		try
+		{
+			search_hash = jsToHash(request["index"]);
+		}
+		catch (...)
+		{
+			BOOST_THROW_EXCEPTION(RPC_Error_InvalidIndex());
+		}
+
+		std::shared_ptr<mcp::account_state> acc_state(m_store.account_state_get(transaction, search_hash));
+		if (!(acc_state && acc_state->account() == account))
+		{
+			BOOST_THROW_EXCEPTION(RPC_Error_InvalidIndexNotExsist());
+		}
+	}
+	else
+	{
+		std::shared_ptr<mcp::account_state> acc_state(m_cache->latest_account_state_get(transaction, account));
+		if (acc_state)
+			search_hash = acc_state->hash();
+		else
+			BOOST_THROW_EXCEPTION(RPC_Error_InvalidIndexNotExsist());
+	}
+
 	/*mcp::rpc_account_block_list_error_code error_code_l;
 
 	if (!request.count("account") || (!request["account"].is_string()))
@@ -1248,6 +1306,95 @@ void mcp::rpc_handler::account_block_list(mcp::json & j_response)
 
 void mcp::rpc_handler::account_state_list(mcp::json & j_response)
 {
+	if (!request.count("account") || !request["account"].is_string())
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccount());
+	}
+
+	dev::Address account(0);
+	try
+	{
+		account = jsToAddress(request["account"]);
+	}
+	catch (...)
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccount());
+	}
+
+	if (!request.count("limit"))
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidLimit());
+	}
+
+	u64 limit_l = jsToU64(request["limit"]);
+	if (limit_l > list_max_limit)
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidLimitTooLarge());
+	}
+
+	mcp::db::db_transaction transaction(m_store.create_transaction());
+	dev::h256 search_hash(0);
+
+	if (request.count("index"))
+	{
+		if (!request["index"].is_string())
+			BOOST_THROW_EXCEPTION(RPC_Error_InvalidIndex());
+
+		try
+		{
+			search_hash = jsToHash(request["index"]);
+		}
+		catch (...)
+		{
+			BOOST_THROW_EXCEPTION(RPC_Error_InvalidIndex());
+		}
+
+		std::shared_ptr<mcp::account_state> acc_state(m_store.account_state_get(transaction, search_hash));
+		if (!(acc_state && acc_state->account() == account))
+		{
+			BOOST_THROW_EXCEPTION(RPC_Error_InvalidIndexNotExsist());
+		}
+	}
+	else
+	{
+		std::shared_ptr<mcp::account_state> acc_state(m_cache->latest_account_state_get(transaction, account));
+		if (acc_state)
+			search_hash = acc_state->hash();
+		else
+			BOOST_THROW_EXCEPTION(RPC_Error_InvalidIndexNotExsist());
+	}
+
+	mcp::json acc_states_l = mcp::json::array();
+	int i = 0;
+	while (i < limit_l && search_hash != dev::h256(0))
+	{
+		std::shared_ptr<mcp::account_state> acc_state(m_store.account_state_get(transaction, search_hash));
+		if (!acc_state)
+			break;
+
+		mcp::json acc_state_l;
+		acc_state_l["hash"] = acc_state->hash().hex();
+		acc_state_l["account"] = acc_state->account().hexPrefixed();
+		//acc_state_l["block_hash"] = acc_state->block_hash.to_string();
+		//acc_state_l["previous"] = acc_state->previous.to_string();
+		acc_state_l["balance"] = acc_state->balance().str();
+		acc_state_l["nonce"] = acc_state->nonce().str();
+		acc_state_l["storage_root"] = acc_state->baseRoot().hex();
+		acc_state_l["code_hash"] = acc_state->codeHash().hex();
+		acc_state_l["is_alive"] = acc_state->isAlive();
+
+		acc_states_l.push_back(acc_state_l);
+
+		// search_hash = acc_state->previous;
+		i++;
+	}
+
+	j_response["account_states"] = acc_states_l;
+	if (search_hash != dev::h256(0))
+		j_response["next_index"] = search_hash.hex();
+	else
+		j_response["next_index"] = nullptr;
+
 	/*mcp::rpc_account_block_list_error_code error_code_l;
 
 	if (!request.count("account") || (!request["account"].is_string()))
@@ -1370,9 +1517,11 @@ void mcp::rpc_handler::account_state_list(mcp::json & j_response)
 
 void mcp::rpc_handler::block(mcp::json & j_response)
 {
-	if (!request.count("hash") || !request["hash"].is_string()) {
+	if (!request.count("hash") || !request["hash"].is_string())
+	{
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidHash());
 	}
+
 	std::string hash_text = request["hash"];
 	mcp::uint256_union hash;
 	bool error(hash.decode_hex(hash_text));
