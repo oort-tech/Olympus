@@ -7,7 +7,7 @@ mcp::key_content::key_content()
 
 mcp::key_content::key_content(dev::Slice const & val_a)
 {
-	//assert_x(val_a.size() == sizeof(*this));
+	assert_x(val_a.size() == sizeof(*this));
 	std::copy(reinterpret_cast<uint8_t const *> (val_a.data()), reinterpret_cast<uint8_t const *> (val_a.data()) + sizeof(*this), reinterpret_cast<uint8_t *> (this));
 }
 
