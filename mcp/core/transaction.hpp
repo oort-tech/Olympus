@@ -40,7 +40,7 @@ namespace mcp
 	public:
 		Transaction() {}
 		/// Constructs a transaction from a transaction skeleton & optional secret.
-		Transaction(TransactionSkeleton const& ts, Secret const& _s);
+		Transaction(TransactionSkeleton const& ts, boost::optional<Secret> const& _s);
 
 		/// Constructs an unsigned message-call transaction.
 		Transaction(u256 const& _value, u256 const& _gasPrice, u256 const& _gas, Address const& _dest, bytes const& _data, u256 const& _nonce = 0) :

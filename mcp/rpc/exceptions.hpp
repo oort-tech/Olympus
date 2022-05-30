@@ -104,6 +104,8 @@ namespace mcp
 	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_InsufficientBalance, -32602, "Insufficient balance");
 	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_DataTooLarge, -32602, "Data size is too large");
 	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_Validation, -32603, "Validation error");
+	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_PendingTransactionAlreadyExists, -32603, "Pending transaction already exists");
+	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_TransactionAlreadyInChain, -32603, "Transaction already exists in chain");
 
 	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_ParseError, -32700, "Parse error");
 	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_InvalidRequest, -32600, "Invalid request");
