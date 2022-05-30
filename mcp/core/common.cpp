@@ -757,7 +757,7 @@ Address mcp::slice_to_address(dev::Slice const & slice)
 //    // sichaoy: don't use rlpList here
 //    return dev::Address(sha3(rlpList(_from, _nonce)));
 //}
-
+/*
 bool mcp::isZeroH256(u256 const& _r)
 {
 	return !_r;
@@ -774,7 +774,7 @@ Address mcp::toAddress(std::string const& _s)
 	catch (BadHexCharacter&) {}
 	BOOST_THROW_EXCEPTION(InvalidAddress());
 }
-
+*/
 bool mcp::isAddress(std::string const& _s)
 {
 	if (dev::isHex(_s)) {
@@ -1005,7 +1005,6 @@ void mcp::trace::serialize_json(mcp::json & json_a) const
 		else
 			json_a["result"] = nullptr;
 	}
-
 }
 
 boost::filesystem::path mcp::working_path()

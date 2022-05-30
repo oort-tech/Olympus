@@ -630,9 +630,9 @@ namespace mcp
 
 	//dev::Address toAddress(dev::Address const& _from, u256 const& _nonce);
 
-	bool isZeroH256(u256 const& _r);
+	// bool isZeroH256(u256 const& _r);
 
-	Address toAddress(std::string const& _s);
+	// Address toAddress(std::string const& _s);
 	bool isAddress(std::string const& _s);
 
 	// OS-specific way of finding a path to a home directory.
