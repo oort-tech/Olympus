@@ -1984,6 +1984,64 @@ void mcp::rpc_handler::block_traces(mcp::json & j_response)
 
 void mcp::rpc_handler::stable_blocks(mcp::json & j_response)
 {
+	bool error(false);
+	mcp::rpc_stable_blocks_error_code error_code_l;
+
+	uint64_t index(0);
+	if (request.count("index"))
+	{
+		if (!try_get_uint64_t_from_json("index", index))
+		{
+			BOOST_THROW_EXCEPTION(RPC_Error_InvalidIndex());
+		}
+	}
+
+	uint64_t limit_l(0);
+	if (!request.count("limit"))
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidLimit());
+	}
+	if (!try_get_uint64_t_from_json("limit", limit_l))
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidLimit());
+	}
+
+	if (limit_l > list_max_limit)
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidLimitTooLarge());
+	}
+
+	mcp::db::db_transaction transaction(m_store.create_transaction());
+	uint64_t last_stable_index(m_chain->last_stable_index());
+
+	mcp::json block_list_l = mcp::json::array();
+	int blocks_count(0);
+	for (uint64_t stable_index = index; stable_index <= last_stable_index; stable_index++)
+	{
+		mcp::block_hash block_hash_l;
+		bool exists(!m_store.stable_block_get(transaction, stable_index, block_hash_l));
+		assert_x(exists);
+
+		auto block = m_cache->block_get(transaction, block_hash_l);
+		assert_x(block);
+
+		mcp::json block_l;
+		block->serialize_json(block_l);
+		block_list_l.push_back(block_l);
+
+		blocks_count++;
+		if (blocks_count == limit_l)
+			break;
+	}
+
+	j_response["blocks"] = block_list_l;
+
+	uint64_t next_index = index + limit_l;
+	if (next_index <= last_stable_index)
+		j_response["next_index"] = next_index;
+	else
+		j_response["next_index"] = nullptr;
+
 	/*bool error(false);
 	mcp::rpc_stable_blocks_error_code error_code_l;
 
@@ -2057,6 +2115,109 @@ void mcp::rpc_handler::stable_blocks(mcp::json & j_response)
 
 void mcp::rpc_handler::estimate_gas(mcp::json & j_response)
 {
+	// sichaoy: remove the "from" field, and to pick it by default
+	dev::Address from(0);
+	if (request.count("from"))
+	{
+		if (!request["from"].is_string())
+		{
+			BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccountFrom());
+		}
+
+		std::string from_text = request["from"];
+		bool error(!mcp::isAddress(from_text));
+		if (error)
+		{
+			BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccountFrom());
+		}
+		from = dev::Address(from_text);
+	}
+
+	dev::Address to(0);
+	if (request.count("to"))
+	{
+		if (!request["to"].is_string())
+		{
+			BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccountTo());
+		}
+
+		std::string to_text = request["to"];
+
+		bool error(!mcp::isAddress(to_text));
+		if (error)
+		{
+			BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccountTo());
+		}
+		to = dev::Address(to_text);
+	}
+
+	mcp::amount amount(0);
+	if (request.count("amount"))
+	{
+		if (!request["amount"].is_string())
+		{
+			BOOST_THROW_EXCEPTION(RPC_Error_InvalidAmount());
+		}
+		std::string amount_text = request["amount"];
+		bool error = !boost::conversion::try_lexical_convert(amount_text, amount);
+		if (error)
+		{
+			BOOST_THROW_EXCEPTION(RPC_Error_InvalidAmount());
+		}
+	}
+
+	uint64_t gas(0);
+	if (request.count("gas"))
+	{
+		if (!try_get_uint64_t_from_json("gas", gas))
+		{
+			BOOST_THROW_EXCEPTION(RPC_Error_InvalidGas());
+		}
+	}
+
+	uint256_t gas_price(0);
+	if (request.count("gas_price"))
+	{
+		uint256_t gas_price;
+		if (!request["gas_price"].is_string() || !boost::conversion::try_lexical_convert(request["gas_price"].get<std::string>(), gas_price))
+		{
+			RPC_Error_InvalidGasPrice(RPC_Error_InvalidGas());
+		}
+	}
+
+	dev::bytes data;
+	if (request.count("data"))
+	{
+		std::string data_text = request["data"];
+		bool error = mcp::hex_to_bytes(data_text, data);
+		if (error)
+		{
+			RPC_Error_InvalidGasPrice(RPC_Error_InvalidData());
+		}
+
+		if (data.size() > mcp::max_data_size)
+		{
+			RPC_Error_InvalidGasPrice(RPC_Error_DataSizeTooLarge());
+		}
+	}
+
+	dev::eth::McInfo mc_info;
+	if (!try_get_mc_info(mc_info))
+	{
+		RPC_Error_InvalidGasPrice(RPC_Error_InvalidMci());
+	}
+
+	mcp::db::db_transaction transaction(m_store.create_transaction());
+	std::pair<u256, bool> result = m_chain->estimate_gas(transaction, m_cache, from, amount, to, data, gas, gas_price, mc_info);
+
+	mcp::json response_l;
+	if (!result.second)
+	{
+		RPC_Error_InvalidGasPrice(RPC_Error_GasNotEnoughOrFail());
+	}
+
+	j_response["gas"] = result.first;
+
 	//mcp::rpc_estimate_gas_error_code error_code_l;
 	//if (!rpc.config.enable_control)
 	//{
@@ -2193,6 +2354,73 @@ void mcp::rpc_handler::estimate_gas(mcp::json & j_response)
 
 void mcp::rpc_handler::call(mcp::json & j_response)
 {
+	dev::Address from(0);
+	if (request.count("from"))
+	{
+		if (!request["from"].is_string())
+		{
+			BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccountFrom());
+		}
+
+		std::string from_text = request["from"];
+		bool error(!mcp::isAddress(from_text));
+		if (error)
+		{
+			BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccountFrom());
+		}
+		from = dev::Address(from_text);
+	}
+
+	dev::Address to(0);
+	if (request.count("to"))
+	{
+		if (!request["to"].is_string())
+		{
+			BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccountTo());
+		}
+
+		std::string to_text = request["to"];
+
+		bool error(!mcp::isAddress(to_text));
+		if (error)
+		{
+			BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccountTo());
+		}
+		to = dev::Address(to_text);
+	}
+
+
+	dev::bytes data;
+	if (request.count("data"))
+	{
+		std::string data_text = request["data"];
+		bool error = mcp::hex_to_bytes(data_text, data);
+		if (error)
+		{
+			RPC_Error_InvalidGasPrice(RPC_Error_InvalidData());
+		}
+
+		if (data.size() > mcp::max_data_size)
+		{
+			RPC_Error_InvalidGasPrice(RPC_Error_DataSizeTooLarge());
+		}
+	}
+
+	dev::eth::McInfo mc_info;
+	if (!try_get_mc_info(mc_info))
+	{
+		RPC_Error_InvalidGasPrice(RPC_Error_InvalidMci());
+	}
+	
+	mcp::db::db_transaction transaction(m_store.create_transaction());
+	std::shared_ptr<mcp::account_state> acc_state(m_cache->latest_account_state_get(transaction, from));
+	mcp::Transaction trans(0, mcp::uint256_t(mcp::block_max_gas), 0, to, data, acc_state->nonce());
+	std::pair<mcp::ExecutionResult, dev::eth::TransactionReceipt> result = m_chain->execute(transaction, m_cache, trans, mc_info, Permanence::Reverted, dev::eth::OnOpFunc());
+
+	j_response["output"] = bytes_to_hex(result.first.output);
+
+	
+
 	//mcp::rpc_call_error_code error_code_l;
 	//if (!rpc.config.enable_control)
 	//{
