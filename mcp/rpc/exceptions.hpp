@@ -66,5 +66,15 @@ namespace mcp
 
 	RPC_ERROR_EXCEPTION(RPC_Error_EmptyPassword, 46, "Password can not be empty");
 
+	RPC_ERROR_EXCEPTION(RPC_Error_Eth_Ok, 0, "");
+	RPC_ERROR_EXCEPTION(RPC_Error_Eth_PARSE_ERROR, -32700, "Parse error");
+	RPC_ERROR_EXCEPTION(RPC_Error_Eth_INVALID_REQUEST, -32600, "Invalid request");
+	RPC_ERROR_EXCEPTION(RPC_Error_Eth_METHOD_NOT_FOUND, -32601, "Method not found");
+	RPC_ERROR_EXCEPTION(RPC_Error_Eth_INVALID_PARAMS, -32602, "Invalid params");
+	RPC_ERROR_EXCEPTION(RPC_Error_Eth_INTERNAL_ERROR, -32603, "Internal error");
+	RPC_ERROR_EXCEPTION(RPC_Error_Eth_METHOD_NOT_SUPPORTED, -32004, "Method not supported");
+	RPC_ERROR_EXCEPTION(RPC_Error_Eth_INVALID_INPUT, -32000, "Invalid input");
+	RPC_ERROR_EXCEPTION(RPC_Error_Eth_TRANSACTION_REJECTED, -32003, "Transaction rejected");
+
 	RPC_ERROR_EXCEPTION(RPC_Error_UnknowError, 100, "Unkown Error");
 }
