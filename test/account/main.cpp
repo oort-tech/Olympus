@@ -9,6 +9,7 @@
 
 void test_number()
 {
+	/*
 	mcp::stopwatch sw1;
 	mcp::stopwatch sw2;
 
@@ -36,11 +37,12 @@ void test_number()
 
 	std::cout << "ws1: " << sw1.get_elapsed().count() << " ms" << std::endl;
 	std::cout << "ws2: " << sw2.get_elapsed().count() << " ms" << std::endl;
-
+	*/
 }
 
 void test_work()
 {
+	/*
 	std::cout << "-------------work---------------" << std::endl;
 
 	mcp::uint64_union work(123456);
@@ -59,6 +61,7 @@ void test_work()
 	blake2b_final(&hash, output.bytes.data(), output.bytes.size());
 
 	std::cout << "output:" << output.to_string() << std::endl;
+	*/
 }
 
 int main(int argc, char * const * argv)

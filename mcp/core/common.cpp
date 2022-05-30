@@ -626,10 +626,10 @@ mcp::summary_hash mcp::summary::gen_summary_hash(mcp::block_hash const & block_h
         blake2b_update(&hash_l, s.data(), sizeof(s));
     blake2b_update(&hash_l, &status_a, sizeof(status_a));
 
-	mcp::uint64_union stable_index(stable_index_a);
-	blake2b_update(&hash_l, stable_index.bytes.data(), sizeof(stable_index.bytes));
-	mcp::uint64_union mc_timestamp(mc_timestamp_a);
-	blake2b_update(&hash_l, mc_timestamp.bytes.data(), sizeof(mc_timestamp.bytes));
+	dev::h64 stable_index(stable_index_a);
+	blake2b_update(&hash_l, stable_index.data(), sizeof(stable_index));
+	dev::h64 mc_timestamp(mc_timestamp_a);
+	blake2b_update(&hash_l, mc_timestamp.data(), sizeof(mc_timestamp));
 
     status = blake2b_final(&hash_l, result.data(), sizeof(result));
     assert_x(status == 0);
@@ -659,7 +659,7 @@ dev::Slice mcp::advance_info::val() const
 {
 	return dev::Slice((char*)this, sizeof(*this));
 }
-
+/*
 dev::Slice mcp::uint64_to_slice(mcp::uint64_union const & value_a)
 {
 	return dev::Slice((char*)value_a.bytes.data(), value_a.bytes.size());
@@ -685,19 +685,25 @@ mcp::uint256_union mcp::slice_to_uint256(dev::Slice const & slice)
 	std::copy((byte *)slice.data(), (byte *)slice.data() + sizeof(result), result.bytes.data());
 	return result;
 }
+*/
+dev::Slice mcp::h64_to_slice(h64 const & value)
+{
+	return dev::Slice(reinterpret_cast<char const*>(value.data()), value.size);
+}
+dev::h64 mcp::slice_to_h64(dev::Slice const & slice)
+{
+	return dev::h64(slice.toBytes());
+}
 
 dev::Slice mcp::h256_to_slice(h256 const & value)
 {
 	return dev::Slice(reinterpret_cast<char const*>(value.data()), value.size);
-	//return dev::Slice((char*)value.asBytes().data(), value.asBytes().size());
 }
-h256 mcp::slice_to_h256(dev::Slice const & slice)
+dev::h256 mcp::slice_to_h256(dev::Slice const & slice)
 {
-	//h256 result(slice.data());
-	//std::copy((byte *)slice.data(), (byte *)slice.data() + sizeof(result), result.asBytes().data());
-	return h256(slice.toBytes());
+	return dev::h256(slice.toBytes());
 }
-
+/*
 dev::Slice mcp::uint512_to_slice(mcp::uint512_union const & value)
 {
 	return dev::Slice((char*)value.bytes.data(), value.bytes.size());
@@ -710,7 +716,7 @@ mcp::uint512_union mcp::slice_to_uint512(dev::Slice const & slice)
 	std::copy((byte *)slice.data(), (byte *)slice.data() + sizeof(result), result.bytes.data());
 	return result;
 }
-
+*/
 dev::Slice mcp::account_to_slice(dev::Address const & value)
 {
 	return dev::Slice((char*)value.data(), value.size);
@@ -889,7 +895,7 @@ mcp::suicide_trace_action::suicide_trace_action(bool & error_a, dev::RLP const &
 
 	contract_account = (Address)r[0];
 	refund_account = (Address)r[1];
-	balance = (mcp::uint256_t)r[2];
+	balance = (u256)r[2];
 }
 
 void mcp::suicide_trace_action::stream_RLP(dev::RLPStream & s) const

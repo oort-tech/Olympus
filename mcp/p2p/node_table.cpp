@@ -314,19 +314,19 @@ std::unique_ptr<discover_packet> node_table::interpret_packet(bi::udp::endpoint 
 {
 	std::unique_ptr<discover_packet> packet = std::unique_ptr<discover_packet>();
 	// hash + node id + sig + network + packet type + packet (smallest possible packet is ping packet which is 5 bytes)
-	if (data.size() < sizeof(hash256) + node_id::size + dev::Signature::size + 1 + 1 + 5)
+	if (data.size() < hash256::size + node_id::size + dev::Signature::size + 1 + 1 + 5)
 	{
         LOG(m_log.debug) << "Invalid packet (too small) from " << from.address().to_string() << ":" << from.port();
 		return packet;
 	}
-	dev::bytesConstRef hash(data.cropped(0, sizeof(hash256)));
-	dev::bytesConstRef bytes_to_hash_cref(data.cropped(sizeof(hash256), data.size() - sizeof(hash256)));
+	dev::bytesConstRef hash(data.cropped(0, hash256::size));
+	dev::bytesConstRef bytes_to_hash_cref(data.cropped(hash256::size, data.size() - hash256::size));
 	dev::bytesConstRef node_id_cref(bytes_to_hash_cref.cropped(0, node_id::size));
 	dev::bytesConstRef rlp_sig_cref(bytes_to_hash_cref.cropped(node_id::size, dev::Signature::size));
 	dev::bytesConstRef rlp_cref(bytes_to_hash_cref.cropped(node_id::size + dev::Signature::size));
 
 	hash256 echo(mcp::blake2b_hash(bytes_to_hash_cref));
-	dev::bytes echo_bytes(&echo.bytes[0], &echo.bytes[0] + echo.bytes.size());
+	dev::bytes echo_bytes = echo.asBytes();
 	if (!hash.contentsEqual(echo_bytes))
 	{
         LOG(m_log.debug) << "Invalid packet (bad hash) from " << from.address().to_string() << ":" << from.port();

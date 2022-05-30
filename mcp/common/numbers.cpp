@@ -12,6 +12,7 @@
 
 thread_local CryptoPP::AutoSeededRandomPool mcp::random_pool;
 
+/*
 mcp::uint256_union::uint256_union(uint64_t value0)
 {
 	*this = mcp::uint256_t(value0);
@@ -40,14 +41,13 @@ bool mcp::uint256_union::operator== (mcp::uint256_union const & other_a) const
 }
 
 // Construct a uint256_union = AES_ENC_CTR (cleartext, key, iv)
-/*
+
 void mcp::uint256_union::encrypt(mcp::raw_key const & cleartext, mcp::raw_key const & key, uint128_union const & iv)
 {
 	CryptoPP::AES::Encryption alg(key.data.bytes.data(), sizeof(key.data.bytes));
 	CryptoPP::CTR_Mode_ExternalCipher::Encryption enc(alg, iv.bytes.data());
 	enc.ProcessData(bytes.data(), cleartext.data.bytes.data(), sizeof(cleartext.data.bytes));
 }
-*/
 
 bool mcp::uint256_union::is_zero() const
 {
@@ -254,6 +254,7 @@ std::string mcp::uint256_union::to_string_dec() const
 	encode_dec(result);
 	return result;
 }
+*/
 
 /*
 mcp::raw_key::raw_key(dev::Secret const & prv_a) :
@@ -283,7 +284,6 @@ void mcp::raw_key::decrypt(mcp::uint256_union const & ciphertext, mcp::raw_key c
 	CryptoPP::CTR_Mode_ExternalCipher::Decryption dec(alg, iv.bytes.data());
 	dec.ProcessData(data.bytes.data(), ciphertext.bytes.data(), sizeof(ciphertext.bytes));
 }
-*/
 
 bool mcp::uint512_union::operator== (mcp::uint512_union const & other_a) const
 {
@@ -865,6 +865,7 @@ std::string mcp::uint64_union::to_string_no_fill(bool show_base) const
 	encode_hex_no_fill(result, show_base);
 	return result;
 }
+*/
 
 /*
 mcp::signature_struct::signature_struct(uint256_union const& _r, uint256_union const& _s, byte _v): r(_r), s(_s), v(_v) {

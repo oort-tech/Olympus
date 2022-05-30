@@ -5889,10 +5889,11 @@ void mcp::rpc_handler::eth_getLogs(mcp::json & j_response)
 		std::vector<std::string> topics_l = params["topics"];
 		for (std::string const &topic_text : topics_l)
 		{
-			mcp::uint256_union topic;
-			auto error(topic.decode_hex(topic_text, true));
-			if (error)
-			{
+			dev::h256 topic(0);
+			try {
+				topic = jsToHash(topic_text);
+			}
+			catch (...) {
 				error_eth_response(response, rpc_eth_error_code::invalid_params, j_response);
 				return;
 			}

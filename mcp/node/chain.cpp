@@ -173,7 +173,7 @@ void mcp::chain::save_dag_block(mcp::timeout_db_transaction & timeout_tx_a, std:
 
 void mcp::chain::try_advance(mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a)
 {
-	while (!m_stopped && m_advance_info.mci.number() > m_last_stable_mci_internal)
+	while (!m_stopped && ((dev::h64::Arith) m_advance_info.mci).convert_to<uint64_t>() > m_last_stable_mci_internal)
 	{
 		m_last_stable_mci_internal++;
 		advance_stable_mci(timeout_tx_a, cache_a, m_last_stable_mci_internal, m_advance_info.witness_block);

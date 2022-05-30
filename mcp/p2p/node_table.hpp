@@ -56,11 +56,11 @@ namespace mcp
 				//	% packet_a.source_id.to_string() % rlp_hash.to_string() % rlp_sig.to_string());
 
 				//data:  H( node id || rlp sig || rlp ) || node id || rlp sig || rlp 
-				data.resize(sizeof(hash256) + node_id::size + dev::Signature::size + rlp.size());
-				dev::bytesRef data_hash_ref(&data[0], sizeof(hash256));
-				dev::bytesRef data_node_id_ref(&data[sizeof(hash256)], node_id::size);
-				dev::bytesRef data_sig_ref(&data[sizeof(hash256) + node_id::size], dev::Signature::size);
-				dev::bytesRef data_rlp_ref(&data[sizeof(hash256) + node_id::size + dev::Signature::size], rlp_cref.size());
+				data.resize(hash256::size + node_id::size + dev::Signature::size + rlp.size());
+				dev::bytesRef data_hash_ref(&data[0], hash256::size);
+				dev::bytesRef data_node_id_ref(&data[hash256::size], node_id::size);
+				dev::bytesRef data_sig_ref(&data[hash256::size + node_id::size], dev::Signature::size);
+				dev::bytesRef data_rlp_ref(&data[hash256::size + node_id::size + dev::Signature::size], rlp_cref.size());
 
 				dev::bytesConstRef node_id_cref(packet_a.source_id.data(), packet_a.source_id.size);
 				node_id_cref.copyTo(data_node_id_ref);
@@ -69,10 +69,10 @@ namespace mcp
 
 				rlp_cref.copyTo(data_rlp_ref);
 
-				dev::bytesConstRef bytes_to_hash(&data[sizeof(hash256)], data.size() - sizeof(hash256));
+				dev::bytesConstRef bytes_to_hash(&data[hash256::size], data.size() - hash256::size);
 				hash256 hash(mcp::blake2b_hash(bytes_to_hash));
 
-				dev::bytesConstRef hash_cref(hash.bytes.data(), hash.bytes.size());
+				dev::bytesConstRef hash_cref(hash.data(), hash.size);
 				hash_cref.copyTo(data_hash_ref);
 
 				return rlp_hash;

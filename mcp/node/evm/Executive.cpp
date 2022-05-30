@@ -259,9 +259,9 @@ bool mcp::Executive::executeCreate(Address const& _sender, u256 const& _endowmen
     // Schedule _init execution if not empty.
 	if (!_init.empty())
 	{
-		mcp::uint256_union code_hash_union(mcp::blake2b_hash(_init));
-		dev::bytesConstRef code_hash_ref(code_hash_union.bytes.data(), code_hash_union.bytes.size());
-		h256 code_hash(code_hash_ref);
+		dev::h256 code_hash(mcp::blake2b_hash(_init));
+		//dev::bytesConstRef code_hash_ref(code_hash.data(), code_hash.size);
+		//h256 code_hash(code_hash_ref);
 		m_ext = std::make_shared<ExtVM>(m_s, m_envInfo, m_newAddress, _sender, _origin, _endowment, _gasPrice, 
 			dev::bytesConstRef(), _init, code_hash, m_depth + 1, true, false);
 	}

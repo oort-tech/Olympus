@@ -136,8 +136,8 @@ std::string mcp::block_store::get_rocksdb_state(uint64_t limit)
 
 void mcp::block_store::version_put(mcp::db::db_transaction & transaction_a, int version_a)
 {
-	mcp::uint256_union version_value(version_a);
-	transaction_a.put(prop, mcp::h256_to_slice(version_key), mcp::uint256_to_slice(version_value));
+	dev::h256 version_value(version_a);
+	transaction_a.put(prop, mcp::h256_to_slice(version_key), mcp::h256_to_slice(version_value));
 }
 
 int mcp::block_store::version_get()
@@ -152,9 +152,9 @@ int mcp::block_store::version_get()
 	}
 	else
 	{
-		mcp::uint256_union version_value(mcp::slice_to_uint256(dev::Slice(data)));
-		assert_x(version_value.qwords[2] == 0 && version_value.qwords[1] == 0 && version_value.qwords[0] == 0);
-		result = version_value.number().convert_to<int>();
+		dev::h256 version_value(mcp::slice_to_h256(dev::Slice(data)));
+		// assert_x(version_value.qwords[2] == 0 && version_value.qwords[1] == 0 && version_value.qwords[0] == 0);
+		result = ((dev::h256::Arith) version_value).convert_to<int>();
 	}
 	return result;
 }
@@ -446,8 +446,8 @@ size_t mcp::block_store::dag_free_count(mcp::db::db_transaction & transaction_a)
 bool mcp::block_store::main_chain_get(mcp::db::db_transaction & transaction_a, uint64_t const & mci_a, mcp::block_hash & hash_a, std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a)
 {
 	std::string value;
-	mcp::uint64_union mci(mci_a);
-	bool exists(transaction_a.get(main_chain, mcp::uint64_to_slice(mci), value, snapshot_a));
+	dev::h64 mci(mci_a);
+	bool exists(transaction_a.get(main_chain, mcp::h64_to_slice(mci), value, snapshot_a));
 	if (exists)
 	{
 		hash_a = mcp::slice_to_h256(value);
@@ -457,14 +457,14 @@ bool mcp::block_store::main_chain_get(mcp::db::db_transaction & transaction_a, u
 
 void mcp::block_store::main_chain_put(mcp::db::db_transaction & transaction_a, uint64_t const & mci_a, mcp::block_hash const & hash_a)
 {
-	mcp::uint64_union mci(mci_a);
-	transaction_a.put(main_chain, mcp::uint64_to_slice(mci), mcp::h256_to_slice(hash_a));
+	dev::h64 mci(mci_a);
+	transaction_a.put(main_chain, mcp::h64_to_slice(mci), mcp::h256_to_slice(hash_a));
 }
 
 void mcp::block_store::main_chain_del(mcp::db::db_transaction & transaction_a, uint64_t const & mci_a)
 {
-	mcp::uint64_union mci(mci_a);
-	transaction_a.del(main_chain, mcp::uint64_to_slice(mci));
+	dev::h64 mci(mci_a);
+	transaction_a.del(main_chain, mcp::h64_to_slice(mci));
 }
 
 size_t mcp::block_store::stable_block_count(mcp::db::db_transaction & transaction_a)
@@ -475,8 +475,8 @@ size_t mcp::block_store::stable_block_count(mcp::db::db_transaction & transactio
 bool mcp::block_store::stable_block_get(mcp::db::db_transaction & transaction_a, uint64_t const & index_a, mcp::block_hash & hash_a, std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a)
 {
 	std::string value;
-	mcp::uint64_union index(index_a);
-	bool exists(transaction_a.get(stable_block, mcp::uint64_to_slice(index), value, snapshot_a));
+	dev::h64 index(index_a);
+	bool exists(transaction_a.get(stable_block, mcp::h64_to_slice(index), value, snapshot_a));
 	if (exists)
 	{
 		hash_a = mcp::slice_to_h256(value);
@@ -486,8 +486,8 @@ bool mcp::block_store::stable_block_get(mcp::db::db_transaction & transaction_a,
 
 void mcp::block_store::stable_block_put(mcp::db::db_transaction & transaction_a, uint64_t const & index_a, mcp::block_hash const & hash_a)
 {
-	mcp::uint64_union index(index_a);
-	transaction_a.put(stable_block, mcp::uint64_to_slice(index), mcp::h256_to_slice(hash_a));
+	dev::h64 index(index_a);
+	transaction_a.put(stable_block, mcp::h64_to_slice(index), mcp::h256_to_slice(hash_a));
 }
 
 size_t mcp::block_store::transaction_unstable_count(mcp::db::db_transaction & transaction_a)
@@ -521,14 +521,14 @@ uint64_t mcp::block_store::last_mci_get(mcp::db::db_transaction & transaction_a)
 	bool exists(transaction_a.get(prop, mcp::h256_to_slice(last_mci_key), value));
 	uint64_t result(0);
 	if (exists)
-		result = mcp::slice_to_uint64(value).number();
+		result = ((dev::h64::Arith) mcp::slice_to_h64(value)).convert_to<uint64_t>();
 	return result;
 }
 
 void mcp::block_store::last_mci_put(mcp::db::db_transaction & transaction_a, uint64_t const & last_mci_a)
 {
-	mcp::uint64_union last_mci(last_mci_a);
-	transaction_a.put(prop, mcp::h256_to_slice(last_mci_key), mcp::uint64_to_slice(last_mci));
+	dev::h64 last_mci(last_mci_a);
+	transaction_a.put(prop, mcp::h256_to_slice(last_mci_key), mcp::h64_to_slice(last_mci));
 }
 
 
@@ -538,14 +538,14 @@ uint64_t mcp::block_store::last_stable_mci_get(mcp::db::db_transaction & transac
 	bool exists(transaction_a.get(prop, mcp::h256_to_slice(last_stable_mci_key), value));
 	uint64_t result(0);
 	if (exists)
-		result = mcp::slice_to_uint64(value).number();
+		result = ((dev::h64::Arith)mcp::slice_to_h64(value)).convert_to<uint64_t>();
 	return result;
 }
 
 void mcp::block_store::last_stable_mci_put(mcp::db::db_transaction & transaction_a, uint64_t const & last_stable_mci_a)
 {
-	mcp::uint64_union last_stable_mci(last_stable_mci_a);
-	transaction_a.put(prop, mcp::h256_to_slice(last_stable_mci_key), mcp::uint64_to_slice(last_stable_mci));
+	dev::h64 last_stable_mci(last_stable_mci_a);
+	transaction_a.put(prop, mcp::h256_to_slice(last_stable_mci_key), mcp::h64_to_slice(last_stable_mci));
 }
 
 
@@ -571,14 +571,14 @@ uint64_t mcp::block_store::last_stable_index_get(mcp::db::db_transaction & trans
 	bool exists(transaction_a.get(prop, mcp::h256_to_slice(last_stable_index_key), value));
 	uint64_t result(0);
 	if (exists)
-		result = mcp::slice_to_uint64(value).number();
+		result = ((dev::h64::Arith)mcp::slice_to_h64(value)).convert_to<uint64_t>();
 	return result;
 }
 
 void mcp::block_store::last_stable_index_put(mcp::db::db_transaction & transaction_a, uint64_t const & last_stable_index_a)
 {
-	mcp::uint64_union last_stable_index(last_stable_index_a);
-	transaction_a.put(prop, mcp::h256_to_slice(last_stable_index_key), mcp::uint64_to_slice(last_stable_index));
+	dev::h64 last_stable_index(last_stable_index_a);
+	transaction_a.put(prop, mcp::h256_to_slice(last_stable_index_key), mcp::h64_to_slice(last_stable_index));
 }
 
 
@@ -709,8 +709,8 @@ void mcp::block_store::genesis_hash_put(mcp::db::db_transaction & transaction_a,
 bool mcp::block_store::catchup_chain_summaries_get(mcp::db::db_transaction & transaction_a, uint64_t const & index_a, mcp::summary_hash & hash_a)
 {
 	std::string value;
-	mcp::uint64_union index(index_a);
-	bool exists(transaction_a.get(catchup_chain_summaries, mcp::uint64_to_slice(index), value));
+	dev::h64 index(index_a);
+	bool exists(transaction_a.get(catchup_chain_summaries, mcp::h64_to_slice(index), value));
 	if (exists)
 	{
 		hash_a = mcp::slice_to_h256(value);
@@ -720,14 +720,14 @@ bool mcp::block_store::catchup_chain_summaries_get(mcp::db::db_transaction & tra
 
 void mcp::block_store::catchup_chain_summaries_put(mcp::db::db_transaction & transaction_a, uint64_t const & index_a, mcp::summary_hash const & hash_a)
 {
-	mcp::uint64_union index(index_a);
-	transaction_a.put(catchup_chain_summaries, mcp::uint64_to_slice(index), mcp::h256_to_slice(hash_a));
+	dev::h64 index(index_a);
+	transaction_a.put(catchup_chain_summaries, mcp::h64_to_slice(index), mcp::h256_to_slice(hash_a));
 }
 
 void mcp::block_store::catchup_chain_summaries_del(mcp::db::db_transaction & transaction_a, uint64_t const & index_a)
 {
-	mcp::uint64_union index(index_a);
-	transaction_a.del(catchup_chain_summaries, mcp::uint64_to_slice(index));
+	dev::h64 index(index_a);
+	transaction_a.del(catchup_chain_summaries, mcp::h64_to_slice(index));
 }
 
 void mcp::block_store::catchup_chain_summaries_clear(std::shared_ptr<rocksdb::WriteOptions> write_option_a)
@@ -872,15 +872,15 @@ bool mcp::block_store::catchup_index_get(mcp::db::db_transaction & transaction_a
 	bool exists(transaction_a.get(prop, mcp::h256_to_slice(catchup_index), value));
 	if (exists)
 	{
-		_v = mcp::slice_to_uint64(value).number();
+		_v = ((dev::h64::Arith)mcp::slice_to_h64(value)).convert_to<uint64_t>();
 	}
 	return !exists;
 }
 
 void mcp::block_store::catchup_index_put(mcp::db::db_transaction & transaction_a, uint64_t const& _v)
 {
-	mcp::uint64_union v(_v);
-	transaction_a.put(prop, mcp::h256_to_slice(catchup_index), mcp::uint64_to_slice(v));
+	dev::h64 v(_v);
+	transaction_a.put(prop, mcp::h256_to_slice(catchup_index), mcp::h64_to_slice(v));
 }
 
 void mcp::block_store::catchup_index_del(mcp::db::db_transaction & transaction_a)
@@ -894,15 +894,15 @@ bool mcp::block_store::catchup_max_index_get(mcp::db::db_transaction & transacti
 	bool exists(transaction_a.get(prop, mcp::h256_to_slice(catchup_max_index), value));
 	if (exists)
 	{
-		_v = mcp::slice_to_uint64(value).number();
+		_v = ((dev::h64::Arith)mcp::slice_to_h64(value)).convert_to<uint64_t>();
 	}
 	return !exists;
 }
 
 void mcp::block_store::catchup_max_index_put(mcp::db::db_transaction & transaction_a, uint64_t const& _v)
 {
-	mcp::uint64_union v(_v);
-	transaction_a.put(prop, mcp::h256_to_slice(catchup_max_index), mcp::uint64_to_slice(v));
+	dev::h64 v(_v);
+	transaction_a.put(prop, mcp::h256_to_slice(catchup_max_index), mcp::h64_to_slice(v));
 }
 
 void mcp::block_store::catchup_max_index_del(mcp::db::db_transaction & transaction_a)
