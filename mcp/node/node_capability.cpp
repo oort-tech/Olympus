@@ -33,7 +33,7 @@ void mcp::node_capability::stop()
 void mcp::node_capability::on_connect(std::shared_ptr<p2p::peer> peer_a, unsigned const & offset)
 {
     auto  node_id = peer_a->remote_node_id();
-    if (m_genesis == 0)
+    if (m_genesis == mcp::block_hash(0))
     {
         mcp::db::db_transaction transaction(m_store.create_transaction());
         bool error = m_store.genesis_hash_get(transaction, m_genesis);
@@ -261,7 +261,7 @@ bool mcp::node_capability::read_packet(std::shared_ptr<p2p::peer> peer_a, unsign
             bool is_missing = false;
 			bool need_add = true;
 			mcp::block_hash block_hash(joint.block->hash());
-			if (!joint.request_id.is_zero())
+			if (joint.request_id != mcp::sync_request_hash(0))
 			{
 				need_add = false;
 				std::lock_guard<std::mutex> lock(m_requesting_lock);
@@ -354,7 +354,7 @@ bool mcp::node_capability::read_packet(std::shared_ptr<p2p::peer> peer_a, unsign
 
             if (m_sync->get_current_request_id() != response.request_id)
             {
-                LOG(m_log.error) << "catchup_request request id error, response.request_id:" << response.request_id.to_string() << ",current_request_id:" << m_sync->get_current_request_id().to_string();
+                LOG(m_log.error) << "catchup_request request id error, response.request_id:" << response.request_id.hex() << ",current_request_id:" << m_sync->get_current_request_id().hex();
                 return true;
             }
 
@@ -405,7 +405,7 @@ bool mcp::node_capability::read_packet(std::shared_ptr<p2p::peer> peer_a, unsign
             //LOG(m_log.trace) << "recv hash tree response, arr_summary size: " << response.arr_summaries.size();
             if (m_sync->get_current_request_id() != response.request_id)
             {
-                LOG(m_log.error) << "hash_tree_request:return timeout. response.request_id:" << response.request_id.to_string() << ",current_request_id:" << m_sync->get_current_request_id().to_string();
+                LOG(m_log.error) << "hash_tree_request:return timeout. response.request_id:" << response.request_id.hex() << ",current_request_id:" << m_sync->get_current_request_id().hex();
                 return true;
             }
 
@@ -715,7 +715,7 @@ mcp::sync_request_hash  mcp::node_capability::gen_sync_request_hash(p2p::node_id
 {
 	mcp::sync_request_hash result;
 	blake2b_state hash_l;
-	auto status(blake2b_init(&hash_l, sizeof(result.bytes)));
+	auto status(blake2b_init(&hash_l, sizeof(result)));
 
 	assert_x(status == 0);
 	size_t random_l = mcp::random_pool.GenerateWord32();
@@ -725,7 +725,7 @@ mcp::sync_request_hash  mcp::node_capability::gen_sync_request_hash(p2p::node_id
 	blake2b_update(&hash_l, &random_l, sizeof(random_l));
 
 
-	status = blake2b_final(&hash_l, result.bytes.data(), sizeof(result.bytes));
+	status = blake2b_final(&hash_l, result.data(), sizeof(result));
 	assert_x(status == 0);
 
 	return result;

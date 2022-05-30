@@ -76,7 +76,7 @@ bool mcp::genesis::try_initialize(mcp::db::db_transaction & transaction_a, mcp::
 	bool exists(!store_a.genesis_hash_get(transaction_a, genesis_hash));
 	if (exists)
 	{
-		std::cout << block_hash .to_string() << ":" << genesis_hash.to_string() << std::endl;
+		std::cout << block_hash .hex() << ":" << genesis_hash.hex() << std::endl;
 		if(genesis_hash != block_hash)
 			throw std::runtime_error("genesis block changed");
 
@@ -99,7 +99,7 @@ bool mcp::genesis::try_initialize(mcp::db::db_transaction & transaction_a, mcp::
 
 	block_state.is_on_main_chain = true;
 	block_state.witnessed_level = block_state.level;
-	block_state.best_parent = 0;
+	block_state.best_parent.clear();
 	block_state.earliest_included_mc_index = boost::none;
 	block_state.latest_included_mc_index = boost::none;
 	block_state.bp_included_mc_index = boost::none;
@@ -148,7 +148,7 @@ bool mcp::genesis::try_initialize(mcp::db::db_transaction & transaction_a, mcp::
 		block_state.status, block_state.stable_index, block_state.mc_timestamp);
 
     mcp::log log_node("node");
-	LOG(log_node.info) << "Genesis Summary:" << summary_hash.to_string();
+	LOG(log_node.info) << "Genesis Summary:" << summary_hash.hex();
 
 	store_a.block_summary_put(transaction_a, block_hash, summary_hash);
 	store_a.summary_block_put(transaction_a, summary_hash, block_hash);

@@ -245,7 +245,7 @@ h256 ExtVM::mcBlockHash(h256 mci_a)
 	bool exists(!store.main_chain_get(transaction, mci, mc_hash));
 	if (exists)
 	{
-		dev::bytesConstRef ref(mc_hash.bytes.data(), mc_hash.bytes.size());
+		dev::bytesConstRef ref(mc_hash.data(), mc_hash.size);
 		return h256(ref);
 	}
 	else

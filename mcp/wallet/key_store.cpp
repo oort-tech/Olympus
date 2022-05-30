@@ -57,11 +57,11 @@ std::string mcp::key_content::to_json() const
 mcp::value_previous_work::value_previous_work(dev::Slice const & val_a)
 {
 	assert_x(val_a.size() == sizeof(*this));
-	std::copy(reinterpret_cast<uint8_t const *> (val_a.data()), reinterpret_cast<uint8_t const *> (val_a.data()) + sizeof(previous), previous.chars.begin());
-	std::copy(reinterpret_cast<uint8_t const *> (val_a.data()) + sizeof(previous), reinterpret_cast<uint8_t const *> (val_a.data()) + sizeof(previous) + sizeof(work), work.bytes.begin());
+	std::copy(reinterpret_cast<uint8_t const *> (val_a.data()), reinterpret_cast<uint8_t const *> (val_a.data()) + sizeof(previous), previous.asArray().begin());
+	std::copy(reinterpret_cast<uint8_t const *> (val_a.data()) + sizeof(previous), reinterpret_cast<uint8_t const *> (val_a.data()) + sizeof(previous) + sizeof(work), work.asArray().begin());
 }
 
-mcp::value_previous_work::value_previous_work(mcp::uint256_union const & previous_a, mcp::uint64_union const & work_a) :
+mcp::value_previous_work::value_previous_work(mcp::block_hash const & previous_a, dev::h64 const & work_a) :
 	previous(previous_a),
 	work(work_a)
 {

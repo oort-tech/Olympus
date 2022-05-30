@@ -44,10 +44,10 @@ mcp::joint_message::joint_message(bool & error_a, dev::RLP const & r)
 
 void mcp::joint_message::stream_RLP(dev::RLPStream & s) const
 {
-	summary_hash.is_zero() ? s.appendList(2) : s.appendList(3);
+	summary_hash == mcp::summary_hash(0) ? s.appendList(2) : s.appendList(3);
 	s << request_id;
 	block->streamRLP(s);
-	if (!summary_hash.is_zero())
+	if (summary_hash != mcp::summary_hash(0))
 	{
 		s << summary_hash;
 	}

@@ -434,7 +434,7 @@ void mcp::rpc_ws::on_new_block(std::shared_ptr<mcp::block> block)
 	background->sync_async([this, block]
 	{
 		mcp::json p;
-		p["hash"] = block->hash().to_string();
+		p["hash"] = block->hash().hex();
 		trigger_subscribe("new_block", p);
 	});
 }
@@ -444,7 +444,7 @@ void mcp::rpc_ws::on_stable_block(std::shared_ptr<mcp::block> block)
 	background->sync_async([this, block]
 	{
 		mcp::json p;
-		p["hash"] = block->hash().to_string();
+		p["hash"] = block->hash().hex();
 		trigger_subscribe("stable_block", p);
 	});
 }

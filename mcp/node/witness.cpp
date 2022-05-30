@@ -56,13 +56,13 @@ mcp::witness::witness(mcp::error_message & error_msg,
 		return;
 	}
 
-    if (!m_last_witness_block_hash.is_zero())
+    if (m_last_witness_block_hash != mcp::block_hash(0))
     {
         mcp::db::db_transaction transaction(m_store.create_transaction());
         if (!m_store.block_exists(transaction, m_last_witness_block_hash))
         {
             m_witness_get_current_chain = false;
-            LOG(m_log.info) << "witness account cannot do witness cause: " << m_last_witness_block_hash.to_string() << " not exsist.";
+            LOG(m_log.info) << "witness account cannot do witness cause: " << m_last_witness_block_hash.hex() << " not exsist.";
         }
     }
 
@@ -113,7 +113,7 @@ void mcp::witness::check_and_witness()
         if (!m_store.block_exists(transaction, m_last_witness_block_hash))
         {
             m_is_witnessing.clear();
-            LOG(m_log.info) << "Not do witness, last_witness_block_hash:" << m_last_witness_block_hash.to_string() << " not exsist.";
+            LOG(m_log.info) << "Not do witness, last_witness_block_hash:" << m_last_witness_block_hash.hex() << " not exsist.";
             return;
         }
         else

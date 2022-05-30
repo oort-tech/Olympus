@@ -184,7 +184,7 @@ void mcp::block_processor::add_item(std::shared_ptr<mcp::block_processor_item> i
 		}
 	}
 
-	if (!item_a->is_sync() && item_a->joint.summary_hash.is_zero())
+	if (!item_a->is_sync() && item_a->joint.summary_hash == mcp::summary_hash(0))
 	{
 		//LOG(m_log.debug) << "Add recent block:" << block_hash.to_string();
 
@@ -274,7 +274,7 @@ void mcp::block_processor::mt_process_blocks()
 									if (mcp::seconds_since_epoch() < block->exec_timestamp())
 									{
 										ok = false;
-										err_msg = boost::str(boost::format("Exec timestamp too late, block: %1%, exec_timestamp: %2%, sys_timestamp: %3%") % block_hash.to_string() % block->exec_timestamp() % mcp::seconds_since_epoch());
+										err_msg = boost::str(boost::format("Exec timestamp too late, block: %1%, exec_timestamp: %2%, sys_timestamp: %3%") % block_hash.hex() % block->exec_timestamp() % mcp::seconds_since_epoch());
 										LOG(m_log.debug) << err_msg;
 										//cache late message
 										if (block->exec_timestamp() < mcp::seconds_since_epoch() + 300) //5 minutes
@@ -293,7 +293,7 @@ void mcp::block_processor::mt_process_blocks()
 								case base_validate_result_codes::invalid_signature:
 								{
 									ok = false;
-									err_msg = "Invalid signature, hash:" + block_hash.to_string() + ",from:" + block->from().hexPrefixed() + ",signature:" + ((Signature)block->signature()).hex();
+									err_msg = "Invalid signature, hash:" + block_hash.hex() + ",from:" + block->from().hexPrefixed() + ",signature:" + ((Signature)block->signature()).hex();
 									LOG(m_log.debug) << err_msg;
 
 									break;
@@ -301,7 +301,7 @@ void mcp::block_processor::mt_process_blocks()
 								case base_validate_result_codes::invalid_block:
 								{
 									ok = false;
-									err_msg = boost::str(boost::format("Invalid block: %1%, error message: %2%") % block->hash().to_string() % result.err_msg);
+									err_msg = boost::str(boost::format("Invalid block: %1%, error message: %2%") % block->hash().hex() % result.err_msg);
 									LOG(m_log.debug) << err_msg;
 
 									//cache invalid block
@@ -311,7 +311,7 @@ void mcp::block_processor::mt_process_blocks()
 								case base_validate_result_codes::known_invalid_block:
 								{
 									ok = false;
-									err_msg = boost::str(boost::format("Know invalid block: %1%") % block->hash().to_string());
+									err_msg = boost::str(boost::format("Know invalid block: %1%") % block->hash().hex());
 									LOG(m_log.trace) << err_msg;
 
 									break;
@@ -363,7 +363,7 @@ void mcp::block_processor::mt_process_blocks()
 
 void mcp::block_processor::add_to_process(std::shared_ptr<mcp::block_processor_item> item_a)
 {
-	if (!item_a->is_sync() && !item_a->joint.summary_hash.is_zero())
+	if (!item_a->is_sync() && item_a->joint.summary_hash != mcp::summary_hash(0))
 	{
 		assert_x(!item_a->is_local());
 		//LOG(m_log.debug) << "Start sync:" << item_a->joint.block->hash().to_string();
@@ -559,7 +559,7 @@ void mcp::block_processor::do_process_one(mcp::timeout_db_transaction & timeout_
 	case mcp::validate_result_codes::ok:
 	{
 		//broadcast
-		if (!item->is_local() && !item->is_sync() && item->joint.summary_hash.is_zero())
+		if (!item->is_local() && !item->is_sync() && item->joint.summary_hash == mcp::summary_hash(0))
 		{
 			m_async_task->sync_async([this, joint]() {
 				m_capability->broadcast_block(joint);
@@ -573,7 +573,7 @@ void mcp::block_processor::do_process_one(mcp::timeout_db_transaction & timeout_
 	case mcp::validate_result_codes::old:
 	{
 		dag_old_size++;
-		LOG(m_log.trace) << boost::str(boost::format("Old block: %1%") % block_hash.to_string());
+		LOG(m_log.trace) << boost::str(boost::format("Old block: %1%") % block_hash.hex());
 		break;
 	}
 	case mcp::validate_result_codes::missing_parents_and_previous:
@@ -590,13 +590,13 @@ void mcp::block_processor::do_process_one(mcp::timeout_db_transaction & timeout_
 			process_missing(item, result.missing_parents_and_previous, result.missing_links);
 		}
 
-		LOG(m_log.trace) << boost::str(boost::format("Missing parents and previous for: %1%") % block_hash.to_string());
+		LOG(m_log.trace) << boost::str(boost::format("Missing parents and previous for: %1%") % block_hash.hex());
 
 		break;
 	}
 	case mcp::validate_result_codes::invalid_block:
 	{
-		LOG(m_log.info) << boost::str(boost::format("Invalid block: %1%, error message: %2%") % block_hash.to_string() % result.err_msg);
+		LOG(m_log.info) << boost::str(boost::format("Invalid block: %1%, error message: %2%") % block_hash.hex() % result.err_msg);
 		assert_x(!item->is_local());
 		//cache invalid block
 		m_invalid_block_cache.add(block_hash);
@@ -604,7 +604,7 @@ void mcp::block_processor::do_process_one(mcp::timeout_db_transaction & timeout_
 	}
 	case mcp::validate_result_codes::parents_and_previous_include_invalid_block:
 	{
-		LOG(m_log.trace) << boost::str(boost::format("Invalid block: %1%, error message: %2%") % block_hash.to_string() % result.err_msg);
+		LOG(m_log.trace) << boost::str(boost::format("Invalid block: %1%, error message: %2%") % block_hash.hex() % result.err_msg);
 		assert_x(!item->is_local());
 		//cache invalid block
 		m_invalid_block_cache.add(block_hash);
@@ -612,7 +612,7 @@ void mcp::block_processor::do_process_one(mcp::timeout_db_transaction & timeout_
 	}
 	case mcp::validate_result_codes::known_invalid_block:
 	{
-		LOG(m_log.trace) << boost::str(boost::format("Known invalid block: %1%") % block_hash.to_string());
+		LOG(m_log.trace) << boost::str(boost::format("Known invalid block: %1%") % block_hash.hex());
 		assert_x(!item->is_local());
 		break;
 	}

@@ -29,8 +29,8 @@ void mcp::sync_request_status::operator=(mcp::sync_request_status const &other_a
 
 void mcp::sync_info::clear()
 {
-	request_hash_tree_from_summary = 0;
-	request_hash_tree_to_summary = 0;
+	request_hash_tree_from_summary.clear();
+	request_hash_tree_to_summary.clear();
 	request_hash_tree_start_index = 0;
 	index = 0;
 	max_index = 0;
@@ -230,7 +230,7 @@ void mcp::node_sync::request_catchup(p2p::node_id const& id)
                 }
 				m_request_info.clear();
 				purge_handled_summaries_from_hash_tree();
-				request_remote_mc(transaction, id, 0, 0);
+				request_remote_mc(transaction, id, mcp::summary_hash(0), mcp::block_hash(0));
 			//}
 		}
 	}
@@ -267,9 +267,9 @@ void mcp::node_sync::request_remote_mc(mcp::db::db_transaction & transaction_a, 
 
 	LOG(log_sync.info) << "request_remote_mc::stable_mci:" << req_mg.last_stable_mci 
 		<< ",last_known_mci:" << req_mg.last_known_mci 
-		<< ",from_summary:" << from_summary.to_string() 
-		<< ",unstable_tail_block:" << unstable_tail_block.to_string() 
-		<< ",request_id:" << req_mg.request_id.to_string();;
+		<< ",from_summary:" << from_summary.hex() 
+		<< ",unstable_tail_block:" << unstable_tail_block.hex()
+		<< ",request_id:" << req_mg.request_id.hex();
 	send_catchup_request(id, req_mg);
 }
 
@@ -386,10 +386,10 @@ void mcp::node_sync::prepare_catchup_chain(mcp::catchup_request_message const& r
 	mcp::block_hash last_summary_hash(0);
 	std::unordered_set<dev::Address> arr_found_witnesses;
 
-	if (first_catchup_chain_summary == 0)
+	if (first_catchup_chain_summary == mcp::summary_hash(0))
 	{
 
-		bool remaining_unstable_mc_joints_start = (request.unstable_mc_joints_tail == 0);
+		bool remaining_unstable_mc_joints_start = (request.unstable_mc_joints_tail == mcp::block_hash(0));
 
 		uint64_t last_stable_mci;
 		uint64_t last_mci;
@@ -433,7 +433,7 @@ void mcp::node_sync::prepare_catchup_chain(mcp::catchup_request_message const& r
 			if (arr_found_witnesses.size() == distinct_witness_size_remote)
 			{
 				// Collect last summaries of last distinct witnessed blocks
-				if (!mc_block->last_summary_block().is_zero() && last_summary_hash.is_zero())
+				if (mc_block->last_summary_block() != mcp::block_hash(0) && last_summary_hash == mcp::block_hash(0))
 				{
 					last_summary_hash = mc_block->last_summary_block();
 				}
@@ -483,7 +483,7 @@ void mcp::node_sync::prepare_catchup_chain(mcp::catchup_request_message const& r
 
 	// create arr_stable_last_summary_joints
 	mcp::block_hash last_summary_block;
-	if (first_catchup_chain_summary == 0)
+	if (first_catchup_chain_summary == mcp::summary_hash(0))
 	{
 		last_summary_block = last_summary_hash;
 	}
@@ -517,8 +517,8 @@ void mcp::node_sync::prepare_catchup_chain(mcp::catchup_request_message const& r
 		arr_stable_last_summary_joints.push_back(joint);
 
 		LOG(log_sync.debug) << "arr_stable_last_summary_joints, mci = " << last_summary_mci
-			<< ", summary = " << joint.summary_hash.to_string() << ",block:" << last_summary_block.to_string();
-		assert_x(!sh.is_zero());
+			<< ", summary = " << joint.summary_hash.hex() << ",block:" << last_summary_block.hex();
+		assert_x(sh != mcp::summary_hash(0));
 		if (last_summary_mci > last_stable_mci_remote && last_summary_mci > 0 && arr_stable_last_summary_joints.size() < 500)
 		{
 			// go to next - last summary
@@ -740,8 +740,8 @@ mcp::sync_result mcp::node_sync::request_next_hash_tree(p2p::node_id const& id, 
 	mcp::sub_packet_type ty(mcp::sub_packet_type::hash_tree_request);
 	request.request_id = m_capability->gen_sync_request_hash(id, timestamp, ty);
 
-	LOG(log_sync.debug) << "send hash tree request, from summary: " << from_summary.to_string()
-		<< ", to summary: " << to_summary.to_string() << ",next index:" << next_start_index << ",request_id:" << request.request_id.to_string();
+	LOG(log_sync.debug) << "send hash tree request, from summary: " << from_summary.hex()
+		<< ", to summary: " << to_summary.hex() << ",next index:" << next_start_index << ",request_id:" << request.request_id.hex();
 
 
 	send_hash_tree_request(id, request);
@@ -833,7 +833,7 @@ mcp::sync_result mcp::node_sync::process_catchup_chain(mcp::catchup_response_mes
 				std::shared_ptr<mcp::block> block = joint.block;
 				mcp::block_hash bh = block->hash();
 
-				if (!joint.summary_hash.is_zero())
+				if (joint.summary_hash != mcp::summary_hash(0))
 				{
 					LOG(log_sync.info) << "process_catchup_chain_error:unstable mc but has summary";
 					process_catchup_result = mcp::sync_result::catchup_chain_summary_check_fail;
@@ -860,7 +860,7 @@ mcp::sync_result mcp::node_sync::process_catchup_chain(mcp::catchup_response_mes
 				arr_parent_blocks = block->parents();
 
 				// derive last_summary_block from receiver's own point of view
-				if (!block->last_summary_block().is_zero() && arr_found_witnesses.size() >= distinct_witness_size)
+				if (block->last_summary_block() != mcp::block_hash(0) && arr_found_witnesses.size() >= distinct_witness_size)
 				{
 					arr_last_summary_blocks.push_back(block->last_summary_block());
 					assoc_last_summary_by_block[block->last_summary_block()] = block->last_summary();
@@ -946,14 +946,14 @@ mcp::sync_result mcp::node_sync::process_catchup_chain(mcp::catchup_response_mes
 #pragma region validate the joints on catchup chain, and put their summaries in an array
 		if (catchup_chain_tail.summary_hash != last_summary)
 		{
-			LOG(log_sync.info) << "process_catchup_chain_error:last summary do not match." << ",last_summary:" << last_summary.to_string() << ",last_summary_block:" << last_summary_block.to_string() << ",catchup_chain_tail.summary_hash:" << catchup_chain_tail.summary_hash.to_string() << ",catchup_chain_block_summary_error:" << catchup_chain_block_summary_error;
+			LOG(log_sync.info) << "process_catchup_chain_error:last summary do not match." << ",last_summary:" << last_summary.hex() << ",last_summary_block:" << last_summary_block.hex() << ",catchup_chain_tail.summary_hash:" << catchup_chain_tail.summary_hash.hex() << ",catchup_chain_block_summary_error:" << catchup_chain_block_summary_error;
 			process_catchup_result = mcp::sync_result::catchup_chain_summary_check_fail;
 			return  process_catchup_result;
 		}
 
         if (m_cache->block_exists(transaction, last_summary_block))
         {
-            LOG(log_sync.info) << "process_catchup_chain_error:last_summary_block exist" << last_summary_block.to_string();
+            LOG(log_sync.info) << "process_catchup_chain_error:last_summary_block exist" << last_summary_block.hex();
             process_catchup_result = mcp::sync_result::catchup_chain_summary_check_fail;
             return  process_catchup_result;
         }
@@ -962,7 +962,7 @@ mcp::sync_result mcp::node_sync::process_catchup_chain(mcp::catchup_response_mes
 		{
 			std::shared_ptr<mcp::block> block = joint.block;
 
-			if (joint.summary_hash.is_zero())
+			if (joint.summary_hash == mcp::summary_hash(0))
 			{
 				LOG(log_sync.info) << "process_catchup_chain_error:joints has no summaries";
 				process_catchup_result = mcp::sync_result::catchup_chain_summary_check_fail;
@@ -980,7 +980,7 @@ mcp::sync_result mcp::node_sync::process_catchup_chain(mcp::catchup_response_mes
 				process_catchup_result = mcp::sync_result::catchup_chain_summary_check_fail;
 				return  process_catchup_result;
 			}
-			if (!block->last_summary_block().is_zero())
+			if (block->last_summary_block() != mcp::block_hash(0))
 			{
 				last_summary_block = block->last_summary_block();
 				last_summary = block->last_summary();
@@ -1026,7 +1026,7 @@ mcp::sync_result mcp::node_sync::process_catchup_chain(mcp::catchup_response_mes
 		{
 			if (last_sync_chain_tail != joint.summary_hash)
 			{
-				LOG(log_sync.error) << "catchup chain:chain tail not overlap:error:summary:" << last_sync_chain_tail.to_string() << ",now:" << joint.summary_hash.to_string();
+				LOG(log_sync.error) << "catchup chain:chain tail not overlap:error:summary:" << last_sync_chain_tail.hex() << ",now:" << joint.summary_hash.hex();
 				process_catchup_result = mcp::sync_result::catchup_chain_summary_check_fail;
 				return process_catchup_result;
 			}
@@ -1040,7 +1040,7 @@ mcp::sync_result mcp::node_sync::process_catchup_chain(mcp::catchup_response_mes
 			mcp::block_hash bh(0);
 			if (!m_store.catchup_chain_summary_block_get(transaction, joint.summary_hash, bh))
 			{
-				LOG(log_sync.error) << "catchup chain: not chain tail gen multi:summary:" << joint.summary_hash.to_string() << "block:" << bh.to_string();
+				LOG(log_sync.error) << "catchup chain: not chain tail gen multi:summary:" << joint.summary_hash.hex() << "block:" << bh.hex();
 				process_catchup_result = mcp::sync_result::catchup_chain_summary_check_fail;
 				return process_catchup_result;
 			}
@@ -1065,7 +1065,7 @@ mcp::sync_result mcp::node_sync::process_catchup_chain(mcp::catchup_response_mes
 				throw;
 			}
 		}
-		LOG(log_sync.debug) << "catchup chain : index:" << index << ",summary hash:" << joint.summary_hash.to_string() << ",block:" << joint.block->hash().to_string();
+		LOG(log_sync.debug) << "catchup chain : index:" << index << ",summary hash:" << joint.summary_hash.hex() << ",block:" << joint.block->hash().hex();
 		index++;
 	}
 
@@ -1161,7 +1161,7 @@ void mcp::node_sync::read_hash_tree(mcp::hash_tree_request_message const& hash_t
 
 		//previous summary hash
 		mcp::summary_hash previous_summary(0);
-		if (!block_ptr->previous().is_zero())
+		if (block_ptr->previous() != mcp::block_hash(0))
 		{
 			bool previous_summary_hash_error(m_cache->block_summary_get(transaction, block_ptr->previous(), previous_summary));
 			assert_x(!previous_summary_hash_error);
@@ -1291,7 +1291,7 @@ void mcp::node_sync::process_hash_tree(p2p::node_id const &id, mcp::hash_tree_re
 		return;
 	}
 
-	LOG(log_sync.debug) << "process_hash_tree:" << hash_tree_response.request_id.to_string();
+	LOG(log_sync.debug) << "process_hash_tree:" << hash_tree_response.request_id.hex();
 
 	std::queue<std::shared_ptr<mcp::block_processor_item>> items;
 
@@ -1315,13 +1315,13 @@ void mcp::node_sync::process_hash_tree(p2p::node_id const &id, mcp::hash_tree_re
 				break;
 			}
 
-			if (s_item.block_hash.is_zero() || s_item.block_hash != s_item.block->hash())
+			if (s_item.block_hash == mcp::block_hash(0) || s_item.block_hash != s_item.block->hash())
 			{
 				LOG(log_sync.info) << "process_hash_tree : invalid block hash";
 				error = true;
 				break;
 			}
-			if (s_item.summary.is_zero())
+			if (s_item.summary == mcp::summary_hash(0))
 			{
 				LOG(log_sync.info) << "process_hash_tree:no summary";
 				error = true;
@@ -1342,24 +1342,24 @@ void mcp::node_sync::process_hash_tree(p2p::node_id const &id, mcp::hash_tree_re
 
 			if (s_item.summary != s_hash)
 			{
-				LOG(log_sync.info) << "process_hash_tree:wrong summary hash" << ", local_summary: " << s_hash.to_string() << ",remote_hash:" << s_item.summary.to_string();
-				LOG(log_sync.info) << "process_hash_tree:wrong summary hash" << ", block: " << s_item.block_hash.to_string() << ".status:" << (int)s_item.status;
+				LOG(log_sync.info) << "process_hash_tree:wrong summary hash" << ", local_summary: " << s_hash.hex() << ",remote_hash:" << s_item.summary.hex();
+				LOG(log_sync.info) << "process_hash_tree:wrong summary hash" << ", block: " << s_item.block_hash.hex() << ".status:" << (int)s_item.status;
 				//if (s_item.receipt)
 				//{
 				//	LOG(log_sync.info) << "process_hash_tree:wrong summary hash" << ", to_state: " << s_item.receipt->from_state.to_string() << ".status:" << s_item.receipt->from_state.to_string();
 				//}
-				LOG(log_sync.info) << "process_hash_tree:wrong summary hash" << ", previous_summary: " << s_item.previous_summary.to_string();
+				LOG(log_sync.info) << "process_hash_tree:wrong summary hash" << ", previous_summary: " << s_item.previous_summary.hex();
 				for (auto i : s_item.parent_summaries)
 				{
-					LOG(log_sync.info) << "process_hash_tree:wrong summary hash" << ", parent_summary: " << i.to_string();
+					LOG(log_sync.info) << "process_hash_tree:wrong summary hash" << ", parent_summary: " << i.hex();
 				}
 				for (auto i : s_item.link_summaries)
 				{
-					LOG(log_sync.info) << "process_hash_tree:wrong summary hash" << ", link_summary: " << i.to_string();
+					LOG(log_sync.info) << "process_hash_tree:wrong summary hash" << ", link_summary: " << i.hex();
 				}
 				for (auto i : s_item.skiplist_summaries)
 				{
-					LOG(log_sync.info) << "process_hash_tree:wrong summary hash" << ", skiplist_summary: " << i.to_string();
+					LOG(log_sync.info) << "process_hash_tree:wrong summary hash" << ", skiplist_summary: " << i.hex();
 				}
 				error = true;
 				break;
@@ -1378,35 +1378,35 @@ void mcp::node_sync::process_hash_tree(p2p::node_id const &id, mcp::hash_tree_re
 			mcp::block_hash previous_hash;
 			{
 				mcp::db::db_transaction & transaction(tx.get_transaction());
-				bool previous_summary_exists(s_item.previous_summary.is_zero()
+				bool previous_summary_exists(s_item.previous_summary == mcp::summary_hash(0)
 					|| m_store.hash_tree_summary_exists(transaction, s_item.previous_summary)
 					|| (!m_store.summary_block_get(transaction, s_item.previous_summary, previous_hash)));
 
 				if (!previous_summary_exists)
 				{
-					LOG(log_sync.info) << "process_hash_tree: previous summary not exsist" << ",block:" << s_item.block_hash.to_string() << ", summary: " << s_hash.to_string()
-						<< ", previous summary: " << s_item.previous_summary.to_string();
+					LOG(log_sync.info) << "process_hash_tree: previous summary not exsist" << ",block:" << s_item.block_hash.hex() << ", summary: " << s_hash.hex()
+						<< ", previous summary: " << s_item.previous_summary.hex();
 					error = true;
 					break;
 				}
 
 				if (!check_summaries_exist(transaction, s_item.parent_summaries))
 				{
-					LOG(log_sync.info) << "process_hash_tree:check_summaries_exist:not exsist" << ",block:" << s_item.block_hash.to_string() << ", summary: " << s_hash.to_string();
+					LOG(log_sync.info) << "process_hash_tree:check_summaries_exist:not exsist" << ",block:" << s_item.block_hash.hex() << ", summary: " << s_hash.hex();
 					error = true;
 					break;
 				}
 
 				if (!check_summaries_exist(transaction, s_item.link_summaries))
 				{
-					LOG(log_sync.info) << "process_hash_tree:check_summaries_exist:not exsist" << ",block:" << s_item.block_hash.to_string() << ", summary: " << s_hash.to_string();
+					LOG(log_sync.info) << "process_hash_tree:check_summaries_exist:not exsist" << ",block:" << s_item.block_hash.hex() << ", summary: " << s_hash.hex();
 					error = true;
 					break;
 				}
 
 				if (!check_summaries_exist(transaction, s_item.skiplist_summaries))
 				{
-					LOG(log_sync.info) << "process_hash_tree:check_summaries_exist:not exsist" << ", summary: " << s_hash.to_string();
+					LOG(log_sync.info) << "process_hash_tree:check_summaries_exist:not exsist" << ", summary: " << s_hash.hex();
 					error = true;
 					break;
 				}
@@ -1496,7 +1496,7 @@ void mcp::node_sync::del_catchup_index(uint64_t index)
             m_store.catchup_chain_block_summary_del(transaction, head_elem_block);
             transaction.commit();
 
-            LOG(log_sync.debug) << "process_hash_tree: del_last_request_chain:" << ",index:" << index << ",summary:" << head_elem_summary.to_string() << ",block:" << head_elem_block.to_string();
+            LOG(log_sync.debug) << "process_hash_tree: del_last_request_chain:" << ",index:" << index << ",summary:" << head_elem_summary.hex() << ",block:" << head_elem_block.hex();
         }
     }
     catch (const std::exception& e)
@@ -1558,7 +1558,7 @@ void mcp::node_sync::deal_exist_catchup_index(mcp::block_hash const& hash_a)
 	std::lock_guard<std::mutex> lock(m_request_info.version_mutex);
 	if (m_request_info.to_summary_index.count(hash_a))
 	{
-        LOG(log_sync.debug) << "catchup_del_index hash:" << hash_a.to_string() << ",index:" << std::to_string(m_request_info.to_summary_index[hash_a]);
+        LOG(log_sync.debug) << "catchup_del_index hash:" << hash_a.hex() << ",index:" << std::to_string(m_request_info.to_summary_index[hash_a]);
 
 		m_request_info.catchup_del_index.insert(std::make_pair(m_request_info.to_summary_index[hash_a], m_request_info.version));
 		m_request_info.to_summary_index.erase(hash_a);
@@ -1711,7 +1711,7 @@ void mcp::node_sync::send_block(p2p::node_id const & id, mcp::joint_message cons
 
 bool mcp::node_sync::is_request_hash_tree()
 {
-	return (!m_request_info.request_hash_tree_from_summary.is_zero() && m_request_info.request_hash_tree_start_index != 0);
+	return (m_request_info.request_hash_tree_from_summary == mcp::summary_hash(0) && m_request_info.request_hash_tree_start_index != 0);
 }
 
 // check if all the summaries in the parameter exists in the node
@@ -1726,7 +1726,7 @@ bool mcp::node_sync::check_summaries_exist(mcp::db::db_transaction & transaction
 
 		if (!exists)
 		{
-			LOG(log_sync.info) << "check_summaries_exist:not exsist" << ",summary: " << it->to_string();
+			LOG(log_sync.info) << "check_summaries_exist:not exsist" << ",summary: " << it->hex();
 			return false;
 		}
 

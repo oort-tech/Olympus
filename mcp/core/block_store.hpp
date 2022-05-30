@@ -202,7 +202,7 @@ namespace mcp
 		int contract_aux;
 
 		//version key
-		static mcp::uint256_union const version_key;
+		static dev::h256 const version_key;
 		int unlink_block;
 		int unlink_info;
 		int next_unlink;
@@ -216,20 +216,20 @@ namespace mcp
 		int transaction_receipt;
 
 		//genesis hash key
-		static mcp::uint256_union const genesis_hash_key;
+		static dev::h256 const genesis_hash_key;
 		//genesis transaction hash key
-		static mcp::uint256_union const genesis_transaction_hash_key;
+		static dev::h256 const genesis_transaction_hash_key;
 		//last main chain index key
-		static mcp::uint256_union const last_mci_key;
+		static dev::h256 const last_mci_key;
 		//last stable main chain index key
-		static mcp::uint256_union const last_stable_mci_key;
+		static dev::h256 const last_stable_mci_key;
 		//advance info key
-		static mcp::uint256_union const advance_info_key;
+		static dev::h256 const advance_info_key;
 		//last stable index key
-		static mcp::uint256_union const last_stable_index_key;
+		static dev::h256 const last_stable_index_key;
 		//catch up index key
-		static mcp::uint256_union const catchup_index;
+		static dev::h256 const catchup_index;
 		//catch up max index key
-		static mcp::uint256_union const catchup_max_index;
+		static dev::h256 const catchup_max_index;
 	};
 }

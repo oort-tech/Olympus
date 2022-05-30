@@ -182,7 +182,7 @@ std::unordered_map<mcp::block_hash, std::shared_ptr<mcp::block_processor_item>> 
 
             if (m_unhandles.count(unhandle_hash) == 0)
             {
-                LOG(m_log.info) << "m_unhandles dont have:hash:" << unhandle_hash.to_string()<<",dependency_hash:"<< dependency_hash_a.to_string();
+                LOG(m_log.info) << "m_unhandles dont have:hash:" << unhandle_hash.hex()<<",dependency_hash:"<< dependency_hash_a.hex();
             }
 			assert_x(m_unhandles.count(unhandle_hash));
 			auto &unhandle = m_unhandles[unhandle_hash];
@@ -229,7 +229,7 @@ void mcp::unhandle_cache::get_missings(size_t const & missing_limit_a, std::vect
 		while (missings_a.size() < 50 && start != it->first)
 		{
 			missings_a.push_back(it->first);
-			if (start.is_zero())
+			if (start == mcp::block_hash(0))
 				start = it->first;
 			it++;
 			if (it == m_unhandles.end())
@@ -257,7 +257,7 @@ void mcp::unhandle_cache::get_missings(size_t const & missing_limit_a, std::vect
 			{
 				if (!m_unhandles.count(*it))
 					missings_a.push_back(*it);
-				if (start.is_zero())
+				if (start == mcp::block_hash(0))
 					start = *it;
 				it++;
 				if (it == m_missings.end())
@@ -290,7 +290,7 @@ void mcp::unhandle_cache::get_missings(size_t const & missing_limit_a, std::vect
 		{
 			if (!m_unhandles.count(*it))
 				light_missings_a.push_back(*it);
-			if (start.is_zero())
+			if (start == mcp::block_hash(0))
 				start = *it;
 			it++;
 			if (it == m_light_missings.end())

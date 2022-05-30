@@ -405,7 +405,7 @@ void mcp::block_state::serialize_json(mcp::json & json_a)
 	mcp::json content_l = mcp::json::object();
 	content_l["level"] = level;
 	content_l["witnessed_level"] = witnessed_level;
-	content_l["best_parent"] = best_parent.to_string();
+	content_l["best_parent"] = best_parent.hex();
 	json_a["content"] = content_l;
 
 	json_a["is_stable"] = is_stable ? 1 : 0;
@@ -459,7 +459,7 @@ void mcp::free_key::serialize(mcp::stream & stream_a) const
     uint64_t be_level_desc(boost::endian::native_to_big(std::numeric_limits<uint64_t>::max() - level_desc));
     write(stream_a, be_level_desc);
 
-    write(stream_a, hash_asc.bytes);
+    write(stream_a, hash_asc.asArray());
 }
 
 void mcp::free_key::deserialize(mcp::stream & stream_a)
@@ -472,7 +472,7 @@ void mcp::free_key::deserialize(mcp::stream & stream_a)
     read(stream_a, be_level_desc);
     level_desc = std::numeric_limits<uint64_t>::max() - boost::endian::big_to_native(be_level_desc);
 
-    read(stream_a, hash_asc.bytes);
+    read(stream_a, hash_asc.asArray());
 }
 
 
@@ -614,16 +614,16 @@ mcp::summary_hash mcp::summary::gen_summary_hash(mcp::block_hash const & block_h
 {
     mcp::summary_hash result;
     blake2b_state hash_l;
-    auto status(blake2b_init(&hash_l, sizeof(result.bytes)));
+    auto status(blake2b_init(&hash_l, sizeof(result)));
     assert_x(status == 0);
 
-    blake2b_update(&hash_l, block_hash.bytes.data(), sizeof(block_hash.bytes));
-	blake2b_update(&hash_l, previous_hash.bytes.data(), sizeof(previous_hash.bytes));
+    blake2b_update(&hash_l, block_hash.data(), sizeof(block_hash));
+	blake2b_update(&hash_l, previous_hash.data(), sizeof(previous_hash));
 	for (auto & parent : parent_hashs)
-        blake2b_update(&hash_l, parent.bytes.data(), sizeof(parent.bytes));
+        blake2b_update(&hash_l, parent.data(), sizeof(parent));
 	blake2b_update(&hash_l, receipts_root.asBytes().data(),sizeof(receipts_root.asBytes()));//used receipt root
     for (auto & s : skiplist)
-        blake2b_update(&hash_l, s.bytes.data(), sizeof(s.bytes));
+        blake2b_update(&hash_l, s.data(), sizeof(s));
     blake2b_update(&hash_l, &status_a, sizeof(status_a));
 
 	mcp::uint64_union stable_index(stable_index_a);
@@ -631,7 +631,7 @@ mcp::summary_hash mcp::summary::gen_summary_hash(mcp::block_hash const & block_h
 	mcp::uint64_union mc_timestamp(mc_timestamp_a);
 	blake2b_update(&hash_l, mc_timestamp.bytes.data(), sizeof(mc_timestamp.bytes));
 
-    status = blake2b_final(&hash_l, result.bytes.data(), sizeof(result.bytes));
+    status = blake2b_final(&hash_l, result.data(), sizeof(result));
     assert_x(status == 0);
 
     return result;

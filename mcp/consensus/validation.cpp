@@ -48,7 +48,7 @@ mcp::base_validate_result mcp::validation::base_validate(mcp::db::db_transaction
 	//check parents
 	mcp::block_hash const & previous(block->previous());
 	std::vector<mcp::block_hash> const & parents(block->parents());
-	bool previous_in_parents = previous.is_zero();
+	bool previous_in_parents = previous == mcp::block_hash(0);
 	mcp::block_hash pre_pblock_hash(0);
 	for (mcp::block_hash const & pblock_hash : parents)
 	{
@@ -70,7 +70,7 @@ mcp::base_validate_result mcp::validation::base_validate(mcp::db::db_transaction
 	if (!previous_in_parents)
 	{
 		result.code = mcp::base_validate_result_codes::invalid_block;
-		result.err_msg = boost::str(boost::format("previous %1% not included by parents") % previous.to_string());
+		result.err_msg = boost::str(boost::format("previous %1% not included by parents") % previous.hex());
 		return result;
 	}
 
@@ -92,7 +92,7 @@ mcp::base_validate_result mcp::validation::base_validate(mcp::db::db_transaction
 	//}
 
 	//validate signature
-	dev::Public pubkey = dev::recover(block->signature(), block_hash.number());
+	dev::Public pubkey = dev::recover(block->signature(), block_hash);
 	if (dev::toAddress(pubkey) != block->from())   //todo used eth sign----------------------------------------
 	{
 		result.code = mcp::base_validate_result_codes::invalid_signature;
@@ -119,7 +119,7 @@ mcp::validate_result mcp::validation::dag_validate(mcp::db::db_transaction & tra
 
 	//check previous
 	mcp::block_hash const & previous(block->previous());
-	if (!previous.is_zero())
+	if (previous != mcp::block_hash(0))
 	{
 		std::shared_ptr<mcp::block> previous_block = cache_a->block_get(transaction_a, previous);
 		if (!previous_block)
@@ -127,7 +127,7 @@ mcp::validate_result mcp::validation::dag_validate(mcp::db::db_transaction & tra
 			if (m_invalid_block_cache.contains(previous))
 			{
 				result.code = mcp::validate_result_codes::parents_and_previous_include_invalid_block;
-				result.err_msg = boost::str(boost::format("Invalid missing previous, hash: %1%") % previous.to_string());
+				result.err_msg = boost::str(boost::format("Invalid missing previous, hash: %1%") % previous.hex());
 				return result;
 			}
 
@@ -147,7 +147,7 @@ mcp::validate_result mcp::validation::dag_validate(mcp::db::db_transaction & tra
 			if (previous_block->exec_timestamp() > block->exec_timestamp())
 			{
 				result.code = mcp::validate_result_codes::invalid_block;
-				result.err_msg = boost::str(boost::format("Invalid exec_timestamp, previous: %1%") % previous.to_string());
+				result.err_msg = boost::str(boost::format("Invalid exec_timestamp, previous: %1%") % previous.hex());
 				return result;
 			}
 		}
@@ -163,7 +163,7 @@ mcp::validate_result mcp::validation::dag_validate(mcp::db::db_transaction & tra
 			if (m_invalid_block_cache.contains(previous))
 			{
 				result.code = mcp::validate_result_codes::parents_and_previous_include_invalid_block;
-				result.err_msg = boost::str(boost::format("Invalid missing parent, hash: %1%") % pblock_hash.to_string());
+				result.err_msg = boost::str(boost::format("Invalid missing parent, hash: %1%") % pblock_hash.hex());
 				return result;
 			}
 
@@ -182,7 +182,7 @@ mcp::validate_result mcp::validation::dag_validate(mcp::db::db_transaction & tra
 		if (pblock->exec_timestamp() > block->exec_timestamp())
 		{
 			result.code = mcp::validate_result_codes::invalid_block;
-			result.err_msg = boost::str(boost::format("Invalid exec_timestamp, parent: %1%") % pblock_hash.to_string());
+			result.err_msg = boost::str(boost::format("Invalid exec_timestamp, parent: %1%") % pblock_hash.hex());
 			return result;
 		}
 	}
@@ -200,7 +200,7 @@ mcp::validate_result mcp::validation::dag_validate(mcp::db::db_transaction & tra
 		|| !last_summary_block_state->main_chain_index)
 	{
 		result.code = mcp::validate_result_codes::invalid_block;
-		result.err_msg = boost::str(boost::format("invalid last summary block %1%") % block->last_summary_block().to_string());
+		result.err_msg = boost::str(boost::format("invalid last summary block %1%") % block->last_summary_block().hex());
 		return result;
 	}
 
@@ -245,7 +245,7 @@ mcp::validate_result mcp::validation::dag_validate(mcp::db::db_transaction & tra
 			if (graph_result != mcp::graph_compare_result::non_related)
 			{
 				result.code = mcp::validate_result_codes::invalid_block;
-				result.err_msg = boost::str(boost::format("parent %1% is related to parent %2%") % pblock_hash.to_string() % pre_hash.to_string());
+				result.err_msg = boost::str(boost::format("parent %1% is related to parent %2%") % pblock_hash.hex() % pre_hash.hex());
 				return result;
 			}
 		}
@@ -254,7 +254,7 @@ mcp::validate_result mcp::validation::dag_validate(mcp::db::db_transaction & tra
 
 	//check best parent
 	mcp::block_hash best_pblock_hash(m_ledger.determine_best_parent(transaction_a, cache_a, parents));
-	if (best_pblock_hash.is_zero())
+	if (best_pblock_hash == mcp::block_hash(0))
 	{
 		result.code = mcp::validate_result_codes::invalid_block;
 		result.err_msg = "no compatible best parent";
@@ -287,18 +287,18 @@ mcp::validate_result mcp::validation::dag_validate(mcp::db::db_transaction & tra
 		{
 			result.code = mcp::validate_result_codes::invalid_block;
 			result.err_msg = boost::str(boost::format("last summary block %1% is not equal to last stable block of best parent %2%")
-				% block->last_summary_block().to_string() % bp_last_stable_block_hash.to_string());
+				% block->last_summary_block().hex() % bp_last_stable_block_hash.hex());
 			return result;
 		}
 
 		mcp::summary_hash last_summary;
 		bool last_summary_exists(!m_cache->block_summary_get(transaction_a, block->last_summary_block(), last_summary));
-		assert_x_msg(last_summary_exists, boost::str(boost::format("last summary not found, last_summary_block: %1%") % block->last_summary_block().to_string()));
+		assert_x_msg(last_summary_exists, boost::str(boost::format("last summary not found, last_summary_block: %1%") % block->last_summary_block().hex()));
 
 		if (last_summary != block->last_summary())
 		{
 			result.code = mcp::validate_result_codes::invalid_block;
-			result.err_msg = boost::str(boost::format("last summary %1% and last summary block %2% do not match") % block->last_summary().to_string() % block->last_summary_block().to_string());
+			result.err_msg = boost::str(boost::format("last summary %1% and last summary block %2% do not match") % block->last_summary().hex() % block->last_summary_block().hex());
 			return result;
 		}
 	}
@@ -309,14 +309,14 @@ mcp::validate_result mcp::validation::dag_validate(mcp::db::db_transaction & tra
 	if (!last_stable_block_state)
 	{
 		result.code = mcp::validate_result_codes::invalid_block;
-		result.err_msg = boost::str(boost::format("last stable block %1% not exists") % block->last_stable_block().to_string());
+		result.err_msg = boost::str(boost::format("last stable block %1% not exists") % block->last_stable_block().hex());
 		return result;
 	}
 
 	if (!last_stable_block_state->is_on_main_chain)
 	{
 		result.code = mcp::validate_result_codes::invalid_block;
-		result.err_msg = boost::str(boost::format("last stable block %1% is not on main chain") % block->last_stable_block().to_string());
+		result.err_msg = boost::str(boost::format("last stable block %1% is not on main chain") % block->last_stable_block().hex());
 		return result;
 	}
 
@@ -368,8 +368,8 @@ mcp::validate_result mcp::validation::dag_validate(mcp::db::db_transaction & tra
 				auto bp_block_state = cache_a->block_state_get(transaction_a, best_pblock_hash);
 				result.code = mcp::validate_result_codes::invalid_block;
 				result.err_msg = boost::str(boost::format("last stable block %1% is not stable in view of me, best parent: %2%, max parent last stable block: %3%, from: %4%, bp_block_state->earliest_bp_included_mc_index: %5%, bp_block_state->latest_bp_included_mc_index:%6%, bp_block_state->is_on_main_chain:%7%")
-					% block->last_stable_block().to_string()
-					% best_pblock_hash.to_string() % max_p_last_stable_block_hash.to_string() % block->from().hexPrefixed()
+					% block->last_stable_block().hex()
+					% best_pblock_hash.hex() % max_p_last_stable_block_hash.hex() % block->from().hexPrefixed()
 					% *bp_block_state->earliest_bp_included_mc_index % *bp_block_state->latest_bp_included_mc_index % bp_block_state->is_on_main_chain);
 				return result;
 			}
@@ -391,8 +391,8 @@ mcp::validate_result mcp::validation::dag_validate(mcp::db::db_transaction & tra
 					auto bp_block_state = cache_a->block_state_get(transaction_a, best_pblock_hash);
 					result.code = mcp::validate_result_codes::invalid_block;
 					result.err_msg = boost::str(boost::format("next mc block of last stable block %1% is stable in view of me, best parent: %2%, last stable block: %3%, from: %4%, bp_block_state->earliest_bp_included_mc_index: %5%, bp_block_state->latest_bp_included_mc_index:%6%, bp_block_state->is_on_main_chain:%7%")
-						% next_mc_hash.to_string()
-						% best_pblock_hash.to_string() % last_stable_block_hash.to_string() % block->from().hexPrefixed()
+						% next_mc_hash.hex()
+						% best_pblock_hash.hex() % last_stable_block_hash.hex() % block->from().hexPrefixed()
 						% *bp_block_state->earliest_bp_included_mc_index % *bp_block_state->latest_bp_included_mc_index % bp_block_state->is_on_main_chain);
 					return result;
 				}

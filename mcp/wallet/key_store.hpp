@@ -26,10 +26,10 @@ namespace mcp
 	public:
 		value_previous_work() = default;
 		value_previous_work(dev::Slice const & val_a);
-		value_previous_work(mcp::uint256_union const &, mcp::uint64_union const &);
+		value_previous_work(mcp::block_hash const &, dev::h64 const &);
 		dev::Slice val() const;
 		mcp::block_hash previous;
-		mcp::uint64_union work;
+		dev::h64 work;
 	};
 
 	class key_store

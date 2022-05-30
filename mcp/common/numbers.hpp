@@ -144,9 +144,9 @@ union uint256_union
 };
 
 // All keys and hashes are 256 bit.
-using amount = uint256_t;
-using block_hash = uint256_union;
-using summary_hash = uint256_union;
+using amount = dev::u256;
+using block_hash = dev::h256;
+using summary_hash = dev::h256;
 //using account_state_hash = uint256_union;
 // using account = uint256_union;
 /// A hash set of mcp accounts
@@ -154,10 +154,10 @@ using summary_hash = uint256_union;
 // using public_key = uint256_union;
 // using private_key = uint256_union;
 // using secret_ciphertext = uint256_union;
-using data_hash = uint256_union;
-using code_hash = uint256_union;
-using state_root = uint256_union;
-using sync_request_hash = uint256_union;
+using data_hash = dev::h256;
+using code_hash = dev::h256;
+using state_root = dev::h256;
+using sync_request_hash = dev::h256;
 // using seed_key = uint256_union;
 // using secret_encry = uint256_union;		//p2p encryption
 
@@ -318,15 +318,6 @@ namespace p2p
 namespace std
 {
 template <>
-struct hash<mcp::uint256_union>
-{
-	size_t operator() (mcp::uint256_union const & data_a) const
-	{
-		return *reinterpret_cast<size_t const *> (data_a.bytes.data ());
-		//return XXH64(data_a.bytes.data(), data_a.bytes.size(), 0);
-	}
-};
-template <>
 struct hash<mcp::uint256_t>
 {
 	size_t operator() (mcp::uint256_t const & number_a) const
@@ -367,11 +358,11 @@ struct hash<mcp::account20_struct>
 namespace boost
 {
     template <>
-    struct hash<mcp::uint256_union>
+    struct hash<dev::h256>
     {
-        size_t operator() (mcp::uint256_union const & value_a) const
+        size_t operator() (dev::h256 const & value_a) const
         {
-            std::hash<mcp::uint256_union> hash;
+            std::hash<dev::h256> hash;
             return hash(value_a);
         }
     };

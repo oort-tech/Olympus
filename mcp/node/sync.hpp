@@ -94,7 +94,7 @@ namespace mcp
 
 			for (auto it = m_request_info.to_summary_index.begin(); it != m_request_info.to_summary_index.end(); it++)
 			{
-				ret = ret + " ," + it->first.to_string() + " ," + std::to_string(it->second);
+				ret = ret + " ," + it->first.hex() + " ," + std::to_string(it->second);
 			}
 
 			return ret;
