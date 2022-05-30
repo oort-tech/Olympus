@@ -247,84 +247,84 @@ mcp::rpc_handler::rpc_handler(mcp::rpc &rpc_a, std::string const &body_a, std::f
 																																				 m_background(rpc_a.m_background),
 																																				 m_store(rpc.m_store)
 {
-	m_rpcMethods["account_list"] = &mcp::rpc_handler::account_list;
-	m_rpcMethods["account_validate"] = &mcp::rpc_handler::account_validate;
-	m_rpcMethods["account_create"] = &mcp::rpc_handler::account_create;
-	m_rpcMethods["account_remove"] = &mcp::rpc_handler::account_remove;
-	m_rpcMethods["account_unlock"] = &mcp::rpc_handler::account_unlock;
-	m_rpcMethods["account_lock"] = &mcp::rpc_handler::account_lock;
-	m_rpcMethods["account_export"] = &mcp::rpc_handler::account_export;
-	m_rpcMethods["account_import"] = &mcp::rpc_handler::account_import;
-	m_rpcMethods["account_password_change"] = &mcp::rpc_handler::account_password_change;
-	m_rpcMethods["account_code"] = &mcp::rpc_handler::account_code;
-	m_rpcMethods["account_balance"] = &mcp::rpc_handler::account_balance;
-	m_rpcMethods["accounts_balances"] = &mcp::rpc_handler::accounts_balances;
-	m_rpcMethods["account_block_list"] = &mcp::rpc_handler::account_block_list;
-	m_rpcMethods["account_state_list"] = &mcp::rpc_handler::account_state_list;
-	m_rpcMethods["block"] = &mcp::rpc_handler::block;
-	m_rpcMethods["blocks"] = &mcp::rpc_handler::blocks;
-	m_rpcMethods["block_state"] = &mcp::rpc_handler::block_state;
-	m_rpcMethods["block_states"] = &mcp::rpc_handler::block_states;
-	m_rpcMethods["block_traces"] = &mcp::rpc_handler::block_traces;
-	m_rpcMethods["stable_blocks"] = &mcp::rpc_handler::stable_blocks;
-	m_rpcMethods["send_block"] = &mcp::rpc_handler::send_block;
-	m_rpcMethods["generate_offline_block"] = &mcp::rpc_handler::generate_offline_block;
-	m_rpcMethods["send_offline_block"] = &mcp::rpc_handler::send_offline_block;
-	m_rpcMethods["block_summary"] = &mcp::rpc_handler::block_summary;
-	m_rpcMethods["sign_msg"] = &mcp::rpc_handler::sign_msg;
-	m_rpcMethods["version"] = &mcp::rpc_handler::version;
-	m_rpcMethods["status"] = &mcp::rpc_handler::status;
-	m_rpcMethods["peers"] = &mcp::rpc_handler::peers;
-	m_rpcMethods["nodes"] = &mcp::rpc_handler::nodes;
-	m_rpcMethods["witness_list"] = &mcp::rpc_handler::witness_list;
-	m_rpcMethods["estimate_gas"] = &mcp::rpc_handler::estimate_gas;
-	m_rpcMethods["logs"] = &mcp::rpc_handler::logs;
-	m_rpcMethods["debug_trace_transaction"] = &mcp::rpc_handler::debug_trace_transaction;
-	m_rpcMethods["debug_storage_range_at"] = &mcp::rpc_handler::debug_storage_range_at;
+	m_mcpRpcMethods["account_list"] = &mcp::rpc_handler::account_list;
+	m_mcpRpcMethods["account_validate"] = &mcp::rpc_handler::account_validate;
+	m_mcpRpcMethods["account_create"] = &mcp::rpc_handler::account_create;
+	m_mcpRpcMethods["account_remove"] = &mcp::rpc_handler::account_remove;
+	m_mcpRpcMethods["account_unlock"] = &mcp::rpc_handler::account_unlock;
+	m_mcpRpcMethods["account_lock"] = &mcp::rpc_handler::account_lock;
+	m_mcpRpcMethods["account_export"] = &mcp::rpc_handler::account_export;
+	m_mcpRpcMethods["account_import"] = &mcp::rpc_handler::account_import;
+	m_mcpRpcMethods["account_password_change"] = &mcp::rpc_handler::account_password_change;
+	m_mcpRpcMethods["account_code"] = &mcp::rpc_handler::account_code;
+	m_mcpRpcMethods["account_balance"] = &mcp::rpc_handler::account_balance;
+	m_mcpRpcMethods["accounts_balances"] = &mcp::rpc_handler::accounts_balances;
+	m_mcpRpcMethods["account_block_list"] = &mcp::rpc_handler::account_block_list;
+	m_mcpRpcMethods["account_state_list"] = &mcp::rpc_handler::account_state_list;
+	m_mcpRpcMethods["block"] = &mcp::rpc_handler::block;
+	m_mcpRpcMethods["blocks"] = &mcp::rpc_handler::blocks;
+	m_mcpRpcMethods["block_state"] = &mcp::rpc_handler::block_state;
+	m_mcpRpcMethods["block_states"] = &mcp::rpc_handler::block_states;
+	m_mcpRpcMethods["block_traces"] = &mcp::rpc_handler::block_traces;
+	m_mcpRpcMethods["stable_blocks"] = &mcp::rpc_handler::stable_blocks;
+	m_mcpRpcMethods["send_block"] = &mcp::rpc_handler::send_block;
+	m_mcpRpcMethods["generate_offline_block"] = &mcp::rpc_handler::generate_offline_block;
+	m_mcpRpcMethods["send_offline_block"] = &mcp::rpc_handler::send_offline_block;
+	m_mcpRpcMethods["block_summary"] = &mcp::rpc_handler::block_summary;
+	m_mcpRpcMethods["sign_msg"] = &mcp::rpc_handler::sign_msg;
+	m_mcpRpcMethods["version"] = &mcp::rpc_handler::version;
+	m_mcpRpcMethods["status"] = &mcp::rpc_handler::status;
+	m_mcpRpcMethods["peers"] = &mcp::rpc_handler::peers;
+	m_mcpRpcMethods["nodes"] = &mcp::rpc_handler::nodes;
+	m_mcpRpcMethods["witness_list"] = &mcp::rpc_handler::witness_list;
+	m_mcpRpcMethods["estimate_gas"] = &mcp::rpc_handler::estimate_gas;
+	m_mcpRpcMethods["logs"] = &mcp::rpc_handler::logs;
+	m_mcpRpcMethods["debug_trace_transaction"] = &mcp::rpc_handler::debug_trace_transaction;
+	m_mcpRpcMethods["debug_storage_range_at"] = &mcp::rpc_handler::debug_storage_range_at;
 	
-	m_rpcMethods["net_version"] = &mcp::rpc_handler::net_version;
-	m_rpcMethods["net_listening"] = &mcp::rpc_handler::net_listening;
-	m_rpcMethods["net_peerCount"] = &mcp::rpc_handler::net_peerCount;
-	m_rpcMethods["web3_clientVersion"] = &mcp::rpc_handler::web3_clientVersion;
-	m_rpcMethods["web3_sha3"] = &mcp::rpc_handler::web3_sha3;
+	m_ethRpcMethods["net_version"] = &mcp::rpc_handler::net_version;
+	m_ethRpcMethods["net_listening"] = &mcp::rpc_handler::net_listening;
+	m_ethRpcMethods["net_peerCount"] = &mcp::rpc_handler::net_peerCount;
+	m_ethRpcMethods["web3_clientVersion"] = &mcp::rpc_handler::web3_clientVersion;
+	m_ethRpcMethods["web3_sha3"] = &mcp::rpc_handler::web3_sha3;
 
-	m_rpcMethods["eth_blockNumber"] = &mcp::rpc_handler::eth_blockNumber;
-	m_rpcMethods["eth_getTransactionCount"] = &mcp::rpc_handler::eth_getTransactionCount;
-	m_rpcMethods["eth_chainId"] = &mcp::rpc_handler::eth_chainId;
-	m_rpcMethods["eth_gasPrice"] = &mcp::rpc_handler::eth_gasPrice;
-	m_rpcMethods["eth_estimateGas"] = &mcp::rpc_handler::eth_estimateGas;
-	m_rpcMethods["eth_getBlockByNumber"] = &mcp::rpc_handler::eth_getBlockByNumber;
-	m_rpcMethods["eth_getBlockTransactionCountByHash"] = &mcp::rpc_handler::eth_getBlockTransactionCountByHash;
-	m_rpcMethods["eth_getBlockTransactionCountByNumber"] = &mcp::rpc_handler::eth_getBlockTransactionCountByNumber;
-	m_rpcMethods["eth_sendRawTransaction"] = &mcp::rpc_handler::eth_sendRawTransaction;
-	m_rpcMethods["eth_sendTransaction"] = &mcp::rpc_handler::eth_sendTransaction;
-	m_rpcMethods["eth_call"] = &mcp::rpc_handler::eth_call;
+	m_ethRpcMethods["eth_blockNumber"] = &mcp::rpc_handler::eth_blockNumber;
+	m_ethRpcMethods["eth_getTransactionCount"] = &mcp::rpc_handler::eth_getTransactionCount;
+	m_ethRpcMethods["eth_chainId"] = &mcp::rpc_handler::eth_chainId;
+	m_ethRpcMethods["eth_gasPrice"] = &mcp::rpc_handler::eth_gasPrice;
+	m_ethRpcMethods["eth_estimateGas"] = &mcp::rpc_handler::eth_estimateGas;
+	m_ethRpcMethods["eth_getBlockByNumber"] = &mcp::rpc_handler::eth_getBlockByNumber;
+	m_ethRpcMethods["eth_getBlockTransactionCountByHash"] = &mcp::rpc_handler::eth_getBlockTransactionCountByHash;
+	m_ethRpcMethods["eth_getBlockTransactionCountByNumber"] = &mcp::rpc_handler::eth_getBlockTransactionCountByNumber;
+	m_ethRpcMethods["eth_sendRawTransaction"] = &mcp::rpc_handler::eth_sendRawTransaction;
+	m_ethRpcMethods["eth_sendTransaction"] = &mcp::rpc_handler::eth_sendTransaction;
+	m_ethRpcMethods["eth_call"] = &mcp::rpc_handler::eth_call;
 	
-	m_rpcMethods["eth_protocolVersion"] = &mcp::rpc_handler::eth_protocolVersion;
-	m_rpcMethods["eth_syncing"] = &mcp::rpc_handler::eth_syncing;
-	m_rpcMethods["eth_getLogs"] = &mcp::rpc_handler::eth_getLogs;
-	m_rpcMethods["eth_getCode"] = &mcp::rpc_handler::eth_getCode;
-	m_rpcMethods["eth_getStorageAt"] = &mcp::rpc_handler::eth_getStorageAt;
-	m_rpcMethods["eth_getTransactionByHash"] = &mcp::rpc_handler::eth_getTransactionByHash;
-	m_rpcMethods["eth_getTransactionByBlockHashAndIndex"] = &mcp::rpc_handler::eth_getTransactionByBlockHashAndIndex;
-	m_rpcMethods["eth_getTransactionByBlockNumberAndIndex"] = &mcp::rpc_handler::eth_getTransactionByBlockNumberAndIndex;
-	m_rpcMethods["eth_getTransactionReceipt"] = &mcp::rpc_handler::eth_getTransactionReceipt;
-	m_rpcMethods["eth_getBalance"] = &mcp::rpc_handler::eth_getBalance;
-	m_rpcMethods["eth_getBlockByHash"] = &mcp::rpc_handler::eth_getBlockByHash;
-	m_rpcMethods["eth_accounts"] = &mcp::rpc_handler::eth_accounts;
-	m_rpcMethods["eth_sign"] = &mcp::rpc_handler::eth_sign;
-	m_rpcMethods["eth_signTransaction"] = &mcp::rpc_handler::eth_signTransaction;
+	m_ethRpcMethods["eth_protocolVersion"] = &mcp::rpc_handler::eth_protocolVersion;
+	m_ethRpcMethods["eth_syncing"] = &mcp::rpc_handler::eth_syncing;
+	m_ethRpcMethods["eth_getLogs"] = &mcp::rpc_handler::eth_getLogs;
+	m_ethRpcMethods["eth_getCode"] = &mcp::rpc_handler::eth_getCode;
+	m_ethRpcMethods["eth_getStorageAt"] = &mcp::rpc_handler::eth_getStorageAt;
+	m_ethRpcMethods["eth_getTransactionByHash"] = &mcp::rpc_handler::eth_getTransactionByHash;
+	m_ethRpcMethods["eth_getTransactionByBlockHashAndIndex"] = &mcp::rpc_handler::eth_getTransactionByBlockHashAndIndex;
+	m_ethRpcMethods["eth_getTransactionByBlockNumberAndIndex"] = &mcp::rpc_handler::eth_getTransactionByBlockNumberAndIndex;
+	m_ethRpcMethods["eth_getTransactionReceipt"] = &mcp::rpc_handler::eth_getTransactionReceipt;
+	m_ethRpcMethods["eth_getBalance"] = &mcp::rpc_handler::eth_getBalance;
+	m_ethRpcMethods["eth_getBlockByHash"] = &mcp::rpc_handler::eth_getBlockByHash;
+	m_ethRpcMethods["eth_accounts"] = &mcp::rpc_handler::eth_accounts;
+	m_ethRpcMethods["eth_sign"] = &mcp::rpc_handler::eth_sign;
+	m_ethRpcMethods["eth_signTransaction"] = &mcp::rpc_handler::eth_signTransaction;
 
-	m_rpcMethods["personal_importRawKey"] = &mcp::rpc_handler::personal_importRawKey;
-	m_rpcMethods["personal_listAccounts"] = &mcp::rpc_handler::personal_listAccounts;
-	m_rpcMethods["personal_lockAccount"] = &mcp::rpc_handler::personal_lockAccount;
-	m_rpcMethods["personal_newAccount"] = &mcp::rpc_handler::personal_newAccount;
-	m_rpcMethods["personal_unlockAccount"] = &mcp::rpc_handler::personal_unlockAccount;
-	m_rpcMethods["personal_sendTransaction"] = &mcp::rpc_handler::personal_sendTransaction;
-	m_rpcMethods["personal_sign"] = &mcp::rpc_handler::personal_sign;
-	m_rpcMethods["personal_ecRecover"] = &mcp::rpc_handler::personal_ecRecover;
+	m_ethRpcMethods["personal_importRawKey"] = &mcp::rpc_handler::personal_importRawKey;
+	m_ethRpcMethods["personal_listAccounts"] = &mcp::rpc_handler::personal_listAccounts;
+	m_ethRpcMethods["personal_lockAccount"] = &mcp::rpc_handler::personal_lockAccount;
+	m_ethRpcMethods["personal_newAccount"] = &mcp::rpc_handler::personal_newAccount;
+	m_ethRpcMethods["personal_unlockAccount"] = &mcp::rpc_handler::personal_unlockAccount;
+	m_ethRpcMethods["personal_sendTransaction"] = &mcp::rpc_handler::personal_sendTransaction;
+	m_ethRpcMethods["personal_sign"] = &mcp::rpc_handler::personal_sign;
+	m_ethRpcMethods["personal_ecRecover"] = &mcp::rpc_handler::personal_ecRecover;
 }
-
+/*
 void mcp::rpc_response(std::function<void(mcp::json const &)> response_a, std::string const &message_a)
 {
 	mcp::json j_response;
@@ -349,7 +349,7 @@ void mcp::rpc_response(std::function<void(mcp::json const &)> response_a, int co
 	mcp::json j_response;
 	mcp::rpc_response(response_a, error_code, message_a, j_response);
 }
-
+*/
 namespace
 {
 	bool decode_unsigned(std::string const &text, uint64_t &number)
@@ -2343,7 +2343,7 @@ void mcp::rpc_handler::send_block(mcp::json & j_response)
 	catch (...)
 	{
 		//throw JsonRpcException(exceptionToErrorMessage());
-		BOOST_THROW_EXCEPTION(RPC_Error_Eth_INVALID_PARAMS());
+		//BOOST_THROW_EXCEPTION(RPC_Error_Eth_INVALID_PARAMS());
 	}
 }
 
@@ -3357,7 +3357,9 @@ void mcp::rpc_connection::read()
 				}
 				else
 				{
-					rpc_response(response_handler, "Can only POST requests");
+					mcp::json j_response;
+					j_response["msg"] = "Can only POST requests";
+					response_handler(j_response);
 				}
 			});
 		}
@@ -3377,365 +3379,79 @@ namespace
 
 void mcp::rpc_handler::process_request()
 {
-	if (!rpc.config.enable_control)
-	{
-		rpc_response(response, "RPC control is disabled");
-		return;
-	}
+	mcp::json j_response;
 
 	try
 	{
+		if (!rpc.config.enable_control) {
+			BOOST_THROW_EXCEPTION(RPC_Error_Disabled());
+		}
+
 		request = mcp::json::parse(body);
 		
 		LOG(m_log.debug) << "REQUEST:" << request;
 
-		std::string action = request.count("action") > 0 ? request["action"] : request["method"];
-		auto pointer = m_rpcMethods.find(action);
+		if (request.count("action")) {
+			auto pointer = m_mcpRpcMethods.find(request["action"]);
+			if (pointer != m_mcpRpcMethods.end()) {
+				(this->*(pointer->second))(j_response);
+				j_response["code"] = 0;
+				j_response["msg"] = "OK";
+			}
+			else {
+				BOOST_THROW_EXCEPTION(RPC_Error_UnknownCommand());
+			}
+		}
+		else if (request.count("method")) {
+			auto pointer = m_ethRpcMethods.find(request["method"]);
+			if (pointer != m_ethRpcMethods.end()) {
 
-		if (pointer != m_rpcMethods.end()) {
-			mcp::json j_response;
-			(this->*(pointer->second))(j_response);
-			rpc_response(response, 0, "OK", j_response);
-		}
-		/*
-		bool handled = false;
-		if (action == "account_create")
-		{
-			account_create();
-			request.erase("password");
-			reprocess_body(body, request);
-			handled = true;
-		}
-		else if (action == "account_remove")
-		{
-			account_remove();
-			request.erase("password");
-			reprocess_body(body, request);
-			handled = true;
-		}
-		else if (action == "account_unlock")
-		{
-			account_unlock();
-			request.erase("password");
-			reprocess_body(body, request);
-			handled = true;
-		}
-		else if (action == "account_password_change")
-		{
-			account_password_change();
-			request.erase("old_password");
-			request.erase("new_password");
-			reprocess_body(body, request);
-			handled = true;
-		}
-		else if (action == "send_block")
-		{
-			send_block();
-			request.erase("password");
-			reprocess_body(body, request);
-			handled = true;
-		}
+				if (!request.count("id") ||
+					!request.count("jsonrpc") ||
+					!request.count("params") ||
+					!request["params"].is_array())
+				{
+					BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidRequest());
+				}
 
-		if (handled)
-			return;
-
-		if (action == "account_list")
-		{
-			account_list();
+				j_response["id"] = request["id"];
+				j_response["jsonrpc"] = request["jsonrpc"];
+				j_response["result"] = nullptr;
+				(this->*(pointer->second))(j_response);
+			}
+			else {
+				BOOST_THROW_EXCEPTION(RPC_Error_Eth_MethodNotFound());
+			}
 		}
-		else if (action == "account_validate")
-		{
-			account_validate();
-		}
-		else if (action == "account_lock")
-		{
-			account_lock();
-		}
-		else if (action == "account_export")
-		{
-			account_export();
-		}
-
-		else if (action == "account_import")
-		{
-			account_import();
-		}
-		else if (action == "account_code")
-		{
-			account_code();
-		}
-		else if (action == "account_balance")
-		{
-			account_balance();
-		}
-		else if (action == "accounts_balances")
-		{
-			accounts_balances();
-		}
-		else if (action == "account_block_list")
-		{
-			account_block_list();
-		}
-		else if (action == "account_state_list")
-		{
-			account_state_list();
-		}
-		else if (action == "block")
-		{
-			block();
-		}
-		else if (action == "blocks")
-		{
-			blocks();
-		}
-		else if (action == "block_state")
-		{
-			block_state();
-		}
-		else if (action == "block_states")
-		{
-			block_states();
-		}
-		else if (action == "block_traces")
-		{
-			block_traces();
-		}
-		else if (action == "stable_blocks")
-		{
-			stable_blocks();
-		}
-		else if (action == "estimate_gas")
-		{
-			estimate_gas();
-		}
-		else if (action == "call")
-		{
-			call();
-		}
-		else if (action == "logs")
-		{
-			logs();
-		}
-		else if (action == "generate_offline_block")
-		{
-			generate_offline_block();
-		}
-		else if (action == "send_offline_block")
-		{
-			send_offline_block();
-		}
-		else if (action == "block_summary")
-		{
-			block_summary();
-		}
-		else if (action == "sign_msg")
-		{
-			sign_msg();
-		}
-		else if (action == "version")
-		{
-			version();
-		}
-		else if (action == "status")
-		{
-			status();
-		}
-		else if (action == "peers")
-		{
-			peers();
-		}
-		else if (action == "nodes")
-		{
-			nodes();
-		}
-		else if (action == "witness_list")
-		{
-			witness_list();
-		}
-		else if (action == "debug_trace_transaction")
-		{
-			debug_trace_transaction();
-		}
-		else if (action == "debug_storage_range_at")
-		{
-			debug_storage_range_at();
-		}
-		else if (action == "get_sync_status")
-		{
-			rpc_response(response, mcp::node_sync::get_syncing_status());
-		}
-		// added by michael
-		else if (action == "eth_blockNumber")
-		{
-			eth_blockNumber();
-		}
-		else if (action == "eth_getTransactionCount")
-		{
-			eth_getTransactionCount();
-		}
-		else if (action == "eth_chainId")
-		{
-			eth_chainId();
-		}
-		else if (action == "eth_gasPrice")
-		{
-			eth_gasPrice();
-		}
-		else if (action == "eth_estimateGas")
-		{
-			eth_estimateGas();
-		}
-		else if (action == "eth_getBlockByNumber")
-		{
-			eth_getBlockByNumber();
-		}
-		else if (action == "eth_sendRawTransaction")
-		{
-			eth_sendRawTransaction();
-		}
-		else if (action == "eth_sendTransaction")
-		{
-			eth_sendTransaction();
-		}
-		else if (action == "eth_call")
-		{
-			eth_call();
-		}
-		else if (action == "net_version")
-		{
-			net_version();
-		}
-		else if (action == "net_listening")
-		{
-			net_listening();
-		}
-		else if (action == "net_peerCount") {
-			net_peerCount();
-		}
-		else if (action == "web3_clientVersion")
-		{
-			web3_clientVersion();
-		}
-		else if (action == "web3_sha3") {
-			web3_sha3();
-		}
-		else if (action == "eth_getCode")
-		{
-			eth_getCode();
-		}
-		else if (action == "eth_getStorageAt")
-		{
-			eth_getStorageAt();
-		}
-		else if (action == "eth_getTransactionByHash")
-		{
-			eth_getTransactionByHash();
-		}
-		else if (action == "eth_getTransactionByBlockHashAndIndex")
-		{
-			eth_getTransactionByBlockHashAndIndex();
-		}
-		else if (action == "eth_getTransactionByBlockNumberAndIndex")
-		{
-			eth_getTransactionByBlockNumberAndIndex();
-		}
-		else if (action == "eth_getTransactionReceipt")
-		{
-			eth_getTransactionReceipt();
-		}
-		else if (action == "eth_getBalance")
-		{
-			eth_getBalance();
-		}
-		else if (action == "eth_getBlockByHash")
-		{
-			eth_getBlockByHash();
-		}
-		else if (action == "eth_getBlockTransactionCountByHash")
-		{
-			eth_getBlockTransactionCountByHash();
-		}
-		else if (action == "eth_getBlockTransactionCountByNumber")
-		{
-			eth_getBlockTransactionCountByNumber();
-		}
-		else if (action == "eth_accounts")
-		{
-			eth_accounts();
-		}
-		else if (action == "eth_sign")
-		{
-			eth_sign();
-		}
-		else if (action == "eth_signTransaction")
-		{
-			eth_signTransaction();
-		}
-		else if (action == "eth_syncing")
-		{
-			eth_syncing();
-		}
-		else if (action == "eth_protocolVersion")
-		{
-			eth_protocolVersion();
-		}
-		else if (action == "eth_getLogs")
-		{
-			eth_getLogs();
-		}
-		else if (action == "personal_importRawKey")
-		{
-			personal_importRawKey();
-		}
-		else if (action == "personal_listAccounts")
-		{
-			personal_listAccounts();
-		}
-		else if (action == "personal_lockAccount")
-		{
-			personal_lockAccount();
-		}
-		else if (action == "personal_newAccount")
-		{
-			personal_newAccount();
-		}
-		else if (action == "personal_unlockAccount")
-		{
-			personal_unlockAccount();
-		}
-		else if (action == "personal_sendTransaction")
-		{
-			personal_sendTransaction();
-		}
-		else if (action == "personal_sign")
-		{
-			personal_sign();
-		}
-		else if (action == "personal_ecRecover")
-		{
-			personal_ecRecover();
-		}
-		*/
-		//
 		else
 		{
-			rpc_response(response, "Unknown command");
+			BOOST_THROW_EXCEPTION(RPC_Error_UnknownCommand());
 		}
+	}
+	catch (mcp::RpcEthException const &err)
+	{
+		mcp::json error;
+		error["code"] = err.code();
+		error["message"] = err.what();
+		j_response["error"] = error;
 	}
 	catch (mcp::RpcException const &err)
 	{
-		rpc_response(response, err.code(), err.what());
+		if (err.code() >= 0) {
+			j_response["code"] = err.code();
+		}
+		j_response["msg"] = err.what();
 	}
 	catch (std::exception const &err)
 	{
-		LOG(m_log.error) << "rpc runtime_error : error_response = Unable to parse JSON or " << err.what();
-		rpc_response(response, "Unable to parse JSON");
+		j_response["msg"] = "Unable to parse JSON";
 	}
 	catch (...)
 	{
-		LOG(m_log.error) << "Internal server error in HTTP RPC ";
-		rpc_response(response, "Internal server error in HTTP RPC");
+		j_response["msg"] = "Internal server error in HTTP RPC";
 	}
+
+	response(j_response);
 }
 
 std::shared_ptr<mcp::rpc> mcp::get_rpc(mcp::block_store &store_a, std::shared_ptr<mcp::chain> chain_a,
@@ -4717,7 +4433,6 @@ void mcp::rpc_handler::eth_blockNumber(mcp::json & j_response)
 	}
 
 	j_response["result"] = toJS(m_chain->last_stable_index());
-	response(j_response);
 }
 
 void mcp::rpc_handler::eth_getTransactionCount(mcp::json & j_response)

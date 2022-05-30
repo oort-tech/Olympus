@@ -6,8 +6,19 @@ namespace mcp
 {
 	struct RpcException : virtual Exception
 	{
+		enum TYPE {
+			MCP = 0,
+			ETH = 1,
+		};
+
 		const char* what() const noexcept override { return "OK"; }
 		const int virtual code() const noexcept { return 0; }
+		const TYPE virtual type() const noexcept { return MCP; }
+	};
+
+	struct RpcEthException : RpcException
+	{
+		const TYPE type() const noexcept override { return ETH; }
 	};
 
 #define RPC_ERROR_EXCEPTION(X, C, M)  \
@@ -16,6 +27,16 @@ namespace mcp
 		const char* what() const noexcept override { return M; } \
 		const int code() const noexcept override { return C; } \
     }
+
+#define RPC_ETH_ERROR_EXCEPTION(X, C, M)  \
+    struct X : virtual RpcEthException \
+    {                            \
+		const char* what() const noexcept override { return M; } \
+		const int code() const noexcept override { return C; } \
+    }
+
+	RPC_ERROR_EXCEPTION(RPC_Error_Disabled, -2, "RPC control is disabled");
+	RPC_ERROR_EXCEPTION(RPC_Error_UnknownCommand, -1, "Unknown command");
 
 	RPC_ERROR_EXCEPTION(RPC_Error_OK, 0, "OK");
 	RPC_ERROR_EXCEPTION(RPC_Error_InvalidAccount, 1, "Invalid account");
@@ -63,18 +84,33 @@ namespace mcp
 	RPC_ERROR_EXCEPTION(RPC_Error_InvalidToStableBlockIndex, 43, "Invalid to stable block index");
 	RPC_ERROR_EXCEPTION(RPC_Error_InvalidTopics, 44, "Invalid topics");
 	RPC_ERROR_EXCEPTION(RPC_Error_InvalidParams, 45, "Invalid params");
-
 	RPC_ERROR_EXCEPTION(RPC_Error_EmptyPassword, 46, "Password can not be empty");
 
-	RPC_ERROR_EXCEPTION(RPC_Error_Eth_Ok, 0, "");
-	RPC_ERROR_EXCEPTION(RPC_Error_Eth_PARSE_ERROR, -32700, "Parse error");
-	RPC_ERROR_EXCEPTION(RPC_Error_Eth_INVALID_REQUEST, -32600, "Invalid request");
-	RPC_ERROR_EXCEPTION(RPC_Error_Eth_METHOD_NOT_FOUND, -32601, "Method not found");
-	RPC_ERROR_EXCEPTION(RPC_Error_Eth_INVALID_PARAMS, -32602, "Invalid params");
-	RPC_ERROR_EXCEPTION(RPC_Error_Eth_INTERNAL_ERROR, -32603, "Internal error");
-	RPC_ERROR_EXCEPTION(RPC_Error_Eth_METHOD_NOT_SUPPORTED, -32004, "Method not supported");
-	RPC_ERROR_EXCEPTION(RPC_Error_Eth_INVALID_INPUT, -32000, "Invalid input");
-	RPC_ERROR_EXCEPTION(RPC_Error_Eth_TRANSACTION_REJECTED, -32003, "Transaction rejected");
-
 	RPC_ERROR_EXCEPTION(RPC_Error_UnknowError, 100, "Unkown Error");
+
+	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_OK, 0, "");
+	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_InvalidAccount, -32602, "Invalid account");
+	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_InvalidPassword, -32602, "Invalid password");
+	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_LockedAccount, -32602, "Locked account");
+	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_InvalidSignature, -32602, "Invalid signature");
+	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_InvalidValue, -32602, "Invalid value");
+	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_InvalidGas, -32602, "Invalid gas amount");
+	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_InvalidGasPrice, -32602, "Invalid gas price");
+	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_InvalidData, -32602, "Invalid data");
+	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_InvalidBlock, -32602, "Invalid block number");
+	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_InvalidAccountFrom, -32602, "Invalid sender account");
+	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_InvalidAccountTo, -32602, "Invalid receiver account");
+	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_InvalidHash, -32602, "Invalid hash");
+	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_InsufficientBalance, -32602, "Insufficient balance");
+	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_DataTooLarge, -32602, "Data size is too large");
+	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_Validation, -32603, "Validation error");
+
+	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_ParseError, -32700, "Parse error");
+	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_InvalidRequest, -32600, "Invalid request");
+	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_MethodNotFound, -32601, "Method not found");
+	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_InvalidParams, -32602, "Invalid params");
+	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_InternalError, -32603, "Internal error");
+	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_MethodNotSupported, -32004, "Method not supported");
+	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_InvalidInput, -32000, "Invalid input");
+	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_TransactionRejected, -32003, "Transaction rejected");
 }
