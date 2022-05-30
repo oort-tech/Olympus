@@ -32,7 +32,7 @@ void test_argon2()
 
 	std::chrono::time_point<std::chrono::high_resolution_clock> start = std::chrono::high_resolution_clock::now();
 
-	mcp::uint256_union result;
+	dev::h256 result;
 
 	uint32_t memory_cost = 16 * 1024 * 1024;
 	auto status = crypto_pwhash(result.bytes.data(),
@@ -59,14 +59,15 @@ void test_argon2()
 
 void test_blake2()
 {
+	/*
 	std::cout << "-------------blake2---------------" << std::endl;
 
-	mcp::uint256_union input;
+	dev::h256 input;
 	input.decode_hex("5E844EE4D2E26920F8B0C4B7846929057CFCE48BF40BA269B173648999630053");
 
 	std::chrono::time_point<std::chrono::high_resolution_clock> start = std::chrono::high_resolution_clock::now();
 
-	mcp::uint256_union result;
+	dev::h256 result;
 	blake2b_state state;
 	auto status(blake2b_init(&state, result.bytes.size()));
 	if(status == 0)
@@ -89,26 +90,30 @@ void test_blake2()
 	}
 
 	std::cout << "Caculate blake2 fail";
+	*/
 }
 
 void test_sha3()
 {
+	/*
 	std::cout << "-------------sha3---------------" << std::endl;
 
-	mcp::uint256_union input;
+	dev::h256 input;
 	input.decode_hex("5E844EE4D2E26920F8B0C4B7846929057CFCE48BF40BA269B173648999630053");
 
 	std::chrono::time_point<std::chrono::high_resolution_clock> start = std::chrono::high_resolution_clock::now();
 	std::cout << dev::sha3(input.ref()).hex();
 	std::chrono::nanoseconds dur = std::chrono::duration_cast<std::chrono::nanoseconds> (std::chrono::high_resolution_clock::now() - start);
 	std::cout << "duration:" << dur.count() << "ns" << std::endl;
+	*/
 }
 
 void test_sha512()
 {
+	/*
 	std::cout << "-------------sha512---------------" << std::endl;
 
-	mcp::uint256_union input;
+	dev::h256 input;
 	input.decode_hex("5E844EE4D2E26920F8B0C4B7846929057CFCE48BF40BA269B173648999630053");
 
 	mcp::uint512_union result;
@@ -124,13 +129,14 @@ void test_sha512()
 
 	std::cout << "input:" << input.to_string() << std::endl;
 	std::cout << "result:" << result.to_string() << std::endl;
+	*/
 }
 
 void test_ed25519()
 {
 	/*std::cout << "-------------ed25519---------------" << std::endl;
 
-	mcp::uint256_union prv;
+	dev::h256 prv;
 	prv.decode_hex("0000000000000000000000000000000000000000000000000000000000000000");
 
 	dev::Public pub;
@@ -149,7 +155,7 @@ void test_ed25519()
 
 
 
-	mcp::uint256_union message;
+	dev::h256 message;
 	message.decode_hex("5E844EE4D2E26920F8B0C4B7846929057CFCE48BF40BA269B173648999630053");
 
 	dev::Signature signature;
@@ -189,17 +195,17 @@ void test_aes()
 	/*
 	std::cout << "-------------aes-256-ctr---------------" << std::endl;
 
-	mcp::uint256_union key;
+	dev::h256 key;
 	key.decode_hex("5E844EE4D2E26920F8B0C4B7846929057CFCE48BF40BA269B173648999630053");
 
 	mcp::uint128_union iv;
 	iv.decode_hex("A695DDC35ED9F3183A09FED1E6D92083");
 
-	mcp::uint256_union plaintext;
+	dev::h256 plaintext;
 	plaintext.decode_hex("AF8460A7D28A396C62D6C51620B87789C862ED8783374EEF7B783145F540EB19");
 
-	mcp::uint256_union ciphertext;
-	mcp::uint256_union decrypttext;
+	dev::h256 ciphertext;
+	dev::h256 decrypttext;
 
 	{
 		std::chrono::time_point<std::chrono::high_resolution_clock> start = std::chrono::high_resolution_clock::now();
@@ -318,7 +324,7 @@ void test_secp256k1()
 	}
 
 
-	mcp::uint256_union message;
+	dev::h256 message;
 	dev::sha3("msg").ref().copyTo(message.ref());
 
 	dev::Signature signature;
@@ -363,7 +369,7 @@ void test_x25519()
 	dev::Secret prv;
 	prv.decode_hex("BC1C100CA9C2B7E2DF6D1F46744AD3F51D0532BF6ACA5063D382EFFF8A5E28C7");
 
-	mcp::uint256_union message;
+	dev::h256 message;
 	message.decode_hex("AF8460A7D28A396C62D6C51620B87789C862ED8783374EEF7B783145F540EB19");
 
 	/*

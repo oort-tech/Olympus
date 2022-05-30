@@ -7,7 +7,7 @@
 #include "config.hpp"
 
 
-mcp::Transaction::Transaction(TransactionSkeleton const& ts, Secret const& s) :
+mcp::Transaction::Transaction(TransactionSkeleton const& ts, boost::optional<Secret> const& s) :
 	m_nonce(ts.nonce),
 	m_value(ts.value),
 	m_receiveAddress(ts.to),
@@ -17,10 +17,9 @@ mcp::Transaction::Transaction(TransactionSkeleton const& ts, Secret const& s) :
 	m_sender(ts.from),
 	m_chainId(mcp::chain_id)
 {
-	if (s)
-		sign(s);
+	if (s.is_initialized())
+		sign(*s);
 }
-
 
 mcp::Transaction::Transaction(dev::RLP const & rlp, CheckTransaction _checkSig)
 {

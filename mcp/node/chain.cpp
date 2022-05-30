@@ -37,7 +37,7 @@ void mcp::chain::init(bool & error_a, mcp::timeout_db_transaction & timeout_tx_a
 		return;
 	}
 
-	LOG(m_log.info) << "Genesis block:" << mcp::genesis::block_hash.to_string();
+	LOG(m_log.info) << "Genesis block:" << mcp::genesis::block_hash.hex();
 
 	// Init precompiled contract account
 	if (first_time)
@@ -173,7 +173,7 @@ void mcp::chain::save_dag_block(mcp::timeout_db_transaction & timeout_tx_a, std:
 
 void mcp::chain::try_advance(mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a)
 {
-	while (!m_stopped && m_advance_info.mci.number() > m_last_stable_mci_internal)
+	while (!m_stopped && ((dev::h64::Arith) m_advance_info.mci).convert_to<uint64_t>() > m_last_stable_mci_internal)
 	{
 		m_last_stable_mci_internal++;
 		advance_stable_mci(timeout_tx_a, cache_a, m_last_stable_mci_internal, m_advance_info.witness_block);
@@ -301,7 +301,7 @@ void mcp::chain::find_main_chain_changes(mcp::db::db_transaction & transaction_a
 	if (retreat_mci < m_last_stable_mci_internal)
 	{
 		std::string msg(boost::str(boost::format("stable mci retreat, last added block: %1%, retreat mci: %2%, last stable mci: %3%") 
-			% block_a->hash().to_string() % retreat_mci % m_last_stable_mci_internal));
+			% block_a->hash().hex() % retreat_mci % m_last_stable_mci_internal));
 		LOG(m_log.info) << msg;
 		throw std::runtime_error(msg);
 	}
@@ -609,7 +609,7 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 
 						/// commit transaction receipt
 						/// the account states were committed in Executive::go()
-						result.second.setBlockInfo(dag_stable_block_hash.number(), m_last_stable_index_internal, i); //block hash need transfer to h256
+						result.second.setBlockInfo(dag_stable_block_hash, m_last_stable_index_internal, i); //block hash need transfer to h256
 						m_store.transaction_receipt_put(transaction_a, _t->sha3(), result.second);//maybe need block hash
 
 						RLPStream receiptRLP;
@@ -678,19 +678,19 @@ void mcp::chain::set_block_stable(mcp::timeout_db_transaction & timeout_tx_a, st
 #pragma region check fork
 		mcp::block_hash previous_hash(stable_block->previous());
 		std::shared_ptr<mcp::block_state> previous_state;
-		if (!previous_hash.is_zero())
+		if (previous_hash != mcp::block_hash(0))
 		{
 			previous_state = cache_a->block_state_get(transaction_a, previous_hash);
 			assert_x(previous_state);
 		}
 
-		if (!previous_hash.is_zero() && previous_state->status == mcp::block_status::fork)
+		if (previous_hash != mcp::block_hash(0) && previous_state->status == mcp::block_status::fork)
 			stable_block_state_copy->status = mcp::block_status::fork;
 		else
 		{
 			mcp::block_hash old_successor_hash;
 			bool old_successor_exists(!cache_a->successor_get(transaction_a, stable_block->root(), old_successor_hash));
-			assert_x_msg(old_successor_exists, "hash: " + stable_block->root().to_string());
+			assert_x_msg(old_successor_exists, "hash: " + stable_block->root().hex());
 			if (old_successor_hash != stable_block_hash)
 			{
 				std::shared_ptr<mcp::block_state> old_successor_state(cache_a->block_state_get(transaction_a, old_successor_hash));
@@ -731,7 +731,7 @@ void mcp::chain::set_block_stable(mcp::timeout_db_transaction & timeout_tx_a, st
 
 			//previous summary hash
 			mcp::summary_hash previous_summary_hash(0);
-			if (!stable_block->previous().is_zero())
+			if (stable_block->previous() != mcp::block_hash(0))
 			{
 				bool previous_summary_hash_error(cache_a->block_summary_get(transaction_a, stable_block->previous(), previous_summary_hash));
 				assert_x(!previous_summary_hash_error);
@@ -1024,7 +1024,7 @@ std::pair<u256, bool> mcp::chain::estimate_gas(mcp::db::db_transaction& transact
 
 // This is the top function to be called by js call(). The reason to have this extra wrapper is to have this function
 // be called other methods except chain::set_block_stable
-std::pair<mcp::ExecutionResult, dev::eth::TransactionReceipt> mcp::chain::execute(mcp::db::db_transaction& transaction_a, std::shared_ptr<mcp::iblock_cache> cache_a, Transaction const& _t, dev::eth::McInfo const & mc_info_a ,Permanence _p, dev::eth::OnOpFunc const& _onOp)
+std::pair<mcp::ExecutionResult, dev::eth::TransactionReceipt> mcp::chain::execute(mcp::db::db_transaction& transaction_a, std::shared_ptr<mcp::iblock_cache> cache_a, Transaction const& _t, dev::eth::McInfo const & mc_info_a, Permanence _p, dev::eth::OnOpFunc const& _onOp)
 {
 	dev::eth::EnvInfo env(transaction_a, m_store, cache_a, mc_info_a);
 	// sichaoy: startNonce = 0

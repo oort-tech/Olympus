@@ -108,7 +108,7 @@ void mcp::composer::pick_parents_and_last_summary_and_wl_block(mcp::db::db_trans
 		mcp::stopwatch_guard sw("compose:pick_parents1");
 		std::set<mcp::block_hash> ordered_parents;
 		ordered_parents.insert(best_pblock_hash);
-		bool has_previous(!previous_a.is_zero());
+		bool has_previous(previous_a != mcp::block_hash(0));
 		if (has_previous && previous_a != best_pblock_hash)
 		{
 			ordered_parents.insert(previous_a);
@@ -126,7 +126,7 @@ void mcp::composer::pick_parents_and_last_summary_and_wl_block(mcp::db::db_trans
 		uint64_t rand_level = mcp::random_pool.GenerateWord32(min_level, max_level);
 
 		mcp::block_hash rand_hash;
-		mcp::random_pool.GenerateBlock(rand_hash.bytes.data(), rand_hash.bytes.size());
+		mcp::random_pool.GenerateBlock(rand_hash.data(), rand_hash.size);
 
 		mcp::free_key rand_key(rand_witnessed_level, rand_level, rand_hash);
 		mcp::db::forward_iterator rand_it = m_store.dag_free_begin(transaction_a, rand_key, snapshot);
@@ -275,14 +275,14 @@ void mcp::composer::pick_parents_and_last_summary_and_wl_block(mcp::db::db_trans
 
 mcp::block_hash mcp::composer::get_latest_block(mcp::db::db_transaction &  transaction_a, dev::Address const & account_a)
 {
-	mcp::block_hash previous;
+	mcp::block_hash previous(0);
 
 	mcp::dag_account_info info;
 	bool account_error(m_store.dag_account_get(transaction_a, account_a, info));
-	previous = account_error ? 0 : info.latest_stable_block;
+	previous = account_error ? previous : info.latest_stable_block;
 
 	mcp::block_hash latest_block_hash(previous);
-	mcp::block_hash root(previous.is_zero() ? ((dev::Address::Arith)account_a).convert_to<unsigned>() : previous);
+	mcp::block_hash root = previous == mcp::block_hash(0) ? mcp::block_hash(account_a) : previous;
 
 	//search in chain
 	while (true)

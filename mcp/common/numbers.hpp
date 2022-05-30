@@ -19,9 +19,9 @@ using stream = std::basic_streambuf<uint8_t>;
 // Random pool used by mcp.
 // This must be thread_local as long as the AutoSeededRandomPool implementation requires it
 extern thread_local CryptoPP::AutoSeededRandomPool random_pool;
-using uint128_t = boost::multiprecision::uint128_t;
-using uint256_t = boost::multiprecision::uint256_t;
-using uint512_t = boost::multiprecision::uint512_t;
+// using uint128_t = boost::multiprecision::uint128_t;
+using uint256_t = dev::u256;
+// using uint512_t = boost::multiprecision::uint512_t;
 
 // Read a raw byte stream the size of `T' and fill value.
 template <typename T>
@@ -38,7 +38,7 @@ void write(mcp::stream & stream_a, T const & value)
 	auto amount_written(stream_a.sputn(reinterpret_cast<uint8_t const *> (&value), sizeof(value)));
 	assert_x(amount_written == sizeof(value));
 }
-
+/*
 union uint64_union
 {
 public:
@@ -96,6 +96,7 @@ public:
 	dev::bytesRef ref() { return dev::bytesRef(bytes.data(), 16); }
 	dev::bytesConstRef ref() const { return dev::bytesConstRef(bytes.data(), 16); }
 };
+
 // Balances are 128 bit.
 
 class raw_key;
@@ -142,11 +143,12 @@ union uint256_union
 	dev::bytesRef ref() { return dev::bytesRef(bytes.data(), 32); }
 	dev::bytesConstRef ref() const { return dev::bytesConstRef(bytes.data(), 32); }
 };
+*/
 
 // All keys and hashes are 256 bit.
-using amount = uint256_t;
-using block_hash = uint256_union;
-using summary_hash = uint256_union;
+using amount = dev::u256;
+using block_hash = dev::h256;
+using summary_hash = dev::h256;
 //using account_state_hash = uint256_union;
 // using account = uint256_union;
 /// A hash set of mcp accounts
@@ -154,10 +156,10 @@ using summary_hash = uint256_union;
 // using public_key = uint256_union;
 // using private_key = uint256_union;
 // using secret_ciphertext = uint256_union;
-using data_hash = uint256_union;
-using code_hash = uint256_union;
-using state_root = uint256_union;
-using sync_request_hash = uint256_union;
+using data_hash = dev::h256;
+using code_hash = dev::h256;
+using state_root = dev::h256;
+using sync_request_hash = dev::h256;
 // using seed_key = uint256_union;
 // using secret_encry = uint256_union;		//p2p encryption
 
@@ -176,7 +178,7 @@ public:
 	bool operator!= (mcp::raw_key const &) const;
 	mcp::uint256_union data;
 };
-*/
+
 
 union uint512_union
 {
@@ -211,6 +213,7 @@ union uint512_union
 	dev::bytesRef ref() { return dev::bytesRef(bytes.data(), 64); }
 	dev::bytesConstRef ref() const { return dev::bytesConstRef(bytes.data(), 64); }
 };
+*/
 
 // added by michael at 1/7
 /*
@@ -306,7 +309,7 @@ using account = account20_struct;
 namespace p2p
 {
 	using node_id = dev::h256;
-	using hash256 = mcp::uint256_union;
+	using hash256 = dev::h256;
 
 	node_id toNodeId(dev::PublicCompressed const & pubkey);
 }
@@ -317,15 +320,7 @@ namespace p2p
 
 namespace std
 {
-template <>
-struct hash<mcp::uint256_union>
-{
-	size_t operator() (mcp::uint256_union const & data_a) const
-	{
-		return *reinterpret_cast<size_t const *> (data_a.bytes.data ());
-		//return XXH64(data_a.bytes.data(), data_a.bytes.size(), 0);
-	}
-};
+/*
 template <>
 struct hash<mcp::uint256_t>
 {
@@ -353,7 +348,7 @@ struct hash<mcp::uint512_union>
 		//return XXH64(data_a.bytes.data(), data_a.bytes.size(), 0);
 	}
 };
-/*template <>
+template <>
 struct hash<mcp::account20_struct>
 {
 	size_t operator() (mcp::account20_struct const & data_a) const
@@ -367,11 +362,11 @@ struct hash<mcp::account20_struct>
 namespace boost
 {
     template <>
-    struct hash<mcp::uint256_union>
+    struct hash<dev::h256>
     {
-        size_t operator() (mcp::uint256_union const & value_a) const
+        size_t operator() (dev::h256 const & value_a) const
         {
-            std::hash<mcp::uint256_union> hash;
+            std::hash<dev::h256> hash;
             return hash(value_a);
         }
     };

@@ -773,8 +773,10 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 
 		if (!config.witness.last_block.empty())
 		{
-			if (last_witness_block_hash_l.decode_hex(config.witness.last_block))
-			{
+			try {
+				last_witness_block_hash_l = mcp::block_hash(config.witness.last_block);
+			}
+			catch (...) {
 				std::cerr << "witness account last_witness_block_hash is error\n ";
 				return;
 			}

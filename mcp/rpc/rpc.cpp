@@ -247,84 +247,84 @@ mcp::rpc_handler::rpc_handler(mcp::rpc &rpc_a, std::string const &body_a, std::f
 																																				 m_background(rpc_a.m_background),
 																																				 m_store(rpc.m_store)
 {
-	m_rpcMethods["account_list"] = &mcp::rpc_handler::account_list;
-	m_rpcMethods["account_validate"] = &mcp::rpc_handler::account_validate;
-	m_rpcMethods["account_create"] = &mcp::rpc_handler::account_create;
-	m_rpcMethods["account_remove"] = &mcp::rpc_handler::account_remove;
-	m_rpcMethods["account_unlock"] = &mcp::rpc_handler::account_unlock;
-	m_rpcMethods["account_lock"] = &mcp::rpc_handler::account_lock;
-	m_rpcMethods["account_export"] = &mcp::rpc_handler::account_export;
-	m_rpcMethods["account_import"] = &mcp::rpc_handler::account_import;
-	m_rpcMethods["account_password_change"] = &mcp::rpc_handler::account_password_change;
-	m_rpcMethods["account_code"] = &mcp::rpc_handler::account_code;
-	m_rpcMethods["account_balance"] = &mcp::rpc_handler::account_balance;
-	m_rpcMethods["accounts_balances"] = &mcp::rpc_handler::accounts_balances;
-	m_rpcMethods["account_block_list"] = &mcp::rpc_handler::account_block_list;
-	m_rpcMethods["account_state_list"] = &mcp::rpc_handler::account_state_list;
-	m_rpcMethods["block"] = &mcp::rpc_handler::block;
-	m_rpcMethods["blocks"] = &mcp::rpc_handler::blocks;
-	m_rpcMethods["block_state"] = &mcp::rpc_handler::block_state;
-	m_rpcMethods["block_states"] = &mcp::rpc_handler::block_states;
-	m_rpcMethods["block_traces"] = &mcp::rpc_handler::block_traces;
-	m_rpcMethods["stable_blocks"] = &mcp::rpc_handler::stable_blocks;
-	m_rpcMethods["send_block"] = &mcp::rpc_handler::send_block;
-	m_rpcMethods["generate_offline_block"] = &mcp::rpc_handler::generate_offline_block;
-	m_rpcMethods["send_offline_block"] = &mcp::rpc_handler::send_offline_block;
-	m_rpcMethods["block_summary"] = &mcp::rpc_handler::block_summary;
-	m_rpcMethods["sign_msg"] = &mcp::rpc_handler::sign_msg;
-	m_rpcMethods["version"] = &mcp::rpc_handler::version;
-	m_rpcMethods["status"] = &mcp::rpc_handler::status;
-	m_rpcMethods["peers"] = &mcp::rpc_handler::peers;
-	m_rpcMethods["nodes"] = &mcp::rpc_handler::nodes;
-	m_rpcMethods["witness_list"] = &mcp::rpc_handler::witness_list;
-	m_rpcMethods["estimate_gas"] = &mcp::rpc_handler::estimate_gas;
-	m_rpcMethods["logs"] = &mcp::rpc_handler::logs;
-	m_rpcMethods["debug_trace_transaction"] = &mcp::rpc_handler::debug_trace_transaction;
-	m_rpcMethods["debug_storage_range_at"] = &mcp::rpc_handler::debug_storage_range_at;
+	m_mcpRpcMethods["account_list"] = &mcp::rpc_handler::account_list;
+	m_mcpRpcMethods["account_validate"] = &mcp::rpc_handler::account_validate;
+	m_mcpRpcMethods["account_create"] = &mcp::rpc_handler::account_create;
+	m_mcpRpcMethods["account_remove"] = &mcp::rpc_handler::account_remove;
+	m_mcpRpcMethods["account_unlock"] = &mcp::rpc_handler::account_unlock;
+	m_mcpRpcMethods["account_lock"] = &mcp::rpc_handler::account_lock;
+	m_mcpRpcMethods["account_export"] = &mcp::rpc_handler::account_export;
+	m_mcpRpcMethods["account_import"] = &mcp::rpc_handler::account_import;
+	m_mcpRpcMethods["account_password_change"] = &mcp::rpc_handler::account_password_change;
+	m_mcpRpcMethods["account_code"] = &mcp::rpc_handler::account_code;
+	m_mcpRpcMethods["account_balance"] = &mcp::rpc_handler::account_balance;
+	m_mcpRpcMethods["accounts_balances"] = &mcp::rpc_handler::accounts_balances;
+	m_mcpRpcMethods["account_block_list"] = &mcp::rpc_handler::account_block_list;
+	m_mcpRpcMethods["account_state_list"] = &mcp::rpc_handler::account_state_list;
+	m_mcpRpcMethods["block"] = &mcp::rpc_handler::block;
+	m_mcpRpcMethods["blocks"] = &mcp::rpc_handler::blocks;
+	m_mcpRpcMethods["block_state"] = &mcp::rpc_handler::block_state;
+	m_mcpRpcMethods["block_states"] = &mcp::rpc_handler::block_states;
+	m_mcpRpcMethods["block_traces"] = &mcp::rpc_handler::block_traces;
+	m_mcpRpcMethods["stable_blocks"] = &mcp::rpc_handler::stable_blocks;
+	m_mcpRpcMethods["send_block"] = &mcp::rpc_handler::send_block;
+	m_mcpRpcMethods["generate_offline_block"] = &mcp::rpc_handler::generate_offline_block;
+	m_mcpRpcMethods["send_offline_block"] = &mcp::rpc_handler::send_offline_block;
+	m_mcpRpcMethods["block_summary"] = &mcp::rpc_handler::block_summary;
+	m_mcpRpcMethods["sign_msg"] = &mcp::rpc_handler::sign_msg;
+	m_mcpRpcMethods["version"] = &mcp::rpc_handler::version;
+	m_mcpRpcMethods["status"] = &mcp::rpc_handler::status;
+	m_mcpRpcMethods["peers"] = &mcp::rpc_handler::peers;
+	m_mcpRpcMethods["nodes"] = &mcp::rpc_handler::nodes;
+	m_mcpRpcMethods["witness_list"] = &mcp::rpc_handler::witness_list;
+	m_mcpRpcMethods["estimate_gas"] = &mcp::rpc_handler::estimate_gas;
+	m_mcpRpcMethods["logs"] = &mcp::rpc_handler::logs;
+	m_mcpRpcMethods["debug_trace_transaction"] = &mcp::rpc_handler::debug_trace_transaction;
+	m_mcpRpcMethods["debug_storage_range_at"] = &mcp::rpc_handler::debug_storage_range_at;
 	
-	m_rpcMethods["net_version"] = &mcp::rpc_handler::net_version;
-	m_rpcMethods["net_listening"] = &mcp::rpc_handler::net_listening;
-	m_rpcMethods["net_peerCount"] = &mcp::rpc_handler::net_peerCount;
-	m_rpcMethods["web3_clientVersion"] = &mcp::rpc_handler::web3_clientVersion;
-	m_rpcMethods["web3_sha3"] = &mcp::rpc_handler::web3_sha3;
+	m_ethRpcMethods["net_version"] = &mcp::rpc_handler::net_version;
+	m_ethRpcMethods["net_listening"] = &mcp::rpc_handler::net_listening;
+	m_ethRpcMethods["net_peerCount"] = &mcp::rpc_handler::net_peerCount;
+	m_ethRpcMethods["web3_clientVersion"] = &mcp::rpc_handler::web3_clientVersion;
+	m_ethRpcMethods["web3_sha3"] = &mcp::rpc_handler::web3_sha3;
 
-	m_rpcMethods["eth_blockNumber"] = &mcp::rpc_handler::eth_blockNumber;
-	m_rpcMethods["eth_getTransactionCount"] = &mcp::rpc_handler::eth_getTransactionCount;
-	m_rpcMethods["eth_chainId"] = &mcp::rpc_handler::eth_chainId;
-	m_rpcMethods["eth_gasPrice"] = &mcp::rpc_handler::eth_gasPrice;
-	m_rpcMethods["eth_estimateGas"] = &mcp::rpc_handler::eth_estimateGas;
-	m_rpcMethods["eth_getBlockByNumber"] = &mcp::rpc_handler::eth_getBlockByNumber;
-	m_rpcMethods["eth_getBlockTransactionCountByHash"] = &mcp::rpc_handler::eth_getBlockTransactionCountByHash;
-	m_rpcMethods["eth_getBlockTransactionCountByNumber"] = &mcp::rpc_handler::eth_getBlockTransactionCountByNumber;
-	m_rpcMethods["eth_sendRawTransaction"] = &mcp::rpc_handler::eth_sendRawTransaction;
-	m_rpcMethods["eth_sendTransaction"] = &mcp::rpc_handler::eth_sendTransaction;
-	m_rpcMethods["eth_call"] = &mcp::rpc_handler::eth_call;
+	m_ethRpcMethods["eth_blockNumber"] = &mcp::rpc_handler::eth_blockNumber;
+	m_ethRpcMethods["eth_getTransactionCount"] = &mcp::rpc_handler::eth_getTransactionCount;
+	m_ethRpcMethods["eth_chainId"] = &mcp::rpc_handler::eth_chainId;
+	m_ethRpcMethods["eth_gasPrice"] = &mcp::rpc_handler::eth_gasPrice;
+	m_ethRpcMethods["eth_estimateGas"] = &mcp::rpc_handler::eth_estimateGas;
+	m_ethRpcMethods["eth_getBlockByNumber"] = &mcp::rpc_handler::eth_getBlockByNumber;
+	m_ethRpcMethods["eth_getBlockTransactionCountByHash"] = &mcp::rpc_handler::eth_getBlockTransactionCountByHash;
+	m_ethRpcMethods["eth_getBlockTransactionCountByNumber"] = &mcp::rpc_handler::eth_getBlockTransactionCountByNumber;
+	m_ethRpcMethods["eth_sendRawTransaction"] = &mcp::rpc_handler::eth_sendRawTransaction;
+	m_ethRpcMethods["eth_sendTransaction"] = &mcp::rpc_handler::eth_sendTransaction;
+	m_ethRpcMethods["eth_call"] = &mcp::rpc_handler::eth_call;
 	
-	m_rpcMethods["eth_protocolVersion"] = &mcp::rpc_handler::eth_protocolVersion;
-	m_rpcMethods["eth_syncing"] = &mcp::rpc_handler::eth_syncing;
-	m_rpcMethods["eth_getLogs"] = &mcp::rpc_handler::eth_getLogs;
-	m_rpcMethods["eth_getCode"] = &mcp::rpc_handler::eth_getCode;
-	m_rpcMethods["eth_getStorageAt"] = &mcp::rpc_handler::eth_getStorageAt;
-	m_rpcMethods["eth_getTransactionByHash"] = &mcp::rpc_handler::eth_getTransactionByHash;
-	m_rpcMethods["eth_getTransactionByBlockHashAndIndex"] = &mcp::rpc_handler::eth_getTransactionByBlockHashAndIndex;
-	m_rpcMethods["eth_getTransactionByBlockNumberAndIndex"] = &mcp::rpc_handler::eth_getTransactionByBlockNumberAndIndex;
-	m_rpcMethods["eth_getTransactionReceipt"] = &mcp::rpc_handler::eth_getTransactionReceipt;
-	m_rpcMethods["eth_getBalance"] = &mcp::rpc_handler::eth_getBalance;
-	m_rpcMethods["eth_getBlockByHash"] = &mcp::rpc_handler::eth_getBlockByHash;
-	m_rpcMethods["eth_accounts"] = &mcp::rpc_handler::eth_accounts;
-	m_rpcMethods["eth_sign"] = &mcp::rpc_handler::eth_sign;
-	m_rpcMethods["eth_signTransaction"] = &mcp::rpc_handler::eth_signTransaction;
+	m_ethRpcMethods["eth_protocolVersion"] = &mcp::rpc_handler::eth_protocolVersion;
+	m_ethRpcMethods["eth_syncing"] = &mcp::rpc_handler::eth_syncing;
+	m_ethRpcMethods["eth_getLogs"] = &mcp::rpc_handler::eth_getLogs;
+	m_ethRpcMethods["eth_getCode"] = &mcp::rpc_handler::eth_getCode;
+	m_ethRpcMethods["eth_getStorageAt"] = &mcp::rpc_handler::eth_getStorageAt;
+	m_ethRpcMethods["eth_getTransactionByHash"] = &mcp::rpc_handler::eth_getTransactionByHash;
+	m_ethRpcMethods["eth_getTransactionByBlockHashAndIndex"] = &mcp::rpc_handler::eth_getTransactionByBlockHashAndIndex;
+	m_ethRpcMethods["eth_getTransactionByBlockNumberAndIndex"] = &mcp::rpc_handler::eth_getTransactionByBlockNumberAndIndex;
+	m_ethRpcMethods["eth_getTransactionReceipt"] = &mcp::rpc_handler::eth_getTransactionReceipt;
+	m_ethRpcMethods["eth_getBalance"] = &mcp::rpc_handler::eth_getBalance;
+	m_ethRpcMethods["eth_getBlockByHash"] = &mcp::rpc_handler::eth_getBlockByHash;
+	m_ethRpcMethods["eth_accounts"] = &mcp::rpc_handler::eth_accounts;
+	m_ethRpcMethods["eth_sign"] = &mcp::rpc_handler::eth_sign;
+	m_ethRpcMethods["eth_signTransaction"] = &mcp::rpc_handler::eth_signTransaction;
 
-	m_rpcMethods["personal_importRawKey"] = &mcp::rpc_handler::personal_importRawKey;
-	m_rpcMethods["personal_listAccounts"] = &mcp::rpc_handler::personal_listAccounts;
-	m_rpcMethods["personal_lockAccount"] = &mcp::rpc_handler::personal_lockAccount;
-	m_rpcMethods["personal_newAccount"] = &mcp::rpc_handler::personal_newAccount;
-	m_rpcMethods["personal_unlockAccount"] = &mcp::rpc_handler::personal_unlockAccount;
-	m_rpcMethods["personal_sendTransaction"] = &mcp::rpc_handler::personal_sendTransaction;
-	m_rpcMethods["personal_sign"] = &mcp::rpc_handler::personal_sign;
-	m_rpcMethods["personal_ecRecover"] = &mcp::rpc_handler::personal_ecRecover;
+	m_ethRpcMethods["personal_importRawKey"] = &mcp::rpc_handler::personal_importRawKey;
+	m_ethRpcMethods["personal_listAccounts"] = &mcp::rpc_handler::personal_listAccounts;
+	m_ethRpcMethods["personal_lockAccount"] = &mcp::rpc_handler::personal_lockAccount;
+	m_ethRpcMethods["personal_newAccount"] = &mcp::rpc_handler::personal_newAccount;
+	m_ethRpcMethods["personal_unlockAccount"] = &mcp::rpc_handler::personal_unlockAccount;
+	m_ethRpcMethods["personal_sendTransaction"] = &mcp::rpc_handler::personal_sendTransaction;
+	m_ethRpcMethods["personal_sign"] = &mcp::rpc_handler::personal_sign;
+	m_ethRpcMethods["personal_ecRecover"] = &mcp::rpc_handler::personal_ecRecover;
 }
-
+/*
 void mcp::rpc_response(std::function<void(mcp::json const &)> response_a, std::string const &message_a)
 {
 	mcp::json j_response;
@@ -349,7 +349,7 @@ void mcp::rpc_response(std::function<void(mcp::json const &)> response_a, int co
 	mcp::json j_response;
 	mcp::rpc_response(response_a, error_code, message_a, j_response);
 }
-
+*/
 namespace
 {
 	bool decode_unsigned(std::string const &text, uint64_t &number)
@@ -1520,11 +1520,13 @@ void mcp::rpc_handler::block(mcp::json & j_response)
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidHash());
 	}
 
-	std::string hash_text = request["hash"];
-	mcp::uint256_union hash;
-	bool error(hash.decode_hex(hash_text));
-
-	if (error) {
+	mcp::block_hash hash(0);
+	try
+	{
+		hash = jsToHash(request["hash"]);
+	}
+	catch (...)
+	{
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidHash());
 	}
 
@@ -1605,9 +1607,13 @@ void mcp::rpc_handler::blocks(mcp::json & j_response)
 	std::vector<std::string> hashes_l = request["hashes"];
 	for (std::string const &hash_text : hashes_l)
 	{
-		mcp::uint256_union hash;
-		bool error(hash.decode_hex(hash_text));
-		if (error) {
+		mcp::block_hash hash(0);
+		try
+		{
+			hash = jsToHash(hash_text);
+		}
+		catch (...)
+		{
 			BOOST_THROW_EXCEPTION(RPC_Error_InvalidHash());
 		}
 
@@ -1666,14 +1672,20 @@ void mcp::rpc_handler::blocks(mcp::json & j_response)
 
 void mcp::rpc_handler::block_state(mcp::json & j_response)
 {
-	if (!request.count("hash") || !request["hash"].is_string()) {
+	mcp::rpc_block_error_code error_code_l;
+
+	if (!request.count("hash") || (!request["hash"].is_string()))
+	{
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidHash());
 	}
-	std::string hash_text = request["hash"];
-	mcp::uint256_union hash;
-	bool error(hash.decode_hex(hash_text));
 
-	if (error) {
+	mcp::block_hash hash(0);
+	try
+	{
+		hash = jsToHash(request["hash"]);
+	}
+	catch (...)
+	{
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidHash());
 	}
 
@@ -1685,8 +1697,17 @@ void mcp::rpc_handler::block_state(mcp::json & j_response)
 		assert_x(block);
 
 		mcp::json block_state_l;
-		block_state_l["hash"] = hash.to_string();
+		block_state_l["hash"] = hash.hex();
+		//dev::Address contract_account(0);
+		//if (block->type() == mcp::block_type::light && block->isCreation() && state->is_stable && (state->status == mcp::block_status::ok))
+		//{
+		//	std::shared_ptr<mcp::account_state> acc_state(m_store.account_state_get(transaction, state->receipt->from_state));
+		//	assert_x(acc_state);
+		//	contract_account = toAddress(block->from(), acc_state->nonce() - 1);
+		//}
+
 		state->serialize_json(block_state_l);
+
 		j_response["block_state"] = block_state_l;
 	}
 	else
@@ -1760,9 +1781,13 @@ void mcp::rpc_handler::block_states(mcp::json & j_response)
 	std::vector<std::string> hashes_l = request["hashes"];
 	for (std::string const &hash_text : hashes_l)
 	{
-		mcp::uint256_union hash;
-		auto error(hash.decode_hex(hash_text));
-		if (error) {
+		mcp::block_hash hash(0);
+		try
+		{
+			hash = jsToHash(hash_text);
+		}
+		catch (...)
+		{
 			BOOST_THROW_EXCEPTION(RPC_Error_InvalidHash());
 		}
 		auto state(m_cache->block_state_get(transaction, hash));
@@ -1772,7 +1797,7 @@ void mcp::rpc_handler::block_states(mcp::json & j_response)
 			auto block(m_cache->block_get(transaction, hash));
 			assert_x(block);
 
-			state_l["hash"] = hash.to_string();
+			state_l["hash"] = hash.hexPrefixed();
 			//dev::Address contract_address;
 			//if (block->type() == mcp::block_type::light && block->isCreation() && state->is_stable && (state->status == mcp::block_status::ok))
 			//{
@@ -1847,7 +1872,7 @@ void mcp::rpc_handler::block_states(mcp::json & j_response)
 
 void mcp::rpc_handler::block_traces(mcp::json & j_response)
 {
-	if (!request.count("hash") || (!request["hash"].is_string()))
+	/*if (!request.count("hash") || (!request["hash"].is_string()))
 	{
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidHash());
 	}
@@ -1907,7 +1932,7 @@ void mcp::rpc_handler::block_traces(mcp::json & j_response)
 		traces_l.push_back(trace_l);
 	}
 
-	j_response["block_traces"] = traces_l;
+	j_response["block_traces"] = traces_l;*/
 		
 	
 	/*mcp::rpc_block_error_code error_code_l;
@@ -2691,7 +2716,7 @@ void mcp::rpc_handler::send_block(mcp::json & j_response)
 	catch (...)
 	{
 		//throw JsonRpcException(exceptionToErrorMessage());
-		BOOST_THROW_EXCEPTION(RPC_Error_Eth_INVALID_PARAMS());
+		//BOOST_THROW_EXCEPTION(RPC_Error_Eth_INVALID_PARAMS());
 	}
 }
 
@@ -2941,21 +2966,26 @@ void mcp::rpc_handler::send_offline_block(mcp::json & j_response)
 	{
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidPrevious());
 	}
-	std::string previous_text = request["previous"];
-	mcp::block_hash previous;
-	error = previous.decode_hex(previous_text);
-	if (error)
-	{
+	mcp::block_hash previous(0);
+	try {
+		previous = jsToHash(request["previous"]);
+	}
+	catch (...) {
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidPrevious());
 	}
-
+	
 	if (!request.count("signature") || (!request["signature"].is_string()))
 	{
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidSignature());
 	}
 
-	std::string signature_text = request["signature"];
-	dev::Signature signature(signature_text);
+	dev::Signature signature(0);
+	try {
+		signature = jsToSignature(request["signature"]);
+	}
+	catch (...) {
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidSignature());
+	}
 
 	std::vector<mcp::block_hash> parents;
 	std::shared_ptr<std::list<mcp::block_hash>> links = std::make_shared<std::list<mcp::block_hash>>();
@@ -2968,7 +2998,7 @@ void mcp::rpc_handler::send_offline_block(mcp::json & j_response)
 	//																   last_summary, last_summary_block, last_stable_block, gas, gas_price, data, exec_timestamp);
 
 	//assert_x(p_block != nullptr);
-
+	/*
 	bool async(false);
 	if (request.count("async"))
 	{
@@ -2977,7 +3007,7 @@ void mcp::rpc_handler::send_offline_block(mcp::json & j_response)
 			BOOST_THROW_EXCEPTION(RPC_Error_InvalidAsync());
 		}
 	}
-
+	*/
 	/*bool gen_next_work_l(false);
 	auto rpc_l(shared_from_this());
 	m_wallet->send_async(
@@ -3700,7 +3730,9 @@ void mcp::rpc_connection::read()
 				}
 				else
 				{
-					rpc_response(response_handler, "Can only POST requests");
+					mcp::json j_response;
+					j_response["msg"] = "Can only POST requests";
+					response_handler(j_response);
 				}
 			});
 		}
@@ -3720,365 +3752,79 @@ namespace
 
 void mcp::rpc_handler::process_request()
 {
-	if (!rpc.config.enable_control)
-	{
-		rpc_response(response, "RPC control is disabled");
-		return;
-	}
+	mcp::json j_response;
 
 	try
 	{
+		if (!rpc.config.enable_control) {
+			BOOST_THROW_EXCEPTION(RPC_Error_Disabled());
+		}
+
 		request = mcp::json::parse(body);
 		
 		LOG(m_log.debug) << "REQUEST:" << request;
 
-		std::string action = request.count("action") > 0 ? request["action"] : request["method"];
-		auto pointer = m_rpcMethods.find(action);
+		if (request.count("action")) {
+			auto pointer = m_mcpRpcMethods.find(request["action"]);
+			if (pointer != m_mcpRpcMethods.end()) {
+				(this->*(pointer->second))(j_response);
+				j_response["code"] = 0;
+				j_response["msg"] = "OK";
+			}
+			else {
+				BOOST_THROW_EXCEPTION(RPC_Error_UnknownCommand());
+			}
+		}
+		else if (request.count("method")) {
+			auto pointer = m_ethRpcMethods.find(request["method"]);
+			if (pointer != m_ethRpcMethods.end()) {
 
-		if (pointer != m_rpcMethods.end()) {
-			mcp::json j_response;
-			(this->*(pointer->second))(j_response);
-			rpc_response(response, 0, "OK", j_response);
-		}
-		/*
-		bool handled = false;
-		if (action == "account_create")
-		{
-			account_create();
-			request.erase("password");
-			reprocess_body(body, request);
-			handled = true;
-		}
-		else if (action == "account_remove")
-		{
-			account_remove();
-			request.erase("password");
-			reprocess_body(body, request);
-			handled = true;
-		}
-		else if (action == "account_unlock")
-		{
-			account_unlock();
-			request.erase("password");
-			reprocess_body(body, request);
-			handled = true;
-		}
-		else if (action == "account_password_change")
-		{
-			account_password_change();
-			request.erase("old_password");
-			request.erase("new_password");
-			reprocess_body(body, request);
-			handled = true;
-		}
-		else if (action == "send_block")
-		{
-			send_block();
-			request.erase("password");
-			reprocess_body(body, request);
-			handled = true;
-		}
+				if (!request.count("id") ||
+					!request.count("jsonrpc") ||
+					!request.count("params") ||
+					!request["params"].is_array())
+				{
+					BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidRequest());
+				}
 
-		if (handled)
-			return;
-
-		if (action == "account_list")
-		{
-			account_list();
+				j_response["id"] = request["id"];
+				j_response["jsonrpc"] = request["jsonrpc"];
+				j_response["result"] = nullptr;
+				(this->*(pointer->second))(j_response);
+			}
+			else {
+				BOOST_THROW_EXCEPTION(RPC_Error_Eth_MethodNotFound());
+			}
 		}
-		else if (action == "account_validate")
-		{
-			account_validate();
-		}
-		else if (action == "account_lock")
-		{
-			account_lock();
-		}
-		else if (action == "account_export")
-		{
-			account_export();
-		}
-
-		else if (action == "account_import")
-		{
-			account_import();
-		}
-		else if (action == "account_code")
-		{
-			account_code();
-		}
-		else if (action == "account_balance")
-		{
-			account_balance();
-		}
-		else if (action == "accounts_balances")
-		{
-			accounts_balances();
-		}
-		else if (action == "account_block_list")
-		{
-			account_block_list();
-		}
-		else if (action == "account_state_list")
-		{
-			account_state_list();
-		}
-		else if (action == "block")
-		{
-			block();
-		}
-		else if (action == "blocks")
-		{
-			blocks();
-		}
-		else if (action == "block_state")
-		{
-			block_state();
-		}
-		else if (action == "block_states")
-		{
-			block_states();
-		}
-		else if (action == "block_traces")
-		{
-			block_traces();
-		}
-		else if (action == "stable_blocks")
-		{
-			stable_blocks();
-		}
-		else if (action == "estimate_gas")
-		{
-			estimate_gas();
-		}
-		else if (action == "call")
-		{
-			call();
-		}
-		else if (action == "logs")
-		{
-			logs();
-		}
-		else if (action == "generate_offline_block")
-		{
-			generate_offline_block();
-		}
-		else if (action == "send_offline_block")
-		{
-			send_offline_block();
-		}
-		else if (action == "block_summary")
-		{
-			block_summary();
-		}
-		else if (action == "sign_msg")
-		{
-			sign_msg();
-		}
-		else if (action == "version")
-		{
-			version();
-		}
-		else if (action == "status")
-		{
-			status();
-		}
-		else if (action == "peers")
-		{
-			peers();
-		}
-		else if (action == "nodes")
-		{
-			nodes();
-		}
-		else if (action == "witness_list")
-		{
-			witness_list();
-		}
-		else if (action == "debug_trace_transaction")
-		{
-			debug_trace_transaction();
-		}
-		else if (action == "debug_storage_range_at")
-		{
-			debug_storage_range_at();
-		}
-		else if (action == "get_sync_status")
-		{
-			rpc_response(response, mcp::node_sync::get_syncing_status());
-		}
-		// added by michael
-		else if (action == "eth_blockNumber")
-		{
-			eth_blockNumber();
-		}
-		else if (action == "eth_getTransactionCount")
-		{
-			eth_getTransactionCount();
-		}
-		else if (action == "eth_chainId")
-		{
-			eth_chainId();
-		}
-		else if (action == "eth_gasPrice")
-		{
-			eth_gasPrice();
-		}
-		else if (action == "eth_estimateGas")
-		{
-			eth_estimateGas();
-		}
-		else if (action == "eth_getBlockByNumber")
-		{
-			eth_getBlockByNumber();
-		}
-		else if (action == "eth_sendRawTransaction")
-		{
-			eth_sendRawTransaction();
-		}
-		else if (action == "eth_sendTransaction")
-		{
-			eth_sendTransaction();
-		}
-		else if (action == "eth_call")
-		{
-			eth_call();
-		}
-		else if (action == "net_version")
-		{
-			net_version();
-		}
-		else if (action == "net_listening")
-		{
-			net_listening();
-		}
-		else if (action == "net_peerCount") {
-			net_peerCount();
-		}
-		else if (action == "web3_clientVersion")
-		{
-			web3_clientVersion();
-		}
-		else if (action == "web3_sha3") {
-			web3_sha3();
-		}
-		else if (action == "eth_getCode")
-		{
-			eth_getCode();
-		}
-		else if (action == "eth_getStorageAt")
-		{
-			eth_getStorageAt();
-		}
-		else if (action == "eth_getTransactionByHash")
-		{
-			eth_getTransactionByHash();
-		}
-		else if (action == "eth_getTransactionByBlockHashAndIndex")
-		{
-			eth_getTransactionByBlockHashAndIndex();
-		}
-		else if (action == "eth_getTransactionByBlockNumberAndIndex")
-		{
-			eth_getTransactionByBlockNumberAndIndex();
-		}
-		else if (action == "eth_getTransactionReceipt")
-		{
-			eth_getTransactionReceipt();
-		}
-		else if (action == "eth_getBalance")
-		{
-			eth_getBalance();
-		}
-		else if (action == "eth_getBlockByHash")
-		{
-			eth_getBlockByHash();
-		}
-		else if (action == "eth_getBlockTransactionCountByHash")
-		{
-			eth_getBlockTransactionCountByHash();
-		}
-		else if (action == "eth_getBlockTransactionCountByNumber")
-		{
-			eth_getBlockTransactionCountByNumber();
-		}
-		else if (action == "eth_accounts")
-		{
-			eth_accounts();
-		}
-		else if (action == "eth_sign")
-		{
-			eth_sign();
-		}
-		else if (action == "eth_signTransaction")
-		{
-			eth_signTransaction();
-		}
-		else if (action == "eth_syncing")
-		{
-			eth_syncing();
-		}
-		else if (action == "eth_protocolVersion")
-		{
-			eth_protocolVersion();
-		}
-		else if (action == "eth_getLogs")
-		{
-			eth_getLogs();
-		}
-		else if (action == "personal_importRawKey")
-		{
-			personal_importRawKey();
-		}
-		else if (action == "personal_listAccounts")
-		{
-			personal_listAccounts();
-		}
-		else if (action == "personal_lockAccount")
-		{
-			personal_lockAccount();
-		}
-		else if (action == "personal_newAccount")
-		{
-			personal_newAccount();
-		}
-		else if (action == "personal_unlockAccount")
-		{
-			personal_unlockAccount();
-		}
-		else if (action == "personal_sendTransaction")
-		{
-			personal_sendTransaction();
-		}
-		else if (action == "personal_sign")
-		{
-			personal_sign();
-		}
-		else if (action == "personal_ecRecover")
-		{
-			personal_ecRecover();
-		}
-		*/
-		//
 		else
 		{
-			rpc_response(response, "Unknown command");
+			BOOST_THROW_EXCEPTION(RPC_Error_UnknownCommand());
 		}
+	}
+	catch (mcp::RpcEthException const &err)
+	{
+		mcp::json error;
+		error["code"] = err.code();
+		error["message"] = err.what();
+		j_response["error"] = error;
 	}
 	catch (mcp::RpcException const &err)
 	{
-		rpc_response(response, err.code(), err.what());
+		if (err.code() >= 0) {
+			j_response["code"] = err.code();
+		}
+		j_response["msg"] = err.what();
 	}
 	catch (std::exception const &err)
 	{
-		LOG(m_log.error) << "rpc runtime_error : error_response = Unable to parse JSON or " << err.what();
-		rpc_response(response, "Unable to parse JSON");
+		j_response["msg"] = "Unable to parse JSON";
 	}
 	catch (...)
 	{
-		LOG(m_log.error) << "Internal server error in HTTP RPC ";
-		rpc_response(response, "Internal server error in HTTP RPC");
+		j_response["msg"] = "Internal server error in HTTP RPC";
 	}
+
+	response(j_response);
 }
 
 std::shared_ptr<mcp::rpc> mcp::get_rpc(mcp::block_store &store_a, std::shared_ptr<mcp::chain> chain_a,
@@ -5034,371 +4780,244 @@ void mcp::error_eth_response(std::function<void(mcp::json const &)> response_a, 
 	response_a(json_a);
 }
 
-bool mcp::rpc_handler::is_eth_rpc(mcp::json &response_l)
-{
-	if (!request.count("id") ||
-		!request.count("jsonrpc") ||
-		!request.count("params") ||
-		!request["params"].is_array())
-	{
-		error_eth_response(response, rpc_eth_error_code::INVALID_REQUEST, response_l);
-		return false;
-	}
-
-	response_l["id"] = request["id"];
-	response_l["jsonrpc"] = request["jsonrpc"];
-	response_l["result"] = nullptr;
-
-	return true;
-}
-
 void mcp::rpc_handler::eth_blockNumber(mcp::json & j_response)
 {
-	if (!is_eth_rpc(j_response))
-	{
-		return;
-	}
-
 	j_response["result"] = toJS(m_chain->last_stable_index());
-	response(j_response);
 }
 
 void mcp::rpc_handler::eth_getTransactionCount(mcp::json & j_response)
 {
 	try
 	{
-		std::string str = request["params"][0];
-		j_response["result"] = toJS(m_wallet->getTransactionCount(jsToAddress(str)));
-		response(j_response);
+		j_response["result"] = toJS(m_wallet->getTransactionCount(jsToAddress(request["params"][0])));
 	}
 	catch (...)
 	{
-		error_eth_response(response, rpc_eth_error_code::invalid_params, j_response);
-		//BOOST_THROW_EXCEPTION(JsonRpcException(Errors::ERROR_RPC_INVALID_PARAMS));
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidAccount());
 	}
 }
 
 void mcp::rpc_handler::eth_chainId(mcp::json & j_response)
 {
-	if (!is_eth_rpc(j_response))
-	{
-		return;
-	}
-
 	j_response["result"] = toJS(mcp::chain_id);
-	response(j_response);
 }
 
 void mcp::rpc_handler::eth_gasPrice(mcp::json & j_response)
 {
-	if (!is_eth_rpc(j_response))
-	{
-		return;
-	}
 	j_response["result"] = toJS(mcp::gas_price);
-	response(j_response);
 }
 
 void mcp::rpc_handler::eth_estimateGas(mcp::json & j_response)
 {
-	try
+	mcp::json params = request["params"];
+	if (params.size() < 1 || !params[0].is_object())
 	{
-		mcp::json params = request["params"][0];
-		TransactionSkeleton t = mcp::toTransactionSkeleton(params);
-		int64_t gas = static_cast<int64_t>(t.gas);
-
-		dev::eth::McInfo mc_info;
-		uint64_t block_number = m_chain->last_stable_mci();
-		if (!try_get_mc_info(mc_info, block_number))
-		{
-			error_eth_response(response, rpc_eth_error_code::invalid_block_number, j_response);
-			return;
-		}
-
-		mcp::db::db_transaction transaction(m_store.create_transaction());
-		std::pair<u256, bool> result = m_chain->estimate_gas(transaction, m_cache, t.from, t.value, t.to, t.data, gas, t.gasPrice, mc_info);
-
-		/// this error is reported if the gas less than 21000, the logic has not been confirmed, response other code ?
-		if (!result.second)
-		{
-			error_eth_response(response, rpc_eth_error_code::invalid_block_number, j_response);
-			return;
-		}
-
-		j_response["result"] = toJS(result.first);
-		response(j_response);
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
 	}
-	catch (Exception const&)
+	
+	TransactionSkeleton t = mcp::toTransactionSkeleton(params[0]);
+	
+	dev::eth::McInfo mc_info;
+	uint64_t block_number = m_chain->last_stable_mci();
+	if (!try_get_mc_info(mc_info, block_number))
 	{
-		//throw JsonRpcException(exceptionToErrorMessage());
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidBlock());
 	}
+
+	mcp::db::db_transaction transaction(m_store.create_transaction());
+	std::pair<u256, bool> result = m_chain->estimate_gas(transaction, m_cache, t.from, t.value, t.to, t.data, static_cast<int64_t>(t.gas), t.gasPrice, mc_info);
+
+	/// this error is reported if the gas less than 21000, the logic has not been confirmed, response other code ?
+	if (!result.second)
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidGas());
+	}
+
+	j_response["result"] = toJS(result.first);
 }
 
 void mcp::rpc_handler::eth_getBlockByNumber(mcp::json & j_response)
 {
-	try
+	mcp::json params = request["params"];
+	if (params.size() < 1 || !params[0].is_string())
 	{
-		uint64_t block_number = 0;
-		std::string str = request["params"][0];
-		if (str == "latest")
-		{
-			block_number = m_chain->last_stable_index();
-		}
-		else if (str == "earliest")
-		{///used default zero
-		}
-		else
-		{
-			block_number = jsToInt(str);
-		}
-
-		mcp::db::db_transaction transaction(m_store.create_transaction());
-		mcp::block_hash block_hash;
-		if (m_store.stable_block_get(transaction, block_number, block_hash))
-		{
-			error_eth_response(response, rpc_eth_error_code::invalid_block_number, j_response);
-			return;
-		}
-
-		auto block(m_cache->block_get(transaction, block_hash));
-		mcp::json block_l;
-		if (block != nullptr)
-		{
-			block->serialize_json_eth(block_l);
-			block_l["number"] = uint64_to_hex_nofill(block_number);
-		}
-		j_response["result"] = block_l;
-
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
 	}
-	catch (...)
+
+	uint64_t block_number = 0;
+	std::string blockText = params[0];
+	if (blockText == "latest") {
+		block_number = m_chain->last_stable_index();
+	}
+	else if (blockText == "earliest") {
+		block_number = 0;
+	}
+	else {
+		block_number = jsToInt(blockText);
+	}
+
+	mcp::db::db_transaction transaction(m_store.create_transaction());
+	mcp::block_hash block_hash;
+	if (m_store.stable_block_get(transaction, block_number, block_hash))
 	{
-		mcp::json j_response;
-		error_eth_response(response, rpc_eth_error_code::invalid_params, j_response);
-		//BOOST_THROW_EXCEPTION(JsonRpcException(Errors::ERROR_RPC_INVALID_PARAMS));
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidBlock());
 	}
+
+	auto block(m_cache->block_get(transaction, block_hash));
+	if (block == nullptr)
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidBlock());
+	}
+
+	mcp::json block_l;
+	block->serialize_json_eth(block_l);
+	block_l["number"] = uint64_to_hex_nofill(block_number);
+	j_response["result"] = block_l;
 }
 
 void mcp::rpc_handler::eth_sendRawTransaction(mcp::json & j_response)
 {
+	mcp::json params = request["params"];
+	if (params.size() < 1 || !params[0].is_string())
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
+	}
+
 	try
 	{
-		std::string _rlp = request["params"][0];
-		Transaction t(jsToBytes(_rlp, OnFailed::Throw), CheckTransaction::None);
-
-		mcp::json response_l;
+		Transaction t(jsToBytes(params[0], OnFailed::Throw), CheckTransaction::None);
 		j_response["result"] = toJS(m_wallet->importTransaction(t));
-		response(j_response);
 	}
-	catch (Exception const& e)
+	catch (dev::GasPriceTooLow const& e)
 	{
-		LOG(m_log.debug) << "eth_sendRawTransaction error:" << e.what();//delete if response
-		//throw JsonRpcException(exceptionToErrorMessage());
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidGas());
+	}
+	catch (dev::PendingTransactionAlreadyExists const& e)
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_PendingTransactionAlreadyExists());
+	}
+	catch (dev::TransactionAlreadyInChain const& e)
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_TransactionAlreadyInChain());
+	}
+	catch (dev::UnknownTransactionValidationError const& e)
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_Validation());
+	}
+	catch (...)
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
 	}
 }
 
 void mcp::rpc_handler::eth_sendTransaction(mcp::json & j_response)
 {
+	mcp::json params = request["params"];
+	if (params.size() < 1 || !params[0].is_object())
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
+	}
+	
+	TransactionSkeleton t = mcp::toTransactionSkeleton(params[0]);
+
 	try
 	{
-		mcp::json params = request["params"][0];
 		auto rpc_l(shared_from_this());
-		auto fun = [rpc_l, &j_response, this](h256 h)
+		auto fun = [rpc_l, j_response, this](h256 h)
 		{
-			j_response["result"] = toJS(h);
-			response(j_response);
+			mcp::json j_resp = j_response;
+			j_resp["result"] = toJS(h);
+			response(j_resp);
 		};
 
-		TransactionSkeleton t = mcp::toTransactionSkeleton(params);
 		m_wallet->send_async(t, fun);
 	}
-	catch (Exception const& e)
+	catch (dev::GasPriceTooLow const& e)
 	{
-		LOG(m_log.debug) << "eth_sendRawTransaction error:" << e.what();//delete if response
-		//throw JsonRpcException(exceptionToErrorMessage());
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidGas());
+	}
+	catch (dev::PendingTransactionAlreadyExists const& e)
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_PendingTransactionAlreadyExists());
+	}
+	catch (dev::TransactionAlreadyInChain const& e)
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_TransactionAlreadyInChain());
+	}
+	catch (dev::UnknownTransactionValidationError const& e)
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_Validation());
 	}
 }
 
 void mcp::rpc_handler::eth_call(mcp::json & j_response)
 {
-	if (!is_eth_rpc(j_response))
-	{
-		return;
-	}
-
 	mcp::json params = request["params"];
-	if (params.size() == 0)
+	if (params.size() < 2 || !params[0].is_object())
 	{
-		error_eth_response(response, rpc_eth_error_code::invalid_params, j_response);
-		return;
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
 	}
 
-	dev::Address from;
+	TransactionSkeleton ts = mcp::toTransactionSkeleton(params[0]);
+	Transaction t(ts);
 
-	if (params[0].count("from"))
-	{
-		if (!params[0]["from"].is_string())
-		{
-			error_eth_response(response, rpc_eth_error_code::invalid_from_account, j_response);
-			return;
-		}
-		std::string from_text = params[0]["from"];
-		if (!mcp::isAddress(from_text))
-		{
-			error_eth_response(response, rpc_eth_error_code::invalid_from_account, j_response);
-			return;
-		}
-		from = dev::Address(from_text);
+	uint64_t block_number = 0;
+	std::string blockText = params[1];
+	if (blockText == "latest") {
+		block_number = m_chain->last_stable_index();
 	}
-	
-	if (!params[0].count("to") || (!params[0]["to"].is_string()))
-	{
-		error_eth_response(response, rpc_eth_error_code::invalid_to_account, j_response);
-		return;
+	else if (blockText == "earliest") {
+		block_number = 0;
 	}
-
-	std::string to_text = params[0]["to"];
-	if (!mcp::isAddress(to_text))
-	{
-		error_eth_response(response, rpc_eth_error_code::invalid_to_account, j_response);
-		return;
-	}
-
-	dev::Address to(to_text);
-
-	dev::bytes data;
-	if (params[0].count("data"))
-	{
-		std::string data_text = params[0]["data"];
-		if (mcp::hex_to_bytes(data_text, data))
-		{
-			error_eth_response(response, rpc_eth_error_code::invalid_data, j_response);
-			return;
-		}
-		if (data.size() > mcp::max_data_size)
-		{
-			error_eth_response(response, rpc_eth_error_code::invalid_data, j_response);
-			return;
-		}
-	}
-
-	uint64_t block_number;
-	if (params.size() == 2 && params[1].is_string())
-	{
-		std::string block_numberText = params[1];
-		if (block_numberText == "latest")
-		{
-			block_number = m_chain->last_stable_mci();
-		}
-		else if (block_numberText == "earliest")
-		{
-			block_number = 0;
-		}
-		else if (block_numberText.find("0x") == 0)
-		{
-			if (hex_to_uint64(block_numberText, block_number, true))
-			{
-				error_eth_response(response, rpc_eth_error_code::invalid_block_number, j_response);
-				return;
-			}
-		}
-		else
-		{
-			error_eth_response(response, rpc_eth_error_code::invalid_block_number, j_response);
-			return;
-		}
-	}
-	else
-	{
-		block_number = m_chain->last_stable_mci();
+	else {
+		block_number = jsToInt(blockText);
 	}
 
 	dev::eth::McInfo mc_info;
 	if (!try_get_mc_info(mc_info, block_number))
 	{
-		error_eth_response(response, rpc_eth_error_code::invalid_block_number, j_response);
-		return;
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidBlock());
 	}
 
-	//std::shared_ptr<mcp::block> block = std::make_shared<mcp::block>(
-	//	mcp::block_type::light,														// mcp::block_type type_a,
-	//	from,																		// dev::Address const & from_a,
-	//	to,																			// dev::Address const & to_a,
-	//	0,																			// mcp::amount const & amount_a,
-	//	0,																			// mcp::block_hash const & previous_a,
-	//	std::vector<mcp::block_hash>{},												// std::vector<mcp::block_hash> const & parents_a,
-	//	std::make_shared<std::list<mcp::block_hash>>(std::list<mcp::block_hash>{}), // std::shared_ptr<std::list<mcp::block_hash>> links_a,
-	//	0,																			// mcp::summary_hash const & last_summary_a,
-	//	0,																			// mcp::block_hash const & last_summary_block_a,
-	//	0,																			// mcp::block_hash const & last_stable_block_a,
-	//	mcp::uint256_t(mcp::block_max_gas),											// uint256_t gas_a,
-	//	0,																			// uint256_t gas_price_a,
-	//	data,																		// std::vector<uint8_t> const & data_a,
-	//	0																			// uint64_t const & exec_timestamp_a,
-	//);
+	mcp::db::db_transaction transaction(m_store.create_transaction());
+	std::pair<mcp::ExecutionResult, dev::eth::TransactionReceipt> result = m_chain->execute(
+		transaction,
+		m_cache,
+		t,
+		mc_info,
+		Permanence::Reverted,
+		dev::eth::OnOpFunc()
+	);
 
-	//mcp::db::db_transaction transaction(m_store.create_transaction());
-	//std::pair<mcp::ExecutionResult, dev::eth::TransactionReceipt> result = m_chain->execute(transaction, m_cache, block, mc_info, Permanence::Reverted, dev::eth::OnOpFunc());
-
-	//response_l["result"] = "0x" + bytes_to_hex(result.first.output);
-
-	response(j_response);
+	j_response["result"] = toJS(result.first.output);
 }
 
 void mcp::rpc_handler::net_version(mcp::json & j_response)
 {
-	if (!is_eth_rpc(j_response))
-	{
-		return;
-	}
-
 	j_response["result"] = (int)mcp::mcp_network + 800;
-	response(j_response);
 }
 
 void mcp::rpc_handler::net_listening(mcp::json & j_response)
 {
-	if (!is_eth_rpc(j_response))
-	{
-		return;
-	}
 	j_response["result"] = m_host->is_started();
-	response(j_response);
 }
 
 void mcp::rpc_handler::net_peerCount(mcp::json & j_response)
 {
-	if (!is_eth_rpc(j_response))
-	{
-		return;
-	}
 	j_response["result"] = m_host->get_peers_count();
-	response(j_response);
 }
 
 void mcp::rpc_handler::web3_clientVersion(mcp::json & j_response)
 {
-	if (!is_eth_rpc(j_response))
-	{
-		return;
-	}
 	j_response["result"] = STR(MCP_VERSION);
-	response(j_response);
 }
 
-void mcp::rpc_handler::web3_sha3(mcp::json & j_response) {
-	if (!is_eth_rpc(j_response))
-	{
-		return;
-	}
+void mcp::rpc_handler::web3_sha3(mcp::json & j_response)
+{
 	mcp::json params = request["params"];
-	if (params.size() != 1)
+	if (params.size() < 1 || !params[0].is_string())
 	{
-		error_eth_response(response, rpc_eth_error_code::invalid_params, j_response);
-		return;
-	}
-	if (!params[0].is_string()) {
-		error_eth_response(response, rpc_eth_error_code::invalid_params, j_response);
-		return;
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
 	}
 
 	dev::bytes digest;
@@ -5408,298 +5027,204 @@ void mcp::rpc_handler::web3_sha3(mcp::json & j_response) {
 	digest.resize(hash.DigestSize());
 	hash.Final(digest.data());
 
-	j_response["result"] = "0x" + mcp::bytes_to_hex(digest);
-	response(j_response);
+	j_response["result"] = toJS(digest);
 }
 
 void mcp::rpc_handler::eth_getCode(mcp::json & j_response)
 {
+	mcp::json params = request["params"];
+	mcp::db::db_transaction transaction(m_store.create_transaction());
+	chain_state c_state(transaction, 0, m_store, m_chain, m_cache);
+
 	try
 	{
-		std::string str = request["params"][0];
-		mcp::db::db_transaction transaction(m_store.create_transaction());
-		chain_state c_state(transaction, 0, m_store, m_chain, m_cache);
-
-		j_response["result"] = toJS(c_state.code(jsToAddress(str)));
-		response(j_response);
+		j_response["result"] = toJS(c_state.code(jsToAddress(params[0])));
 	}
 	catch (...)
 	{
-		error_eth_response(response, rpc_eth_error_code::invalid_params, j_response);
-		//BOOST_THROW_EXCEPTION(JsonRpcException(Errors::ERROR_RPC_INVALID_PARAMS));
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidAccount());
 	}
 }
 
 void mcp::rpc_handler::eth_getStorageAt(mcp::json & j_response)
 {
-	/*mcp::json response_l;
-	if (!is_eth_rpc(response_l))
-	{
-		return;
-	}
-
 	mcp::json params = request["params"];
 	if (params.size() < 2 ||
 		!params[0].is_string() ||
-		!params[1].is_string()) {
-		error_eth_response(response, rpc_eth_error_code::invalid_params, response_l);
-		return;
+		!params[1].is_string())
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
 	}
 
-	if (!mcp::isAddress(params[0])) {
-		error_eth_response(response, rpc_eth_error_code::invalid_account, response_l);
-		return;
+	try
+	{
+		dev::Address account = jsToAddress(params[0]);
+		uint256_t position = jsToU256(params[1]);
+
+		mcp::db::db_transaction transaction(m_store.create_transaction());
+		chain_state c_state(transaction, 0, m_store, m_chain, m_cache);
+		j_response["result"] = toJS(c_state.storage(account, position));
 	}
-
-	dev::Address account(params[0]);
-
-	uint256_t position;
-	if (hex_to_uint256(params[1], position, true)) {
-		error_eth_response(response, rpc_eth_error_code::invalid_params, response_l);
-		return;
+	catch (...)
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
 	}
-
-	mcp::db::db_transaction transaction(m_store.create_transaction());
-	chain_state c_state(transaction, 0, m_store, m_chain, m_cache);
-	response_l["result"] = uint256_to_hex_nofill(c_state.storage(account, position));
-
-	response(response_l);*/
 }
 
 void mcp::rpc_handler::eth_getTransactionByHash(mcp::json & j_response)
 {
+	mcp::json params = request["params"];
+	if (params.size() < 1 || !params[0].is_string())
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
+	}
+
 	try
 	{
-		//todo localisedTransaction, have block hash and block number. but how to associate blocks before witness
-		std::string str = request["params"][0];
-		h256 h = jsToFixed<32>(str);
+		// todo localisedTransaction, have block hash and block number. but how to associate blocks before witness
+		h256 hash = jsToHash(params[0]);
 
-		//todo used cache
 		auto transaction = m_store.create_transaction();
-		auto t = m_store.transaction_get(transaction, h);
-		if (t == nullptr)//todo throw and catch
+		auto state = m_cache->block_state_get(transaction, hash);
+		auto t = m_store.transaction_get(transaction, hash);
+		if (state == nullptr || !state->is_stable || t == nullptr)
 		{
-			error_eth_response(response, rpc_eth_error_code::invalid_params, j_response);
-			return;
+			throw;
 		}
 
-		j_response["result"] = toJson(*t);
-		response(j_response);
+		mcp::json result = toJson(*t);
+		result["blockHash"] = hash.hexPrefixed();
+		result["transactionIndex"] = 0;
+		result["blockNumber"] = toJS(state->main_chain_index);
+
+		j_response["result"] = result;
 	}
-	catch (Exception const&)
+	catch (...)
 	{
-		//throw JsonRpcException(exceptionToErrorMessage());
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidHash());
 	}
 }
 
 void mcp::rpc_handler::eth_getTransactionByBlockHashAndIndex(mcp::json & j_response)
 {
-	if (!is_eth_rpc(j_response))
-	{
-		return;
-	}
-
 	mcp::json params = request["params"];
-	if (params.size() != 2) {
-		error_eth_response(response, rpc_eth_error_code::invalid_params, j_response);
-		return;
-	}
-
-	if (params[1] != "0x0") {
-		error_eth_response(response, rpc_eth_error_code::invalid_params, j_response);
-		return;
-	}
-
-	mcp::block_hash block_hash;
-	if (block_hash.decode_hex(params[0], true)) {
-		error_eth_response(response, rpc_eth_error_code::invalid_params, j_response);
-		return;
-	}
-
-	mcp::db::db_transaction transaction(m_store.create_transaction());
-	std::shared_ptr<mcp::block_state> state(m_cache->block_state_get(transaction, block_hash));
-	if (block_hash != mcp::genesis::block_hash && state != nullptr)
+	if (params.size() < 2 || params[1] != "0x0")
 	{
-		auto block(m_cache->block_get(transaction, block_hash));
-		if (block != nullptr) {
-			if (state->is_stable)
-			{
-				/*if (state->status == mcp::block_status::ok) {
-					mcp::json json_receipt;
-					json_receipt["hash"] = block_hash.to_string(true);
-					json_receipt["nonce"] = 0;
-					if (state->receipt != boost::none) {
-						std::shared_ptr<mcp::account_state> acc_state(m_store.account_state_get(transaction, state->receipt->from_state));
-						assert_x(acc_state);
-						json_receipt["nonce"] = uint256_to_hex_nofill(acc_state->nonce() - 1);
-					}
-					json_receipt["blockHash"] = block_hash.to_string(true);
-					json_receipt["blockNumber"] = uint64_to_hex_nofill(state->main_chain_index.get());
-					json_receipt["transactionIndex"] = "0x0";
-					json_receipt["from"] = block->hashables->from.to_account();
-					if (block->isCreation()) {
-						json_receipt["to"] = nullptr;
-					}
-					else {
-						json_receipt["to"] = block->hashables->to.to_account();
-					}
-					json_receipt["value"] = uint256_to_hex_nofill(block->hashables->amount);
-					json_receipt["gas"] = uint256_to_hex_nofill(block->hashables->gas);
-					json_receipt["input"] = "0x" + bytes_to_hex(block->data);
-					json_receipt["gasPrice"] = uint64_to_hex_nofill(1000000000);
-					json_receipt["v"] = block->signature.v;
-					json_receipt["r"] = block->signature.r.to_string_no_fill(true);
-					json_receipt["s"] = block->signature.s.to_string_no_fill(true);
-					j_response["result"] = json_receipt;
-				}
-				else if (state->status == mcp::block_status::fail) {
-					error_eth_response(response, rpc_eth_error_code::TRANSACTION_REJECTED, j_response);
-					return;
-				}*/
-			}
-		}
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
 	}
 
-	response(j_response);
+	try
+	{
+		mcp::block_hash hash = jsToHash(params[0]);
+
+		auto transaction = m_store.create_transaction();
+		auto state = m_cache->block_state_get(transaction, hash);
+		auto t = m_store.transaction_get(transaction, hash);
+		if (state == nullptr || !state->is_stable || t == nullptr)
+		{
+			throw;
+		}
+
+		mcp::json result = toJson(*t);
+		result["blockHash"] = hash.hexPrefixed();
+		result["transactionIndex"] = 0;
+		result["blockNumber"] = toJS(state->main_chain_index);
+
+		j_response["result"] = result;
+	}
+	catch (...)
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidHash());
+	}
 }
 
 void mcp::rpc_handler::eth_getTransactionByBlockNumberAndIndex(mcp::json & j_response)
 {
-	if (!is_eth_rpc(j_response))
-	{
-		return;
-	}
-
 	mcp::json params = request["params"];
-	if (params.size() != 2)
+	if (params.size() < 2 || params[1] != "0x0")
 	{
-		error_eth_response(response, rpc_eth_error_code::invalid_params, j_response);
-		return;
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
 	}
 
-	if (params[1] != "0x0") {
-		error_eth_response(response, rpc_eth_error_code::invalid_params, j_response);
-		return;
+	uint64_t block_number = 0;
+	std::string blockText = params[0];
+	if (blockText == "latest") {
+		block_number = m_chain->last_stable_index();
 	}
-
-	uint64_t block_number;
-	if (params[0].is_string())
-	{
-		std::string block_numberText = params[0];
-		if (block_numberText == "latest")
-		{
-			block_number = m_chain->last_stable_mci();
-		}
-		else if (block_numberText == "earliest")
-		{
-			block_number = 0;
-		}
-		else if (block_numberText.find("0x") == 0)
-		{
-			if (hex_to_uint64(block_numberText, block_number, true))
-			{
-				error_eth_response(response, rpc_eth_error_code::invalid_block_number, j_response);
-				return;
-			}
-		}
-		else
-		{
-			error_eth_response(response, rpc_eth_error_code::invalid_block_number, j_response);
-			return;
-		}
+	else if (blockText == "earliest") {
+		block_number = 0;
 	}
-	else
-	{
-		error_eth_response(response, rpc_eth_error_code::invalid_block_number, j_response);
-		return;
+	else {
+		block_number = jsToInt(blockText);
 	}
 
 	mcp::db::db_transaction transaction(m_store.create_transaction());
-	mcp::block_hash block_hash;
-	if (m_store.main_chain_get(transaction, block_number, block_hash))
+	mcp::block_hash hash;
+	if (m_store.main_chain_get(transaction, block_number, hash))
 	{
-		error_eth_response(response, rpc_eth_error_code::invalid_block_number, j_response);
-		return;
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidBlock());
 	}
 
-	std::shared_ptr<mcp::block_state> state(m_cache->block_state_get(transaction, block_hash));
-
-	if (block_hash != mcp::genesis::block_hash && state != nullptr)
-	{
-		auto block(m_cache->block_get(transaction, block_hash));
-		if (block != nullptr) {
-			if (state->is_stable)
-			{
-				/*if (state->status == mcp::block_status::ok) {
-					mcp::json json_receipt;
-					json_receipt["hash"] = block_hash.to_string(true);
-					json_receipt["nonce"] = 0;
-					if (state->receipt != boost::none) {
-						std::shared_ptr<mcp::account_state> acc_state(m_store.account_state_get(transaction, state->receipt->from_state));
-						assert_x(acc_state);
-						json_receipt["nonce"] = uint256_to_hex_nofill(acc_state->nonce() - 1);
-					}
-					json_receipt["blockHash"] = block_hash.to_string(true);
-					json_receipt["blockNumber"] = uint64_to_hex_nofill(state->main_chain_index.get());
-					json_receipt["transactionIndex"] = "0x0";
-					json_receipt["from"] = block->hashables->from.to_account();
-					if (block->isCreation()) {
-						json_receipt["to"] = nullptr;
-					}
-					else {
-						json_receipt["to"] = block->hashables->to.to_account();
-					}
-					json_receipt["value"] = uint256_to_hex_nofill(block->hashables->amount);
-					json_receipt["gas"] = uint256_to_hex_nofill(block->hashables->gas);
-					json_receipt["input"] = "0x" + bytes_to_hex(block->data);
-					json_receipt["gasPrice"] = uint64_to_hex_nofill(1000000000);
-					json_receipt["v"] = block->signature.v;
-					json_receipt["r"] = block->signature.r.to_string_no_fill(true);
-					json_receipt["s"] = block->signature.s.to_string_no_fill(true);
-					j_response["result"] = json_receipt;
-				}
-				else if (state->status == mcp::block_status::fail) {
-					error_eth_response(response, rpc_eth_error_code::TRANSACTION_REJECTED, j_response);
-					return;
-				}*/
-			}
-		}
-	}
-
-	response(j_response);
-}
-
-void mcp::rpc_handler::eth_getBalance(mcp::json & j_response) {
 	try
 	{
-		std::string str = request["params"][0];
-		mcp::db::db_transaction transaction(m_store.create_transaction());
-		chain_state c_state(transaction, 0, m_store, m_chain, m_cache);
+		mcp::block_hash hash = jsToHash(params[0]);
 
-		j_response["result"] = toJS(c_state.balance(jsToAddress(str)));
-		response(j_response);
+		auto transaction = m_store.create_transaction();
+		auto state = m_cache->block_state_get(transaction, hash);
+		auto t = m_store.transaction_get(transaction, hash);
+		if (state == nullptr || !state->is_stable || t == nullptr)
+		{
+			throw;
+		}
+
+		mcp::json result = toJson(*t);
+		result["blockHash"] = hash.hexPrefixed();
+		result["transactionIndex"] = 0;
+		result["blockNumber"] = toJS(state->main_chain_index);
+
+		j_response["result"] = result;
 	}
 	catch (...)
 	{
-		error_eth_response(response, rpc_eth_error_code::invalid_params, j_response);
-		//BOOST_THROW_EXCEPTION(JsonRpcException(Errors::ERROR_RPC_INVALID_PARAMS));
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidBlock());
+	}
+}
+
+void mcp::rpc_handler::eth_getBalance(mcp::json & j_response) {
+	mcp::json params = request["params"];
+	if (params.size() < 1)
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
+	}
+	try
+	{
+		mcp::db::db_transaction transaction(m_store.create_transaction());
+		chain_state c_state(transaction, 0, m_store, m_chain, m_cache);
+		j_response["result"] = toJS(c_state.balance(jsToAddress(params[0])));
+	}
+	catch (...)
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidAccount());
 	}
 }
 
 void mcp::rpc_handler::eth_getTransactionReceipt(mcp::json & j_response)
 {
+	mcp::json params = request["params"];
+	if (params.size() < 1)
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
+	}
 	try
 	{
 		//todo localisedTransaction, have block hash and block number. but how to associate blocks before witness
-		std::string str = request["params"][0];
-		h256 h = jsToFixed<32>(str);
+		h256 hash = jsToHash(params[0]);
 
-		//todo used cache
 		auto transaction = m_store.create_transaction();
-		auto t = m_store.transaction_get(transaction, h);
-		auto tr = m_store.transaction_receipt_get(transaction, h);
-		if (nullptr == t || nullptr == tr)
-			return response("{}");
+		auto t = m_store.transaction_get(transaction, hash);
+		auto tr = m_store.transaction_receipt_get(transaction, hash);
+		if (t == nullptr || tr == nullptr)
+			throw;
 
 		auto lt = dev::eth::LocalisedTransactionReceipt(
 			*tr,
@@ -5709,170 +5234,104 @@ void mcp::rpc_handler::eth_getTransactionReceipt(mcp::json & j_response)
 			toAddress(t->from(), t->nonce()));
 
 		j_response["result"] = toJson(lt);
-		response(j_response);
 	}
-	catch (Exception const&)
+	catch (...)
 	{
-		//throw JsonRpcException(exceptionToErrorMessage());
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidHash());
 	}
 }
 
 void mcp::rpc_handler::eth_getBlockByHash(mcp::json & j_response)
 {
-	if (!is_eth_rpc(j_response))
-	{
-		return;
-	}
-
 	mcp::json params = request["params"];
-	if (params.size() != 2)
+	if (params.size() < 2)
 	{
-		error_eth_response(response, rpc_eth_error_code::invalid_params, j_response);
-		return;
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
 	}
 
-	mcp::block_hash block_hash;
-	if (block_hash.decode_hex(params[0], true)) {
-		error_eth_response(response, rpc_eth_error_code::invalid_params, j_response);
-		return;
-	}
-
-	mcp::db::db_transaction transaction(m_store.create_transaction());
-	std::shared_ptr<mcp::block_state> state(m_cache->block_state_get(transaction, block_hash));
-	if (state != nullptr)
+	try
 	{
-		auto block(m_cache->block_get(transaction, block_hash));
-		mcp::json block_l;
-		if (block != nullptr)
-		{
-			bool is_full = params[1];
-			block->serialize_json_eth(block_l);
-			block_l["number"] = uint64_to_hex_nofill(state->main_chain_index.get());
-		}
-		j_response["result"] = block_l;
-	}
+		mcp::block_hash hash = jsToHash(params[0]);
 
-	response(j_response);
+		mcp::db::db_transaction transaction(m_store.create_transaction());
+		auto state = m_cache->block_state_get(transaction, hash);
+		auto t = m_store.transaction_get(transaction, hash);
+		if (state == nullptr || !state->is_stable || t == nullptr)
+			throw;
+		
+		mcp::json result = toJS(t);
+		result["number"] = toJS(state->main_chain_index);
+		j_response["result"] = result;
+	}
+	catch (...)
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidHash());
+	}
 }
 
 void mcp::rpc_handler::eth_getBlockTransactionCountByHash(mcp::json & j_response)
 {
-	if (!is_eth_rpc(j_response))
-	{
-		return;
-	}
-
 	mcp::json params = request["params"];
-	if (params.size() != 1)
+	if (params.size() < 1)
 	{
-		error_eth_response(response, rpc_eth_error_code::invalid_params, j_response);
-		return;
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
 	}
 
-	mcp::block_hash block_hash;
-	if (block_hash.decode_hex(params[0], true)) {
-		error_eth_response(response, rpc_eth_error_code::invalid_params, j_response);
-		return;
-	}
-
-	mcp::db::db_transaction transaction(m_store.create_transaction());
-	std::shared_ptr<mcp::block_state> state(m_cache->block_state_get(transaction, block_hash));
-	if (state != nullptr)
+	try
 	{
-		auto block(m_cache->block_get(transaction, block_hash));
-		mcp::json block_l;
-		j_response["result"] = 0;
-		if (block != nullptr)
-		{
-			if (!block->hash().is_zero()) {
-				j_response["result"] = 1;
-			}
-		}
-	}
+		mcp::block_hash hash = jsToHash(params[0]);
 
-	response(j_response);
+		mcp::db::db_transaction transaction(m_store.create_transaction());
+		auto state = m_cache->block_state_get(transaction, hash);
+		auto t = m_store.transaction_get(transaction, hash);
+		if (state == nullptr || !state->is_stable || t == nullptr)
+			j_response["result"] = 0;
+		else
+			j_response["result"] = 1;
+	}
+	catch (...)
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidHash());
+	}
 }
 
 void mcp::rpc_handler::eth_getBlockTransactionCountByNumber(mcp::json & j_response)
 {
-	if (!is_eth_rpc(j_response))
-	{
-		return;
-	}
-
 	mcp::json params = request["params"];
-	if (params.size() != 1)
+	if (params.size() < 1)
 	{
-		error_eth_response(response, rpc_eth_error_code::invalid_params, j_response);
-		return;
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
 	}
 
-	uint64_t block_number;
-	if (params[0].is_string())
-	{
-		std::string block_numberText = params[0];
-		if (block_numberText == "latest")
-		{
-			block_number = m_chain->last_stable_mci();
-		}
-		else if (block_numberText == "earliest")
-		{
-			block_number = 0;
-		}
-		else if (block_numberText.find("0x") == 0)
-		{
-			if (hex_to_uint64(block_numberText, block_number, true))
-			{
-				error_eth_response(response, rpc_eth_error_code::invalid_block_number, j_response);
-				return;
-			}
-		}
-		else
-		{
-			error_eth_response(response, rpc_eth_error_code::invalid_block_number, j_response);
-			return;
-		}
+	uint64_t block_number = 0;
+	std::string blockText = params[0];
+	if (blockText == "latest") {
+		block_number = m_chain->last_stable_index();
 	}
-	else
-	{
-		error_eth_response(response, rpc_eth_error_code::invalid_block_number, j_response);
-		return;
+	else if (blockText == "earliest") {
+		block_number = 0;
+	}
+	else {
+		block_number = jsToInt(blockText);
 	}
 
 	mcp::db::db_transaction transaction(m_store.create_transaction());
-	mcp::block_hash block_hash;
-	if (m_store.main_chain_get(transaction, block_number, block_hash))
+	mcp::block_hash hash;
+	if (m_store.main_chain_get(transaction, block_number, hash))
 	{
-		error_eth_response(response, rpc_eth_error_code::invalid_block_number, j_response);
-		return;
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidBlock());
 	}
 
-	std::shared_ptr<mcp::block_state> state(m_cache->block_state_get(transaction, block_hash));
-	if (state != nullptr)
-	{
-		auto block(m_cache->block_get(transaction, block_hash));
-		if (block != nullptr)
-		{
-			j_response["result"] = 0;
-			if (block != nullptr)
-			{
-				if (!block->hash().is_zero()) {
-					j_response["result"] = 1;
-				}
-			}
-		}
-	}
-
-	response(j_response);
+	auto state = m_cache->block_state_get(transaction, hash);
+	auto t = m_store.transaction_get(transaction, hash);
+	if (state == nullptr || !state->is_stable || t == nullptr)
+		j_response["result"] = 0;
+	else
+		j_response["result"] = 1;
 }
 
 void mcp::rpc_handler::eth_accounts(mcp::json & j_response)
 {
-	if (!is_eth_rpc(j_response))
-	{
-		return;
-	}
-
 	mcp::json j_accounts = mcp::json::array();
 	std::list<dev::Address> account_list(m_key_manager->list());
 	for (auto account : account_list)
@@ -5880,54 +5339,35 @@ void mcp::rpc_handler::eth_accounts(mcp::json & j_response)
 		j_accounts.push_back(account.hexPrefixed());
 	}
 	j_response["result"] = j_accounts;
-
-	response(j_response);
 }
 
 void mcp::rpc_handler::eth_sign(mcp::json & j_response)
 {
-	if (!is_eth_rpc(j_response))
-	{
-		return;
-	}
-
 	mcp::json params = request["params"];
-	if (params.size() != 2) {
-		error_eth_response(response, rpc_eth_error_code::invalid_params, j_response);
-		return;
+	if (params.size() < 2) {
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
 	}
 
-	std::string account_text = params[0];
-	if (!mcp::isAddress(account_text))
+	if (!mcp::isAddress(params[0]))
 	{
-		error_eth_response(response, rpc_eth_error_code::invalid_account, j_response);
-		return;
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidAccount());
 	}
 	
-	dev::Address account(account_text);
+	dev::Address account = jsToAddress(params[0]);
 	if (!m_key_manager->exists(account))
 	{
-		error_eth_response(response, rpc_eth_error_code::invalid_account, j_response);
-		return;
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidAccount());
 	}
 
-	dev::bytes data;
-	std::string data_text = params[1];
-	if (mcp::hex_to_bytes(data_text, data))
+	dev::bytes data = jsToBytes(params[1]);
+	if (data.empty() || data.size() > mcp::max_data_size)
 	{
-		error_eth_response(response, rpc_eth_error_code::invalid_data, j_response);
-		return;
-	}
-	if (data.size() > mcp::max_data_size)
-	{
-		error_eth_response(response, rpc_eth_error_code::invalid_data, j_response);
-		return;
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidData());
 	}
 
 	mcp::Secret prv;
 	if (!m_key_manager->find_unlocked_prv(account, prv)) {
-		error_eth_response(response, rpc_eth_error_code::locked_account, j_response);
-		return;
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_LockedAccount());
 	}
 
 	dev::h256 hash;
@@ -5935,156 +5375,37 @@ void mcp::rpc_handler::eth_sign(mcp::json & j_response)
 	
 	dev::Signature signature = dev::sign(prv, hash);
 	j_response["result"] = signature.hexPrefixed();
-
-	response(j_response);
 }
 
 void mcp::rpc_handler::eth_signTransaction(mcp::json & j_response)
 {
-	if (!is_eth_rpc(j_response))
-	{
-		return;
-	}
-
 	mcp::json params = request["params"][0];
-	if (!params.is_object())
+	if (params.size() < 1 || !params[0].is_object())
 	{
-		error_eth_response(response, rpc_eth_error_code::invalid_params, j_response);
-		return;
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
 	}
 
-	if (!params.count("from") ||
-		!params["from"].is_string() ||
-		!mcp::isAddress(params["from"]))
-	{
-		error_eth_response(response, rpc_eth_error_code::invalid_from_account, j_response);
-		return;
-	}
-
-	std::string from_account = params["from"];
-	dev::Address from(from_account);
-	if (!m_key_manager->exists(from))
-	{
-		error_eth_response(response, rpc_eth_error_code::invalid_from_account, j_response);
-		return;
-	}
-
-	if (params.count("to") && !params["to"].is_string())
-	{
-		error_eth_response(response, rpc_eth_error_code::invalid_to_account, j_response);
-		return;
-	}
-
-	std::string to_account = params["to"];
-	dev::Address to(to_account);
-	if (!m_key_manager->exists(to))
-	{
-		error_eth_response(response, rpc_eth_error_code::invalid_to_account, j_response);
-		return;
-	}
-
-	uint256_t amount(0);
-	if (params.count("value") &&
-		(!params["value"].is_string() ||
-		hex_to_uint256(params["value"], amount, true)))
-	{
-		error_eth_response(response, rpc_eth_error_code::invalid_value, j_response);
-		return;
-	}
-
-	uint256_t gas(0);
-	if (params.count("gas") &&
-		(!params["gas"].is_string() ||
-		hex_to_uint256(params["gas"], gas, true)))
-	{
-		error_eth_response(response, rpc_eth_error_code::invalid_gas, j_response);
-		return;
-	}
-
-	uint256_t gas_price(0);
-	if (params.count("gasPrice") &&
-		(!params["gasPrice"].is_string() ||
-		hex_to_uint256(params["gasPrice"], gas_price, true)))
-	{
-		error_eth_response(response, rpc_eth_error_code::invalid_gas_price, j_response);
-		return;
-	}
-
-	dev::bytes data;
-	if (params.count("data"))
-	{
-		std::string data_text = params["data"];
-		if (mcp::hex_to_bytes(data_text, data))
-		{
-			error_eth_response(response, rpc_eth_error_code::invalid_data, j_response);
-			return;
-		}
-	}
-	else
-	{
-		error_eth_response(response, rpc_eth_error_code::invalid_params, j_response);
-		return;
-	}
-	if (data.size() > mcp::max_data_size)
-	{
-		error_eth_response(response, rpc_eth_error_code::invalid_data, j_response);
-		return;
-	}
-
-	uint256_t nonce(0);
-	if (params.count("nonce") &&
-		(!params["nonce"].is_string() ||
-		hex_to_uint256(params["nonce"], nonce, true)))
-	{
-		error_eth_response(response, rpc_eth_error_code::invalid_nonce, j_response);
-		return;
+	TransactionSkeleton ts = mcp::toTransactionSkeleton(params[0]);
+	if (!m_key_manager->exists(ts.from)) {
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidAccount());
 	}
 
 	dev::Secret prv;
-	if (!m_key_manager->find_unlocked_prv(from, prv)) {
-		error_eth_response(response, rpc_eth_error_code::locked_account, j_response);
-		return;
+	if (!m_key_manager->find_unlocked_prv(ts.from, prv)) {
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_LockedAccount());
 	}
 
-	RLPStream rlpStream;
-	rlpStream.appendList(9);
-	rlpStream << nonce;
-	rlpStream << gas_price;
-	rlpStream << gas;
-	if (to == dev::Address(0)) {
-		rlpStream << "";
-	}
-	else {
-		rlpStream << to;
-	}
-	rlpStream << amount;
-	rlpStream << data;
-	rlpStream << (uint64_t)((int)mcp::mcp_network + 800) << 0 << 0;
-	
-	dev::Signature signature = dev::sign(prv, dev::sha3(rlpStream.out()));
-	j_response["result"] = signature.hexPrefixed();
-
-	response(j_response);
+	Transaction t(ts, prv);
+	j_response["result"] = ((dev::Signature*)&t.signature())->hexPrefixed();
 }
 
 void mcp::rpc_handler::eth_protocolVersion(mcp::json & j_response)
 {
-	if (!is_eth_rpc(j_response))
-	{
-		return;
-	}
-
 	j_response["result"] = STR(MCP_VERSION);
-	response(j_response);
 }
 
 void mcp::rpc_handler::eth_syncing(mcp::json & j_response)
 {
-	if (!is_eth_rpc(j_response))
-	{
-		return;
-	}
-
 	uint64_t last_stable_mci(m_chain->last_stable_mci());
 	uint64_t last_mci(m_chain->last_mci());
 	uint64_t last_stable_index(m_chain->last_stable_index());
@@ -6095,256 +5416,183 @@ void mcp::rpc_handler::eth_syncing(mcp::json & j_response)
 	result["highestBlock"] = uint64_to_hex_nofill(last_stable_index);
 
 	j_response["result"] = result;
-	response(j_response);
 }
 
 void mcp::rpc_handler::eth_getLogs(mcp::json & j_response)
 {
-	if (!is_eth_rpc(j_response))
+	mcp::json params = request["params"];
+	if (params.size() < 1 || !params[0].is_object())
 	{
-		return;
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
 	}
+	params = params[0];
 
-	mcp::json params = request["params"][0];
-	if (!params.is_object())
+	try
 	{
-		error_eth_response(response, rpc_eth_error_code::invalid_params, j_response);
-		return;
-	}
-
-	uint64_t fromBlock = 0;
-	if (params.count("fromBlock"))
-	{
-		std::string fromBlockText = params["fromBlock"];
-		if (fromBlockText == "latest")
+		uint64_t fromBlock = 0;
+		if (params.count("fromBlock"))
 		{
-			fromBlock = m_chain->last_stable_index();
-		}
-		else if (fromBlockText == "earliest")
-		{
-			fromBlock = 0;
-		}
-		else if (fromBlockText.find("0x") == 0)
-		{
-			if (hex_to_uint64(fromBlockText, fromBlock, true))
-			{
-				error_eth_response(response, rpc_eth_error_code::invalid_block_number, j_response);
-				return;
+			std::string blockText = params["fromBlock"];
+			if (blockText == "latest") {
+				fromBlock = m_chain->last_stable_index();
+			}
+			else if (blockText == "earliest") {
+				fromBlock = 0;
+			}
+			else {
+				fromBlock = jsToInt(blockText);
 			}
 		}
-		else
-		{
-			error_eth_response(response, rpc_eth_error_code::invalid_block_number, j_response);
-			return;
-		}
-	}
 
-	uint64_t toBlock = 0;
-	if (params.count("toBlock"))
-	{
-		std::string toBlockText = params["toBlock"];
-		if (toBlockText == "latest")
+		uint64_t toBlock = 0;
+		if (params.count("fromBlock"))
 		{
-			toBlock = m_chain->last_stable_index();
-		}
-		else if (toBlockText == "earliest")
-		{
-			toBlock = 0;
-		}
-		else if (toBlockText.find("0x") == 0)
-		{
-			if (hex_to_uint64(toBlockText, toBlock, true))
-			{
-				error_eth_response(response, rpc_eth_error_code::invalid_block_number, j_response);
-				return;
+			std::string blockText = params["fromBlock"];
+			if (blockText == "latest") {
+				toBlock = m_chain->last_stable_index();
+			}
+			else if (blockText == "earliest") {
+				toBlock = 0;
+			}
+			else {
+				toBlock = jsToInt(blockText);
 			}
 		}
-		else
-		{
-			error_eth_response(response, rpc_eth_error_code::invalid_block_number, j_response);
-			return;
-		}
-	}
 
-	mcp::block_hash block_hash;
-	block_hash.clear();
-	if (params.count("blockhash"))
-	{
-		if (block_hash.decode_hex(params["blockhash"], true)) {
-			error_eth_response(response, rpc_eth_error_code::invalid_hash, j_response);
-			return;
-		}
-	}
-
-	std::vector<dev::Address> search_address;
-	if (params.count("address") && !params["address"].is_null())
-	{
-		if (request["address"].is_string())
+		mcp::block_hash block_hash(0);
+		if (params.count("blockhash"))
 		{
-			std::string account_text = params["account"];
-			bool error = !mcp::isAddress(account_text);
-			if (error)
+			block_hash = jsToHash(params["blockhash"]);
+		}
+
+		std::vector<dev::Address> search_address;
+		if (params.count("address") && !params["address"].is_null())
+		{
+			if (request["address"].is_string())
 			{
-				error_eth_response(response, rpc_eth_error_code::invalid_params, j_response);
-				return;
+				search_address.push_back(jsToAddress(params["account"]));
 			}
-			dev::Address account(account_text);
-			search_address.push_back(account);
-		}
-		else if (params["address"].is_array())
-		{
-			std::vector<std::string> address_l = params["address"];
-			for (std::string const &address_text : address_l)
+			else if (params["address"].is_array())
 			{
-				auto error(!mcp::isAddress(address_text));
-				if (error)
+				std::vector<std::string> address_l = params["address"];
+				for (std::string const &address_text : address_l)
 				{
-					error_eth_response(response, rpc_eth_error_code::invalid_params, j_response);
-					return;
-				}
-				dev::Address address(address_text);
-				search_address.push_back(address);
-			}
-		}
-	}
-
-	std::vector<dev::h256> search_topics;
-	if (params.count("topics") && !params["topics"].is_null())
-	{
-		if (!params["topics"].is_array())
-		{
-			error_eth_response(response, rpc_eth_error_code::invalid_params, j_response);
-			return;
-		}
-
-		std::vector<std::string> topics_l = params["topics"];
-		for (std::string const &topic_text : topics_l)
-		{
-			mcp::uint256_union topic;
-			auto error(topic.decode_hex(topic_text, true));
-			if (error)
-			{
-				error_eth_response(response, rpc_eth_error_code::invalid_params, j_response);
-				return;
-			}
-
-			search_topics.push_back(dev::h256(topic.ref()));
-		}
-	}
-	
-	int logi = 0;
-	mcp::json logs_l = mcp::json::array();
-	mcp::db::db_transaction transaction(m_store.create_transaction());
-
-	if (!block_hash.is_zero()) {
-		std::shared_ptr<mcp::block_state> state(m_cache->block_state_get(transaction, block_hash));
-		fromBlock = toBlock = state->stable_index;
-	}
-
-	for (uint64_t i(fromBlock); i <= toBlock; i++)
-	{
-		mcp::block_hash block_hash;
-		bool exists(!m_store.stable_block_get(transaction, i, block_hash));
-		assert_x(exists);
-		std::shared_ptr<mcp::block_state> block_state(m_cache->block_state_get(transaction, block_hash));
-		assert_x(block_state);
-
-		//if (block_state->block_type != mcp::block_type::light)
-		//	continue;
-
-		//if (!block_state->receipt)
-		//	continue;
-
-		std::unordered_set<dev::Address> existed_addresses;
-		for (dev::Address const &address : search_address)
-		{
-			//if (block_state->receipt->contains_bloom(address.ref()))
-			//	existed_addresses.insert(address);
-		}
-		if (search_address.size() > 0 && existed_addresses.size() == 0)
-			continue;
-
-		std::unordered_set<dev::h256> existed_topics;
-		for (dev::h256 const &topic : search_topics)
-		{
-			//if (block_state->receipt->contains_bloom(topic))
-			//	existed_topics.insert(topic);
-		}
-
-		if (search_topics.size() > 0 && existed_topics.size() == 0)
-			continue;
-
-		/*for (auto const &log : block_state->receipt->log)
-		{
-			if (search_address.empty() || existed_addresses.count(log.acct))
-			{
-				for (dev::h256 const &t : log.topics)
-				{
-					if (search_topics.size() == 0 || existed_topics.count(t))
-					{
-						mcp::json log_l;
-						log_l["transactionIndex"] = "0x0";
-						log_l["blockNumber"] = uint64_to_hex_nofill(block_state->main_chain_index.get());
-						log_l["transactionHash"] = block_hash.to_string(true);
-						logi++;
-						log_l["logIndex"] = logi;
-						log_l["blockHash"] = block_hash.to_string(true);
-						log.serialize_json_eth(log_l);
-
-						logs_l.push_back(log_l);
-						break;
-					}
+					search_address.push_back(jsToAddress(address_text));
 				}
 			}
-		}*/
-	}
+		}
 
-	j_response["result"] = logs_l;
-	response(j_response);
+		std::vector<dev::h256> search_topics;
+		if (params.count("topics") && !params["topics"].is_null())
+		{
+			if (!params["topics"].is_array())
+			{
+				throw;
+			}
+
+			std::vector<std::string> topics_l = params["topics"];
+			for (std::string const &topic_text : topics_l)
+			{
+				search_topics.push_back(jsToHash(topic_text));
+			}
+		}
+
+		int logi = 0;
+		mcp::json logs_l = mcp::json::array();
+		mcp::db::db_transaction transaction(m_store.create_transaction());
+
+		if (block_hash != mcp::block_hash(0)) {
+			auto state = m_cache->block_state_get(transaction, block_hash);
+			if (state == nullptr) {
+				throw;
+			}
+			fromBlock = toBlock = state->stable_index;
+		}
+
+		for (uint64_t i(fromBlock); i <= toBlock; i++)
+		{
+			if (!m_store.stable_block_get(transaction, i, block_hash)) {
+				continue;
+			}
+
+			auto block_state = m_cache->block_state_get(transaction, block_hash);
+			if (!block_state || !block_state->is_stable) {
+				continue;
+			}
+
+			auto t = m_store.transaction_get(transaction, block_hash);
+			auto tr = m_store.transaction_receipt_get(transaction, block_hash);
+			if (t == nullptr || tr == nullptr)
+				throw;
+			
+			std::unordered_set<dev::Address> existed_addresses;
+			for (dev::Address const &address : search_address)
+			{
+				log_bloom bloom = tr->bloom();
+				if (bloom.containsBloom<3>(dev::sha3(address.ref())))
+					existed_addresses.insert(address);
+			}
+			if (search_address.size() > 0 && existed_addresses.size() == 0)
+				continue;
+
+			std::unordered_set<dev::h256> existed_topics;
+			for (dev::h256 const &topic : search_topics)
+			{
+				log_bloom bloom = tr->bloom();
+				if (bloom.containsBloom<3>(dev::sha3(topic)))
+					existed_topics.insert(topic);
+			}
+
+			if (search_topics.size() > 0 && existed_topics.size() == 0)
+				continue;
+
+			auto lt = dev::eth::LocalisedTransactionReceipt(
+				*tr,
+				t->sha3(),//transaction hash
+				t->from(),
+				t->to(),
+				toAddress(t->from(), t->nonce()));
+
+			logs_l.push_back(toJson(lt.localisedLogs()));
+		}
+
+		j_response["result"] = logs_l;
+	}
+	catch (...)
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
+	}
 }
 
 void mcp::rpc_handler::personal_importRawKey(mcp::json & j_response)
 {
-	if (!is_eth_rpc(j_response))
-	{
-		return;
-	}
-
 	mcp::json params = request["params"];
-	if (params.size() != 2)
+	if (params.size() < 2 || !params[0].is_string())
 	{
-		error_eth_response(response, rpc_eth_error_code::invalid_params, j_response);
-		return;
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
+	}
+	
+	dev::Secret prv;
+	try {
+		prv = dev::Secret(params[0].get<std::string>());
+	} catch (...) {
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
 	}
 
-	if (!params[0].is_string())
-	{
-		error_eth_response(response, rpc_eth_error_code::invalid_params, j_response);
-		return;
-	}
-
-	mcp::Secret prv(params[0].get<std::string>());
 	std::string password = params[1];
 	if (password.empty() ||
 		!mcp::validatePasswordSize(password) ||
 		!mcp::validatePassword(password))
 	{
-		error_eth_response(response, rpc_eth_error_code::invalid_password, j_response);
-		return;
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidPassword());
 	}
 
 	mcp::key_content kc = m_key_manager->importRawKey(prv, password);
 	j_response["result"] = kc.account.hexPrefixed();
-	response(j_response);
 }
 
 void mcp::rpc_handler::personal_listAccounts(mcp::json & j_response)
 {
-	if (!is_eth_rpc(j_response))
-	{
-		return;
-	}
-
 	mcp::json j_accounts = mcp::json::array();
 	std::list<dev::Address> account_list(m_key_manager->list());
 	for (auto account : account_list)
@@ -6352,49 +5600,33 @@ void mcp::rpc_handler::personal_listAccounts(mcp::json & j_response)
 		j_accounts.push_back(account.hexPrefixed());
 	}
 	j_response["result"] = j_accounts;
-
-	response(j_response);
 }
 
 void mcp::rpc_handler::personal_lockAccount(mcp::json & j_response)
 {
-	if (!is_eth_rpc(j_response))
-	{
-		return;
-	}
-
 	mcp::json params = request["params"];
-	std::string account_text = params[0];
-	if (!mcp::isAddress(account_text))
+	try
 	{
-		error_eth_response(response, rpc_eth_error_code::invalid_params, j_response);
-		return;
+		dev::Address account = jsToAddress(params[0]);
+		if (!m_key_manager->exists(account)) {
+			throw;
+		}
+
+		m_key_manager->lock(account);
+		j_response["result"] = true;
 	}
-
-	dev::Address account(account_text);
-	if (!m_key_manager->exists(account)) {
-		error_eth_response(response, rpc_eth_error_code::invalid_params, j_response);
-		return;
+	catch (...)
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidAccount());
 	}
-
-	m_key_manager->lock(account);
-	j_response["result"] = true;
-
-	response(j_response);
 }
 
 void mcp::rpc_handler::personal_newAccount(mcp::json & j_response)
 {
-	if (!is_eth_rpc(j_response))
-	{
-		return;
-	}
-
 	mcp::json params = request["params"];
-	if (params.size() != 1)
+	if (params.size() < 1)
 	{
-		error_eth_response(response, rpc_eth_error_code::invalid_params, j_response);
-		return;
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
 	}
 
 	std::string password = params[0];
@@ -6402,237 +5634,110 @@ void mcp::rpc_handler::personal_newAccount(mcp::json & j_response)
 		!mcp::validatePasswordSize(password) ||
 		!mcp::validatePassword(password))
 	{
-		error_eth_response(response, rpc_eth_error_code::invalid_password, j_response);
-		return;
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidPassword());
 	}
 
 	dev::Address account = m_key_manager->create(password, false, true);
-
 	j_response["result"] = account.hexPrefixed();
-	response(j_response);
 }
 
 void mcp::rpc_handler::personal_unlockAccount(mcp::json & j_response)
 {
-	if (!is_eth_rpc(j_response))
-	{
-		return;
-	}
-
 	mcp::json params = request["params"];
-	if (params.size() != 3)
+	if (params.size() < 2)
 	{
-		error_eth_response(response, rpc_eth_error_code::invalid_params, j_response);
-		return;
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
 	}
 
-	std::string account_text = params[0];
-	if (!mcp::isAddress(account_text))
+	if (!mcp::isAddress(params[0]))
 	{
-		error_eth_response(response, rpc_eth_error_code::invalid_params, j_response);
-		return;
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidAccount());
 	}
 
-	dev::Address account(account_text);
-	if (!m_key_manager->exists(account)) {
-		error_eth_response(response, rpc_eth_error_code::invalid_params, j_response);
-		return;
+	dev::Address account = jsToAddress(params[0]);
+	if (!m_key_manager->exists(account))
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidAccount());
 	}
 
-	std::string password_text = params[1];
-	auto error(m_key_manager->unlock(account, password_text));
-	if (error)
+	if (m_key_manager->unlock(account, params[1]))
 	{
-		error_eth_response(response, rpc_eth_error_code::invalid_password, j_response);
-		return;
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidPassword());
 	}
 	
 	j_response["result"] = true;
-
-	response(j_response);
 }
 
 void mcp::rpc_handler::personal_sendTransaction(mcp::json & j_response)
 {
-	if (!is_eth_rpc(j_response))
-	{
-		return;
-	}
-
 	mcp::json params = request["params"];
-	mcp::json tx = params[0];
-	if (!tx.is_object() || !params[1].is_string())
+	if (params.size() < 2 || !params[0].is_object() || !params[1].is_string())
 	{
-		error_eth_response(response, rpc_eth_error_code::invalid_params, j_response);
-		return;
-	}
-	std::string password = params[1];
-
-	if (!tx.count("from") ||
-		!tx["from"].is_string() ||
-		!mcp::isAddress(tx["from"]))
-	{
-		error_eth_response(response, rpc_eth_error_code::invalid_from_account, j_response);
-		return;
-	}
-
-	std::string from_account = tx["from"];
-	dev::Address from(from_account);
-	if (!m_key_manager->exists(from))
-	{
-		error_eth_response(response, rpc_eth_error_code::invalid_from_account, j_response);
-		return;
-	}
-
-	dev::Address to;
-	if (tx.count("to"))
-	{
-		if (!tx["to"].is_string() || !mcp::isAddress(tx["to"])) {
-			error_eth_response(response, rpc_eth_error_code::invalid_to_account, j_response);
-			return;
-		}
-		std::string to_account = tx["to"];
-		to = dev::Address(to_account);
-	}
-
-	uint256_t amount(0);
-	if (tx.count("value") &&
-		(!tx["value"].is_string() ||
-			hex_to_uint256(tx["value"], amount, true)))
-	{
-		error_eth_response(response, rpc_eth_error_code::invalid_value, j_response);
-		return;
-	}
-
-	uint256_t gas(0);
-	if (tx.count("gas") &&
-		(!tx["gas"].is_string() ||
-			hex_to_uint256(tx["gas"], gas, true)))
-	{
-		error_eth_response(response, rpc_eth_error_code::invalid_gas, j_response);
-		return;
-	}
-
-	uint256_t gas_price(0);
-	if (tx.count("gasPrice") &&
-		(tx["gasPrice"].is_string() ||
-			hex_to_uint256(tx["gasPrice"], gas_price, true)))
-	{
-		error_eth_response(response, rpc_eth_error_code::invalid_gas_price, j_response);
-		return;
-	}
-
-	dev::bytes data;
-	if (tx.count("data"))
-	{
-		std::string data_text = tx["data"];
-		if (mcp::hex_to_bytes(data_text, data))
-		{
-			error_eth_response(response, rpc_eth_error_code::invalid_data, j_response);
-			return;
-		}
-	}
-	else
-	{
-		error_eth_response(response, rpc_eth_error_code::invalid_params, j_response);
-		return;
-	}
-	if (data.size() > mcp::max_data_size)
-	{
-		error_eth_response(response, rpc_eth_error_code::invalid_data, j_response);
-		return;
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
 	}
 	
-	boost::optional<mcp::block_hash> previous_opt;
-	bool gen_next_work_l(false);
-	bool async(false);
-	auto rpc_l(shared_from_this());
-	/*m_wallet->send_async(
-		mcp::block_type::light, previous_opt, from, to, amount, gas, gas_price, data, password, [response_l, rpc_l, this](mcp::send_result result)
+	TransactionSkeleton t = mcp::toTransactionSkeleton(params[0]);
+	std::string password = params[1];
+
+	try
 	{
-		mcp::json response_j = response_l;
-		switch (result.code)
+		auto rpc_l(shared_from_this());
+		auto fun = [rpc_l, j_response, this](h256 h)
 		{
-		case mcp::send_result_codes::ok:
-		{
-			response_j["result"] = result.block->hash().to_string(true);
-			response(response_j);
-			break;
-		}
-		case mcp::send_result_codes::from_not_exists:
-			error_eth_response(response, rpc_eth_error_code::invalid_from_account, response_j);
-			break;
-		case mcp::send_result_codes::account_locked:
-			error_eth_response(response, rpc_eth_error_code::locked_account, response_j);
-			break;
-		case mcp::send_result_codes::wrong_password:
-			error_eth_response(response, rpc_eth_error_code::invalid_password, response_j);
-			break;
-		case mcp::send_result_codes::insufficient_balance:
-			error_eth_response(response, rpc_eth_error_code::insufficient_balance, response_j);
-			break;
-		case mcp::send_result_codes::data_size_too_large:
-			error_eth_response(response, rpc_eth_error_code::data_size_too_large, response_j);
-			break;
-		case mcp::send_result_codes::validate_error:
-			error_eth_response(response, rpc_eth_error_code::validate_error, response_j);
-			break;
-		case mcp::send_result_codes::error:
-			error_eth_response(response, rpc_eth_error_code::block_error, response_j);
-			break;
-		default:
-			error_eth_response(response, rpc_eth_error_code::unknown_error, response_j);
-			break;
-		} },
-		gen_next_work_l, async);*/
+			mcp::json j_resp = j_response;
+			j_resp["result"] = toJS(h);
+			response(j_resp);
+		};
+
+		m_wallet->send_async(t, fun, password);
+	}
+	catch (dev::GasPriceTooLow const& e)
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidGas());
+	}
+	catch (dev::PendingTransactionAlreadyExists const& e)
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_PendingTransactionAlreadyExists());
+	}
+	catch (dev::TransactionAlreadyInChain const& e)
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_TransactionAlreadyInChain());
+	}
+	catch (dev::UnknownTransactionValidationError const& e)
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_Validation());
+	}
 }
 
 void mcp::rpc_handler::personal_sign(mcp::json & j_response)
 {
-	if (!is_eth_rpc(j_response))
+	mcp::json params = request["params"];
+	if (params.size() < 3)
 	{
-		return;
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
 	}
 
-	mcp::json params = request["params"];
-	if (params.size() != 3) {
-		error_eth_response(response, rpc_eth_error_code::invalid_params, j_response);
-		return;
-	}
-	
-	dev::bytes data;
-	std::string data_text = params[0];
-	if (mcp::hex_to_bytes(data_text, data))
+	dev::bytes data = jsToBytes(params[0]);
+	if (data.empty() || data.size() > mcp::max_data_size)
 	{
-		error_eth_response(response, rpc_eth_error_code::invalid_data, j_response);
-		return;
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidData());
 	}
-	if (data.size() > mcp::max_data_size)
+
+	if (!mcp::isAddress(params[1]))
 	{
-		error_eth_response(response, rpc_eth_error_code::invalid_data, j_response);
-		return;
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidAccount());
 	}
-	
-	std::string account_text = params[1];
-	if (!mcp::isAddress(account_text))
-	{
-		error_eth_response(response, rpc_eth_error_code::invalid_account, j_response);
-		return;
-	}
-	
-	dev::Address account(account_text);
+
+	dev::Address account = jsToAddress(params[1]);
 	if (!m_key_manager->exists(account))
 	{
-		error_eth_response(response, rpc_eth_error_code::invalid_account, j_response);
-		return;
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidAccount());
 	}
 
-	std::string password_text = params[2];
-
 	mcp::Secret prv;
-	if (m_key_manager->decrypt_prv(account, password_text, prv)) {
-		error_eth_response(response, rpc_eth_error_code::invalid_password, j_response);
-		return;
+	if (m_key_manager->decrypt_prv(account, params[2], prv))
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidPassword());
 	}
 
 	dev::h256 hash;
@@ -6640,37 +5745,35 @@ void mcp::rpc_handler::personal_sign(mcp::json & j_response)
 
 	dev::Signature signature = dev::sign(prv, hash);
 	j_response["result"] = signature.hexPrefixed();
-
-	response(j_response);
 }
 
 void mcp::rpc_handler::personal_ecRecover(mcp::json & j_response)
 {
-	if (!is_eth_rpc(j_response))
-	{
-		return;
-	}
-
 	mcp::json params = request["params"];
-	if (params.size() != 2) {
-		error_eth_response(response, rpc_eth_error_code::invalid_params, j_response);
-		return;
+	if (params.size() < 2)
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
 	}
 
-	mcp::bytes data;
-	if (mcp::hex_to_bytes(params[0], data)) {
-		error_eth_response(response, rpc_eth_error_code::invalid_params, j_response);
-		return;
+	dev::bytes data = jsToBytes(params[0]);
+	if (data.empty() || data.size() > mcp::max_data_size)
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidData());
 	}
 
-	dev::Signature sig(params[1].get<std::string>());
+	dev::Signature sig(0);
+	try {
+		sig = jsToSignature(params[1]);
+	}
+	catch (...) {
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidSignature());
+	}
+
 	dev::h256 hash;
 	get_eth_signed_msg(data, hash);
 
 	dev::Address from = dev::toAddress(dev::recover(sig, hash));
 	j_response["result"] = from.hexPrefixed();
-
-	response(j_response);
 }
 
 void mcp::rpc_handler::get_eth_signed_msg(dev::bytes & data, dev::h256 & hash)

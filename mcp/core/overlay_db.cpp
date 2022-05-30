@@ -35,7 +35,7 @@ void overlay_db::commit()
     {
         if (i.second.second)
         {
-            store.contract_main_trie_node_put(transaction, mcp::uint256_union(i.first), i.second.first);
+            store.contract_main_trie_node_put(transaction, mcp::code_hash(i.first), i.second.first);
             //std::cout << "commit: " << mcp::uint256_union(i.first).to_string() << " string: " << i.second.first <<std::endl;
         }
     }
@@ -83,7 +83,7 @@ std::string overlay_db::lookup(dev::h256 const& _h) const
         return ret;
 
     std::string value;
-    bool error = store.contract_main_trie_node_get(transaction, mcp::uint256_union(_h), value);
+    bool error = store.contract_main_trie_node_get(transaction, mcp::code_hash(_h), value);
     //std::cout << "looktup: " << mcp::uint256_union(_h).to_string() << " string: " << value.size() << std::endl;
     return value;
 }
@@ -94,7 +94,7 @@ bool overlay_db::exists(dev::h256 const& _h) const
         return true;
 
     std::string value;
-    return !store.contract_main_trie_node_get(transaction, mcp::uint256_union(_h), value);
+    return !store.contract_main_trie_node_get(transaction, mcp::code_hash(_h), value);
 
     /*
     return m_db && m_db->exists(toSlice(_h));

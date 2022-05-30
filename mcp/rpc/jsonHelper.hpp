@@ -13,6 +13,8 @@ namespace mcp
 
 	inline h256 jsToHash(std::string const& _s) { return jsToFixed<32>(_s);  }
 
+	inline Signature jsToSignature(std::string const& _s) { return jsToFixed<65>(_s); }
+
 	inline u128 jsToU128(std::string const& _s) { return jsToInt<16>(_s); }
 
 	inline u64 jsToU64(std::string const& _s) { return jsToInt<8>(_s); }

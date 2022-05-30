@@ -32,7 +32,7 @@ namespace mcp
 			std::shared_ptr<mcp::block_processor> block_processor_a,
 			std::shared_ptr<mcp::block_cache> cache_a, std::shared_ptr<TransactionQueue> tq,
 			std::string const & account_text, std::string const & password_a, 
-			mcp::block_hash const& last_witness_block_hash_a = 0
+			mcp::block_hash const& last_witness_block_hash_a = mcp::block_hash(0)
 		);
 		void start();
 		void check_and_witness();

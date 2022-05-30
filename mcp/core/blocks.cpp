@@ -21,7 +21,7 @@ mcp::block::block(dev::Address from, mcp::block_hash const & previous, std::vect
 {
 	if (s)
 	{
-		auto sig = dev::sign(s, hash().number());
+		auto sig = dev::sign(s, hash());
 		dev::SignatureStruct sigStruct = *(dev::SignatureStruct const*)&sig;
 		if (sigStruct.isValid())
 			m_vrs = sigStruct;
@@ -101,17 +101,17 @@ void mcp::block::serialize_json(std::string & string_a) const
 
 void mcp::block::serialize_json(mcp::json & json_a) const
 {
-	json_a["hash"] = hash().to_string();
+	json_a["hash"] = hash().hex();
 	json_a["from"] = m_from.hexPrefixed();
 
 	//previous
 	mcp::json content_l = mcp::json::object();
-	content_l["previous"] = m_previous.to_string();
+	content_l["previous"] = m_previous.hex();
 	//parents
 	mcp::json j_parents = mcp::json::array();
 	for (mcp::block_hash const & p : m_parents)
 	{
-		j_parents.push_back(p.to_string());
+		j_parents.push_back(p.hex());
 	}
 	content_l["parents"] = j_parents;
 	//links
@@ -123,9 +123,9 @@ void mcp::block::serialize_json(mcp::json & json_a) const
 	}
 	content_l["links"] = j_links;
 	//last_summary,last_summary_block,last_stable_block,timestamp
-	content_l["last_summary"] = m_last_summary.to_string();
-	content_l["last_summary_block"] = m_last_summary_block.to_string();
-	content_l["last_stable_block"] = m_last_stable_block.to_string();
+	content_l["last_summary"] = m_last_summary.hex();
+	content_l["last_summary_block"] = m_last_summary_block.hex();
+	content_l["last_stable_block"] = m_last_stable_block.hex();
 	content_l["timestamp"] = m_exec_timestamp;
 	json_a["content"] = content_l;
 
@@ -142,8 +142,8 @@ void mcp::block::serialize_json_eth(std::string & string_a) const
 
 void mcp::block::serialize_json_eth(mcp::json & json_a) const
 {
-	json_a["hash"] = hash().to_string(true);
-	json_a["parentHash"] = m_previous.to_string(true);
+	json_a["hash"] = hash().hexPrefixed();
+	json_a["parentHash"] = m_previous.hexPrefixed();
 	json_a["gasLimit"] = uint256_to_hex_nofill(mcp::block_max_gas);
 	//json_a["gasUsed"] = uint256_to_hex_nofill(gas);
 	//json_a["minGasPrice"] = uint256_to_hex_nofill(gas_price);
@@ -161,7 +161,7 @@ void mcp::block::serialize_json_eth(mcp::json & json_a) const
 
 mcp::block_hash & mcp::block::hash() const
 {
-	if (m_hashWith.is_zero())
+	if (m_hashWith == mcp::block_hash(0))
 	{
 		dev::RLPStream s;
 		streamRLP(s, WithoutSignature);
@@ -176,18 +176,18 @@ mcp::block_hash & mcp::block::hash() const
 
 mcp::block_hash mcp::block::root() const
 {
-	return isZeroH256(m_previous.is_zero()) ? mcp::block_hash(((dev::Address::Arith) m_from).convert_to<unsigned>()) : m_previous; //todo maybe error
+	return m_previous == mcp::block_hash(0) ? mcp::block_hash(m_from) : m_previous; //todo maybe error
 }
 
 void mcp::block::init_from_genesis_transaction(dev::Address const& from, h256 const& hash, std::string time)
 {
 	m_from = from;
-	m_previous = 0;
+	m_previous.clear();
 	h256s links;
 	links.push_back(hash);
-	m_last_summary = 0;
-	m_last_summary_block = 0;
-	m_last_stable_block = 0;
+	m_last_summary.clear();
+	m_last_summary_block.clear();
+	m_last_stable_block.clear();
 
 	uint64_t exec_timestamp;
 	std::stringstream exec_timestamp_ss(time);

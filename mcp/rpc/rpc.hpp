@@ -16,9 +16,11 @@
 
 namespace mcp
 {
+/*
 void rpc_response(std::function<void(mcp::json const &)> response_a, int const& error_code, std::string const & message_a, mcp::json& json_a);
 void rpc_response(std::function<void(mcp::json const &)> response_a, int const& error_code, std::string const & message_a);
 void rpc_response(std::function<void(mcp::json const &)> response_a, std::string const & message_a);
+*/
 
 class rpc_config
 {
@@ -511,7 +513,6 @@ public:
 
 	void logs(mcp::json & j_response);
 
-    bool is_eth_rpc(mcp::json &response);
 	void get_eth_signed_msg(dev::bytes & data, dev::h256 & hash);
 	bool try_get_mc_info(dev::eth::McInfo &mc_info_a, uint64_t &mci);
 
@@ -577,8 +578,8 @@ private:
 	std::shared_ptr<mcp::async_task> m_background;
 	mcp::block_store m_store;
 
-	// added by michael at 5/24
-	std::map<std::string, RPCMethodPointer> m_rpcMethods;
+	std::map<std::string, RPCMethodPointer> m_mcpRpcMethods;
+	std::map<std::string, RPCMethodPointer> m_ethRpcMethods;
 	
 	bool try_get_bool_from_json(std::string const& field_name_a,bool & value_a );
     bool try_get_uint64_t_from_json(std::string const& field_name_a, uint64_t & value_a);

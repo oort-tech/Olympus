@@ -233,10 +233,9 @@ h256 ExtVM::mcBlockHash(h256 mci_a)
 	if(mci_a > h256(std::numeric_limits<uint64_t>::max()))
 		return h256(0);
 
-	mcp::uint256_union mci_u;
-	mci_u.bytes = mci_a.asArray();
+	dev::h256 mci_u(mci_a);
 	uint64_t mci;
-	bool success(boost::conversion::try_lexical_convert<uint64_t>(mci_u.number(), mci));
+	bool success(boost::conversion::try_lexical_convert<uint64_t>(mci_u, mci));
 	assert_x(success);
 
 	mcp::block_store & store(envInfo().store);
@@ -245,7 +244,7 @@ h256 ExtVM::mcBlockHash(h256 mci_a)
 	bool exists(!store.main_chain_get(transaction, mci, mc_hash));
 	if (exists)
 	{
-		dev::bytesConstRef ref(mc_hash.bytes.data(), mc_hash.bytes.size());
+		dev::bytesConstRef ref(mc_hash.data(), mc_hash.size);
 		return h256(ref);
 	}
 	else

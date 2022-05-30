@@ -463,7 +463,7 @@ namespace mcp
 		advance_info(dev::Slice const & val_a);
 		dev::Slice val() const;
 
-		uint64_union mci;
+		dev::h64 mci;
 		mcp::block_hash witness_block;
 	};
 
@@ -603,19 +603,25 @@ namespace mcp
 		Retry 	///< Import transaction even if it was dropped before.
 	};
 
-
+	/*
 	dev::Slice uint64_to_slice(mcp::uint64_union const & value);
 	mcp::uint64_union slice_to_uint64(dev::Slice const & slice);
 
 	dev::Slice uint256_to_slice(mcp::uint256_union const & value);
 	mcp::uint256_union slice_to_uint256(dev::Slice const & slice);
+	*/
+
+	dev::Slice h64_to_slice(h64 const & value);
+	dev::h64 slice_to_h64(dev::Slice const & slice);
 
 	dev::Slice h256_to_slice(h256 const & value);
-	h256 slice_to_h256(dev::Slice const & slice);
+	dev::h256 slice_to_h256(dev::Slice const & slice);
 
+	/*
 	// Added by Daniel
 	dev::Slice uint512_to_slice(mcp::uint512_union const & value);
 	mcp::uint512_union slice_to_uint512(dev::Slice const & slice);
+	*/
 
 	// added by michael at 1/13
 	dev::Slice account_to_slice(dev::Address const & value);
@@ -627,9 +633,9 @@ namespace mcp
 
 	//dev::Address toAddress(dev::Address const& _from, u256 const& _nonce);
 
-	bool isZeroH256(u256 const& _r);
+	// bool isZeroH256(u256 const& _r);
 
-	Address toAddress(std::string const& _s);
+	// Address toAddress(std::string const& _s);
 	bool isAddress(std::string const& _s);
 
 	// OS-specific way of finding a path to a home directory.
