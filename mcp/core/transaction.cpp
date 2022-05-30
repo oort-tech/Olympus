@@ -17,7 +17,7 @@ mcp::Transaction::Transaction(TransactionSkeleton const& ts, boost::optional<Sec
 	m_sender(ts.from),
 	m_chainId(mcp::chain_id)
 {
-	if (s)
+	if (s.is_initialized())
 		sign(*s);
 }
 

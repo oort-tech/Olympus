@@ -4586,7 +4586,7 @@ void mcp::rpc_handler::eth_call(mcp::json & j_response)
 	}
 
 	TransactionSkeleton ts = mcp::toTransactionSkeleton(params[0]);
-	Transaction t(ts, boost::none);
+	Transaction t(ts);
 
 	uint64_t block_number = 0;
 	std::string blockText = params[1];

@@ -62,7 +62,7 @@ bool mcp::genesis::try_initialize(mcp::db::db_transaction & transaction_a, mcp::
 	_t.to = jsToFixed<20>(json["to"]);
 	_t.value = jsToU256(json["value"]);
 	_t.nonce = 0;
-	Transaction ts(_t, dev::Secret());
+	Transaction ts(_t);
 	
 	std::string from_account = json["from"];
 	dev::Address from(from_account);
