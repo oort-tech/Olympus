@@ -3242,11 +3242,11 @@ void mcp::rpc_handler::send_offline_block(mcp::json & j_response)
 	mcp::block_hash last_stable_block(0);
 	uint64_t exec_timestamp(0);
 
-	//std::shared_ptr<mcp::block> p_block = std::make_shared<mcp::block>(mcp::block_type::light, from, to, amount, previous, parents, links,
-	//																   last_summary, last_summary_block, last_stable_block, gas, gas_price, data, exec_timestamp);
+	/*std::shared_ptr<mcp::block> p_block = std::make_shared<mcp::block>(from, previous, parents, links,
+		last_summary, last_summary_block, last_stable_block, exec_timestamp);
 
-	//assert_x(p_block != nullptr);
-	/*
+	assert_x(p_block != nullptr);
+	
 	bool async(false);
 	if (request.count("async"))
 	{
@@ -3255,50 +3255,50 @@ void mcp::rpc_handler::send_offline_block(mcp::json & j_response)
 			BOOST_THROW_EXCEPTION(RPC_Error_InvalidAsync());
 		}
 	}
-	*/
-	/*bool gen_next_work_l(false);
-	auto rpc_l(shared_from_this());
-	m_wallet->send_async(
-	p_block, signature, [rpc_l, this](mcp::send_result result)
+	
+	bool gen_next_work_l(false);
+	auto rpc_l(shared_from_this());*/
+	/*m_wallet->send_async(
+		p_block, signature, [rpc_l, this](mcp::send_result result)
 	{
-	mcp::rpc_send_offline_block_error_code error_code_l;
-	switch (result.code)
-	{
-	case mcp::send_result_codes::ok:
-	{
-	mcp::uint256_union hash(result.block->hash());
-	mcp::json response_l;
-	response_l["hash"] = hash.to_string();
+		mcp::rpc_send_offline_block_error_code error_code_l;
+		switch (result.code)
+		{
+		case mcp::send_result_codes::ok:
+		{
+			mcp::uint256_union hash(result.block->hash());
+			mcp::json response_l;
+			response_l["hash"] = hash.to_string();
 
-	error_code_l = mcp::rpc_send_offline_block_error_code::ok;
-	rpc_response(response, (int)error_code_l, rpc_l->err.msg(error_code_l), response_l);
-	break;
-	}
-	case mcp::send_result_codes::insufficient_balance:
-	error_code_l = mcp::rpc_send_offline_block_error_code::insufficient_balance;
-	rpc_response(response, (int)error_code_l, rpc_l->err.msg(error_code_l));
-	break;
-	case mcp::send_result_codes::data_size_too_large:
-	error_code_l = mcp::rpc_send_offline_block_error_code::data_size_too_large;
-	rpc_response(response, (int)error_code_l, rpc_l->err.msg(error_code_l));
-	break;
-	case mcp::send_result_codes::validate_error:
-	error_code_l = mcp::rpc_send_offline_block_error_code::validate_error;
-	if (result.msg != "")
-	rpc_response(response, (int)error_code_l, result.msg);
-	else
-	rpc_response(response, (int)error_code_l, rpc_l->err.msg(error_code_l));
-	break;
-	case mcp::send_result_codes::error:
-	error_code_l = mcp::rpc_send_offline_block_error_code::send_block_error;
-	rpc_response(response, (int)error_code_l, rpc_l->err.msg(error_code_l));
-	break;
-	default:
-	error_code_l = mcp::rpc_send_offline_block_error_code::send_unknown_error;
-	rpc_response(response, (int)error_code_l, rpc_l->err.msg(error_code_l));
-	break;
-	} },
-	gen_next_work_l, async);*/
+			error_code_l = mcp::rpc_send_offline_block_error_code::ok;
+			rpc_response(response, (int)error_code_l, rpc_l->err.msg(error_code_l), response_l);
+			break;
+		}
+		case mcp::send_result_codes::insufficient_balance:
+			error_code_l = mcp::rpc_send_offline_block_error_code::insufficient_balance;
+			rpc_response(response, (int)error_code_l, rpc_l->err.msg(error_code_l));
+			break;
+		case mcp::send_result_codes::data_size_too_large:
+			error_code_l = mcp::rpc_send_offline_block_error_code::data_size_too_large;
+			rpc_response(response, (int)error_code_l, rpc_l->err.msg(error_code_l));
+			break;
+		case mcp::send_result_codes::validate_error:
+			error_code_l = mcp::rpc_send_offline_block_error_code::validate_error;
+			if (result.msg != "")
+				rpc_response(response, (int)error_code_l, result.msg);
+			else
+				rpc_response(response, (int)error_code_l, rpc_l->err.msg(error_code_l));
+			break;
+		case mcp::send_result_codes::error:
+			error_code_l = mcp::rpc_send_offline_block_error_code::send_block_error;
+			rpc_response(response, (int)error_code_l, rpc_l->err.msg(error_code_l));
+			break;
+		default:
+			error_code_l = mcp::rpc_send_offline_block_error_code::send_unknown_error;
+			rpc_response(response, (int)error_code_l, rpc_l->err.msg(error_code_l));
+			break;
+		} },
+		gen_next_work_l, async);*/
 
 	//mcp::rpc_send_offline_block_error_code error_code_l;
 
@@ -3493,6 +3493,115 @@ void mcp::rpc_handler::send_offline_block(mcp::json & j_response)
 
 void mcp::rpc_handler::block_summary(mcp::json & j_response)
 {
+
+	if (!request.count("hash") || (!request["hash"].is_string()))
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidHash());
+	}
+
+	std::string hash_text = request["hash"];
+	mcp::block_hash hash;
+	try {
+		hash = jsToHash(hash_text);
+	}
+	catch (...) {
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidHash());
+	}
+	
+	mcp::db::db_transaction transaction(m_store.create_transaction());
+	mcp::summary_hash summary;
+	bool exists(!m_cache->block_summary_get(transaction, hash, summary));
+	if (!exists)
+	{
+		j_response["summary"] = nullptr;
+	}
+	else
+	{
+		j_response["summary"] = summary.hex();
+
+		auto block(m_cache->block_get(transaction, hash));
+		assert_x(block);
+		auto block_state(m_cache->block_state_get(transaction, hash));
+		assert_x(block_state);
+
+		// previous summary hash
+		mcp::summary_hash previous_summary_hash(0);
+		if (block->previous() != dev::h256(0))
+		{
+			bool previous_summary_hash_error(m_cache->block_summary_get(transaction, block->previous(), previous_summary_hash));
+			assert_x(!previous_summary_hash_error);
+		}
+		j_response["previous_summary"] = previous_summary_hash.hex();
+
+		// parent summary hashs
+		mcp::json parent_summaries_l = mcp::json::array();
+		for (mcp::block_hash const &pblock_hash : block->parents())
+		{
+			mcp::summary_hash p_summary_hash;
+			bool p_summary_hash_error(m_cache->block_summary_get(transaction, pblock_hash, p_summary_hash));
+			assert_x(!p_summary_hash_error);
+
+			parent_summaries_l.push_back(p_summary_hash.hex());
+		}
+		j_response["parent_summaries"] = parent_summaries_l;
+
+		// link summary hashs
+		//std::shared_ptr<std::list<mcp::block_hash>> links(block->links());
+		mcp::json link_summaries_l = mcp::json::array();
+		for (auto it(block->links().begin()); it != block->links().end(); it++)
+		{
+			mcp::block_hash const &link_hash(*it);
+			mcp::summary_hash l_summary_hash;
+			bool l_summary_hash_error(m_cache->block_summary_get(transaction, link_hash, l_summary_hash));
+			assert_x(!l_summary_hash_error);
+
+			link_summaries_l.push_back(l_summary_hash.hex());
+		}
+		j_response["link_summaries"] = link_summaries_l;
+
+		// skip list
+		mcp::json skiplist_summaries_l = mcp::json::array();
+		if (block_state->is_on_main_chain)
+		{
+			std::set<mcp::summary_hash> summary_skiplist;
+			std::vector<uint64_t> skip_list_mcis = m_chain->cal_skip_list_mcis(*block_state->main_chain_index);
+			for (uint64_t &mci : skip_list_mcis)
+			{
+				mcp::block_hash sl_block_hash;
+				bool sl_block_hash_error(m_store.main_chain_get(transaction, mci, sl_block_hash));
+				assert_x(!sl_block_hash_error);
+
+				mcp::summary_hash sl_summary_hash;
+				bool sl_summary_hash_error(m_cache->block_summary_get(transaction, sl_block_hash, sl_summary_hash));
+				assert_x(!sl_summary_hash_error);
+				summary_skiplist.insert(sl_summary_hash);
+			}
+
+			for (mcp::summary_hash s : summary_skiplist)
+				skiplist_summaries_l.push_back(s.hex());
+		}
+		j_response["skiplist_summaries"] = skiplist_summaries_l;
+
+		j_response["status"] = (uint64_t)block_state->status;
+
+		/*if (block_state->receipt)
+		{
+			j_response["from_state"] = block_state->receipt->from_state.to_string();
+			mcp::json to_states_l = mcp::json::array();
+			for (auto sh : block_state->receipt->to_state)
+			{
+				to_states_l.push_back(sh.to_string());
+			}
+			j_response["to_states"] = to_states_l;
+		}
+		else
+		{
+			j_response["from_state"] = nullptr;
+			j_response["to_states"] = nullptr;
+		}*/
+	}
+
+	
 	//mcp::rpc_block_error_code error_code_l;
 
 	//if (!request.count("hash") || (!request["hash"].is_string()))
@@ -3613,6 +3722,61 @@ void mcp::rpc_handler::block_summary(mcp::json & j_response)
 
 void mcp::rpc_handler::sign_msg(mcp::json & j_response)
 {
+
+	if (!request.count("account") || (!request["account"].is_string()))
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccount());
+	}
+
+	std::string account_text = request["account"];
+	auto error(!mcp::isAddress(account_text));
+	if (error)
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccount());
+	}
+
+	dev::Address account(account_text);
+
+	if (!request.count("msg") || (!request["msg"].is_string()))
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidMsg());
+	}
+	std::string sign_msg_text = request["msg"];
+	h256 sign_msg(0);
+	try {
+		sign_msg = jsToHash(sign_msg_text);
+	}
+	catch (...) {
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidMsg());
+	}
+
+	if (!request.count("password") || (!request["password"].is_string()))
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidPassword());
+	}
+	std::string password_a = request["password"];
+	dev::Secret prv;
+	if (password_a.empty())
+	{
+		bool exists(m_key_manager->find_unlocked_prv(account, prv));
+		if (!exists)
+		{
+			BOOST_THROW_EXCEPTION(RPC_Error_WrongPassword());
+		}
+	}
+	else
+	{
+		bool error(m_key_manager->decrypt_prv(account, password_a, prv));
+		if (error)
+		{
+			BOOST_THROW_EXCEPTION(RPC_Error_WrongPassword());
+		}
+	}
+	
+	dev::Signature sig(dev::sign(prv, sign_msg));
+	j_response["signature"] = sig.hex();
+
+
 	/*mcp::rpc_sign_msg_error_code error_code_l;
 
 	if (!request.count("account") || (!request["account"].is_string()))
@@ -3757,6 +3921,71 @@ void mcp::rpc_handler::witness_list(mcp::json & j_response)
 
 void mcp::rpc_handler::debug_trace_transaction(mcp::json & j_response)
 {
+	if (!request.count("hash") || !request["hash"].is_string())
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidHash());
+	}
+
+	std::string hash_text = request["hash"];
+	mcp::block_hash hash;
+	try {
+		hash = jsToHash(hash_text);
+	}
+	catch (...) {
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidHash());
+	}
+	
+
+	mcp::db::db_transaction transaction(m_store.create_transaction());
+	dev::eth::McInfo mc_info;
+	if (!m_chain->get_mc_info_from_block_hash(transaction, m_cache, hash, mc_info))
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidMci());
+	}
+
+	mcp::json options;
+	options["disable_storage"] = true;
+	options["disable_memory"] = false;
+	options["disable_stack"] = false;
+	options["full_storage"] = false;
+	if (request.count("options"))
+	{
+		mcp::json options_json = request["options"];
+		if (options_json.count("disable_storage"))
+			options["disable_storage"] = options_json["disable_storage"];
+		if (options_json.count("disable_memory"))
+			options["disable_memory"] = options_json["disable_memory"];
+		if (options_json.count("disable_stack"))
+			options["disable_stack"] = options_json["disable_stack"];
+		if (options_json.count("full_storage"))
+			options["full_storage"] = options_json["full_storage"];
+	}
+
+	try
+	{
+		dev::eth::EnvInfo env(transaction, m_store, m_cache, mc_info);
+		auto block(m_cache->block_get(transaction, hash));
+		assert_x(block);
+		chain_state c_state(transaction, 0, m_store, m_chain, m_cache);
+		mcp::ExecutionResult er;
+		std::list<std::shared_ptr<mcp::trace>> traces;
+		mcp::Executive e(c_state, env, traces);
+		e.setResultRecipient(er);
+
+		/*mcp::json trace = m_chain->traceTransaction(e, transaction, options);
+		j_response["return_value"] = er.output.hexPrefixed();
+		j_response["struct_logs"] = trace;*/
+
+	}
+	catch (Exception const &_e)
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_VMException());
+	}
+	catch (std::exception const &_e)
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_UnknowError());
+	}
+
 	//mcp::rpc_debug_trace_transaction_error_code error_code_l;
 
 	//if (!request.count("hash") || !request["hash"].is_string())
@@ -3839,6 +4068,79 @@ void mcp::rpc_handler::debug_trace_transaction(mcp::json & j_response)
 
 void mcp::rpc_handler::debug_storage_range_at(mcp::json & j_response)
 {
+
+	if (!request.count("hash") || !request["hash"].is_string())
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidHash());
+	}
+
+	std::string hash_text = request["hash"];
+	mcp::block_hash hash;
+	try {
+		hash = jsToHash(hash_text);
+	}
+	catch (...) {
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidHash());
+	}
+
+	dev::Address acct(0);
+	if (!request.count("account") || !request["account"].is_string() || !mcp::isAddress(request["account"]))
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccount());
+	}
+	std::string account_text = request["account"];
+	acct = dev::Address(account_text);
+	
+	h256 begin;
+	try {
+		begin = jsToHash(request["begin"]);
+	}
+	catch (...){
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidBegin());
+	}
+
+	uint64_t max_results(0);
+	if (!request.count("max_results") || !try_get_uint64_t_from_json("max_results", max_results))
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidBegin());
+	}
+
+	j_response["storage"] = mcp::json::object();
+
+	try
+	{
+		mcp::db::db_transaction transaction(m_store.create_transaction());
+		chain_state c_state(transaction, 0, m_store, m_chain, m_cache);
+
+		std::map<h256, std::pair<u256, u256>> const storage(c_state.storage(acct));
+
+		// begin is inclusive
+		auto itBegin = storage.lower_bound(begin);
+		for (auto it = itBegin; it != storage.end(); ++it)
+		{
+			if (j_response["storage"].size() == static_cast<unsigned>(max_results))
+			{
+				j_response["next_key"] = toCompactHexPrefixed(it->first, 32);
+				break;
+			}
+
+			mcp::json keyValue = mcp::json::object();
+			std::string hashedKey = toCompactHexPrefixed(it->first, 32);
+			keyValue["key"] = toCompactHexPrefixed(it->second.first, 32);
+			keyValue["value"] = toCompactHexPrefixed(it->second.second, 32);
+
+			j_response["storage"][hashedKey] = keyValue;
+		}
+
+		
+	}
+	catch (Exception const &_e)
+	{
+		cerror << "Unexpected exception in VM. There may be a bug in this implementation. "
+			   << diagnostic_information(_e);
+		exit(1);
+	}
+
 	//mcp::rpc_debug_storage_range_at_error_code error_code_l;
 
 	//mcp::block_hash hash;
