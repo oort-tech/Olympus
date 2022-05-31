@@ -2206,7 +2206,7 @@ void mcp::rpc_handler::estimate_gas(mcp::json & j_response)
 		uint256_t gas_price;
 		if (!request["gas_price"].is_string() || !boost::conversion::try_lexical_convert(request["gas_price"].get<std::string>(), gas_price))
 		{
-			RPC_Error_InvalidGasPrice(RPC_Error_InvalidGas());
+			BOOST_THROW_EXCEPTION(RPC_Error_InvalidGas());
 		}
 	}
 
@@ -2217,19 +2217,19 @@ void mcp::rpc_handler::estimate_gas(mcp::json & j_response)
 		bool error = mcp::hex_to_bytes(data_text, data);
 		if (error)
 		{
-			RPC_Error_InvalidGasPrice(RPC_Error_InvalidData());
+			BOOST_THROW_EXCEPTION(RPC_Error_InvalidData());
 		}
 
 		if (data.size() > mcp::max_data_size)
 		{
-			RPC_Error_InvalidGasPrice(RPC_Error_DataSizeTooLarge());
+			BOOST_THROW_EXCEPTION(RPC_Error_DataSizeTooLarge());
 		}
 	}
 
 	dev::eth::McInfo mc_info;
 	if (!try_get_mc_info(mc_info))
 	{
-		RPC_Error_InvalidGasPrice(RPC_Error_InvalidMci());
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidMci());
 	}
 
 	mcp::db::db_transaction transaction(m_store.create_transaction());
@@ -2238,7 +2238,7 @@ void mcp::rpc_handler::estimate_gas(mcp::json & j_response)
 	mcp::json response_l;
 	if (!result.second)
 	{
-		RPC_Error_InvalidGasPrice(RPC_Error_GasNotEnoughOrFail());
+		BOOST_THROW_EXCEPTION(RPC_Error_GasNotEnoughOrFail());
 	}
 
 	j_response["gas"] = result.first;
@@ -2422,19 +2422,19 @@ void mcp::rpc_handler::call(mcp::json & j_response)
 		bool error = mcp::hex_to_bytes(data_text, data);
 		if (error)
 		{
-			RPC_Error_InvalidGasPrice(RPC_Error_InvalidData());
+			BOOST_THROW_EXCEPTION(RPC_Error_InvalidData());
 		}
 
 		if (data.size() > mcp::max_data_size)
 		{
-			RPC_Error_InvalidGasPrice(RPC_Error_DataSizeTooLarge());
+			BOOST_THROW_EXCEPTION(RPC_Error_DataSizeTooLarge());
 		}
 	}
 
 	dev::eth::McInfo mc_info;
 	if (!try_get_mc_info(mc_info))
 	{
-		RPC_Error_InvalidGasPrice(RPC_Error_InvalidMci());
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidMci());
 	}
 
 	TransactionSkeleton ts = mcp::toTransactionSkeleton(request);
