@@ -3347,7 +3347,7 @@ void mcp::rpc_connection::read()
 					catch (std::exception const & e)
 					{
                         LOG(this_l->m_log.error) << "rpc http write error:" << e.what() << "," << boost::stacktrace::stacktrace();
-						throw;
+						throw "";
 					}
 				});
 				if (this_l->request.method() == boost::beast::http::verb::post)
@@ -3405,7 +3405,6 @@ void mcp::rpc_handler::process_request()
 		else if (request.count("method")) {
 			auto pointer = m_ethRpcMethods.find(request["method"]);
 			if (pointer != m_ethRpcMethods.end()) {
-
 				if (!request.count("id") ||
 					!request.count("jsonrpc") ||
 					!request.count("params") ||
@@ -4498,7 +4497,7 @@ void mcp::rpc_handler::eth_getBlockByNumber(mcp::json & j_response)
 
 	mcp::json block_l;
 	block->serialize_json_eth(block_l);
-	block_l["number"] = uint64_to_hex_nofill(block_number);
+	block_l["number"] = toJS(block_number);
 	j_response["result"] = block_l;
 }
 
@@ -4716,13 +4715,13 @@ void mcp::rpc_handler::eth_getTransactionByHash(mcp::json & j_response)
 		auto t = m_store.transaction_get(transaction, hash);
 		if (state == nullptr || !state->is_stable || t == nullptr)
 		{
-			throw;
+			throw "";
 		}
 
 		mcp::json result = toJson(*t);
 		result["blockHash"] = hash.hexPrefixed();
 		result["transactionIndex"] = 0;
-		result["blockNumber"] = toJS(state->main_chain_index);
+		result["blockNumber"] = toJS(*state->main_chain_index);
 
 		j_response["result"] = result;
 	}
@@ -4749,13 +4748,13 @@ void mcp::rpc_handler::eth_getTransactionByBlockHashAndIndex(mcp::json & j_respo
 		auto t = m_store.transaction_get(transaction, hash);
 		if (state == nullptr || !state->is_stable || t == nullptr)
 		{
-			throw;
+			throw "";
 		}
 
 		mcp::json result = toJson(*t);
 		result["blockHash"] = hash.hexPrefixed();
 		result["transactionIndex"] = 0;
-		result["blockNumber"] = toJS(state->main_chain_index);
+		result["blockNumber"] = toJS(*state->main_chain_index);
 
 		j_response["result"] = result;
 	}
@@ -4801,13 +4800,13 @@ void mcp::rpc_handler::eth_getTransactionByBlockNumberAndIndex(mcp::json & j_res
 		auto t = m_store.transaction_get(transaction, hash);
 		if (state == nullptr || !state->is_stable || t == nullptr)
 		{
-			throw;
+			throw "";
 		}
 
 		mcp::json result = toJson(*t);
 		result["blockHash"] = hash.hexPrefixed();
 		result["transactionIndex"] = 0;
-		result["blockNumber"] = toJS(state->main_chain_index);
+		result["blockNumber"] = toJS(*state->main_chain_index);
 
 		j_response["result"] = result;
 	}
@@ -4851,7 +4850,7 @@ void mcp::rpc_handler::eth_getTransactionReceipt(mcp::json & j_response)
 		auto t = m_store.transaction_get(transaction, hash);
 		auto tr = m_store.transaction_receipt_get(transaction, hash);
 		if (t == nullptr || tr == nullptr)
-			throw;
+			throw "";
 
 		auto lt = dev::eth::LocalisedTransactionReceipt(
 			*tr,
@@ -4871,7 +4870,7 @@ void mcp::rpc_handler::eth_getTransactionReceipt(mcp::json & j_response)
 void mcp::rpc_handler::eth_getBlockByHash(mcp::json & j_response)
 {
 	mcp::json params = request["params"];
-	if (params.size() < 2)
+	if (params.size() < 1)
 	{
 		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
 	}
@@ -4879,16 +4878,20 @@ void mcp::rpc_handler::eth_getBlockByHash(mcp::json & j_response)
 	try
 	{
 		mcp::block_hash hash = jsToHash(params[0]);
-
-		mcp::db::db_transaction transaction(m_store.create_transaction());
-		auto state = m_cache->block_state_get(transaction, hash);
-		auto t = m_store.transaction_get(transaction, hash);
-		if (state == nullptr || !state->is_stable || t == nullptr)
-			throw;
 		
-		mcp::json result = toJS(t);
-		result["number"] = toJS(state->main_chain_index);
-		j_response["result"] = result;
+		mcp::db::db_transaction transaction(m_store.create_transaction());
+		auto block = m_cache->block_get(transaction, hash);
+		auto state = m_cache->block_state_get(transaction, hash);
+
+		if (block == nullptr || state == nullptr || !state->is_stable)
+		{
+			throw "";
+		}
+
+		mcp::json block_l;
+		block->serialize_json_eth(block_l);
+		block_l["number"] = toJS(*state->main_chain_index);
+		j_response["result"] = block_l;
 	}
 	catch (...)
 	{
@@ -5114,7 +5117,7 @@ void mcp::rpc_handler::eth_getLogs(mcp::json & j_response)
 		{
 			if (!params["topics"].is_array())
 			{
-				throw;
+				throw "";
 			}
 
 			std::vector<std::string> topics_l = params["topics"];
@@ -5131,7 +5134,7 @@ void mcp::rpc_handler::eth_getLogs(mcp::json & j_response)
 		if (block_hash != mcp::block_hash(0)) {
 			auto state = m_cache->block_state_get(transaction, block_hash);
 			if (state == nullptr) {
-				throw;
+				throw "";
 			}
 			fromBlock = toBlock = state->stable_index;
 		}
@@ -5150,7 +5153,7 @@ void mcp::rpc_handler::eth_getLogs(mcp::json & j_response)
 			auto t = m_store.transaction_get(transaction, block_hash);
 			auto tr = m_store.transaction_receipt_get(transaction, block_hash);
 			if (t == nullptr || tr == nullptr)
-				throw;
+				throw "";
 			
 			std::unordered_set<dev::Address> existed_addresses;
 			for (dev::Address const &address : search_address)
@@ -5236,7 +5239,7 @@ void mcp::rpc_handler::personal_lockAccount(mcp::json & j_response)
 	{
 		dev::Address account = jsToAddress(params[0]);
 		if (!m_key_manager->exists(account)) {
-			throw;
+			throw "";
 		}
 
 		m_key_manager->lock(account);
