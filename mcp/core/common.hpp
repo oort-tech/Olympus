@@ -179,6 +179,9 @@ namespace mcp
 		/// Sets the transaction of the account state
 		void setPrevious() { m_previous = init_hash; }
 
+		/// Sets the transaction of the account state
+		h256 previous() { return m_previous; }
+
 		/// @returns true iff this object represents an account in the state. Returns false if this object
     	/// represents an account that should no longer exist in the trie (an account that never existed or was
     	/// suicided).
