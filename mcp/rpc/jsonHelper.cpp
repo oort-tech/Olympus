@@ -5,7 +5,60 @@
 
 namespace mcp
 {
-	TransactionSkeleton toTransactionSkeleton(mcp::json const& _json)
+	TransactionSkeleton toTransactionSkeletonForEth(mcp::json const& _json)
+	{
+		TransactionSkeleton ret;
+
+		if (!_json.is_object() || _json.empty())
+			return ret;
+
+		if (_json.count("from") && !_json["from"].empty() && _json["from"].is_string()) {
+			try {
+				ret.from = jsToAddress(_json["from"]);
+			}
+			catch (...) {
+				BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidAccountFrom());
+			}
+		}
+
+		if (_json.count("to") && !_json["to"].empty() && _json["to"].is_string()) {
+			try {
+				ret.to = jsToAddress(_json["to"]);
+			}
+			catch (...) {
+				BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidAccountTo());
+			}
+		}
+
+		if (_json.count("value") && !_json["value"].empty() && _json["value"].is_string()) {
+			ret.value = jsToU256(_json["value"]);
+		}
+
+		if (_json.count("gas") && !_json["gas"].empty() && _json["gas"].is_string())
+			ret.gas = jsToU256(_json["gas"]);
+
+		if (_json.count("gasPrice") && !_json["gasPrice"].empty() && _json["gasPrice"].is_string())
+			ret.gasPrice = jsToU256(_json["gasPrice"]);
+
+		if (_json.count("data") && !_json["data"].empty() && _json["data"].is_string()) {
+			try {
+				ret.data = jsToBytes(_json["data"], OnFailed::Throw);
+			}
+			catch (...) {
+				BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidData());
+			}
+		}
+
+		//if (!_json["code"].empty() && _json["gasPrice"].is_string())
+		//	ret.data = jsToBytes(_json["code"].asString(), OnFailed::Throw);
+
+		if (_json.count("nonce") && !_json["nonce"].empty() && _json["nonce"].is_string())
+			ret.nonce = jsToU256(_json["nonce"]);
+
+		return ret;
+	}
+
+	TransactionSkeleton toTransactionSkeletonForMcp(mcp::json const& _json)
 	{
 		TransactionSkeleton ret;
 
@@ -30,14 +83,14 @@ namespace mcp
 			}
 		}
 
-		if (_json.count("value") && !_json["value"].empty() && _json["value"].is_string()) {
+		if (_json.count("amount") && !_json["amount"].empty() && _json["amount"].is_string()) {
 			ret.value = jsToU256(_json["value"]);
 		}
 
 		if (_json.count("gas") && !_json["gas"].empty() && _json["gas"].is_string())
 			ret.gas = jsToU256(_json["gas"]);
 
-		if (_json.count("gasPrice") && !_json["gasPrice"].empty() && _json["gasPrice"].is_string())
+		if (_json.count("gas_price") && !_json["gas_price"].empty() && _json["gas_price"].is_string())
 			ret.gasPrice = jsToU256(_json["gasPrice"]);
 
 		if (_json.count("data") && !_json["data"].empty() && _json["data"].is_string()) {

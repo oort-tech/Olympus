@@ -7,7 +7,9 @@
 
 namespace mcp
 {
-	TransactionSkeleton toTransactionSkeleton(mcp::json const& _json);
+	TransactionSkeleton toTransactionSkeletonForEth(mcp::json const& _json);
+
+	TransactionSkeleton toTransactionSkeletonForMcp(mcp::json const& _json);
 
 	inline Address jsToAddress(std::string const& _s) { return jsToFixed<20>(_s); }
 
