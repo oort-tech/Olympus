@@ -5276,7 +5276,7 @@ void mcp::rpc_handler::eth_getTransactionByHash(mcp::json & j_response)
 		mcp::json result = toJson(*t);
 		result["blockHash"] = hash.hexPrefixed();
 		result["transactionIndex"] = 0;
-		result["blockNumber"] = toJS(*state->main_chain_index);
+		result["blockNumber"] = toJS(state->stable_index);
 
 		j_response["result"] = result;
 	}
@@ -5309,7 +5309,7 @@ void mcp::rpc_handler::eth_getTransactionByBlockHashAndIndex(mcp::json & j_respo
 		mcp::json result = toJson(*t);
 		result["blockHash"] = hash.hexPrefixed();
 		result["transactionIndex"] = 0;
-		result["blockNumber"] = toJS(*state->main_chain_index);
+		result["blockNumber"] = toJS(state->stable_index);
 
 		j_response["result"] = result;
 	}
@@ -5361,7 +5361,7 @@ void mcp::rpc_handler::eth_getTransactionByBlockNumberAndIndex(mcp::json & j_res
 		mcp::json result = toJson(*t);
 		result["blockHash"] = hash.hexPrefixed();
 		result["transactionIndex"] = 0;
-		result["blockNumber"] = toJS(*state->main_chain_index);
+		result["blockNumber"] = toJS(state->stable_index);
 
 		j_response["result"] = result;
 	}
@@ -5445,7 +5445,7 @@ void mcp::rpc_handler::eth_getBlockByHash(mcp::json & j_response)
 
 		mcp::json block_l;
 		block->serialize_json_eth(block_l);
-		block_l["number"] = toJS(*state->main_chain_index);
+		block_l["number"] = toJS(state->stable_index);
 		j_response["result"] = block_l;
 	}
 	catch (...)
