@@ -421,7 +421,7 @@ enum class rpc_eth_error_code
 // added by michael at 3/7
 void error_eth_response(std::function<void(mcp::json const &)> response_a, mcp::rpc_eth_error_code error_code, mcp::json& json_a);
 //
-
+/*
 class rpc_error_msg 
 {
 public:
@@ -460,7 +460,7 @@ public:
     std::string msg(mcp::rpc_stop_error_code const & err_a);
 	std::string msg(mcp::rpc_web3_sha3_error_code const & err_a);
 };
-
+*/
 template <class I> using AbstractRPCMethodPointer = void(I::*)(mcp::json &);
 
 class rpc_handler : public std::enable_shared_from_this<mcp::rpc_handler>
@@ -585,7 +585,7 @@ private:
     bool try_get_uint64_t_from_json(std::string const& field_name_a, uint64_t & value_a);
 	bool try_get_mc_info(dev::eth::McInfo & mc_info_a);
 
-    mcp::rpc_error_msg err;
+    // mcp::rpc_error_msg err;
     mcp::log m_log = { mcp::log("rpc") };
 };
 /** Returns the correct RPC implementation based on TLS configuration */

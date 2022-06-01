@@ -4010,7 +4010,7 @@ std::shared_ptr<mcp::rpc> mcp::get_rpc(mcp::block_store &store_a, std::shared_pt
 	std::shared_ptr<rpc> impl(new rpc(store_a, chain_a, cache_a, key_manager_a, wallet_a, host_a, background_a, composer_a, service_a, config_a));
 	return impl;
 }
-
+/*
 std::string mcp::rpc_error_msg::msg(mcp::rpc_account_create_error_code const &err_a)
 {
 	std::string error_msg;
@@ -4953,7 +4953,7 @@ void mcp::error_eth_response(std::function<void(mcp::json const &)> response_a, 
 	json_a["error"] = error;
 	response_a(json_a);
 }
-
+*/
 void mcp::rpc_handler::eth_blockNumber(mcp::json & j_response)
 {
 	j_response["result"] = toJS(m_chain->last_stable_index());
