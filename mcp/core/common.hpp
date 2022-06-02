@@ -588,7 +588,7 @@ namespace mcp
 		TransactionAddress(RLP const& _rlp) { blockHash = (mcp::block_hash)_rlp[0]; index = _rlp[1].toInt<unsigned>();/* blockNum = (uint64_t)_rlp[2];*/}
 		bytes rlp() const { RLPStream s(2); s << blockHash << index /*<< blockNum*/; return s.out(); }
 
-		explicit operator bool() const { return !blockHash.is_zero(); }
+		explicit operator bool() const { return blockHash != mcp::block_hash(0); }
 
 		mcp::block_hash blockHash;
 		unsigned index = 0;

@@ -1532,12 +1532,10 @@ void mcp::rpc_handler::block(mcp::json & j_response, bool &)
 
 	mcp::db::db_transaction transaction(m_store.create_transaction());
 	auto block(m_cache->block_get(transaction, hash));
-
+	
 	if (block != nullptr)
 	{
-		mcp::json block_l;
-		block->serialize_json(block_l);
-		j_response["block"] = block_l;
+		j_response["block"] = toJson(*block);
 	}
 	else
 	{
@@ -1595,7 +1593,6 @@ void mcp::rpc_handler::blocks(mcp::json & j_response, bool &)
 	mcp::rpc_blocks_error_code error_code_l;
 
 	std::vector<std::string> hashes;
-	mcp::json response_l;
 	mcp::json blocks_l = mcp::json::array();
 	mcp::db::db_transaction transaction(m_store.create_transaction());
 
@@ -1620,7 +1617,7 @@ void mcp::rpc_handler::blocks(mcp::json & j_response, bool &)
 		auto block(m_cache->block_get(transaction, hash));
 		mcp::json block_l;
 		if (block != nullptr)
-			block->serialize_json(block_l);
+			block_l = toJson(*block);
 		else
 			block_l = nullptr;
 		blocks_l.push_back(block_l);
@@ -2048,8 +2045,7 @@ void mcp::rpc_handler::stable_blocks(mcp::json & j_response, bool &)
 		auto block = m_cache->block_get(transaction, block_hash_l);
 		assert_x(block);
 
-		mcp::json block_l;
-		block->serialize_json(block_l);
+		mcp::json block_l = toJson(*block);
 		block_list_l.push_back(block_l);
 
 		blocks_count++;
@@ -2520,8 +2516,11 @@ void mcp::rpc_handler::logs(mcp::json & j_response, bool &)
 		auto lt = dev::eth::LocalisedTransactionReceipt(
 			*tr,
 			t->sha3(),//transaction hash
+			block_hash,
+			i,
 			t->from(),
 			t->to(),
+			0,
 			toAddress(t->from(), t->nonce()));
 
 		logs_l.push_back(toJson(lt.localisedLogs()));
@@ -5032,10 +5031,36 @@ void mcp::rpc_handler::eth_getBlockByNumber(mcp::json & j_response, bool &)
 		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidBlock());
 	}
 
-	mcp::json block_l;
-	block->serialize_json_eth(block_l);
-	block_l["number"] = toJS(block_number);
-	j_response["result"] = block_l;
+	j_response["result"] = toJson(*block);
+}
+
+void mcp::rpc_handler::eth_getBlockByHash(mcp::json & j_response, bool &)
+{
+	mcp::json params = request["params"];
+	if (params.size() < 1)
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
+	}
+
+	try
+	{
+		mcp::block_hash hash = jsToHash(params[0]);
+
+		mcp::db::db_transaction transaction(m_store.create_transaction());
+		auto block = m_cache->block_get(transaction, hash);
+		auto state = m_cache->block_state_get(transaction, hash);
+
+		if (block == nullptr || state == nullptr || !state->is_stable)
+		{
+			throw "";
+		}
+
+		j_response["result"] = toJson(*block);
+	}
+	catch (...)
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidHash());
+	}
 }
 
 void mcp::rpc_handler::eth_sendRawTransaction(mcp::json & j_response, bool &)
@@ -5219,19 +5244,20 @@ void mcp::rpc_handler::eth_getTransactionByHash(mcp::json & j_response, bool &)
 		h256 hash = jsToHash(params[0]);
 
 		auto transaction = m_store.create_transaction();
-		auto state = m_cache->block_state_get(transaction, hash);
 		auto t = m_store.transaction_get(transaction, hash);
-		if (state == nullptr || !state->is_stable || t == nullptr)
+		auto td = m_cache->transaction_address_get(transaction, hash);
+		if (t == nullptr || td == nullptr)
 		{
 			throw "";
 		}
 
-		mcp::json result = toJson(*t);
-		result["blockHash"] = hash.hexPrefixed();
-		result["transactionIndex"] = 0;
-		result["blockNumber"] = toJS(state->stable_index);
+		uint64_t block_number = 0;
+		if (!m_cache->block_number_get(transaction, td->blockHash, block_number)) {
+			throw "";
+		}
 
-		j_response["result"] = result;
+		auto lt = LocalisedTransaction(*t, td->blockHash, td->index, block_number);
+		j_response["result"] = toJson(lt);
 	}
 	catch (...)
 	{
@@ -5357,49 +5383,29 @@ void mcp::rpc_handler::eth_getTransactionReceipt(mcp::json & j_response, bool &)
 		auto transaction = m_store.create_transaction();
 		auto t = m_store.transaction_get(transaction, hash);
 		auto tr = m_store.transaction_receipt_get(transaction, hash);
-		if (t == nullptr || tr == nullptr)
+		auto td = m_cache->transaction_address_get(transaction, hash);
+
+		if (t == nullptr || tr == nullptr || td == nullptr)
 			throw "";
-
-		auto lt = dev::eth::LocalisedTransactionReceipt(
-			*tr,
-			t->sha3(),//transaction hash
-			t->from(),
-			t->to(),
-			toAddress(t->from(), t->nonce()));
-
-		j_response["result"] = toJson(lt);
-	}
-	catch (...)
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidHash());
-	}
-}
-
-void mcp::rpc_handler::eth_getBlockByHash(mcp::json & j_response, bool &)
-{
-	mcp::json params = request["params"];
-	if (params.size() < 1)
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
-	}
-
-	try
-	{
-		mcp::block_hash hash = jsToHash(params[0]);
 		
-		mcp::db::db_transaction transaction(m_store.create_transaction());
-		auto block = m_cache->block_get(transaction, hash);
-		auto state = m_cache->block_state_get(transaction, hash);
-
-		if (block == nullptr || state == nullptr || !state->is_stable)
-		{
+		uint64_t block_number = 0;
+		auto exist = m_cache->block_number_get(transaction, td->blockHash, block_number);
+		
+		if (!m_cache->block_number_get(transaction, td->blockHash, block_number)) {
 			throw "";
 		}
 
-		mcp::json block_l;
-		block->serialize_json_eth(block_l);
-		block_l["number"] = toJS(state->stable_index);
-		j_response["result"] = block_l;
+		auto lt = dev::eth::LocalisedTransactionReceipt(
+			*tr,
+			t->sha3(), // transaction hash
+			td->blockHash, // block hash
+			block_number,
+			t->from(),
+			t->to(),
+			td->index,
+			toAddress(t->from(), t->nonce()));
+
+		j_response["result"] = toJson(lt);
 	}
 	catch (...)
 	{
@@ -5684,6 +5690,7 @@ void mcp::rpc_handler::eth_getLogs(mcp::json & j_response, bool &)
 			if (search_topics.size() > 0 && existed_topics.size() == 0)
 				continue;
 
+			/*
 			auto lt = dev::eth::LocalisedTransactionReceipt(
 				*tr,
 				t->sha3(),//transaction hash
@@ -5692,6 +5699,7 @@ void mcp::rpc_handler::eth_getLogs(mcp::json & j_response, bool &)
 				toAddress(t->from(), t->nonce()));
 
 			logs_l.push_back(toJson(lt.localisedLogs()));
+			*/
 		}
 
 		j_response["result"] = logs_l;

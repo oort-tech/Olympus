@@ -167,7 +167,7 @@ namespace mcp
 			res["gasPrice"] = toJS(_t.gasPrice());
 			res["nonce"] = toJS(_t.nonce());
 			res["value"] = toJS(_t.value());
-			res["blockHash"] = _t.blockHash().to_string();
+			res["blockHash"] = _t.blockHash().hexPrefixed();
 			res["transactionIndex"] = toJS(_t.transactionIndex());
 			res["blockNumber"] = toJS(_t.blockNumber());
 			res["r"] = toJS(_t.signature().r);
@@ -181,9 +181,9 @@ namespace mcp
 	{
 		mcp::json res;
 		res["transactionHash"] = toJS(_t.hash());
-		res["transactionIndex"] = _t.transactionIndex();
-		res["blockHash"] = _t.blockHash().to_string();
-		res["blockNumber"] = _t.blockNumber();
+		res["transactionIndex"] = toJS(_t.transactionIndex());
+		res["blockHash"] = _t.blockHash().hexPrefixed();
+		res["blockNumber"] = toJS(_t.blockNumber());
 		res["from"] = toJS(_t.from());
 		res["to"] = toJS(_t.to());
 		res["cumulativeGasUsed"] = toJS(_t.cumulativeGasUsed());
@@ -209,11 +209,11 @@ namespace mcp
 			{
 				rs = toJson(static_cast<mcp::log_entry const&>(r));
 				rs["type"] = "mined";
-				rs["blockNumber"] = r.blockNumber;
-				rs["blockHash"] = r.blockHash.to_string();
+				rs["blockNumber"] = toJS(r.blockNumber);
+				rs["blockHash"] = r.blockHash.hexPrefixed();
 				rs["logIndex"] = r.logIndex;
-				rs["transactionHash"] = toJS(r.transactionHash);
-				rs["transactionIndex"] = r.transactionIndex;
+				rs["transactionHash"] = r.transactionHash.hexPrefixed();
+				rs["transactionIndex"] = toJS(r.transactionIndex);
 			}
 			res.push_back(rs);
 		}
@@ -237,15 +237,15 @@ namespace mcp
 	mcp::json toJson(mcp::block & _b)
 	{
 		mcp::json res;
-		res["hash"] = _b.hash().to_string(true);
-		res["from"] = _b.from().to_account();
 
-		res["previous"] = _b.previous().to_string();
+		res["hash"] = _b.hash().hex();
+		res["from"] = _b.from().hexPrefixed();
+		res["previous"] = _b.previous().hex();
 
 		mcp::json j_parents = mcp::json::array();
 		for (auto & p : _b.parents())
 		{
-			j_parents.push_back(p.to_string());
+			j_parents.push_back(p.hex());
 		}
 		res["parents"] = j_parents;
 
@@ -254,9 +254,9 @@ namespace mcp
 			j_links.push_back(toJS(l));
 		res["links"] = j_links;
 
-		res["last_summary"] = _b.last_summary().to_string();
-		res["last_summary_block"] = _b.last_summary_block().to_string();
-		res["last_stable_block"] = _b.last_stable_block().to_string();
+		res["last_summary"] = _b.last_summary().hex();
+		res["last_summary_block"] = _b.last_summary_block().hex();
+		res["last_stable_block"] = _b.last_stable_block().hex();
 		res["timestamp"] = _b.exec_timestamp();
 		res["gasLimit"] = toJS(mcp::block_max_gas);
 		res["signature"] = ((Signature)_b.signature()).hex();
@@ -264,4 +264,21 @@ namespace mcp
 		return res;
 	}
 
+	mcp::json toJson(mcp::block & _b, Transaction & _t)
+	{
+		mcp::json res;
+
+		res["hash"] = _b.hash().hexPrefixed();
+		res["parentHash"] = _b.previous().hexPrefixed();
+		res["gasUsed"] = toJS(_t.gas());
+		res["minGasPrice"] = toJS(_t.gasPrice());
+		res["gasLimit"] = mcp::block_max_gas;
+		res["timestamp"] = _b.exec_timestamp();
+		
+		mcp::json ts = mcp::json::array();
+		ts.push_back(_t.sha3().hexPrefixed());
+		res["transactions"] = ts;
+		
+		return res;
+	}
 }
