@@ -1672,8 +1672,6 @@ void mcp::rpc_handler::blocks(mcp::json & j_response, bool &)
 
 void mcp::rpc_handler::block_state(mcp::json & j_response, bool &)
 {
-	mcp::rpc_block_error_code error_code_l;
-
 	if (!request.count("hash") || (!request["hash"].is_string()))
 	{
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidHash());
@@ -3930,9 +3928,9 @@ void mcp::rpc_handler::process_request()
 		if (request.count("action")) {
 			auto pointer = m_mcpRpcMethods.find(request["action"]);
 			if (pointer != m_mcpRpcMethods.end()) {
-				(this->*(pointer->second))(j_response, async);
 				j_response["code"] = 0;
 				j_response["msg"] = "OK";
+				(this->*(pointer->second))(j_response, async);
 			}
 			else {
 				BOOST_THROW_EXCEPTION(RPC_Error_UnknownCommand());
