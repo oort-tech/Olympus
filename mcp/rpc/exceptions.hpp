@@ -8,10 +8,22 @@ namespace mcp
 	{
 		const char* what() const noexcept override { return "OK"; }
 		const int virtual code() const noexcept { return 0; }
+		const void virtual toJson(json & j_response) const noexcept {
+			if (code() >= 0) {
+				j_response["code"] = code();
+			}
+			j_response["msg"] = what();
+		}
 	};
 
 	struct RpcEthException : RpcException
 	{
+		const void toJson(json & j_response) const noexcept override {
+			json error;
+			error["code"] = code();
+			error["message"] = what();
+			j_response["error"] = error;
+		}
 	};
 
 #define RPC_ERROR_EXCEPTION(X, C, M)  \
@@ -27,7 +39,7 @@ namespace mcp
 		const char* what() const noexcept override { return M; } \
 		const int code() const noexcept override { return C; } \
     }
-
+	
 	RPC_ERROR_EXCEPTION(RPC_Error_Disabled, -2, "RPC control is disabled");
 	RPC_ERROR_EXCEPTION(RPC_Error_UnknownCommand, -1, "Unknown command");
 
@@ -93,6 +105,7 @@ namespace mcp
 	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_InvalidGas, -32602, "Invalid gas amount");
 	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_InvalidGasPrice, -32602, "Invalid gas price");
 	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_InvalidData, -32602, "Invalid data");
+	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_InvalidNonce, -32602, "Invalid nonce");
 	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_InvalidBlock, -32602, "Invalid block number");
 	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_InvalidAccountFrom, -32602, "Invalid sender account");
 	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_InvalidAccountTo, -32602, "Invalid receiver account");
@@ -111,4 +124,58 @@ namespace mcp
 	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_MethodNotSupported, -32004, "Method not supported");
 	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_InvalidInput, -32000, "Invalid input");
 	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_TransactionRejected, -32003, "Transaction rejected");
+
+	template<typename Base, typename T>
+	inline bool instanceof(const T *ptr) {
+		return dynamic_cast<const Base*>(ptr) != nullptr;
+	}
+
+	inline void toRpcExceptionJson(Exception const & e, json & j_response) {
+		if (instanceof<dev::GasPriceTooLow>(&e) ||
+			instanceof<dev::BlockGasLimitReached>(&e) ||
+			instanceof<dev::GasPriceTooLow>(&e)) {
+			RPC_Error_InvalidGas().toJson(j_response);
+		}
+		else if (instanceof<dev::NotEnoughCash>(&e)) {
+			RPC_Error_InsufficientBalance().toJson(j_response);
+		}
+		else if (instanceof<dev::PendingTransactionAlreadyExists>(&e)) {
+			RPC_Error_PendingTransactionAlreadyExists().toJson(j_response);
+		}
+		else if (instanceof<dev::TransactionAlreadyInChain>(&e)) {
+			RPC_Error_TransactionAlreadyInChain().toJson(j_response);
+		}
+		else if (instanceof<dev::UnknownTransactionValidationError>(&e)) {
+			RPC_Error_ValidateError().toJson(j_response);
+		}
+		else {
+			RPC_Error_InvalidParams().toJson(j_response);
+		}
+	}
+
+	inline void toRpcExceptionEthJson(Exception const & e, json & j_response) {
+		if (instanceof<dev::OutOfGasIntrinsic>(&e) ||
+			instanceof<dev::BlockGasLimitReached>(&e) ||
+			instanceof<dev::GasPriceTooLow>(&e)) {
+			RPC_Error_Eth_InvalidGas().toJson(j_response);
+		}
+		else if (instanceof<dev::InvalidNonce>(&e)) {
+			RPC_Error_Eth_InvalidNonce().toJson(j_response);
+		}
+		else if (instanceof<dev::NotEnoughCash>(&e)) {
+			RPC_Error_Eth_InsufficientBalance().toJson(j_response);
+		}
+		else if (instanceof<dev::PendingTransactionAlreadyExists>(&e)) {
+			RPC_Error_Eth_PendingTransactionAlreadyExists().toJson(j_response);
+		}
+		else if (instanceof<dev::TransactionAlreadyInChain>(&e)) {
+			RPC_Error_Eth_TransactionAlreadyInChain().toJson(j_response);
+		}
+		else if (instanceof<dev::UnknownTransactionValidationError>(&e)) {
+			RPC_Error_Eth_Validation().toJson(j_response);
+		}
+		else {
+			RPC_Error_Eth_InvalidParams().toJson(j_response);
+		}
+	}
 }

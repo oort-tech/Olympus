@@ -35,7 +35,7 @@ public:
 		std::shared_ptr<TransactionQueue> tq
 	);
 	~wallet() { stop(); }
-	void send_async(TransactionSkeleton t, std::function<void(h256)> const & action_a, boost::optional<std::string> const & password = boost::none);
+	void send_async(TransactionSkeleton t, std::function<void(h256 &, boost::optional<dev::Exception const &>)> const & action_a, boost::optional<std::string> const & password = boost::none);
 	h256 send_action(TransactionSkeleton t, boost::optional<std::string> const & password);
 	//void send_async(std::shared_ptr<mcp::block> const p_block, dev::Signature const & signature_a, std::function<void(mcp::send_result)> const & action_a, bool gen_next_work_a, bool const & async_a);
 	//mcp::send_result send_action(std::shared_ptr<mcp::block> const p_block, dev::Signature const & signature_a, std::function<void(mcp::send_result)> const & action_a, bool const & gen_next_work_a, bool const & async_a);

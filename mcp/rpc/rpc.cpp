@@ -2684,40 +2684,26 @@ void mcp::rpc_handler::send_block(mcp::json & j_response, bool & async)
 		password = request["password"].get<std::string>();
 	}
 
-	try
+	// optional, account locked but input password will unlock.or else return account locked.
+	auto rpc_l(shared_from_this());
+	auto fun = [rpc_l, j_response, this](h256 & h, boost::optional<dev::Exception const &> e)
 	{
-		// optional, account locked but input password will unlock.or else return account locked.
-		auto rpc_l(shared_from_this());
-		auto fun = [rpc_l, j_response, this](h256 h)
-		{
-			mcp::json j_res = j_response;
-			j_res["hash"] = toJS(h);
-			response(j_res);
-		};
+		mcp::json j_res = j_response;
+		j_res["hash"] = toJS(h);
+		response(j_res);
 
-		async = true;
-		m_wallet->send_async(t, fun, password);
-	}
-	catch (dev::GasPriceTooLow const& e)
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidGas());
-	}
-	catch (dev::PendingTransactionAlreadyExists const& e)
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_PendingTransactionAlreadyExists());
-	}
-	catch (dev::TransactionAlreadyInChain const& e)
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_TransactionAlreadyInChain());
-	}
-	catch (dev::UnknownTransactionValidationError const& e)
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_ValidateError());
-	}
-	catch (...)
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams());
-	}
+		mcp::json j_resp = j_response;
+		if (!e) {
+			j_resp["result"] = toJS(h);
+		}
+		else {
+			toRpcExceptionJson(*e, j_resp);
+		}
+		response(j_resp);
+	};
+
+	async = true;
+	m_wallet->send_async(t, fun, password);
 }
 
 void mcp::rpc_handler::generate_offline_block(mcp::json & j_response, bool &)
@@ -3979,17 +3965,11 @@ void mcp::rpc_handler::process_request()
 	}
 	catch (mcp::RpcEthException const &err)
 	{
-		mcp::json error;
-		error["code"] = err.code();
-		error["message"] = err.what();
-		j_response["error"] = error;
+		err.toJson(j_response);
 	}
 	catch (mcp::RpcException const &err)
 	{
-		if (err.code() >= 0) {
-			j_response["code"] = err.code();
-		}
-		j_response["msg"] = err.what();
+		err.toJson(j_response);
 	}
 	catch (std::exception const &err)
 	{
@@ -5073,25 +5053,9 @@ void mcp::rpc_handler::eth_sendRawTransaction(mcp::json & j_response, bool &)
 		Transaction t(jsToBytes(params[0], OnFailed::Throw), CheckTransaction::None);
 		j_response["result"] = toJS(m_wallet->importTransaction(t));
 	}
-	catch (dev::GasPriceTooLow const& e)
+	catch (dev::Exception & e)
 	{
-		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidGas());
-	}
-	catch (dev::PendingTransactionAlreadyExists const& e)
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_Eth_PendingTransactionAlreadyExists());
-	}
-	catch (dev::TransactionAlreadyInChain const& e)
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_Eth_TransactionAlreadyInChain());
-	}
-	catch (dev::UnknownTransactionValidationError const& e)
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_Eth_Validation());
-	}
-	catch (...)
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
+		toRpcExceptionEthJson(e, j_response);
 	}
 }
 
@@ -5105,35 +5069,21 @@ void mcp::rpc_handler::eth_sendTransaction(mcp::json & j_response, bool & async)
 	
 	TransactionSkeleton t = mcp::toTransactionSkeletonForEth(params[0]);
 
-	try
+	auto rpc_l(shared_from_this());
+	auto fun = [rpc_l, j_response, this](h256 & h, boost::optional<dev::Exception const &> e)
 	{
-		auto rpc_l(shared_from_this());
-		auto fun = [j_response, rpc_l, this](h256 h)
-		{
-			mcp::json j_resp = j_response;
+		mcp::json j_resp = j_response;
+		if (!e) {
 			j_resp["result"] = toJS(h);
-			response(j_resp);
-		};
+		}
+		else {
+			toRpcExceptionEthJson(*e, j_resp);
+		}
+		response(j_resp);
+	};
 
-		async = true;
-		m_wallet->send_async(t, fun);
-	}
-	catch (dev::GasPriceTooLow const& e)
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidGas());
-	}
-	catch (dev::PendingTransactionAlreadyExists const& e)
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_Eth_PendingTransactionAlreadyExists());
-	}
-	catch (dev::TransactionAlreadyInChain const& e)
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_Eth_TransactionAlreadyInChain());
-	}
-	catch (dev::UnknownTransactionValidationError const& e)
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_Eth_Validation());
-	}
+	async = true;
+	m_wallet->send_async(t, fun);
 }
 
 void mcp::rpc_handler::eth_call(mcp::json & j_response, bool &)
@@ -5869,35 +5819,21 @@ void mcp::rpc_handler::personal_sendTransaction(mcp::json & j_response, bool & a
 	TransactionSkeleton t = mcp::toTransactionSkeletonForEth(params[0]);
 	std::string password = params[1];
 
-	try
+	auto rpc_l(shared_from_this());
+	auto fun = [rpc_l, j_response, this](h256 & h, boost::optional<dev::Exception const &> e)
 	{
-		auto rpc_l(shared_from_this());
-		auto fun = [rpc_l, j_response, this](h256 h)
-		{
-			mcp::json j_resp = j_response;
+		mcp::json j_resp = j_response;
+		if (!e) {
 			j_resp["result"] = toJS(h);
-			response(j_resp);
-		};
+		}
+		else {
+			toRpcExceptionEthJson(*e, j_resp);
+		}
+		response(j_resp);
+	};
 
-		async = true;
-		m_wallet->send_async(t, fun, password);
-	}
-	catch (dev::GasPriceTooLow const& e)
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidGas());
-	}
-	catch (dev::PendingTransactionAlreadyExists const& e)
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_Eth_PendingTransactionAlreadyExists());
-	}
-	catch (dev::TransactionAlreadyInChain const& e)
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_Eth_TransactionAlreadyInChain());
-	}
-	catch (dev::UnknownTransactionValidationError const& e)
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_Eth_Validation());
-	}
+	async = true;
+	m_wallet->send_async(t, fun, password);
 }
 
 void mcp::rpc_handler::personal_sign(mcp::json & j_response, bool &)

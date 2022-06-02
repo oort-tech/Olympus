@@ -20,11 +20,16 @@ mcp::wallet::wallet(
 {
 }
 
-void mcp::wallet::send_async(TransactionSkeleton t, std::function<void(h256)> const & action_a, boost::optional<std::string> const & password)
+void mcp::wallet::send_async(TransactionSkeleton t, std::function<void(h256 &, boost::optional<dev::Exception const &>)> const & action_a, boost::optional<std::string> const & password)
 {
 	this->queue_wallet_action([this, t, action_a, password]()// put queue
 	{
-		action_a(send_action(t, password));
+		try {
+			action_a(send_action(t, password), boost::none);
+		}
+		catch (Exception const & e) {
+			action_a(h256(0), e);
+		}
 	});
 }
 
