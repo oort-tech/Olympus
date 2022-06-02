@@ -6,19 +6,12 @@ namespace mcp
 {
 	struct RpcException : virtual Exception
 	{
-		enum TYPE {
-			MCP = 0,
-			ETH = 1,
-		};
-
 		const char* what() const noexcept override { return "OK"; }
 		const int virtual code() const noexcept { return 0; }
-		const TYPE virtual type() const noexcept { return MCP; }
 	};
 
 	struct RpcEthException : RpcException
 	{
-		const TYPE type() const noexcept override { return ETH; }
 	};
 
 #define RPC_ERROR_EXCEPTION(X, C, M)  \

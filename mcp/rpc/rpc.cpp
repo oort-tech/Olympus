@@ -508,7 +508,7 @@ bool mcp::rpc_handler::try_get_mc_info(dev::eth::McInfo &mc_info_a, uint64_t &mc
 	return true;
 }
 
-void mcp::rpc_handler::account_list(mcp::json & j_response)
+void mcp::rpc_handler::account_list(mcp::json & j_response, bool &)
 {
 	mcp::json j_accounts = mcp::json::array();
 	std::list<dev::Address> account_list(m_key_manager->list());
@@ -519,7 +519,7 @@ void mcp::rpc_handler::account_list(mcp::json & j_response)
 	j_response["accounts"] = j_accounts;
 }
 
-void mcp::rpc_handler::account_validate(mcp::json & j_response)
+void mcp::rpc_handler::account_validate(mcp::json & j_response, bool &)
 {
 	if (!request.count("account") || !request["account"].is_string())
 	{
@@ -530,7 +530,7 @@ void mcp::rpc_handler::account_validate(mcp::json & j_response)
 	j_response["valid"] = mcp::isAddress(account_text) ? 1 : 0;
 }
 
-void mcp::rpc_handler::account_create(mcp::json & j_response)
+void mcp::rpc_handler::account_create(mcp::json & j_response, bool &)
 {
 	if (!request.count("password") || !request["password"].is_string()) {
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidPassword());
@@ -617,7 +617,7 @@ void mcp::rpc_handler::account_create(mcp::json & j_response)
 	}*/
 }
 
-void mcp::rpc_handler::account_remove(mcp::json & j_response)
+void mcp::rpc_handler::account_remove(mcp::json & j_response, bool &)
 {
 	if (!request.count("account") || !request["account"].is_string()) {
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccount());
@@ -701,7 +701,7 @@ void mcp::rpc_handler::account_remove(mcp::json & j_response)
 	}*/
 }
 
-void mcp::rpc_handler::account_password_change(mcp::json & j_response)
+void mcp::rpc_handler::account_password_change(mcp::json & j_response, bool &)
 {
 	if (!request.count("account") || !request["account"].is_string()) {
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccount());
@@ -817,7 +817,7 @@ void mcp::rpc_handler::account_password_change(mcp::json & j_response)
 	}*/
 }
 
-void mcp::rpc_handler::account_unlock(mcp::json & j_response)
+void mcp::rpc_handler::account_unlock(mcp::json & j_response, bool &)
 {
 	if (!request.count("account") || !request["account"].is_string()) {
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccount());
@@ -903,7 +903,7 @@ void mcp::rpc_handler::account_unlock(mcp::json & j_response)
 	}*/
 }
 
-void mcp::rpc_handler::account_lock(mcp::json & j_response)
+void mcp::rpc_handler::account_lock(mcp::json & j_response, bool &)
 {
 	if (!request.count("account") || !request["account"].is_string()) {
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccount());
@@ -961,7 +961,7 @@ void mcp::rpc_handler::account_lock(mcp::json & j_response)
 	}*/
 }
 
-void mcp::rpc_handler::account_export(mcp::json & j_response)
+void mcp::rpc_handler::account_export(mcp::json & j_response, bool &)
 {
 	if (!request.count("account") || !request["account"].is_string()) {
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccount());
@@ -1017,7 +1017,7 @@ void mcp::rpc_handler::account_export(mcp::json & j_response)
 	}*/
 }
 
-void mcp::rpc_handler::account_import(mcp::json & j_response)
+void mcp::rpc_handler::account_import(mcp::json & j_response, bool &)
 {
 	if (!request.count("json") || !request["json"].is_string()) {
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidJson());
@@ -1066,7 +1066,7 @@ void mcp::rpc_handler::account_import(mcp::json & j_response)
 	//}
 }
 
-void mcp::rpc_handler::account_code(mcp::json & j_response)
+void mcp::rpc_handler::account_code(mcp::json & j_response, bool &)
 {
 	if (!request.count("account") || !request["account"].is_string()) {
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccount());
@@ -1084,7 +1084,7 @@ void mcp::rpc_handler::account_code(mcp::json & j_response)
 	j_response["account_code"] = bytes_to_hex(c_state.code(account));
 }
 
-void mcp::rpc_handler::account_balance(mcp::json & j_response)
+void mcp::rpc_handler::account_balance(mcp::json & j_response, bool &)
 {
 	if (!request.count("account") || !request["account"].is_string()) {
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccount());
@@ -1102,7 +1102,7 @@ void mcp::rpc_handler::account_balance(mcp::json & j_response)
 	j_response["balance"] = balance.convert_to<std::string>();
 }
 
-void mcp::rpc_handler::accounts_balances(mcp::json & j_response)
+void mcp::rpc_handler::accounts_balances(mcp::json & j_response, bool &)
 {
 	mcp::json j_balances = mcp::json::array();
 	if (request.count("accounts") == 0)
@@ -1128,7 +1128,7 @@ void mcp::rpc_handler::accounts_balances(mcp::json & j_response)
 	j_response["balances"] = j_balances;
 }
 
-void mcp::rpc_handler::account_block_list(mcp::json & j_response)
+void mcp::rpc_handler::account_block_list(mcp::json & j_response, bool &)
 {
 	if (!request.count("account") || !request["account"].is_string())
 	{
@@ -1302,7 +1302,7 @@ void mcp::rpc_handler::account_block_list(mcp::json & j_response)
 	rpc_response(response, (int)error_code_l, err.msg(error_code_l), resp_l);*/
 }
 
-void mcp::rpc_handler::account_state_list(mcp::json & j_response)
+void mcp::rpc_handler::account_state_list(mcp::json & j_response, bool &)
 {
 	if (!request.count("account") || !request["account"].is_string())
 	{
@@ -1513,7 +1513,7 @@ void mcp::rpc_handler::account_state_list(mcp::json & j_response)
 	rpc_response(response, (int)error_code_l, err.msg(error_code_l), resp_l);*/
 }
 
-void mcp::rpc_handler::block(mcp::json & j_response)
+void mcp::rpc_handler::block(mcp::json & j_response, bool &)
 {
 	if (!request.count("hash") || !request["hash"].is_string())
 	{
@@ -1590,7 +1590,7 @@ void mcp::rpc_handler::block(mcp::json & j_response)
 	//}
 }
 
-void mcp::rpc_handler::blocks(mcp::json & j_response)
+void mcp::rpc_handler::blocks(mcp::json & j_response, bool &)
 {
 	mcp::rpc_blocks_error_code error_code_l;
 
@@ -1670,7 +1670,7 @@ void mcp::rpc_handler::blocks(mcp::json & j_response)
 	rpc_response(response, (int)error_code_l, err.msg(error_code_l), response_l);*/
 }
 
-void mcp::rpc_handler::block_state(mcp::json & j_response)
+void mcp::rpc_handler::block_state(mcp::json & j_response, bool &)
 {
 	mcp::rpc_block_error_code error_code_l;
 
@@ -1766,7 +1766,7 @@ void mcp::rpc_handler::block_state(mcp::json & j_response)
 	//}
 }
 
-void mcp::rpc_handler::block_states(mcp::json & j_response)
+void mcp::rpc_handler::block_states(mcp::json & j_response, bool &)
 {
 
 	std::vector<std::string> hashes;
@@ -1870,7 +1870,7 @@ void mcp::rpc_handler::block_states(mcp::json & j_response)
 	//rpc_response(response, (int)error_code_l, err.msg(error_code_l), response_l);
 }
 
-void mcp::rpc_handler::block_traces(mcp::json & j_response)
+void mcp::rpc_handler::block_traces(mcp::json & j_response, bool &)
 {
 	/*if (!request.count("hash") || (!request["hash"].is_string()))
 	{
@@ -2007,7 +2007,7 @@ void mcp::rpc_handler::block_traces(mcp::json & j_response)
 	}*/
 }
 
-void mcp::rpc_handler::stable_blocks(mcp::json & j_response)
+void mcp::rpc_handler::stable_blocks(mcp::json & j_response, bool &)
 {
 	bool error(false);
 	mcp::rpc_stable_blocks_error_code error_code_l;
@@ -2138,7 +2138,7 @@ void mcp::rpc_handler::stable_blocks(mcp::json & j_response)
 	rpc_response(response, (int)error_code_l, err.msg(error_code_l), response_l);*/
 }
 
-void mcp::rpc_handler::estimate_gas(mcp::json & j_response)
+void mcp::rpc_handler::estimate_gas(mcp::json & j_response, bool &)
 {
 	TransactionSkeleton t = mcp::toTransactionSkeletonForMcp(request);
 
@@ -2294,7 +2294,7 @@ void mcp::rpc_handler::estimate_gas(mcp::json & j_response)
 	//rpc_response(response, (int)error_code_l, err.msg(error_code_l), response_l);
 }
 
-void mcp::rpc_handler::call(mcp::json & j_response)
+void mcp::rpc_handler::call(mcp::json & j_response, bool &)
 {
 	TransactionSkeleton ts = mcp::toTransactionSkeletonForMcp(request);
 	Transaction t(ts);
@@ -2417,7 +2417,7 @@ void mcp::rpc_handler::call(mcp::json & j_response)
 	//rpc_response(response, (int)error_code_l, err.msg(error_code_l), response_l);
 }
 
-void mcp::rpc_handler::logs(mcp::json & j_response)
+void mcp::rpc_handler::logs(mcp::json & j_response, bool &)
 {
 	uint64_t from_stable_block_index(0);
 	if (request.count("from_stable_block_index") && !request["from_stable_block_index"].is_null())
@@ -2675,7 +2675,7 @@ void mcp::rpc_handler::logs(mcp::json & j_response)
 	//rpc_response(response, (int)error_code_l, err.msg(error_code_l), response_l);
 }
 
-void mcp::rpc_handler::send_block(mcp::json & j_response)
+void mcp::rpc_handler::send_block(mcp::json & j_response, bool & async)
 {
 	TransactionSkeleton t = mcp::toTransactionSkeletonForMcp(request);
 	
@@ -2695,6 +2695,7 @@ void mcp::rpc_handler::send_block(mcp::json & j_response)
 			response(j_res);
 		};
 
+		async = true;
 		m_wallet->send_async(t, fun, password);
 	}
 	catch (dev::GasPriceTooLow const& e)
@@ -2719,7 +2720,7 @@ void mcp::rpc_handler::send_block(mcp::json & j_response)
 	}
 }
 
-void mcp::rpc_handler::generate_offline_block(mcp::json & j_response)
+void mcp::rpc_handler::generate_offline_block(mcp::json & j_response, bool &)
 {
 	TransactionSkeleton ts = mcp::toTransactionSkeletonForMcp(request);
 	Transaction t(ts);
@@ -2892,7 +2893,7 @@ void mcp::rpc_handler::generate_offline_block(mcp::json & j_response)
 	//}*/
 }
 
-void mcp::rpc_handler::send_offline_block(mcp::json & j_response)
+void mcp::rpc_handler::send_offline_block(mcp::json & j_response, bool &)
 {
 	TransactionSkeleton ts = mcp::toTransactionSkeletonForMcp(request);
 
@@ -3124,7 +3125,7 @@ void mcp::rpc_handler::send_offline_block(mcp::json & j_response)
 		gen_next_work_l, async);*/
 }
 
-void mcp::rpc_handler::block_summary(mcp::json & j_response)
+void mcp::rpc_handler::block_summary(mcp::json & j_response, bool &)
 {
 
 	if (!request.count("hash") || (!request["hash"].is_string()))
@@ -3353,7 +3354,7 @@ void mcp::rpc_handler::block_summary(mcp::json & j_response)
 	//}
 }
 
-void mcp::rpc_handler::sign_msg(mcp::json & j_response)
+void mcp::rpc_handler::sign_msg(mcp::json & j_response, bool &)
 {
 	if (!request.count("account") || (!request["account"].is_string()))
 	{
@@ -3476,14 +3477,14 @@ void mcp::rpc_handler::sign_msg(mcp::json & j_response)
 	rpc_response(response, (int)error_code_l, err.msg(error_code_l), response_l);*/
 }
 
-void mcp::rpc_handler::version(mcp::json & j_response)
+void mcp::rpc_handler::version(mcp::json & j_response, bool &)
 {
 	j_response["version"] = STR(MCP_VERSION);
 	j_response["rpc_version"] = "1";
 	j_response["store_version"] = std::to_string(m_store.version_get());
 }
 
-void mcp::rpc_handler::status(mcp::json & j_response)
+void mcp::rpc_handler::status(mcp::json & j_response, bool &)
 {
 	// stable_mci
 	uint64_t last_stable_mci(m_chain->last_stable_mci());
@@ -3496,7 +3497,7 @@ void mcp::rpc_handler::status(mcp::json & j_response)
 	j_response["last_stable_block_index"] = last_stable_index;
 }
 
-void mcp::rpc_handler::peers(mcp::json & j_response)
+void mcp::rpc_handler::peers(mcp::json & j_response, bool &)
 {
 
 	mcp::json peers_l = mcp::json::array();
@@ -3516,7 +3517,7 @@ void mcp::rpc_handler::peers(mcp::json & j_response)
 	j_response["peers"] = peers_l;
 }
 
-void mcp::rpc_handler::nodes(mcp::json & j_response)
+void mcp::rpc_handler::nodes(mcp::json & j_response, bool &)
 {
 
 	mcp::json nodes_l = mcp::json::array();
@@ -3533,7 +3534,7 @@ void mcp::rpc_handler::nodes(mcp::json & j_response)
 	j_response["nodes"] = nodes_l;
 }
 
-void mcp::rpc_handler::witness_list(mcp::json & j_response)
+void mcp::rpc_handler::witness_list(mcp::json & j_response, bool &)
 {
 	mcp::witness_param const &w_param(mcp::param::curr_witness_param());
 	mcp::json witness_list_l = mcp::json::array();
@@ -3544,7 +3545,7 @@ void mcp::rpc_handler::witness_list(mcp::json & j_response)
 	j_response["witness_list"] = witness_list_l;
 }
 
-void mcp::rpc_handler::debug_trace_transaction(mcp::json & j_response)
+void mcp::rpc_handler::debug_trace_transaction(mcp::json & j_response, bool &)
 {
 	if (!request.count("hash") || !request["hash"].is_string())
 	{
@@ -3691,7 +3692,7 @@ void mcp::rpc_handler::debug_trace_transaction(mcp::json & j_response)
 	//}
 }
 
-void mcp::rpc_handler::debug_storage_range_at(mcp::json & j_response)
+void mcp::rpc_handler::debug_storage_range_at(mcp::json & j_response, bool &)
 {
 
 	if (!request.count("hash") || !request["hash"].is_string())
@@ -3928,6 +3929,7 @@ namespace
 void mcp::rpc_handler::process_request()
 {
 	mcp::json j_response;
+	bool async = false;
 
 	try
 	{
@@ -3942,7 +3944,7 @@ void mcp::rpc_handler::process_request()
 		if (request.count("action")) {
 			auto pointer = m_mcpRpcMethods.find(request["action"]);
 			if (pointer != m_mcpRpcMethods.end()) {
-				(this->*(pointer->second))(j_response);
+				(this->*(pointer->second))(j_response, async);
 				j_response["code"] = 0;
 				j_response["msg"] = "OK";
 			}
@@ -3964,7 +3966,7 @@ void mcp::rpc_handler::process_request()
 				j_response["id"] = request["id"];
 				j_response["jsonrpc"] = request["jsonrpc"];
 				j_response["result"] = nullptr;
-				(this->*(pointer->second))(j_response);
+				(this->*(pointer->second))(j_response, async);
 			}
 			else {
 				BOOST_THROW_EXCEPTION(RPC_Error_Eth_MethodNotFound());
@@ -3998,7 +4000,9 @@ void mcp::rpc_handler::process_request()
 		j_response["msg"] = "Internal server error in HTTP RPC";
 	}
 
-	response(j_response);
+	if (!async) {
+		response(j_response);
+	}
 }
 
 std::shared_ptr<mcp::rpc> mcp::get_rpc(mcp::block_store &store_a, std::shared_ptr<mcp::chain> chain_a,
@@ -4954,12 +4958,12 @@ void mcp::error_eth_response(std::function<void(mcp::json const &)> response_a, 
 	response_a(json_a);
 }
 */
-void mcp::rpc_handler::eth_blockNumber(mcp::json & j_response)
+void mcp::rpc_handler::eth_blockNumber(mcp::json & j_response, bool &)
 {
 	j_response["result"] = toJS(m_chain->last_stable_index());
 }
 
-void mcp::rpc_handler::eth_getTransactionCount(mcp::json & j_response)
+void mcp::rpc_handler::eth_getTransactionCount(mcp::json & j_response, bool &)
 {
 	mcp::json params = request["params"];
 	if (params.size() < 1 || !params[0].is_string())
@@ -4977,17 +4981,17 @@ void mcp::rpc_handler::eth_getTransactionCount(mcp::json & j_response)
 	}
 }
 
-void mcp::rpc_handler::eth_chainId(mcp::json & j_response)
+void mcp::rpc_handler::eth_chainId(mcp::json & j_response, bool &)
 {
 	j_response["result"] = toJS(mcp::chain_id);
 }
 
-void mcp::rpc_handler::eth_gasPrice(mcp::json & j_response)
+void mcp::rpc_handler::eth_gasPrice(mcp::json & j_response, bool &)
 {
 	j_response["result"] = toJS(mcp::gas_price);
 }
 
-void mcp::rpc_handler::eth_estimateGas(mcp::json & j_response)
+void mcp::rpc_handler::eth_estimateGas(mcp::json & j_response, bool &)
 {
 	mcp::json params = request["params"];
 	if (params.size() < 1 || !params[0].is_object())
@@ -5016,7 +5020,7 @@ void mcp::rpc_handler::eth_estimateGas(mcp::json & j_response)
 	j_response["result"] = toJS(result.first);
 }
 
-void mcp::rpc_handler::eth_getBlockByNumber(mcp::json & j_response)
+void mcp::rpc_handler::eth_getBlockByNumber(mcp::json & j_response, bool &)
 {
 	mcp::json params = request["params"];
 	if (params.size() < 1 || !params[0].is_string())
@@ -5056,7 +5060,7 @@ void mcp::rpc_handler::eth_getBlockByNumber(mcp::json & j_response)
 	j_response["result"] = block_l;
 }
 
-void mcp::rpc_handler::eth_sendRawTransaction(mcp::json & j_response)
+void mcp::rpc_handler::eth_sendRawTransaction(mcp::json & j_response, bool &)
 {
 	mcp::json params = request["params"];
 	if (params.size() < 1 || !params[0].is_string())
@@ -5091,7 +5095,7 @@ void mcp::rpc_handler::eth_sendRawTransaction(mcp::json & j_response)
 	}
 }
 
-void mcp::rpc_handler::eth_sendTransaction(mcp::json & j_response)
+void mcp::rpc_handler::eth_sendTransaction(mcp::json & j_response, bool & async)
 {
 	mcp::json params = request["params"];
 	if (params.size() < 1 || !params[0].is_object())
@@ -5104,13 +5108,14 @@ void mcp::rpc_handler::eth_sendTransaction(mcp::json & j_response)
 	try
 	{
 		auto rpc_l(shared_from_this());
-		auto fun = [rpc_l, j_response, this](h256 h)
+		auto fun = [j_response, rpc_l, this](h256 h)
 		{
 			mcp::json j_resp = j_response;
 			j_resp["result"] = toJS(h);
 			response(j_resp);
 		};
 
+		async = true;
 		m_wallet->send_async(t, fun);
 	}
 	catch (dev::GasPriceTooLow const& e)
@@ -5131,7 +5136,7 @@ void mcp::rpc_handler::eth_sendTransaction(mcp::json & j_response)
 	}
 }
 
-void mcp::rpc_handler::eth_call(mcp::json & j_response)
+void mcp::rpc_handler::eth_call(mcp::json & j_response, bool &)
 {
 	mcp::json params = request["params"];
 	if (params.size() < 2 || !params[0].is_object())
@@ -5173,27 +5178,27 @@ void mcp::rpc_handler::eth_call(mcp::json & j_response)
 	j_response["result"] = toJS(result.first.output);
 }
 
-void mcp::rpc_handler::net_version(mcp::json & j_response)
+void mcp::rpc_handler::net_version(mcp::json & j_response, bool &)
 {
 	j_response["result"] = (int)mcp::mcp_network + 800;
 }
 
-void mcp::rpc_handler::net_listening(mcp::json & j_response)
+void mcp::rpc_handler::net_listening(mcp::json & j_response, bool &)
 {
 	j_response["result"] = m_host->is_started();
 }
 
-void mcp::rpc_handler::net_peerCount(mcp::json & j_response)
+void mcp::rpc_handler::net_peerCount(mcp::json & j_response, bool &)
 {
 	j_response["result"] = m_host->get_peers_count();
 }
 
-void mcp::rpc_handler::web3_clientVersion(mcp::json & j_response)
+void mcp::rpc_handler::web3_clientVersion(mcp::json & j_response, bool &)
 {
 	j_response["result"] = STR(MCP_VERSION);
 }
 
-void mcp::rpc_handler::web3_sha3(mcp::json & j_response)
+void mcp::rpc_handler::web3_sha3(mcp::json & j_response, bool &)
 {
 	mcp::json params = request["params"];
 	if (params.size() < 1 || !params[0].is_string())
@@ -5211,7 +5216,7 @@ void mcp::rpc_handler::web3_sha3(mcp::json & j_response)
 	j_response["result"] = toJS(digest);
 }
 
-void mcp::rpc_handler::eth_getCode(mcp::json & j_response)
+void mcp::rpc_handler::eth_getCode(mcp::json & j_response, bool &)
 {
 	mcp::json params = request["params"];
 	mcp::db::db_transaction transaction(m_store.create_transaction());
@@ -5227,7 +5232,7 @@ void mcp::rpc_handler::eth_getCode(mcp::json & j_response)
 	}
 }
 
-void mcp::rpc_handler::eth_getStorageAt(mcp::json & j_response)
+void mcp::rpc_handler::eth_getStorageAt(mcp::json & j_response, bool &)
 {
 	mcp::json params = request["params"];
 	if (params.size() < 2 ||
@@ -5252,7 +5257,7 @@ void mcp::rpc_handler::eth_getStorageAt(mcp::json & j_response)
 	}
 }
 
-void mcp::rpc_handler::eth_getTransactionByHash(mcp::json & j_response)
+void mcp::rpc_handler::eth_getTransactionByHash(mcp::json & j_response, bool &)
 {
 	mcp::json params = request["params"];
 	if (params.size() < 1 || !params[0].is_string())
@@ -5286,7 +5291,7 @@ void mcp::rpc_handler::eth_getTransactionByHash(mcp::json & j_response)
 	}
 }
 
-void mcp::rpc_handler::eth_getTransactionByBlockHashAndIndex(mcp::json & j_response)
+void mcp::rpc_handler::eth_getTransactionByBlockHashAndIndex(mcp::json & j_response, bool &)
 {
 	mcp::json params = request["params"];
 	if (params.size() < 2 || params[1] != "0x0")
@@ -5319,7 +5324,7 @@ void mcp::rpc_handler::eth_getTransactionByBlockHashAndIndex(mcp::json & j_respo
 	}
 }
 
-void mcp::rpc_handler::eth_getTransactionByBlockNumberAndIndex(mcp::json & j_response)
+void mcp::rpc_handler::eth_getTransactionByBlockNumberAndIndex(mcp::json & j_response, bool &)
 {
 	mcp::json params = request["params"];
 	if (params.size() < 2 || params[1] != "0x0")
@@ -5371,7 +5376,7 @@ void mcp::rpc_handler::eth_getTransactionByBlockNumberAndIndex(mcp::json & j_res
 	}
 }
 
-void mcp::rpc_handler::eth_getBalance(mcp::json & j_response) {
+void mcp::rpc_handler::eth_getBalance(mcp::json & j_response, bool &) {
 	mcp::json params = request["params"];
 	if (params.size() < 1)
 	{
@@ -5389,7 +5394,7 @@ void mcp::rpc_handler::eth_getBalance(mcp::json & j_response) {
 	}
 }
 
-void mcp::rpc_handler::eth_getTransactionReceipt(mcp::json & j_response)
+void mcp::rpc_handler::eth_getTransactionReceipt(mcp::json & j_response, bool &)
 {
 	mcp::json params = request["params"];
 	if (params.size() < 1)
@@ -5422,7 +5427,7 @@ void mcp::rpc_handler::eth_getTransactionReceipt(mcp::json & j_response)
 	}
 }
 
-void mcp::rpc_handler::eth_getBlockByHash(mcp::json & j_response)
+void mcp::rpc_handler::eth_getBlockByHash(mcp::json & j_response, bool &)
 {
 	mcp::json params = request["params"];
 	if (params.size() < 1)
@@ -5454,7 +5459,7 @@ void mcp::rpc_handler::eth_getBlockByHash(mcp::json & j_response)
 	}
 }
 
-void mcp::rpc_handler::eth_getBlockTransactionCountByHash(mcp::json & j_response)
+void mcp::rpc_handler::eth_getBlockTransactionCountByHash(mcp::json & j_response, bool &)
 {
 	mcp::json params = request["params"];
 	if (params.size() < 1)
@@ -5480,7 +5485,7 @@ void mcp::rpc_handler::eth_getBlockTransactionCountByHash(mcp::json & j_response
 	}
 }
 
-void mcp::rpc_handler::eth_getBlockTransactionCountByNumber(mcp::json & j_response)
+void mcp::rpc_handler::eth_getBlockTransactionCountByNumber(mcp::json & j_response, bool &)
 {
 	mcp::json params = request["params"];
 	if (params.size() < 1)
@@ -5515,7 +5520,7 @@ void mcp::rpc_handler::eth_getBlockTransactionCountByNumber(mcp::json & j_respon
 		j_response["result"] = 1;
 }
 
-void mcp::rpc_handler::eth_accounts(mcp::json & j_response)
+void mcp::rpc_handler::eth_accounts(mcp::json & j_response, bool &)
 {
 	mcp::json j_accounts = mcp::json::array();
 	std::list<dev::Address> account_list(m_key_manager->list());
@@ -5526,7 +5531,7 @@ void mcp::rpc_handler::eth_accounts(mcp::json & j_response)
 	j_response["result"] = j_accounts;
 }
 
-void mcp::rpc_handler::eth_sign(mcp::json & j_response)
+void mcp::rpc_handler::eth_sign(mcp::json & j_response, bool &)
 {
 	mcp::json params = request["params"];
 	if (params.size() < 2) {
@@ -5562,7 +5567,7 @@ void mcp::rpc_handler::eth_sign(mcp::json & j_response)
 	j_response["result"] = signature.hexPrefixed();
 }
 
-void mcp::rpc_handler::eth_signTransaction(mcp::json & j_response)
+void mcp::rpc_handler::eth_signTransaction(mcp::json & j_response, bool &)
 {
 	mcp::json params = request["params"][0];
 	if (params.size() < 1 || !params[0].is_object())
@@ -5584,12 +5589,12 @@ void mcp::rpc_handler::eth_signTransaction(mcp::json & j_response)
 	j_response["result"] = ((dev::Signature*)&t.signature())->hexPrefixed();
 }
 
-void mcp::rpc_handler::eth_protocolVersion(mcp::json & j_response)
+void mcp::rpc_handler::eth_protocolVersion(mcp::json & j_response, bool &)
 {
 	j_response["result"] = STR(MCP_VERSION);
 }
 
-void mcp::rpc_handler::eth_syncing(mcp::json & j_response)
+void mcp::rpc_handler::eth_syncing(mcp::json & j_response, bool &)
 {
 	uint64_t last_stable_mci(m_chain->last_stable_mci());
 	uint64_t last_mci(m_chain->last_mci());
@@ -5603,7 +5608,7 @@ void mcp::rpc_handler::eth_syncing(mcp::json & j_response)
 	j_response["result"] = result;
 }
 
-void mcp::rpc_handler::eth_getLogs(mcp::json & j_response)
+void mcp::rpc_handler::eth_getLogs(mcp::json & j_response, bool &)
 {
 	mcp::json params = request["params"];
 	if (params.size() < 1 || !params[0].is_object())
@@ -5749,7 +5754,7 @@ void mcp::rpc_handler::eth_getLogs(mcp::json & j_response)
 	}
 }
 
-void mcp::rpc_handler::personal_importRawKey(mcp::json & j_response)
+void mcp::rpc_handler::personal_importRawKey(mcp::json & j_response, bool &)
 {
 	mcp::json params = request["params"];
 	if (params.size() < 2 || !params[0].is_string())
@@ -5776,7 +5781,7 @@ void mcp::rpc_handler::personal_importRawKey(mcp::json & j_response)
 	j_response["result"] = kc.account.hexPrefixed();
 }
 
-void mcp::rpc_handler::personal_listAccounts(mcp::json & j_response)
+void mcp::rpc_handler::personal_listAccounts(mcp::json & j_response, bool &)
 {
 	mcp::json j_accounts = mcp::json::array();
 	std::list<dev::Address> account_list(m_key_manager->list());
@@ -5787,7 +5792,7 @@ void mcp::rpc_handler::personal_listAccounts(mcp::json & j_response)
 	j_response["result"] = j_accounts;
 }
 
-void mcp::rpc_handler::personal_lockAccount(mcp::json & j_response)
+void mcp::rpc_handler::personal_lockAccount(mcp::json & j_response, bool &)
 {
 	mcp::json params = request["params"];
 	try
@@ -5806,7 +5811,7 @@ void mcp::rpc_handler::personal_lockAccount(mcp::json & j_response)
 	}
 }
 
-void mcp::rpc_handler::personal_newAccount(mcp::json & j_response)
+void mcp::rpc_handler::personal_newAccount(mcp::json & j_response, bool &)
 {
 	mcp::json params = request["params"];
 	if (params.size() < 1)
@@ -5826,7 +5831,7 @@ void mcp::rpc_handler::personal_newAccount(mcp::json & j_response)
 	j_response["result"] = account.hexPrefixed();
 }
 
-void mcp::rpc_handler::personal_unlockAccount(mcp::json & j_response)
+void mcp::rpc_handler::personal_unlockAccount(mcp::json & j_response, bool &)
 {
 	mcp::json params = request["params"];
 	if (params.size() < 2)
@@ -5853,7 +5858,7 @@ void mcp::rpc_handler::personal_unlockAccount(mcp::json & j_response)
 	j_response["result"] = true;
 }
 
-void mcp::rpc_handler::personal_sendTransaction(mcp::json & j_response)
+void mcp::rpc_handler::personal_sendTransaction(mcp::json & j_response, bool & async)
 {
 	mcp::json params = request["params"];
 	if (params.size() < 2 || !params[0].is_object() || !params[1].is_string())
@@ -5874,6 +5879,7 @@ void mcp::rpc_handler::personal_sendTransaction(mcp::json & j_response)
 			response(j_resp);
 		};
 
+		async = true;
 		m_wallet->send_async(t, fun, password);
 	}
 	catch (dev::GasPriceTooLow const& e)
@@ -5894,7 +5900,7 @@ void mcp::rpc_handler::personal_sendTransaction(mcp::json & j_response)
 	}
 }
 
-void mcp::rpc_handler::personal_sign(mcp::json & j_response)
+void mcp::rpc_handler::personal_sign(mcp::json & j_response, bool &)
 {
 	mcp::json params = request["params"];
 	if (params.size() < 3)
@@ -5932,7 +5938,7 @@ void mcp::rpc_handler::personal_sign(mcp::json & j_response)
 	j_response["result"] = signature.hexPrefixed();
 }
 
-void mcp::rpc_handler::personal_ecRecover(mcp::json & j_response)
+void mcp::rpc_handler::personal_ecRecover(mcp::json & j_response, bool &)
 {
 	mcp::json params = request["params"];
 	if (params.size() < 2)
