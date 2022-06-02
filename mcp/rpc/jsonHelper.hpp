@@ -27,9 +27,13 @@ namespace mcp
 	//response
 	mcp::json toJson(Transaction const& _t);
 
+	mcp::json toJson(LocalisedTransaction const& _t);
+
 	mcp::json toJson(dev::eth::LocalisedTransactionReceipt const& _t);
 
 	mcp::json toJson(mcp::localised_log_entries const& _e);
 
 	mcp::json toJson(mcp::log_entry const& _e);
+
+	mcp::json toJson(mcp::block & _b);
 }

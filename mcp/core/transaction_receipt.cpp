@@ -30,16 +30,13 @@ using namespace dev::eth;
 
 TransactionReceipt::TransactionReceipt(RLP r)
 {
-	if (!r.isList() || r.itemCount() != 7)
+	if (!r.isList() || r.itemCount() != 4)
 		BOOST_THROW_EXCEPTION(InvalidTransactionReceiptFormat());
 
-	m_blockHash = (h256)r[0];
-	m_blockNumber = (unsigned)r[1];
-	m_transactionIndex = (unsigned)r[2];
-	m_statusCode = (uint8_t)r[3];
-	m_gasUsed = (u256)r[4];
-	m_bloom = (log_bloom)r[5];
-	for (auto const& i : r[6])
+	m_statusCode = (uint8_t)r[0];
+	m_gasUsed = (u256)r[1];
+	m_bloom = (log_bloom)r[2];
+	for (auto const& i : r[3])
 		m_log.emplace_back(i);
 
 }
@@ -52,8 +49,8 @@ TransactionReceipt::TransactionReceipt(uint8_t _status, u256 const& _gasUsed, mc
 
 void TransactionReceipt::streamRLP(RLPStream& _s) const
 {
-	_s.appendList(7);
-	_s << m_blockHash << m_blockNumber << m_transactionIndex << statusCode() << m_gasUsed << m_bloom;
+	_s.appendList(4);
+	_s << statusCode() << m_gasUsed << m_bloom;
 	_s.appendList(m_log.size());
 	for (mcp::log_entry const& l : m_log)
 		l.streamRLP(_s);

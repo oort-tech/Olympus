@@ -31,6 +31,10 @@ namespace mcp
 		std::shared_ptr<mcp::Transaction> transaction_get(mcp::db::db_transaction &, h256 const &);
 		void transaction_put(mcp::db::db_transaction &, h256 const &, mcp::Transaction const &);
 
+		/// transaction -> block
+		std::shared_ptr<mcp::TransactionAddress> transaction_address_get(mcp::db::db_transaction &, h256 const &);
+		void transaction_address_put(mcp::db::db_transaction &, h256 const &, mcp::TransactionAddress const &);
+
 		std::shared_ptr<mcp::account_state> account_state_get(mcp::db::db_transaction & transaction_a, h256 const& hash_a);
 		void account_state_put(mcp::db::db_transaction & transaction_a, h256 const& hash_a, mcp::account_state const & value_a);
 
@@ -69,12 +73,13 @@ namespace mcp
 		size_t stable_block_count(mcp::db::db_transaction & transaction_a);
 		bool stable_block_get(mcp::db::db_transaction & transaction_a, uint64_t const & index, mcp::block_hash & hash_a, std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a = nullptr);
 		void stable_block_put(mcp::db::db_transaction & transaction_a, uint64_t const & index_a, mcp::block_hash const & hash_a);
+		bool stable_block_get(mcp::db::db_transaction & transaction_a, mcp::block_hash const& hash_a, uint64_t & index_a, std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a = nullptr);
 
 		size_t transaction_unstable_count(mcp::db::db_transaction & transaction_a);
-		void transaction_unstable_count_add(mcp::db::db_transaction & transaction_a, uint32_t v);
-		void transaction_unstable_count_reduce(mcp::db::db_transaction & transaction_a, uint32_t v);
+		void transaction_unstable_count_add(mcp::db::db_transaction & transaction_a, uint32_t v = 1);
+		void transaction_unstable_count_reduce(mcp::db::db_transaction & transaction_a, uint32_t v = 1);
 		size_t transaction_count(mcp::db::db_transaction & transaction_a);
-		void transaction_count_add(mcp::db::db_transaction & transaction_a, uint32_t v);
+		void transaction_count_add(mcp::db::db_transaction & transaction_a, uint32_t v = 1);
 
 		//sync
 		bool catchup_chain_summaries_get(mcp::db::db_transaction & transaction_a, uint64_t const &, mcp::summary_hash &);
@@ -169,6 +174,9 @@ namespace mcp
 		// transaction hash -> transaction
 		int transactions;
 
+		// transaction hash -> TransactionAddress
+		int transaction_address;
+
 		//block hash -> block state
 		int block_state;
 		//block hash , child block hash -> nullptr
@@ -180,6 +188,8 @@ namespace mcp
 		int main_chain;
 		//block stable index-> block hash
 		int stable_block;
+		//block block hash-> stable index
+		int stable_block_number;
 		// block hash -> summary hash
 		int block_summary;
 		// summary hash -> block hash

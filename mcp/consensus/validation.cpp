@@ -5,13 +5,15 @@
 mcp::validation::validation(
 	mcp::block_store& store_a, mcp::ledger& ledger_a,
 	mcp::mru_list<mcp::block_hash>& invalid_block_cache_a,
-	std::shared_ptr<mcp::block_cache> cache_a
+	std::shared_ptr<mcp::block_cache> cache_a,
+	std::shared_ptr<mcp::iTransactionQueue> tq
 ) :
 	m_store(store_a),
 	m_ledger(ledger_a),
 	m_graph(store_a),
 	m_invalid_block_cache(invalid_block_cache_a),
-	m_cache(cache_a)
+	m_cache(cache_a),
+	m_tq(tq)
 {
 }
 
@@ -187,6 +189,26 @@ mcp::validate_result mcp::validation::dag_validate(mcp::db::db_transaction & tra
 		}
 	}
 
+	/// check links
+	/// links must in cache or processed. if not, the block lack the necessary conditions for processing
+	auto links(block->links());
+	for (auto link : links)
+	{
+		if (!m_tq->exist(link) && !cache_a->transaction_exists(transaction_a, link))
+		{
+			/// todo zhouyou invalid transactions
+			//if (m_invalid_block_cache.contains(link))
+			//{
+			//	result.code = mcp::validate_result_codes::parents_and_previous_include_invalid_block;
+			//	result.err_msg = boost::str(boost::format("Invalid missing link, hash: %1%") % link.to_string());
+			//	return result;
+			//}
+
+			result.missing_links.insert(link);
+			continue;
+		}
+	}
+
 	if (result.missing_parents_and_previous.size() > 0 || result.missing_links.size() > 0)
 	{
 		result.code = mcp::validate_result_codes::missing_parents_and_previous;
@@ -224,13 +246,13 @@ mcp::validate_result mcp::validation::dag_validate(mcp::db::db_transaction & tra
 		return result;
 	}
 	
-	//size_t const & link_size(links->size());
-	//if (link_size > b_param.max_link_size)
-	//{
-	//	result.code = mcp::validate_result_codes::invalid_block;
-	//	result.err_msg = boost::str(boost::format("invalid links size: %1%") % link_size);
-	//	return result;
-	//}
+	size_t const & link_size(links.size());
+	if (link_size > b_param.max_link_size)
+	{
+		result.code = mcp::validate_result_codes::invalid_block;
+		result.err_msg = boost::str(boost::format("invalid links size: %1%") % link_size);
+		return result;
+	}
 
 	//check parent related
 	std::list<mcp::block_hash> pre_pblock_hashs;

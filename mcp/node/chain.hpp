@@ -34,6 +34,7 @@ namespace mcp
 		mcp::json traceTransaction(Executive& _e, Transaction const& _t, mcp::json const& _json);
 
 		void save_dag_block(mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a, std::shared_ptr<mcp::block> block_a);
+		void save_transaction(mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a, std::shared_ptr<mcp::Transaction> t_a, mcp::block_hash const& block_hash_a, unsigned index_a);
 		void try_advance(mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a);
 
 		void update_cache();

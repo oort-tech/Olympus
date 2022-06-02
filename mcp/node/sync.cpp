@@ -54,13 +54,14 @@ mcp::sync_info mcp::node_sync::m_request_info;
 mcp::node_sync::node_sync(
 	std::shared_ptr<mcp::node_capability> capability_a, mcp::block_store& store_a,
 	std::shared_ptr<mcp::chain> chain_a, std::shared_ptr<mcp::block_cache> cache_a,
-	std::shared_ptr<mcp::async_task> async_task_a,
+	std::shared_ptr<mcp::TransactionQueue> tq, std::shared_ptr<mcp::async_task> async_task_a,
 	mcp::fast_steady_clock& steady_clock_a, boost::asio::io_service & io_service_a
 ) :
 	m_capability(capability_a),
 	m_store(store_a),
 	m_chain(chain_a),
 	m_cache(cache_a),
+	m_tq(tq),
 	m_async_task(async_task_a),
 	m_steady_clock(steady_clock_a),
 	m_stoped(false),
@@ -1642,47 +1643,8 @@ void mcp::node_sync::peer_info_request_handler(p2p::node_id const &id)
 	}
 
 	assert_x(have_get_block_count < max_send_count);
-	unsigned max_latest_unlink_send_count = max_send_count - have_get_block_count;
-
-	//try
-	//{
-	//	auto snap = m_store.create_snapshot();
-
-	//	mcp::db::forward_iterator it = m_store.unlink_info_begin(transaction, snap);
-	//	if (it.valid())
-	//	{
-	//		dev::Address rand_account;
-	//		mcp::random_pool.GenerateBlock(rand_account.bytes.data(), rand_account.bytes.size());
-	//		mcp::db::forward_iterator rand_it = m_store.unlink_info_begin(transaction, rand_account, snap);
-	//		if (rand_it.valid())
-	//		{
-	//			it = std::move(rand_it);
-	//		}
-
-	//		dev::Address start_account(0);
-	//		while (pi.arr_light_tip_blocks.size() < max_latest_unlink_send_count)
-	//		{
-	//			if (!it.valid())
-	//				it = m_store.unlink_info_begin(transaction, snap);
-
-	//			dev::Address current_account(mcp::slice_to_account(it.key()));
-	//			if (start_account == current_account)  // eq start ,break
-	//				break;
-	//			if (start_account.is_zero())
-	//				start_account = current_account;
-
-	//			mcp::unlink_info info(it.value());
-	//			if (!info.latest_unlink.is_zero())
-	//				pi.arr_light_tip_blocks.insert(std::make_pair(current_account, info.latest_unlink));
-	//			++it;
-	//		}
-	//	}
-	//}
-	//catch (const std::exception& e)
-	//{
-	//	LOG(log_sync.error) << "latest_unlinks error:" << e.what();
-	//	throw;
-	//}
+	//unsigned max_latest_unlink_send_count = max_send_count - have_get_block_count;
+	pi.arr_light_tip_blocks = m_tq->topAccountAndNonce(max_send_count - have_get_block_count);
 	
 	send_peer_info(id, pi);
 	return;

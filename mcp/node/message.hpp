@@ -271,7 +271,7 @@ class peer_info_message
 	void stream_RLP(dev::RLPStream &s) const;
 	uint64_t min_retrievable_mci;
 	std::vector<mcp::block_hash> arr_tip_blocks;
-	//std::map<dev::Address, mcp::block_hash> arr_light_tip_blocks;
+	std::vector<h256> arr_light_tip_blocks; /// account -> nonce
 };
 
 class peer_info_request_message
@@ -314,7 +314,7 @@ public:
 	mcp::validate_result_codes code;
 	std::string err_msg;
 	std::unordered_set<mcp::block_hash> missing_parents_and_previous;
-	std::unordered_set<mcp::block_hash> missing_links;
+	h256Hash missing_links;
 };
 
 /**

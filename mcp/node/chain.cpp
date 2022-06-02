@@ -170,6 +170,47 @@ void mcp::chain::save_dag_block(mcp::timeout_db_transaction & timeout_tx_a, std:
 	}
 }
 
+void mcp::chain::save_transaction(mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a, std::shared_ptr<mcp::Transaction> t_a, mcp::block_hash const& block_hash_a, unsigned index_a)
+{
+	if (m_stopped)
+		return;
+
+	{
+		//mcp::stopwatch_guard sw("process:save_block:not commit");
+
+		mcp::db::db_transaction & transaction(timeout_tx_a.get_transaction());
+		try
+		{
+			{
+				//mcp::stopwatch_guard sw("save_block:write_block");
+				auto const& hash = t_a->sha3();
+				if (cache_a->transaction_exists(transaction, hash))
+				{
+					assert_x_msg(false, "block exist do not added count,hash:" + hash.hex());
+				}
+
+				//save transaction, need put first
+				cache_a->transaction_put(transaction, t_a);
+				std::shared_ptr<mcp::TransactionAddress> td(std::make_shared<mcp::TransactionAddress>(block_hash_a, index_a));
+				cache_a->transaction_address_put(transaction, hash, td);
+
+				m_store.transaction_unstable_count_add(transaction);
+				m_store.transaction_count_add(transaction);
+				cache_a->transaction_del_from_queue(hash);
+			}
+
+			//m_new_blocks.push(block_a->block);
+
+			timeout_tx_a.commit_if_timeout();
+		}
+		catch (std::exception const & e)
+		{
+			LOG(m_log.error) << "Chain save block error: " << e.what();
+			timeout_tx_a.rollback();
+			throw;
+		}
+	}
+}
 
 void mcp::chain::try_advance(mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a)
 {
@@ -273,6 +314,7 @@ void mcp::chain::write_dag_block(mcp::db::db_transaction & transaction_a, std::s
 
 	m_store.dag_free_put(transaction_a, mcp::free_key(witnessed_level, level, block_hash));
 }
+
 
 void mcp::chain::find_main_chain_changes(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a, std::shared_ptr<mcp::block> block_a, mcp::block_hash const &best_free_block_hash,
 	bool & is_mci_retreat, uint64_t &retreat_mci, uint64_t &retreat_level, std::list<mcp::block_hash> &new_mc_block_hashs)
@@ -609,7 +651,6 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 
 						/// commit transaction receipt
 						/// the account states were committed in Executive::go()
-						result.second.setBlockInfo(dag_stable_block_hash, m_last_stable_index_internal, i); //block hash need transfer to h256
 						m_store.transaction_receipt_put(transaction_a, _t->sha3(), result.second);//maybe need block hash
 
 						RLPStream receiptRLP;
@@ -724,7 +765,8 @@ void mcp::chain::set_block_stable(mcp::timeout_db_transaction & timeout_tx_a, st
 			stable_block_state_copy->stable_index = stable_index;
 			cache_a->block_state_put(transaction_a, stable_block_hash, stable_block_state_copy);
 
-			m_store.stable_block_put(transaction_a, stable_index, stable_block_hash);
+			//m_store.stable_block_put(transaction_a, stable_index, stable_block_hash);
+			cache_a->block_number_put(transaction_a, stable_index, stable_block_hash);
 			m_store.last_stable_index_put(transaction_a, stable_index);
 
 #pragma region summary

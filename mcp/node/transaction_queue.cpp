@@ -9,10 +9,14 @@ namespace mcp
 	constexpr size_t c_maxVerificationQueueSize = 8192;
 	constexpr size_t c_maxDroppedTransactionCount = 1024;
 
-	TransactionQueue::TransactionQueue(mcp::block_store& store_a, std::shared_ptr<mcp::block_cache> cache_a, std::shared_ptr<mcp::chain> chain_a):
+	TransactionQueue::TransactionQueue(
+		mcp::block_store& store_a, std::shared_ptr<mcp::block_cache> cache_a, std::shared_ptr<mcp::chain> chain_a,
+		std::shared_ptr<mcp::async_task> async_task_a
+	):
 		m_store(store_a),
 		m_cache(cache_a),
 		m_chain(chain_a),
+		m_async_task(async_task_a),
 		m_current{ PriorityCompare{ *this } },
 		m_dropped(50000),
 		m_limit(50000),
@@ -84,6 +88,18 @@ namespace mcp
 		return ret;
 	}
 
+	ImportResult TransactionQueue::importLocal(Transaction const& _transaction)
+	{
+		auto ret = import(_transaction);
+		if (ImportResult::Success == ret)/// first import && successed,broadcast it
+		{
+			m_async_task->sync_async([this, _transaction]() {
+				m_capability->broadcast_transaction(_transaction);
+			});
+		}
+		return ret;
+	}
+
 	h256s TransactionQueue::topTransactions(unsigned _limit, h256Hash const& _avoid) const
 	{
 		ReadGuard l(m_lock);
@@ -99,6 +115,38 @@ namespace mcp
 		}
 			
 		return ret;
+	}
+
+	std::vector<h256> TransactionQueue::topAccountAndNonce(unsigned _limit) const
+	{
+		ReadGuard l(m_lock);
+		std::vector<h256> ret;
+		for (auto cs = m_currentByAddressAndNonce.begin(); ret.size() < _limit && cs != m_currentByAddressAndNonce.end(); ++cs)
+		{
+			assert_x(!cs->second.size()); /// must have transaction
+			auto last = cs->second.end();
+			last--;
+			ret.push_back((*last->second).transaction.sha3());
+		}
+
+		return ret;
+	}
+
+	bool TransactionQueue::exist(Address const&_acco, u256 const& _nonce)
+	{
+		ReadGuard l(m_lock);
+		if (!m_currentByAddressAndNonce.count(_acco))
+			return false;
+		auto addr = m_currentByAddressAndNonce[_acco];
+		if (!m_currentByAddressAndNonce[_acco].count(_nonce))
+			return false;
+		return true;
+	}
+
+	bool TransactionQueue::exist(h256 const& _hash)
+	{
+		ReadGuard l(m_lock);
+		return m_currentByHash.count(_hash);
 	}
 
 	h256Hash TransactionQueue::knownTransactions() const
@@ -150,11 +198,11 @@ namespace mcp
 			}
 			// If valid, append to transactions.
 			insertCurrent_WITH_LOCK(make_pair(_h, _transaction));
-			LOG(m_log.debug) << "Queued vaguely legit-looking transaction " << _h;
+			LOG(m_log.debug) << "Queued vaguely legit-looking transaction " << _h.hex();
 
 			while (m_current.size() > m_limit)
 			{
-				LOG(m_log.debug) << "Dropping out of bounds transaction " << _h;
+				LOG(m_log.debug) << "Dropping out of bounds transaction " << _h.hex();
 				remove_WITH_LOCK(m_current.rbegin()->transaction.sha3());
 			}
 
@@ -289,38 +337,33 @@ namespace mcp
 		remove_WITH_LOCK(_txHash);
 	}
 
-	Transaction TransactionQueue::get(h256 const& _txHash) const
+	std::shared_ptr<Transaction> TransactionQueue::get(h256 const& _txHash) const
 	{
 		UpgradableGuard l(m_lock);
 
 		auto t = m_currentByHash.find(_txHash);
 		if (t == m_currentByHash.end())
-			return Transaction();
+			return nullptr;
 
-		return (*t->second).transaction;
+		return std::make_shared<Transaction>((*t->second).transaction);
 	}
 
 
-	void TransactionQueue::enqueue(RLP const& _data, h512 const& _nodeId)
+	void TransactionQueue::enqueue(RLP const& _data, p2p::node_id const& _nodeId)
 	{
 		bool queued = false;
 		{
 			Guard l(x_queue);
-			unsigned itemCount = _data.itemCount();
-			for (unsigned i = 0; i < itemCount; ++i)
+			if (m_unverified.size() >= c_maxVerificationQueueSize)
 			{
-				if (m_unverified.size() >= c_maxVerificationQueueSize)
-				{
-					LOG(m_log.info) << "Transaction verification queue is full. Dropping "
-						<< itemCount - i << " transactions";
-					break;
-				}
-				m_unverified.emplace_back(UnverifiedTransaction(_data[i].data(), _nodeId));
-				queued = true;
+				LOG(m_log.info) << "Transaction verification queue is full. Dropping transactions";
+				return;
 			}
+			m_unverified.emplace_back(UnverifiedTransaction(_data.data(), _nodeId));
+			queued = true;
 		}
-		if (queued)
-			m_queueReady.notify_all();
+		
+		m_queueReady.notify_all();
 	}
 
 	void TransactionQueue::verifierBody()
@@ -342,12 +385,20 @@ namespace mcp
 			{
 				Transaction t(work.transaction, CheckTransaction::Everything);
 				ImportResult ir = import(t);
-				//m_onImport(ir, t.sha3(), work.nodeId); //Notify capability and P2P to process peer. diconnect peer if bad transaction  
+				m_onImport(ir, t.sha3(), work.nodeId);
+
+				if (ImportResult::Success == ir)/// first import && successed,broadcast it
+				{
+					m_async_task->sync_async([this, t]() {
+						m_capability->broadcast_transaction(t);
+					});
+				}
 			}
 			catch (...)
 			{
+				m_onImport(ImportResult::BadChain, h256(0), work.nodeId);///  Notify capability and P2P to process peer. diconnect peer if bad transaction  
 				// should not happen as exceptions are handled in import.
-				cwarn << "Bad transaction:" << boost::current_exception_diagnostic_information();
+				LOG(m_log.error) << "Bad transaction:" << boost::current_exception_diagnostic_information();
 			}
 		}
 	}
@@ -391,6 +442,17 @@ namespace mcp
 		if (c_state.balance(_t.sender()) < totalCost)
 			BOOST_THROW_EXCEPTION(
 				NotEnoughCash() << RequirementError(totalCost, (bigint)c_state.balance(_t.sender())) << errinfo_comment(_t.sender().hex()));
+	}
+
+	std::string TransactionQueue::getInfo()
+	{
+		std::string str = "transactionQueue current:" + std::to_string(m_current.size())
+			+ " ,currentByHash:" + std::to_string(m_currentByHash.size())
+			+ " ,currentByAddressAndNonce:" + std::to_string(m_currentByAddressAndNonce.size())
+			+ " ,future:" + std::to_string(m_future.size())
+			+ " ,m_unverified:" + std::to_string(m_unverified.size());
+
+		return str;
 	}
 
 }

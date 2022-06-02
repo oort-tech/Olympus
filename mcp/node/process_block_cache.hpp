@@ -2,17 +2,17 @@
 
 #include <mcp/core/block_store.hpp>
 #include <mcp/core/block_cache.hpp>
-
 #include <boost/multi_index_container.hpp>
 #include <boost/multi_index/hashed_index.hpp>
 #include <boost/multi_index/member.hpp>
 
 namespace mcp
 {
+	class TransactionQueue;
 	class process_block_cache : public mcp::iblock_cache
 	{
 	public:
-		explicit process_block_cache(std::shared_ptr<mcp::block_cache> cache_a, mcp::block_store & store_a);
+		explicit process_block_cache(std::shared_ptr<mcp::block_cache> cache_a, mcp::block_store & store_a, std::shared_ptr<TransactionQueue> tq);
 
 		bool block_exists(mcp::db::db_transaction & transaction_a, mcp::block_hash const & block_hash_a);
 		std::shared_ptr<mcp::block> block_get(mcp::db::db_transaction & transaction_a, mcp::block_hash const & block_hash_a);
@@ -24,6 +24,14 @@ namespace mcp
 		std::shared_ptr<mcp::account_state> latest_account_state_get(mcp::db::db_transaction & transaction_a, Address const & account_a);
 		void latest_account_state_put(mcp::db::db_transaction & transaction_a, Address const & account_a, std::shared_ptr<mcp::account_state> account_state_a);
 
+		/// transaction
+		bool transaction_exists(mcp::db::db_transaction & transaction_a, h256 const& _hash);
+		std::shared_ptr<Transaction> transaction_get(mcp::db::db_transaction & transaction_a, h256 const&_hash);
+		void transaction_put(mcp::db::db_transaction & transaction_a, std::shared_ptr<Transaction> _t);
+		void transaction_del_from_queue(h256 const& _hash);
+
+		void transaction_address_put(mcp::db::db_transaction & transaction_a, h256 const & hash, std::shared_ptr<mcp::TransactionAddress> const& td);
+
 		bool successor_get(mcp::db::db_transaction & transaction_a, mcp::block_hash const & root_a, mcp::block_hash & successor_a);
 		void successor_put(mcp::db::db_transaction & transaction_a, mcp::block_hash const & root_a, mcp::block_hash const & successor_a);
 		void successor_del(mcp::db::db_transaction & transaction_a, mcp::block_hash const & root_a);
@@ -31,12 +39,15 @@ namespace mcp
 		bool block_summary_get(mcp::db::db_transaction & transaction_a, mcp::block_hash const & block_hash_a, mcp::summary_hash & summary_a);
 		void block_summary_put(mcp::db::db_transaction & transaction_a, mcp::block_hash const & block_hash_a, mcp::block_hash const & summary_a);
 
+		void block_number_put(mcp::db::db_transaction & transaction_a, uint64_t const & index_a, mcp::block_hash const & hash_a);
+
 		void mark_as_changing();
 		void commit_and_clear_changing();
 
 	private:
 		mcp::block_store & m_store;
 		std::shared_ptr<mcp::block_cache> m_cache;
+		std::shared_ptr<TransactionQueue> m_tq;
 
 		template<class TKey, class TValue>
 		class put_item
@@ -72,15 +83,26 @@ namespace mcp
 			>>
 			m_block_state_puts;
 
-		//size_t m_max_latest_account_state_puts_size = 10000;
-		//std::unordered_set<Address> m_latest_account_state_puts_flushed;
-		//boost::multi_index_container<
-		//	put_item<Address, std::shared_ptr<mcp::account_state>>,
-		//	boost::multi_index::indexed_by<
-		//	boost::multi_index::sequenced<>,
-		//	boost::multi_index::hashed_unique<boost::multi_index::member<put_item<Address, std::shared_ptr<mcp::account_state>>, Address, &put_item<Address, std::shared_ptr<mcp::account_state>>::key>>
-		//	>>
-		//	m_latest_account_state_puts;
+		size_t m_max_latest_account_state_puts_size = 10000;
+		std::unordered_set<Address> m_latest_account_state_puts_flushed;
+		boost::multi_index_container<
+			put_item<Address, std::shared_ptr<mcp::account_state>>,
+			boost::multi_index::indexed_by<
+			boost::multi_index::sequenced<>,
+			boost::multi_index::hashed_unique<boost::multi_index::member<put_item<Address, std::shared_ptr<mcp::account_state>>, Address, &put_item<Address, std::shared_ptr<mcp::account_state>>::key>>
+			>>
+			m_latest_account_state_puts;
+
+		size_t m_max_transaction_puts_size = 10000;
+		std::unordered_set<h256> m_transaction_puts_flushed;
+		boost::multi_index_container<
+			put_item<h256, std::shared_ptr<Transaction>>,
+			boost::multi_index::indexed_by<
+			boost::multi_index::sequenced<>,
+			boost::multi_index::hashed_unique<boost::multi_index::member<put_item<h256, std::shared_ptr<Transaction>>, h256, &put_item<h256, std::shared_ptr<Transaction>>::key>>
+			>>
+			m_transaction_puts;
+		std::unordered_set<h256> m_transaction_dels;///delete from transaction queue
 
 		size_t m_max_successor_puts_size = 10000;
 		std::unordered_set<mcp::block_hash> m_successor_puts_flushed;

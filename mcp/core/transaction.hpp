@@ -181,4 +181,29 @@ namespace mcp
 
 	/// Nice name for vector of Transaction.
 	using Transactions = std::vector<Transaction>;
+
+	class LocalisedTransaction : public Transaction
+	{
+	public:
+		LocalisedTransaction(
+			Transaction const& _t,
+			mcp::block_hash const& _blockHash,
+			unsigned _transactionIndex,
+			uint64_t _blockNumber = 0
+		) :
+			Transaction(_t),
+			m_blockHash(_blockHash),
+			m_transactionIndex(_transactionIndex),
+			m_blockNumber(_blockNumber)
+		{}
+
+		mcp::block_hash const& blockHash() const { return m_blockHash; }
+		unsigned transactionIndex() const { return m_transactionIndex; }
+		uint64_t blockNumber() const { return m_blockNumber; }
+
+	private:
+		mcp::block_hash m_blockHash;
+		unsigned m_transactionIndex;
+		uint64_t m_blockNumber;
+	};
 }

@@ -41,25 +41,25 @@ namespace mcp
 	int from_hex_char(char c) noexcept;
 	bool hex_to_bytes(std::string const & s, dev::bytes & out);
 
-    template <typename... T>
-    class observer_set
+    template <typename... Args>
+    class Signal
     {
     public:
-        void add(std::function<void(T...)> const & observer_a)
+		using Callback = std::function<void(Args...)>;
+
+        void add(Callback const & _h)
         {
-            std::lock_guard<std::mutex> lock(mutex);
-            observers.push_back(observer_a);
+            observers.push_back(_h);
         }
-        void operator() (T... args)
+        void operator() (Args... args)
         {
-            std::lock_guard<std::mutex> lock(mutex);
             for (auto & i : observers)
             {
                 i(args...);
             }
         }
-        std::mutex mutex;
-        std::vector<std::function<void(T...)>> observers;
+	private:
+        std::vector<Callback> observers;
     };
 
     class error_message

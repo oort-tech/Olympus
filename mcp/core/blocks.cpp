@@ -92,65 +92,65 @@ void mcp::block::streamRLP(dev::RLPStream & s, IncludeSignature sig) const
 //	return hash() == other_a.hash() && m_vrs == other_a.m_vrs;
 //}
 
-void mcp::block::serialize_json(std::string & string_a) const
-{
-	mcp::json json;
-	serialize_json(json);
-	string_a = json.dump();
-}
+//void mcp::block::serialize_json(std::string & string_a) const
+//{
+//	mcp::json json;
+//	serialize_json(json);
+//	string_a = json.dump();
+//}
+//
+//void mcp::block::serialize_json(mcp::json & json_a) const
+//{
+//	json_a["hash"] = hash().to_string();
+//	json_a["from"] = m_from.to_account();
+//
+//	//previous
+//	mcp::json content_l = mcp::json::object();
+//	content_l["previous"] = m_previous.to_string();
+//	//parents
+//	mcp::json j_parents = mcp::json::array();
+//	for (mcp::block_hash const & p : m_parents)
+//	{
+//		j_parents.push_back(p.to_string());
+//	}
+//	content_l["parents"] = j_parents;
+//	//links
+//	mcp::json j_links = mcp::json::array();
+//	for (auto it(m_links.begin()); it != m_links.end(); it++)
+//	{
+//		h256 const & link(*it);
+//		j_links.push_back(link.hex());
+//	}
+//	content_l["links"] = j_links;
+//	//last_summary,last_summary_block,last_stable_block,timestamp
+//	content_l["last_summary"] = m_last_summary.to_string();
+//	content_l["last_summary_block"] = m_last_summary_block.to_string();
+//	content_l["last_stable_block"] = m_last_stable_block.to_string();
+//	content_l["timestamp"] = m_exec_timestamp;
+//	json_a["content"] = content_l;
+//
+//	std::string signature_l = ((Signature)m_vrs).hex();
+//	json_a["signature"] = signature_l;
+//}
 
-void mcp::block::serialize_json(mcp::json & json_a) const
-{
-	json_a["hash"] = hash().hex();
-	json_a["from"] = m_from.hexPrefixed();
-
-	//previous
-	mcp::json content_l = mcp::json::object();
-	content_l["previous"] = m_previous.hex();
-	//parents
-	mcp::json j_parents = mcp::json::array();
-	for (mcp::block_hash const & p : m_parents)
-	{
-		j_parents.push_back(p.hex());
-	}
-	content_l["parents"] = j_parents;
-	//links
-	mcp::json j_links = mcp::json::array();
-	for (auto it(m_links.begin()); it != m_links.end(); it++)
-	{
-		h256 const & link(*it);
-		j_links.push_back(link.hex());
-	}
-	content_l["links"] = j_links;
-	//last_summary,last_summary_block,last_stable_block,timestamp
-	content_l["last_summary"] = m_last_summary.hex();
-	content_l["last_summary_block"] = m_last_summary_block.hex();
-	content_l["last_stable_block"] = m_last_stable_block.hex();
-	content_l["timestamp"] = m_exec_timestamp;
-	json_a["content"] = content_l;
-
-	std::string signature_l = ((Signature)m_vrs).hex();
-	json_a["signature"] = signature_l;
-}
-
-void mcp::block::serialize_json_eth(std::string & string_a) const
-{
-	mcp::json json;
-	serialize_json_eth(json);
-	string_a = json.dump();
-}
-
-void mcp::block::serialize_json_eth(mcp::json & json_a) const
-{
-	json_a["hash"] = hash().hexPrefixed();
-	json_a["parentHash"] = m_previous.hexPrefixed();
-	json_a["gasLimit"] = uint256_to_hex_nofill(mcp::block_max_gas);
-	//json_a["gasUsed"] = uint256_to_hex_nofill(gas);
-	//json_a["minGasPrice"] = uint256_to_hex_nofill(gas_price);
-	json_a["timestamp"] = uint64_to_hex_nofill(m_exec_timestamp);
-	json_a["transactions"] = mcp::json::array();
-	json_a["transactions"].push_back(json_a["hash"]);
-}
+//void mcp::block::serialize_json_eth(std::string & string_a) const
+//{
+//	mcp::json json;
+//	serialize_json_eth(json);
+//	string_a = json.dump();
+//}
+//
+//void mcp::block::serialize_json_eth(mcp::json & json_a) const
+//{
+//	json_a["hash"] = hash().to_string(true);
+//	json_a["parentHash"] = m_previous.to_string(true);
+//	json_a["gasLimit"] = uint256_to_hex_nofill(mcp::block_max_gas);
+//	//json_a["gasUsed"] = uint256_to_hex_nofill(gas);
+//	//json_a["minGasPrice"] = uint256_to_hex_nofill(gas_price);
+//	json_a["timestamp"] = uint64_to_hex_nofill(m_exec_timestamp);
+//	json_a["transactions"] = mcp::json::array();
+//	json_a["transactions"].push_back(json_a["hash"]);
+//}
 
 //std::string mcp::block::to_json()
 //{

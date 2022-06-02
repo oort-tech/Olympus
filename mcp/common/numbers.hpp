@@ -370,15 +370,14 @@ namespace boost
             return hash(value_a);
         }
     };
-	/*
+
 	template <>
-    struct hash<mcp::account20_struct>
-    {
-        size_t operator() (mcp::account20_struct const & value_a) const
-        {
-            std::hash<mcp::account20_struct> hash;
-            return hash(value_a);
-        }
-    };
-	*/
+	struct hash<dev::Address>
+	{
+		size_t operator() (dev::Address const & data_a) const
+		{
+			std::hash<dev::Address> hash;
+			return hash(data_a);
+		}
+	};
 }

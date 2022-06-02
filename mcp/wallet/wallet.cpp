@@ -73,7 +73,7 @@ h256 mcp::wallet::importTransaction(Transaction const& _t)
 	//	// We'll let TQ deal with nonces, it will order pending transactions by nonce.
 	//}
 
-	ImportResult res = m_tq->import(_t);
+	ImportResult res = m_tq->importLocal(_t);
 	switch (res)
 	{
 	case ImportResult::Success:

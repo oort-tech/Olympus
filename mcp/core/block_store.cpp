@@ -11,6 +11,7 @@ mcp::block_store::block_store(bool & error_a, boost::filesystem::path const & pa
 	latest_account_state(0),
 	blocks(0),
 	transactions(0),
+	transaction_address(0),
 	block_state(0),
 	contract_main(0),
 	contract_aux(0),
@@ -18,6 +19,7 @@ mcp::block_store::block_store(bool & error_a, boost::filesystem::path const & pa
 	dag_free(0),
 	main_chain(0),
 	stable_block(0),
+	stable_block_number(0),
 	block_summary(0),
 	summary_block(0),
 	skiplist(0),
@@ -54,26 +56,28 @@ mcp::block_store::block_store(bool & error_a, boost::filesystem::path const & pa
 	account_state = m_db->set_column_family(default_col, "003");
 	latest_account_state = m_db->set_column_family(default_col, "004");
 	blocks = m_db->set_column_family(default_col, "005");
-	transactions == m_db->set_column_family(default_col, "006");
-	block_state = m_db->set_column_family(default_col, "007");
-	successor = m_db->set_column_family(default_col, "008");
-	main_chain = m_db->set_column_family(default_col, "009");
-	skiplist = m_db->set_column_family(default_col, "010");
-	block_summary = m_db->set_column_family(default_col, "011");
-	summary_block = m_db->set_column_family(default_col, "012");
-	stable_block = m_db->set_column_family(default_col, "013");
-	contract_main = m_db->set_column_family(default_col, "014");
-	prop = m_db->set_column_family(default_col, "015");
-	catchup_chain_summaries = m_db->set_column_family(default_col, "016");
-	catchup_chain_block_summary = m_db->set_column_family(default_col, "017");
-	catchup_chain_summary_block = m_db->set_column_family(default_col, "018");
-	hash_tree_summary = m_db->set_column_family(default_col, "019");
-	unlink_block = m_db->set_column_family(default_col, "020");
-	traces = m_db->set_column_family(default_col, "021");
-	next_unlink = m_db->set_column_family(default_col, "022");
-	next_unlink_index = m_db->set_column_family(default_col, "023");
-	contract_aux = m_db->set_column_family(default_col, "024");
-	transaction_receipt = m_db->set_column_family(default_col, "025");
+	transactions = m_db->set_column_family(default_col, "006");
+	transaction_address = m_db->set_column_family(default_col, "007");
+	block_state = m_db->set_column_family(default_col, "008");
+	successor = m_db->set_column_family(default_col, "009");
+	main_chain = m_db->set_column_family(default_col, "010");
+	skiplist = m_db->set_column_family(default_col, "011");
+	block_summary = m_db->set_column_family(default_col, "012");
+	summary_block = m_db->set_column_family(default_col, "013");
+	stable_block = m_db->set_column_family(default_col, "014");
+	stable_block_number = m_db->set_column_family(default_col, "015");
+	contract_main = m_db->set_column_family(default_col, "016");
+	prop = m_db->set_column_family(default_col, "017");
+	catchup_chain_summaries = m_db->set_column_family(default_col, "018");
+	catchup_chain_block_summary = m_db->set_column_family(default_col, "019");
+	catchup_chain_summary_block = m_db->set_column_family(default_col, "020");
+	hash_tree_summary = m_db->set_column_family(default_col, "021");
+	unlink_block = m_db->set_column_family(default_col, "022");
+	traces = m_db->set_column_family(default_col, "023");
+	next_unlink = m_db->set_column_family(default_col, "024");
+	next_unlink_index = m_db->set_column_family(default_col, "025");
+	contract_aux = m_db->set_column_family(default_col, "026");
+	transaction_receipt = m_db->set_column_family(default_col, "027");
 
 	//use iterator
 	dag_free = m_db->set_column_family(default_col, "101");
@@ -247,7 +251,28 @@ void mcp::block_store::transaction_put(mcp::db::db_transaction & transaction_a, 
 }
 
 
-bool mcp::block_store::dag_account_get(mcp::db::db_transaction & transaction_a, dev::Address const & account_a, mcp::dag_account_info & info_a)
+std::shared_ptr<mcp::TransactionAddress> mcp::block_store::transaction_address_get(mcp::db::db_transaction & transaction_a, h256 const& hash_a)
+{
+	std::string value;
+	bool exists(transaction_a.get(transaction_address, mcp::h256_to_slice(hash_a), value));
+	std::shared_ptr<mcp::TransactionAddress> result = nullptr;
+	if (exists)
+	{
+		dev::RLP r(value);
+		result = std::make_shared<mcp::TransactionAddress>(r);
+	}
+	return result;
+}
+
+void mcp::block_store::transaction_address_put(mcp::db::db_transaction & transaction_a, h256 const& hash_a, mcp::TransactionAddress const& _td)
+{
+	dev::bytes b_value = _td.rlp();
+	dev::Slice s_value((char *)b_value.data(), b_value.size());
+	transaction_a.put(transaction_address, mcp::h256_to_slice(hash_a), s_value);
+}
+
+
+bool mcp::block_store::dag_account_get(mcp::db::db_transaction & transaction_a, mcp::account const & account_a, mcp::dag_account_info & info_a)
 {
 	std::string value;
 	bool exists(transaction_a.get(dag_account_info, mcp::account_to_slice(account_a), value));
@@ -484,10 +509,22 @@ bool mcp::block_store::stable_block_get(mcp::db::db_transaction & transaction_a,
 	return !exists;
 }
 
+bool mcp::block_store::stable_block_get(mcp::db::db_transaction & transaction_a, mcp::block_hash const& hash_a, uint64_t & index_a, std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a)
+{
+	std::string value;
+	bool exists(transaction_a.get(stable_block_number, mcp::uint256_to_slice(hash_a), value, snapshot_a));
+	if (exists)
+	{
+		index_a = mcp::slice_to_uint64(value).number();
+	}
+	return !exists;
+}
+
 void mcp::block_store::stable_block_put(mcp::db::db_transaction & transaction_a, uint64_t const & index_a, mcp::block_hash const & hash_a)
 {
-	dev::h64 index(index_a);
-	transaction_a.put(stable_block, mcp::h64_to_slice(index), mcp::h256_to_slice(hash_a));
+	mcp::uint64_union index(index_a);
+	transaction_a.put(stable_block, mcp::uint64_to_slice(index), mcp::uint256_to_slice(hash_a));
+	transaction_a.put(stable_block_number, mcp::uint256_to_slice(hash_a), mcp::uint64_to_slice(index));
 }
 
 size_t mcp::block_store::transaction_unstable_count(mcp::db::db_transaction & transaction_a)

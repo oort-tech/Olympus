@@ -1,25 +1,34 @@
 #pragma once
 #include <mcp/common/mcp_json.hpp>
 #include <mcp/core/common.hpp>
+#include <mcp/core/transaction_queue.hpp>
 #include <libdevcore/Guards.h>
 #include <libdevcore/LruCache.h>
 #include <mcp/node/chain.hpp>
 #include <mcp/common/Exceptions.h>
+#include <mcp/common/async_task.hpp>
+#include <mcp/node/node_capability.hpp>
 
 
 namespace mcp
 {
 	class chain;
-	class TransactionQueue
+	class node_capability;
+	class TransactionQueue : public iTransactionQueue
 	{
 	public:
-		TransactionQueue(mcp::block_store& store_a, std::shared_ptr<mcp::block_cache> cache_a,std::shared_ptr<mcp::chain> chain_a);
+		TransactionQueue(
+			mcp::block_store& store_a, std::shared_ptr<mcp::block_cache> cache_a,std::shared_ptr<mcp::chain> chain_a,
+			std::shared_ptr<mcp::async_task> async_task_a
+		);
 		~TransactionQueue();
 
 		/// Add transaction to the queue to be verified and imported.
 		/// @param _data RLP encoded transaction data.
 		/// @param _nodeId Optional network identified of a node transaction comes from.
-		void enqueue(RLP const& _data, h512 const& _nodeId);
+		void enqueue(RLP const& _data, p2p::node_id const& _nodeId);
+
+		void set_capability(std::shared_ptr<mcp::node_capability> capability_a) { m_capability = capability_a; }
 
 		size_t size() { return m_current.size(); }
 
@@ -34,9 +43,11 @@ namespace mcp
 		/// @returns Import result code.
 		ImportResult import(Transaction const& _tx, IfDropped _ik = IfDropped::Ignore);
 
+		ImportResult importLocal(Transaction const& _tx);
+
 		/// get transaction from the queue
 		/// @param _txHash Trasnaction hash
-		Transaction get(h256 const& _txHash) const;
+		std::shared_ptr<Transaction> get(h256 const& _txHash) const;
 
 		/// Remove transaction from the queue
 		/// @param _txHash Trasnaction hash
@@ -52,6 +63,15 @@ namespace mcp
 		/// @returns accounts disorder,but transactions of account is order by nonce
 		h256s topTransactions(unsigned _limit, h256Hash const& _avoid = h256Hash()) const;
 
+		/// Get account's last nonce from the queue. Randomly returned are not removed from the queue automatically.
+		std::vector<h256> topAccountAndNonce(unsigned _limit) const;
+
+		/// Determined transaction exist.
+		/// @param Address.
+		/// @param nonce.
+		bool exist(Address const&_acco, u256 const& _nonce);
+		bool exist(h256 const& _hash);
+
 		/// Get a hash set of transactions in the queue
 		/// @returns A hash set of all transactions in the queue
 		h256Hash knownTransactions() const;
@@ -59,6 +79,12 @@ namespace mcp
 		/// Get max nonce for an account
 		/// @returns Max transaction nonce for account in the queue
 		u256 maxNonce(Address const& _a) const;
+
+		/// Register a handler that will be called once asynchronous verification is comeplte an transaction has been imported
+		void onImport(std::function<void(ImportResult, h256 const&, p2p::node_id const&)> const& _t){ m_onImport.add(_t);}
+
+		/// Get transaction queue information
+		std::string getInfo();
 
 	private:
 		/// Verified and imported transaction
@@ -77,7 +103,7 @@ namespace mcp
 		struct UnverifiedTransaction
 		{
 			UnverifiedTransaction() {}
-			UnverifiedTransaction(bytesConstRef const& _t, h512 const& _nodeId) : transaction(_t.toBytes()), nodeId(_nodeId) {}
+			UnverifiedTransaction(bytesConstRef const& _t, p2p::node_id const& _nodeId) : transaction(_t.toBytes()), nodeId(_nodeId) {}
 			UnverifiedTransaction(UnverifiedTransaction&& _t) : transaction(std::move(_t.transaction)), nodeId(std::move(_t.nodeId)) {}
 			UnverifiedTransaction& operator=(UnverifiedTransaction&& _other)
 			{
@@ -92,7 +118,8 @@ namespace mcp
 			UnverifiedTransaction& operator=(UnverifiedTransaction const&) = delete;
 
 			bytes transaction;  ///< RLP encoded transaction data
-			h512 nodeId;        ///< Network Id of the peer transaction comes from
+			//h512 nodeId;        ///< Network Id of the peer transaction comes from
+			p2p::node_id nodeId;
 		};
 
 		struct PriorityCompare
@@ -141,16 +168,20 @@ namespace mcp
 
 		/// verified broadcast incoming transaction
 		std::condition_variable m_queueReady;
+		Signal<ImportResult, h256 const&, p2p::node_id const&> m_onImport;			///< Called for each import attempt. Arguments are result, transaction id an node id. Be nice and exit fast.
 		std::vector<std::thread> m_verifiers;
 		std::deque<UnverifiedTransaction> m_unverified;  ///< Pending verification queue
 		mutable Mutex x_queue;                           ///< Verification queue mutex
 		std::atomic<bool> m_aborting = { false };          ///< Exit condition for verifier.
 
-		//mcp::SealEngine m_SealEngine;
+		// recieve count
+		std::atomic<uint64_t> receive_transaction_count = { 0 };
 
 		mcp::block_store & m_store;
 		std::shared_ptr<mcp::iblock_cache> m_cache;
 		std::shared_ptr<mcp::chain> m_chain;
+		std::shared_ptr<mcp::async_task> m_async_task;
+		std::shared_ptr<mcp::node_capability> m_capability;
 
 		mcp::log m_log = { mcp::log("node") };
 	};
