@@ -84,14 +84,14 @@ namespace mcp
 		}
 
 		if (_json.count("amount") && !_json["amount"].empty() && _json["amount"].is_string()) {
-			ret.value = jsToU256(_json["value"]);
+			ret.value = jsToU256(_json["amount"]);
 		}
 
 		if (_json.count("gas") && !_json["gas"].empty() && _json["gas"].is_string())
 			ret.gas = jsToU256(_json["gas"]);
 
 		if (_json.count("gas_price") && !_json["gas_price"].empty() && _json["gas_price"].is_string())
-			ret.gasPrice = jsToU256(_json["gasPrice"]);
+			ret.gasPrice = jsToU256(_json["gas_price"]);
 
 		if (_json.count("data") && !_json["data"].empty() && _json["data"].is_string()) {
 			try {
