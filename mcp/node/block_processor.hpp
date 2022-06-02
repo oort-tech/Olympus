@@ -114,7 +114,7 @@ namespace mcp
 		void do_process_one(mcp::timeout_db_transaction & timeout_tx, std::shared_ptr<mcp::block_processor_item> item);
 		void do_process_dag_item(mcp::timeout_db_transaction & timeout_tx, std::shared_ptr<mcp::block_processor_item> item_a);
 
-		void process_missing(std::shared_ptr<mcp::block_processor_item> item_a, std::unordered_set<mcp::block_hash> const & missings, std::unordered_set<mcp::block_hash> const & light_missings);
+		void process_missing(std::shared_ptr<mcp::block_processor_item> item_a, std::unordered_set<mcp::block_hash> const & missings, h256Hash const & transactions);
 		void process_existing_missing(mcp::p2p::node_id const & remote_node_id);
 		void try_process_unhandle(std::shared_ptr<mcp::block_processor_item> item_a);
 		void try_remove_invalid_unhandle(mcp::block_hash const & block_hash_a);

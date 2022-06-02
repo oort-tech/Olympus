@@ -18,11 +18,11 @@ class unhandle_item
 {
   public:
 	unhandle_item() = default;
-	unhandle_item(mcp::block_hash const &unhandle_hash_a, std::shared_ptr<mcp::block_processor_item> item_a, std::unordered_set<mcp::block_hash> const &dependency_hashs_a, std::unordered_set<mcp::block_hash> const &light_dependency_hashs_a);
+	unhandle_item(mcp::block_hash const &unhandle_hash_a, std::shared_ptr<mcp::block_processor_item> item_a, std::unordered_set<mcp::block_hash> const &dependency_hashs_a, h256Hash const &transactions_a);
 	mcp::block_hash unhandle_hash;
 	std::shared_ptr<mcp::block_processor_item> item;
 	std::unordered_set<mcp::block_hash> dependency_hashs;
-	std::unordered_set<mcp::block_hash> light_dependency_hashs;
+	h256Hash transactions;
 };
 
 class unhandle_cache
@@ -30,7 +30,7 @@ class unhandle_cache
   public:
 	unhandle_cache(std::shared_ptr<mcp::block_arrival> block_arrival_a, size_t const &capacity_a = 100000);
 
-	bool add(mcp::block_hash const &hash_a, std::unordered_set<mcp::block_hash> const &dependency_hashs_a, std::unordered_set<mcp::block_hash> const &light_dependency_hashs_a, std::shared_ptr<mcp::block_processor_item> item_a);
+	bool add(mcp::block_hash const &hash_a, std::unordered_set<mcp::block_hash> const &dependency_hashs_a, h256Hash const &transactions, std::shared_ptr<mcp::block_processor_item> item_a);
 	std::unordered_map<mcp::block_hash, std::shared_ptr<mcp::block_processor_item>> release_dependency(mcp::block_hash const &dependency_hash_a);
 	void get_missings(size_t const & missing_limit_a, std::vector<mcp::block_hash>& missings_a, std::vector<mcp::block_hash>& light_missings_a);
 

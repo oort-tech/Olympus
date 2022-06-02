@@ -1197,9 +1197,7 @@ void mcp::rpc_handler::block()
 
 		if (block != nullptr)
 		{
-			mcp::json block_l;
-			block->serialize_json(block_l);
-			response_l["block"] = block_l;
+			response_l["block"] = toJson(*block);
 			error_code_l = mcp::rpc_block_error_code::ok;
 			error_response(response, (int)error_code_l, err.msg(error_code_l), response_l);
 		}
@@ -4163,22 +4161,13 @@ void mcp::rpc_handler::eth_getBlockByNumber()
 		}
 
 		mcp::db::db_transaction transaction(m_store.create_transaction());
-		mcp::block_hash block_hash;
-		if (m_store.stable_block_get(transaction, block_number, block_hash))
-		{
-			error_eth_response(response, rpc_eth_error_code::invalid_block_number, response_l);
-			return;
-		}
-
-		auto block(m_cache->block_get(transaction, block_hash));
+		auto block(m_cache->block_get(transaction, block_number));
 		mcp::json block_l;
 		if (block != nullptr)
 		{
-			block->serialize_json_eth(block_l);
-			block_l["number"] = uint64_to_hex_nofill(block_number);
+			block_l = toJson(*block);
 		}
 		response_l["result"] = block_l;
-
 		response(response_l);
 	}
 	catch (...)
@@ -4442,16 +4431,20 @@ void mcp::rpc_handler::eth_getTransactionByHash()
 		std::string str = request["params"][0];
 		h256 h = jsToFixed<32>(str);
 
-		//todo used cache
 		auto transaction = m_store.create_transaction();
-		auto t = m_store.transaction_get(transaction, h);
-		if (t == nullptr)//todo throw and catch
+		auto td = m_cache->transaction_address_get(transaction, h);
+		auto t = m_cache->transaction_get(transaction, h);
+		if (td == nullptr || t == nullptr)//todo throw unknown and catch,@michael
 		{
 			error_eth_response(response, rpc_eth_error_code::invalid_params, response_l);
 			return;
 		}
+		uint64_t blockNum = 0;
+		auto exist = m_cache->block_number_get(transaction, td->blockHash, blockNum);
+		assert(!exist);///must exist
+		auto lt = LocalisedTransaction(*t, td->blockHash, td->index, blockNum);
 
-		response_l["result"] = toJson(*t);
+		response_l["result"] = toJson(lt);
 		response(response_l);
 	}
 	catch (Exception const&)
@@ -4483,25 +4476,34 @@ void mcp::rpc_handler::eth_getTransactionReceipt()
 {
 	try
 	{
+		mcp::json response_l;
 		//todo localisedTransaction, have block hash and block number. but how to associate blocks before witness
 		std::string str = request["params"][0];
 		h256 h = jsToFixed<32>(str);
 
-		//todo used cache
 		auto transaction = m_store.create_transaction();
-		auto t = m_store.transaction_get(transaction, h);
+		auto td = m_cache->transaction_address_get(transaction, h);
+		auto t = m_cache->transaction_get(transaction, h);
 		auto tr = m_store.transaction_receipt_get(transaction, h);
-		if (nullptr == t || nullptr == tr)
-			return response("{}");
+		if (nullptr == t || nullptr == tr || nullptr == td)//todo throw unknown and catch,@michael
+		{
+			error_eth_response(response, rpc_eth_error_code::invalid_params, response_l);
+			return;
+		}
+		uint64_t blockNum = 0;
+		auto exist = m_cache->block_number_get(transaction, td->blockHash, blockNum);
+		assert(!exist);///must exist
 
 		auto lt = dev::eth::LocalisedTransactionReceipt(
 			*tr,
 			t->sha3(),//transaction hash
+			td->blockHash,//block hash
+			blockNum,
 			t->from(),
 			t->to(),
+			td->index,
 			toAddress(t->from(), t->nonce()));
 
-		mcp::json response_l;
 		response_l["result"] = toJson(lt);
 		response(response_l);
 	}

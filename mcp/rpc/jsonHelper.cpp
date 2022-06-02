@@ -1,5 +1,6 @@
 #include <boost/throw_exception.hpp>
 #include <libdevcore/CommonJS.h>
+#include <mcp/core/config.hpp>
 #include "jsonHelper.hpp"
 
 namespace mcp
@@ -76,12 +77,35 @@ namespace mcp
 		return res;
 	}
 
+	mcp::json toJson(LocalisedTransaction const& _t)
+	{
+		mcp::json res;
+		if (_t)
+		{
+			res["hash"] = toJS(_t.sha3());
+			res["input"] = toJS(_t.data());
+			res["to"] = _t.isCreation() ? "" : toJS(_t.receiveAddress());
+			res["from"] = toJS(_t.safeSender());
+			res["gas"] = toJS(_t.gas());
+			res["gasPrice"] = toJS(_t.gasPrice());
+			res["nonce"] = toJS(_t.nonce());
+			res["value"] = toJS(_t.value());
+			res["blockHash"] = _t.blockHash().to_string();
+			res["transactionIndex"] = toJS(_t.transactionIndex());
+			res["blockNumber"] = toJS(_t.blockNumber());
+			res["r"] = toJS(_t.signature().r);
+			res["s"] = toJS(_t.signature().s);
+			res["v"] = toJS(_t.rawV());
+		}
+		return res;
+	}
+
 	mcp::json toJson(dev::eth::LocalisedTransactionReceipt const& _t)
 	{
 		mcp::json res;
 		res["transactionHash"] = toJS(_t.hash());
 		res["transactionIndex"] = _t.transactionIndex();
-		res["blockHash"] = toJS(_t.blockHash());
+		res["blockHash"] = _t.blockHash().to_string();
 		res["blockNumber"] = _t.blockNumber();
 		res["from"] = toJS(_t.from());
 		res["to"] = toJS(_t.to());
@@ -91,7 +115,7 @@ namespace mcp
 		res["logs"] = toJson(_t.localisedLogs());
 		res["logsBloom"] = toJS(_t.bloom());
 		res["status"] = toJS(_t.statusCode());
-		res["type"] = "0x2";//for metamask.golang
+		//res["type"] = "0x2";//for metamask.golang
 		return res;
 	}
 
@@ -109,7 +133,7 @@ namespace mcp
 				rs = toJson(static_cast<mcp::log_entry const&>(r));
 				rs["type"] = "mined";
 				rs["blockNumber"] = r.blockNumber;
-				rs["blockHash"] = toJS(r.blockHash);
+				rs["blockHash"] = r.blockHash.to_string();
 				rs["logIndex"] = r.logIndex;
 				rs["transactionHash"] = toJS(r.transactionHash);
 				rs["transactionIndex"] = r.transactionIndex;
@@ -130,6 +154,36 @@ namespace mcp
 			topics.push_back(toJS(t));
 		res["topics"] = topics;
 		
+		return res;
+	}
+
+	mcp::json toJson(mcp::block & _b)
+	{
+		mcp::json res;
+		res["hash"] = _b.hash().to_string(true);
+		res["from"] = _b.from().to_account();
+
+		res["previous"] = _b.previous().to_string();
+
+		mcp::json j_parents = mcp::json::array();
+		for (auto & p : _b.parents())
+		{
+			j_parents.push_back(p.to_string());
+		}
+		res["parents"] = j_parents;
+
+		mcp::json j_links = mcp::json::array();
+		for (auto & l : _b.links())
+			j_links.push_back(toJS(l));
+		res["links"] = j_links;
+
+		res["last_summary"] = _b.last_summary().to_string();
+		res["last_summary_block"] = _b.last_summary_block().to_string();
+		res["last_stable_block"] = _b.last_stable_block().to_string();
+		res["timestamp"] = _b.exec_timestamp();
+		res["gasLimit"] = toJS(mcp::block_max_gas);
+		res["signature"] = ((Signature)_b.signature()).hex();
+
 		return res;
 	}
 

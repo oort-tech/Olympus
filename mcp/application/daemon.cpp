@@ -858,20 +858,20 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 		mcp::ledger ledger;
 		///chain
 		std::shared_ptr<mcp::chain> chain(std::make_shared<mcp::chain>(chain_store, ledger));
-		///validation
-		std::shared_ptr<mcp::validation> validation(std::make_shared<mcp::validation>(chain_store, ledger, invalid_block_cache, cache));
 
 		/// transaction queue
-		std::shared_ptr<mcp::TransactionQueue> TQ(std::make_shared<mcp::TransactionQueue>(chain_store, cache, chain));
+		std::shared_ptr<mcp::TransactionQueue> TQ(std::make_shared<mcp::TransactionQueue>(chain_store, cache, chain, sync_async));	
+		///validation
+		std::shared_ptr<mcp::validation> validation(std::make_shared<mcp::validation>(chain_store, ledger, invalid_block_cache, cache, TQ));
+		///node_capability
+		std::shared_ptr<mcp::node_capability> capability(std::make_shared<mcp::node_capability>(io_service, chain_store, steady_clock, cache, sync_async, block_arrival, TQ));
+		TQ->set_capability(capability);
 
 		///composer
 		std::shared_ptr<mcp::composer> composer(std::make_shared<mcp::composer>(chain_store, cache, ledger, TQ));
 
-		///node_capability
-		std::shared_ptr<mcp::node_capability> capability(std::make_shared<mcp::node_capability>(io_service, chain_store, steady_clock, cache, sync_async, block_arrival));
-		
 		///sync
-		std::shared_ptr<mcp::node_sync> sync(std::make_shared<mcp::node_sync>(capability, chain_store, chain, cache, sync_async, steady_clock, bg_io_service));
+		std::shared_ptr<mcp::node_sync> sync(std::make_shared<mcp::node_sync>(capability, chain_store, chain, cache, TQ, sync_async, steady_clock, bg_io_service));
 		capability->set_sync(sync);
 		chain->set_complete_store_notice_func(
 			std::bind(&mcp::node_sync::put_hash_tree_summaries, sync, std::placeholders::_1)
@@ -950,7 +950,7 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 		//}
 
 		ongoing_report(chain_store, host, sync_async, background, cache,
-			sync, processor, capability,chain, alarm, m_log);
+			sync, processor, capability,chain, alarm, TQ, m_log);
 
 		std::unique_ptr<mcp::thread_runner> runner = std::make_unique<mcp::thread_runner>(io_service, config.node.io_threads, "io_service");
 		std::unique_ptr<mcp::thread_runner> sync_runner = std::make_unique<mcp::thread_runner>(sync_io_service, config.node.sync_threads, "sync_io_service");
@@ -972,6 +972,7 @@ void mcp_daemon::ongoing_report(
 	std::shared_ptr<mcp::block_cache> cache, std::shared_ptr<mcp::node_sync> sync,
 	std::shared_ptr<mcp::block_processor> processor, std::shared_ptr<mcp::node_capability> capability,
 	std::shared_ptr<mcp::chain> chain, std::shared_ptr<mcp::alarm> alarm,
+	std::shared_ptr<mcp::TransactionQueue> tq,
 	mcp::log& log
 )
 {
@@ -997,7 +998,7 @@ void mcp_daemon::ongoing_report(
 	//io service sync
 	LOG(log.info) << "sync_async: " << sync_async->get_size();
 	//io service background
-	LOG(log.info) << "sync_async: " << background->get_size();
+	LOG(log.info) << "background: " << background->get_size();
 
 
 	LOG(log.info) << "block cache: " << cache->report_cache_size();
@@ -1048,13 +1049,17 @@ void mcp_daemon::ongoing_report(
 		<< ", last_stable_mci:" << last_stable_mci
 		<< ", last_mci:" << last_mci;
 
+	LOG(log.info) << "TQ:" << tq->getInfo();
+
 	auto p_cap_metrics = capability->m_pcapability_metrics;
 	if (p_cap_metrics)
 	{
 		LOG(log.info) << "capability send: "
-			<< "joint:" << p_cap_metrics->joint
 			<< ", broadcast_joint:" << p_cap_metrics->broadcast_joint
 			<< ", joint_request:" << p_cap_metrics->joint_request
+
+			<< ", broadcast_transaction:" << p_cap_metrics->broadcast_transaction
+			<< ", transaction_request:" << p_cap_metrics->transaction_request
 
 			<< ", catchup_request:" << p_cap_metrics->catchup_request
 			<< ", catchup_response:" << p_cap_metrics->catchup_response
@@ -1071,7 +1076,9 @@ void mcp_daemon::ongoing_report(
 	}
 
 	LOG(log.info) << "capability receive: "
-		<< "joint_request:" << capability->receive_joint_request_count
+		<< "joint:" << p_cap_metrics->joint
+		<< ", transaction:" << p_cap_metrics->transaction
+		<< ", joint_request:" << capability->receive_joint_request_count
 		<< ", catchup_request:" << capability->receive_catchup_request_count
 		<< ", catchup_response:" << capability->receive_catchup_response_count
 		<< ", hash_tree_request:" << capability->receive_hash_tree_request_count
@@ -1089,9 +1096,9 @@ void mcp_daemon::ongoing_report(
 	}
 
 	alarm->add(std::chrono::steady_clock::now() + std::chrono::seconds(20), [&store, host, sync_async, background, cache,
-		sync, processor, capability, chain, alarm, &log]() {
+		sync, processor, capability, chain, alarm, tq, &log]() {
 		ongoing_report(store, host, sync_async, background, cache,
-			sync, processor, capability, chain, alarm, log);
+			sync, processor, capability, chain, alarm, tq, log);
 	});
 }
 

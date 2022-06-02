@@ -4,7 +4,8 @@
 mcp::node_capability::node_capability(
 	boost::asio::io_service& io_service_a, mcp::block_store& store_a,
 	mcp::fast_steady_clock& steady_clock_a, std::shared_ptr<mcp::block_cache> cache_a,
-	std::shared_ptr<mcp::async_task> async_task_a, std::shared_ptr<mcp::block_arrival> block_arrival_a
+	std::shared_ptr<mcp::async_task> async_task_a, std::shared_ptr<mcp::block_arrival> block_arrival_a,
+	std::shared_ptr<mcp::TransactionQueue> tq
 	)
     :icapability(p2p::capability_desc("mcp", 0), (unsigned)mcp::sub_packet_type::packet_count),
 	m_io_service(io_service_a),
@@ -13,12 +14,14 @@ mcp::node_capability::node_capability(
 	m_cache(cache_a),
 	m_async_task(async_task_a),
 	m_block_arrival(block_arrival_a),
+	m_tq(tq),
     m_stopped(false),
     m_genesis(0),
     m_pcapability_metrics(std::make_shared<mcp::capability_metrics>()),
 	m_requesting(*this)
 {
 	m_request_timer = std::make_unique<ba::deadline_timer>(m_io_service);
+	m_tq->onImport([this](ImportResult _ir, h256 const& _h, p2p::node_id const& _nodeId) { onTransactionImported(_ir, _h, _nodeId); });
 }
 
 void mcp::node_capability::stop()
@@ -29,6 +32,7 @@ void mcp::node_capability::stop()
 
 	m_stopped = true;
 }
+
 
 void mcp::node_capability::on_connect(std::shared_ptr<p2p::peer> peer_a, unsigned const & offset)
 {
@@ -313,6 +317,56 @@ bool mcp::node_capability::read_packet(std::shared_ptr<p2p::peer> peer_a, unsign
 
             break;
         }
+		case mcp::sub_packet_type::transaction:
+		{
+			bool error(r.itemCount() != 1);
+			//Transaction joint(error, r[0]);
+
+			m_pcapability_metrics->transaction++;
+			if (error)
+			{
+				LOG(m_log.error) << "Invalid new transaction message rlp: " << r[0];
+				peer_a->disconnect(p2p::disconnect_reason::bad_protocol);
+				return true;
+			}
+			/*
+			bool is_missing = false;
+			bool need_add = true;
+			mcp::block_hash block_hash(joint.block->hash());
+			if (!joint.request_id.is_zero())
+			{
+				need_add = false;
+				std::lock_guard<std::mutex> lock(m_requesting_lock);
+				if (m_requesting.exist_erase(joint.request_id)) //ours request && broadcast not arrived
+				{
+					need_add = true;
+					joint.level = mcp::joint_processor_level::request; //if block processor full also need add this block
+				}
+				joint.request_id.clear(); //broadcast do not need id
+				is_missing = true;
+			}
+			else //broadcast try clear request hash
+			{
+				std::lock_guard<std::mutex> lock(m_requesting_lock);
+				m_requesting.erase(block_hash);
+			}
+
+			if (need_add)
+			{
+				std::shared_ptr<mcp::block_processor_item> block_item_l(std::make_shared<mcp::block_processor_item>(joint, peer_a->remote_node_id()));
+				if (is_missing)
+				{
+					block_item_l->set_missing();
+				}
+				m_block_processor->add_to_mt_process(block_item_l);
+			}
+
+			LOG(m_log.debug) << "Joint message, block hash: " << block_hash.to_string();
+			*/
+			m_tq->enqueue(r[0], peer_a->remote_node_id());
+
+			break;
+		}
         case mcp::sub_packet_type::catchup_request:
         {
             bool error(r.itemCount() != 1);
@@ -421,7 +475,8 @@ bool mcp::node_capability::read_packet(std::shared_ptr<p2p::peer> peer_a, unsign
         }
         case mcp::sub_packet_type::peer_info:
         {
-			if (m_sync->is_syncing())
+			/// sync do not deal peer info. just request unprocessed transactions and blocks.
+			if (m_sync->is_syncing()) 
 				return true;
 
             bool error(r.itemCount() != 1);
@@ -462,34 +517,34 @@ bool mcp::node_capability::read_packet(std::shared_ptr<p2p::peer> peer_a, unsign
 				});
 			}
 
-			////light
-			//for (auto it = pi.arr_light_tip_blocks.begin(); it != pi.arr_light_tip_blocks.end(); it++)
-			//{
-			//	auto hash(std::make_shared<mcp::block_hash>(it->second));
-			//	if (m_block_processor->exist_in_clear_block_filter(*hash))
-			//		continue;
-
-			//	m_async_task->sync_async([peer_a, hash, this]() {
-			//		try
-			//		{
-			//			mcp::db::db_transaction transaction(m_store.create_transaction());
-			//			if (!m_cache->unlink_block_exists(transaction, *hash)
-			//				&& !m_cache->block_exists(transaction, *hash))
-			//			{
-			//				m_block_arrival->remove(*hash);
-			//				uint64_t _time = m_steady_clock.now_since_epoch();
-			//				mcp::joint_request_item item(peer_a->remote_node_id(), hash, mcp::block_type::light, mcp::requesting_block_cause::request_peer_info);
-			//				item.from = mcp::joint_request_item_from::peerinfo;
-			//				m_sync->request_new_missing_joints(item, _time);
-			//			}
-			//		}
-			//		catch (const std::exception& e)
-			//		{
-			//			LOG(m_log.error) << "peer_info error:" << e.what();
-			//			throw;
-			//		}
-			//	});
-			//}
+			//light
+			for (auto it = pi.arr_light_tip_blocks.begin(); it != pi.arr_light_tip_blocks.end(); it++)
+			{
+				auto hash(std::make_shared<h256>(*it));
+				m_async_task->sync_async([peer_a, hash, this]() {
+					try
+					{
+						if (m_tq->exist(*hash))
+							return;
+						/// todo maybe have processed
+						//mcp::db::db_transaction transaction(m_store.create_transaction());
+						//if (!m_cache->unlink_block_exists(transaction, *hash)
+						//	&& !m_cache->block_exists(transaction, *hash))
+						//{
+						//	m_block_arrival->remove(*hash);
+						//	uint64_t _time = m_steady_clock.now_since_epoch();
+						//	mcp::joint_request_item item(peer_a->remote_node_id(), hash, mcp::block_type::light, mcp::requesting_block_cause::request_peer_info);
+						//	item.from = mcp::joint_request_item_from::peerinfo;
+						//	m_sync->request_new_missing_joints(item, _time);
+						//}
+					}
+					catch (const std::exception& e)
+					{
+						LOG(m_log.error) << "peer_info error:" << e.what();
+						throw;
+					}
+				});
+			}
 
             break;
         }
@@ -626,13 +681,46 @@ void mcp::node_capability::broadcast_block(mcp::joint_message const & message)
 	}
 }
 
+void mcp::node_capability::broadcast_transaction(mcp::Transaction const & message)
+{
+	try
+	{
+		auto hash(message.sha3());
+		std::lock_guard<std::mutex> lock(m_peers_mutex);
+		for (auto it = m_peers.begin(); it != m_peers.end();)
+		{
+			mcp::peer_info &pi(it->second);
+			if (auto p = pi.try_lock_peer())
+			{
+				it++;
+				if (pi.is_known_transaction(hash))
+					continue;
+
+				m_pcapability_metrics->broadcast_transaction++;
+				m_node_id_cap_metrics[p->remote_node_id()]->broadcast_transaction++;
+
+				dev::RLPStream s;
+				p->prep(s, pi.offset + (unsigned)mcp::sub_packet_type::transaction, 1);
+				message.streamRLP(s);
+				p->send(s);
+			}
+			else
+				it = m_peers.erase(it);
+		}
+	}
+	catch (const std::exception& e)
+	{
+		LOG(m_log.error) << "broadcast_block error, error: " << e.what();
+		throw;
+	}
+}
+
 void mcp::node_capability::mark_as_known_block(p2p::node_id node_id_a, mcp::block_hash block_hash_a)
 {
     std::lock_guard<std::mutex> lock(m_peers_mutex);
     if (m_peers.count(node_id_a))
         m_peers.at(node_id_a).mark_as_known_block(block_hash_a);
 }
-
 
 uint64_t mcp::node_capability::num_peers()
 {
@@ -729,6 +817,27 @@ mcp::sync_request_hash  mcp::node_capability::gen_sync_request_hash(p2p::node_id
 	assert_x(status == 0);
 
 	return result;
+}
+
+void mcp::node_capability::onTransactionImported(ImportResult _ir, h256 const& _h, p2p::node_id const& _nodeId)
+{
+	///io service execute delay, maybe some transactions through the filter
+	m_async_task->sync_async([this, _ir, _h, _nodeId]() {
+		std::lock_guard<std::mutex> lock(m_peers_mutex);
+		if (!m_peers.count(_nodeId))
+			return;
+		if (_h != h256())
+		{
+			m_peers.at(_nodeId).mark_as_known_transaction(_h);
+		}
+		else
+		{
+			mcp::peer_info &pi(m_peers.at(_nodeId));
+			if (auto p = pi.try_lock_peer())
+				p->disconnect(p2p::disconnect_reason::bad_protocol);
+		}
+		/// todo different import result add or reduce rating for the peer
+	});
 }
 
 

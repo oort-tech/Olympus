@@ -404,6 +404,7 @@ add_library (core
 	mcp/core/transaction_receipt.cpp
 	mcp/core/transaction.hpp
 	mcp/core/transaction.cpp
+	mcp/core/transaction_queue.hpp
 	)
 	
 add_executable (mcp

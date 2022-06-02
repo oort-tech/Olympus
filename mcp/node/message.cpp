@@ -345,16 +345,8 @@ mcp::peer_info_message::peer_info_message(bool & error_a, dev::RLP const &r)
 	min_retrievable_mci = (uint64_t)r[0];
 	for (auto r_hash : r[1])
 		arr_tip_blocks.push_back((mcp::block_hash)r_hash);
-	//for (auto r_account_hash : r[2])
-	//{
-	//	error_a = r_account_hash.itemCount() != 2;
-	//	if (error_a)
-	//		return;
-
-	//	mcp::account account(r_account_hash[0]);
-	//	mcp::block_hash hash(r_account_hash[1]);
-	//	arr_light_tip_blocks.insert(std::make_pair(account, hash));
-	//}
+	for (auto r_account_hash : r[2])
+		arr_light_tip_blocks.push_back((h256)r_account_hash);
 }
 
 void mcp::peer_info_message::stream_RLP(dev::RLPStream & s) const
@@ -364,12 +356,9 @@ void mcp::peer_info_message::stream_RLP(dev::RLPStream & s) const
 	s.appendList(arr_tip_blocks.size());
 	for (auto hash : arr_tip_blocks)
 		s << hash;
-	//s.appendList(arr_light_tip_blocks.size());
-	//for (auto p : arr_light_tip_blocks)
-	//{
-	//	s.appendList(2);
-	//	s << p.first << p.second;
-	//}
+	s.appendList(arr_light_tip_blocks.size());
+	for (auto hash : arr_light_tip_blocks)
+		s << hash;
 }
 
 mcp::peer_info_request_message::peer_info_request_message()

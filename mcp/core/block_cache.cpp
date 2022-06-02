@@ -2,11 +2,15 @@
 
 mcp::block_cache::block_cache(mcp::block_store &store_a) :
 	m_store(store_a),
-	m_blocks(50000),
-	m_block_states(50000),
+	m_blocks(1000),
+	m_block_states(1000),
 	m_latest_account_states(50000),
-	m_successors(50000),
-	m_block_summarys(50000)
+	m_transactions(50000),
+	m_transaction_address(50000),
+	m_successors(1000),
+	m_block_summarys(1000),
+	m_block_numbers(1000),
+	m_number_blocks(1000)
 {
 }
 
@@ -31,6 +35,28 @@ std::shared_ptr<mcp::block> mcp::block_cache::block_get(mcp::db::db_transaction 
 	}
 	else
 		block = m_store.block_get(transaction_a, block_hash_a);
+
+	return block;
+}
+
+std::shared_ptr<mcp::block> mcp::block_cache::block_get(mcp::db::db_transaction &transaction_a, uint64_t const & index_a)
+{
+	mcp::block_hash bh;
+	if (block_number_get(transaction_a, index_a, bh))/// not exist
+		return nullptr;
+
+	std::shared_ptr<mcp::block> block = nullptr;
+	std::lock_guard<std::mutex> lock(m_block_mutex);
+	if (!m_block_changings.count(bh))
+	{
+		bool exists = m_blocks.tryGet(bh, block);
+		if (!exists)
+			block = m_store.block_get(transaction_a, bh);
+
+		m_blocks.insert(bh, block);
+	}
+	else
+		block = m_store.block_get(transaction_a, bh);
 
 	return block;
 }
@@ -160,6 +186,80 @@ void mcp::block_cache::clear_latest_account_state_changing()
 }
 
 
+bool mcp::block_cache::transaction_exists(mcp::db::db_transaction & transaction_a, h256 const & hash)
+{
+	auto t = transaction_get(transaction_a, hash);
+	return t != nullptr;
+}
+
+std::shared_ptr<mcp::Transaction> mcp::block_cache::transaction_get(mcp::db::db_transaction &transaction_a, h256 const &hash)
+{
+	std::shared_ptr<mcp::Transaction> t = nullptr;
+	std::lock_guard<std::mutex> lock(m_transaction_mutex);
+	if (!m_transaction_changings.count(hash))
+	{
+		bool exists = m_transactions.tryGet(hash, t);
+		if (!exists)
+		{
+			t = m_store.transaction_get(transaction_a, hash);
+			if (t)
+				m_transactions.insert(hash, t);
+		}
+	}
+	else
+		t = m_store.transaction_get(transaction_a, hash);
+
+	return t;
+}
+
+void mcp::block_cache::transaction_put(h256 const &hash, std::shared_ptr<mcp::Transaction> const & t)
+{
+	std::lock_guard<std::mutex> lock(m_transaction_mutex);
+	m_transactions.insert(hash, t);
+}
+
+void mcp::block_cache::transaction_earse(std::unordered_set<h256> const & hashs)
+{
+	std::lock_guard<std::mutex> lock(m_transaction_mutex);
+	for (auto const & block_hash : hashs)
+		m_transactions.remove(block_hash);
+}
+
+void mcp::block_cache::mark_transaction_as_changing(std::unordered_set<h256> const & hashs)
+{
+	std::lock_guard<std::mutex> lock(m_transaction_mutex);
+	for (auto const & block_hash : hashs)
+		m_transaction_changings.insert(block_hash);
+}
+
+void mcp::block_cache::clear_transaction_changing()
+{
+	std::lock_guard<std::mutex> lock(m_transaction_mutex);
+	m_transaction_changings.clear();
+}
+
+
+std::shared_ptr<mcp::TransactionAddress> mcp::block_cache::transaction_address_get(mcp::db::db_transaction & transaction_a, h256 const & hash)
+{
+	std::shared_ptr<mcp::TransactionAddress> td = nullptr;
+	std::lock_guard<std::mutex> lock(m_transaction_address_mutex);
+	bool exists = m_transaction_address.tryGet(hash, td);
+	if (!exists)
+	{
+		td = m_store.transaction_address_get(transaction_a, hash);
+		if (td)
+			m_transaction_address.insert(hash, td);
+	}
+	return td;
+}
+
+void mcp::block_cache::transaction_address_put(h256 const & hash, std::shared_ptr<mcp::TransactionAddress> const& td)
+{
+	std::lock_guard<std::mutex> lock(m_transaction_address_mutex);
+	m_transaction_address.insert(hash, td);
+}
+
+
 bool mcp::block_cache::successor_get(mcp::db::db_transaction & transaction_a, mcp::block_hash const & root_a, mcp::block_hash & successor_a)
 {
 	bool exists;
@@ -249,6 +349,39 @@ void mcp::block_cache::clear_block_summary_changing()
 {
 	std::lock_guard<std::mutex> lock(m_block_summary_mutex);
 	m_block_summary_changings.clear();
+}
+
+bool mcp::block_cache::block_number_get(mcp::db::db_transaction & transaction_a, uint64_t const & index_a, mcp::block_hash & hash_a)
+{
+	std::lock_guard<std::mutex> lock(m_block_number_mutex);
+	bool exists = m_block_numbers.tryGet(index_a, hash_a);
+	if (!exists)
+	{
+		exists = !m_store.stable_block_get(transaction_a, index_a, hash_a);
+		if (exists)
+			m_block_numbers.insert(index_a, hash_a);
+	}
+	return !exists;
+}
+
+bool mcp::block_cache::block_number_get(mcp::db::db_transaction & transaction_a, mcp::block_hash const & hash_a, uint64_t & index_a)
+{
+	std::lock_guard<std::mutex> lock(m_block_number_mutex);
+	bool exists = m_number_blocks.tryGet(hash_a,index_a);
+	if (!exists)
+	{
+		exists = !m_store.stable_block_get(transaction_a, hash_a, index_a);
+		if (exists)
+			m_number_blocks.insert(hash_a,index_a);
+	}
+	return !exists;
+}
+
+void mcp::block_cache::block_number_put(uint64_t const & index_a, mcp::block_hash const & hash_a)
+{
+	std::lock_guard<std::mutex> lock(m_block_number_mutex);
+	m_block_numbers.insert(index_a, hash_a);
+	m_number_blocks.insert(hash_a, index_a);
 }
 
 

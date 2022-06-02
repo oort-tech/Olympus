@@ -38,12 +38,12 @@ namespace mcp
 
 		//bool operator== (mcp::block const &) const;
 
-		void serialize_json(std::string &) const;
-		void serialize_json(mcp::json & json_a) const;
+		//void serialize_json(std::string &) const;
+		//void serialize_json(mcp::json & json_a) const;
 
-		// added by michael at 2/7
-		void serialize_json_eth(std::string &) const;
-		void serialize_json_eth(mcp::json & json_a) const;
+		//// added by michael at 2/7
+		//void serialize_json_eth(std::string &) const;
+		//void serialize_json_eth(mcp::json & json_a) const;
 
 		///// @returns v value of the transaction (has chainID and recoveryID encoded in it)
 		///// @throws TransactionIsUnsigned if signature was not initialized

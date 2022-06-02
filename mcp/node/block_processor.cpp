@@ -1,9 +1,6 @@
 #include "block_processor.hpp"
 #include <mcp/common/stopwatch.hpp>
 #include <mcp/core/genesis.hpp>
-
-
-//////test
 #include <libdevcore/CommonJS.h>
 
 mcp::late_message_info::late_message_info(std::shared_ptr<mcp::block_processor_item> item_a) :
@@ -72,7 +69,7 @@ mcp::block_processor::block_processor(bool & error_a,
 	m_invalid_block_cache(invalid_block_cache_a),
 	m_alarm(alarm_a),
 	m_stopped(false),
-	m_local_cache(std::make_shared<process_block_cache>(cache_a, store_a)),
+	m_local_cache(std::make_shared<process_block_cache>(cache_a, store_a, tq)),
 	m_last_request_unknown_missing_time(std::chrono::steady_clock::now()),
 	unhandle(std::make_shared<mcp::unhandle_cache>(block_arrival_a))
 {
@@ -672,14 +669,18 @@ void mcp::block_processor::do_process_one(mcp::timeout_db_transaction & timeout_
 void mcp::block_processor::do_process_dag_item(mcp::timeout_db_transaction & timeout_tx, std::shared_ptr<mcp::block_processor_item> item_a)
 {
 	std::shared_ptr<mcp::block> block(item_a->joint.block);
-	mcp::db::db_transaction & transaction(timeout_tx.get_transaction());
 
-	//todo use cache
+	mcp::block_hash const & block_hash(block->hash());
+	unsigned index = 0;
 	for (auto const & link_hash : block->links())
 	{
+		/// Unprocessed transactions cannot be discarded because the cache is full.  todo zhouyou
 		auto t = m_tq->get(link_hash);
-		m_store.transaction_put(transaction, link_hash, t);
-		m_tq->drop(link_hash);
+		if (t == nullptr || m_local_cache->transaction_exists(timeout_tx.get_transaction(), t->sha3())) /// transaction maybe processed yet
+		{
+			index++;
+			continue;
+		}
 
 		//////test get RAW transaction to test interface
 		//dev::bytes b_value;
@@ -689,12 +690,8 @@ void mcp::block_processor::do_process_dag_item(mcp::timeout_db_transaction & tim
 		//	s.swapOut(b_value);
 		//}
 		//LOG(m_log.info) << ":::::::::::" << toJS(b_value);
-	}
 
-	if (block->links().size() > 0)
-	{
-		m_store.transaction_unstable_count_add(transaction, block->links().size());
-		m_store.transaction_count_add(transaction, block->links().size());
+		m_chain->save_transaction(timeout_tx, m_local_cache, t, block_hash, index);
 	}
 
 	/// save block and try advance 
@@ -702,11 +699,11 @@ void mcp::block_processor::do_process_dag_item(mcp::timeout_db_transaction & tim
 	m_chain->try_advance(timeout_tx, m_local_cache);
 }
 
-void mcp::block_processor::process_missing(std::shared_ptr<mcp::block_processor_item> item_a, std::unordered_set<mcp::block_hash> const & missings, std::unordered_set<mcp::block_hash> const & light_missings)
+void mcp::block_processor::process_missing(std::shared_ptr<mcp::block_processor_item> item_a, std::unordered_set<mcp::block_hash> const & missings, h256Hash const & transactions)
 {
     if (m_sync->is_syncing())
         return;
-	bool success(unhandle->add(item_a->block_hash, missings, light_missings, item_a));
+	bool success(unhandle->add(item_a->block_hash, missings, transactions, item_a));
 	if (success)
 	{
 		//LOG(m_log.debug) << "Add unhandle:" << item_a->block_hash.to_string();
@@ -719,7 +716,7 @@ void mcp::block_processor::process_missing(std::shared_ptr<mcp::block_processor_
 			mcp::joint_request_item request_item(item_a->remote_node_id(), hash, mcp::requesting_block_cause::new_unknown);
 			m_sync->request_new_missing_joints(request_item, now);
 		}
-		//for (auto it = light_missings.begin(); it != light_missings.end(); it++)
+		//for (auto it = transactions.begin(); it != transactions.end(); it++)
 		//{
 		//	auto hash(std::make_shared<mcp::block_hash>(*it));
 		//	mcp::joint_request_item request_item(item_a->remote_node_id(), hash, mcp::requesting_block_cause::new_unknown);

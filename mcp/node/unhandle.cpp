@@ -1,13 +1,15 @@
 #include "unhandle.hpp"
 #include <queue>
-mcp::unhandle_item::unhandle_item(mcp::block_hash const &unhandle_hash_a,
-								  std::shared_ptr<mcp::block_processor_item> item_a,
-								  std::unordered_set<mcp::block_hash> const &dependency_hashs_a,
-								  std::unordered_set<mcp::block_hash> const &light_dependency_hashs_a)
-	: unhandle_hash(unhandle_hash_a),
-	  item(item_a),
-	  dependency_hashs(dependency_hashs_a),
-	  light_dependency_hashs(light_dependency_hashs_a)
+mcp::unhandle_item::unhandle_item(
+	mcp::block_hash const &unhandle_hash_a,
+	std::shared_ptr<mcp::block_processor_item> item_a,
+	std::unordered_set<mcp::block_hash> const &dependency_hashs_a,
+	h256Hash const &transactions_a
+):
+	unhandle_hash(unhandle_hash_a),
+	item(item_a),
+	dependency_hashs(dependency_hashs_a),
+	transactions(transactions_a)
 {
 }
 
@@ -19,7 +21,7 @@ mcp::unhandle_cache::unhandle_cache(std::shared_ptr<mcp::block_arrival> block_ar
 
 bool mcp::unhandle_cache::add(mcp::block_hash const &hash_a, 
 	std::unordered_set<mcp::block_hash> const &dependency_hashs_a, 
-	std::unordered_set<mcp::block_hash> const &light_dependency_hashs_a,
+	h256Hash const &transactions,
 	std::shared_ptr<mcp::block_processor_item> item_a)
 {
 	std::lock_guard<std::mutex> lock (m_mutux);
@@ -43,7 +45,7 @@ bool mcp::unhandle_cache::add(mcp::block_hash const &hash_a,
 	
 	add_unhandle_ok_count++;
 
-	mcp::unhandle_item u_item(hash_a, item_a, dependency_hashs_a, light_dependency_hashs_a);
+	mcp::unhandle_item u_item(hash_a, item_a, dependency_hashs_a, transactions);
 	m_unhandles[hash_a] = u_item;
 	//delete unknown dependency
 	if (m_missings.count(hash_a))
@@ -82,31 +84,31 @@ bool mcp::unhandle_cache::add(mcp::block_hash const &hash_a,
 		}
 	}
 
-	for (mcp::block_hash const &dependency_hash : u_item.light_dependency_hashs)
-	{
-		std::shared_ptr<std::unordered_set<mcp::block_hash>> unhandle_hashs;
-		auto const it = m_dependencies.find(dependency_hash);
-		if (it != m_dependencies.end())
-		{
-			unhandle_hashs = it->second;
-		}
-		else
-		{
-			unhandle_hashs = std::make_shared<std::unordered_set<mcp::block_hash>>();
-			m_dependencies.insert(std::make_pair(dependency_hash, unhandle_hashs));
-		}
-		unhandle_hashs->insert(hash_a);
+	//for (mcp::block_hash const &dependency_hash : u_item.transactions)
+	//{
+	//	std::shared_ptr<std::unordered_set<mcp::block_hash>> unhandle_hashs;
+	//	auto const it = m_dependencies.find(dependency_hash);
+	//	if (it != m_dependencies.end())
+	//	{
+	//		unhandle_hashs = it->second;
+	//	}
+	//	else
+	//	{
+	//		unhandle_hashs = std::make_shared<std::unordered_set<mcp::block_hash>>();
+	//		m_dependencies.insert(std::make_pair(dependency_hash, unhandle_hashs));
+	//	}
+	//	unhandle_hashs->insert(hash_a);
 
-		//add unknown dependency
-		if (!m_unhandles.count(dependency_hash))
-			m_light_missings.insert(dependency_hash);
+	//	//add unknown dependency
+	//	if (!m_unhandles.count(dependency_hash))
+	//		m_light_missings.insert(dependency_hash);
 
-		//delete tip
-		if (m_tips.count(dependency_hash))
-		{
-			m_tips.erase(dependency_hash);
-		}
-	}
+	//	//delete tip
+	//	if (m_tips.count(dependency_hash))
+	//	{
+	//		m_tips.erase(dependency_hash);
+	//	}
+	//}
 
 	if (m_unhandles.size() > m_capacity)
 	{
@@ -128,7 +130,7 @@ bool mcp::unhandle_cache::add(mcp::block_hash const &hash_a,
 					break;
 				}
 			}
-			if (!has_missings)
+			/*if (!has_missings)
 			{
 				for (mcp::block_hash const &dependency_hash : delete_item.light_dependency_hashs)
 				{
@@ -138,7 +140,7 @@ bool mcp::unhandle_cache::add(mcp::block_hash const &hash_a,
 						break;
 					}
 				}
-			}
+			}*/
 			
 
 			//skip tip if it has unknown dependencies
@@ -187,16 +189,16 @@ std::unordered_map<mcp::block_hash, std::shared_ptr<mcp::block_processor_item>> 
 			assert_x(m_unhandles.count(unhandle_hash));
 			auto &unhandle = m_unhandles[unhandle_hash];
 			unhandle.dependency_hashs.erase(dependency_hash_a);
-			unhandle.light_dependency_hashs.erase(dependency_hash_a);
-			if (unhandle.dependency_hashs.empty() && unhandle.light_dependency_hashs.empty())
-			{
-				result.insert(std::make_pair(unhandle_hash, unhandle.item));
+			//unhandle.light_dependency_hashs.erase(dependency_hash_a);
+			//if (unhandle.dependency_hashs.empty() && unhandle.light_dependency_hashs.empty())
+			//{
+			//	result.insert(std::make_pair(unhandle_hash, unhandle.item));
 
-                del_unhandle_in_dependencies(unhandle_hash);
-				m_unhandles.erase(unhandle_hash);
-                //LOG(m_log.info) << "release_dependency:m_unhandles.erase to process hash:" << unhandle_hash.to_string();
-				m_tips.erase(unhandle_hash);
-			}
+   //             del_unhandle_in_dependencies(unhandle_hash);
+			//	m_unhandles.erase(unhandle_hash);
+   //             //LOG(m_log.info) << "release_dependency:m_unhandles.erase to process hash:" << unhandle_hash.to_string();
+			//	m_tips.erase(unhandle_hash);
+			//}
 		}
         
 		//delete dependency
@@ -330,24 +332,24 @@ void mcp::unhandle_cache::del_unhandle_in_dependencies(mcp::block_hash const & u
         }
     }
 
-	for (mcp::block_hash const &dependency_hash : delete_item.light_dependency_hashs)
-	{
-		assert_x(m_dependencies.count(dependency_hash));
-		std::shared_ptr<std::unordered_set<mcp::block_hash>> unhandle_hashs = m_dependencies[dependency_hash];
-		assert_x(unhandle_hashs->count(unhandle_a) > 0);
-		unhandle_hashs->erase(unhandle_a);
-		if (unhandle_hashs->empty())
-		{
-			//delete dependency
-			m_dependencies.erase(dependency_hash);
-			//delete unknown dependencies
-			m_missings.erase(dependency_hash);
-			m_light_missings.erase(dependency_hash);
-			//check if dependency is tip now
-			if (m_unhandles.count(dependency_hash))
-				m_tips.insert(dependency_hash);
-		}
-	}
+	//for (mcp::block_hash const &dependency_hash : delete_item.light_dependency_hashs)
+	//{
+	//	assert_x(m_dependencies.count(dependency_hash));
+	//	std::shared_ptr<std::unordered_set<mcp::block_hash>> unhandle_hashs = m_dependencies[dependency_hash];
+	//	assert_x(unhandle_hashs->count(unhandle_a) > 0);
+	//	unhandle_hashs->erase(unhandle_a);
+	//	if (unhandle_hashs->empty())
+	//	{
+	//		//delete dependency
+	//		m_dependencies.erase(dependency_hash);
+	//		//delete unknown dependencies
+	//		m_missings.erase(dependency_hash);
+	//		m_light_missings.erase(dependency_hash);
+	//		//check if dependency is tip now
+	//		if (m_unhandles.count(dependency_hash))
+	//			m_tips.insert(dependency_hash);
+	//	}
+	//}
 }
 
 size_t mcp::unhandle_cache::unhandlde_size() const

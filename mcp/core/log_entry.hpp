@@ -50,7 +50,7 @@ struct localised_log_entry: public log_entry
 
 	localised_log_entry(
 		log_entry const& _le,
-		h256 const& _blockHash,
+		mcp::block_hash const& _blockHash,
 		unsigned _blockNumber,
 		h256 const& _transactionHash,
 		unsigned _transactionIndex,
@@ -64,7 +64,7 @@ struct localised_log_entry: public log_entry
 		logIndex(_logIndex)
 	{}
 
-	h256 blockHash;
+	mcp::block_hash blockHash;
 	unsigned blockNumber = 0;
 	h256 transactionHash;
 	unsigned transactionIndex = 0;
