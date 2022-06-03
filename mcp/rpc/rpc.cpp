@@ -5508,7 +5508,7 @@ void mcp::rpc_handler::eth_getBalance(mcp::json & j_response, bool &) {
 	}
 	catch (...)
 	{
-		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidAccount());
+		j_response["result"] = 0;
 	}
 }
 
@@ -5701,49 +5701,59 @@ void mcp::rpc_handler::eth_getLogs(mcp::json & j_response, bool &)
 			if (!block_state || !block_state->is_stable) {
 				continue;
 			}
-			/*
-			auto t = m_store.transaction_get(transaction, block_hash);
-			auto tr = m_store.transaction_receipt_get(transaction, block_hash);
-			if (t == nullptr || tr == nullptr)
-				throw "";
 			
-			std::unordered_set<dev::Address> existed_addresses;
-			for (dev::Address const &address : search_address)
+			auto block = m_cache->block_get(transaction, block_hash);
+			for (auto & th : block->links())
 			{
-				log_bloom bloom = tr->bloom();
-				if (bloom.containsBloom<3>(dev::sha3(address.ref())))
-					existed_addresses.insert(address);
+				auto t = m_cache->transaction_get(transaction, th);
+				auto tr = m_store.transaction_receipt_get(transaction, th);
+				auto td = m_cache->transaction_address_get(transaction, th);
+				if (t == nullptr || tr == nullptr || td == nullptr)
+					continue;
+
+				std::unordered_set<dev::Address> existed_addresses;
+				for (dev::Address const &address : search_address)
+				{
+					log_bloom bloom = tr->bloom();
+					if (bloom.containsBloom<3>(dev::sha3(address.ref())))
+						existed_addresses.insert(address);
+				}
+				if (search_address.size() > 0 && existed_addresses.size() == 0)
+					continue;
+
+				std::unordered_set<dev::h256> existed_topics;
+				for (dev::h256 const &topic : search_topics)
+				{
+					log_bloom bloom = tr->bloom();
+					if (bloom.containsBloom<3>(dev::sha3(topic)))
+						existed_topics.insert(topic);
+				}
+
+				if (search_topics.size() > 0 && existed_topics.size() == 0)
+					continue;
+
+				auto lt = dev::eth::LocalisedTransactionReceipt(
+					*tr,
+					t->sha3(),
+					block_hash,
+					i,
+					t->from(),
+					t->to(),
+					td->index,
+					toAddress(t->from(), t->nonce()));
+
+				mcp::json logs = toJson(lt.localisedLogs());
+				if (logs.size() > 0) {
+					logs_l.push_back(logs);
+				}
 			}
-			if (search_address.size() > 0 && existed_addresses.size() == 0)
-				continue;
-
-			std::unordered_set<dev::h256> existed_topics;
-			for (dev::h256 const &topic : search_topics)
-			{
-				log_bloom bloom = tr->bloom();
-				if (bloom.containsBloom<3>(dev::sha3(topic)))
-					existed_topics.insert(topic);
-			}
-
-			if (search_topics.size() > 0 && existed_topics.size() == 0)
-				continue;
-
-			auto lt = dev::eth::LocalisedTransactionReceipt(
-				*tr,
-				t->sha3(),//transaction hash
-				t->from(),
-				t->to(),
-				toAddress(t->from(), t->nonce()));
-
-			logs_l.push_back(toJson(lt.localisedLogs()));
-			*/
 		}
 
 		j_response["result"] = logs_l;
 	}
 	catch (...)
 	{
-		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
+		j_response["result"] = mcp::json::array();
 	}
 }
 
