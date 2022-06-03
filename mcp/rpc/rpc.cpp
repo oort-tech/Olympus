@@ -5231,7 +5231,7 @@ void mcp::rpc_handler::eth_getTransactionByHash(mcp::json & j_response, bool &)
 		}
 
 		uint64_t block_number = 0;
-		if (!m_cache->block_number_get(transaction, td->blockHash, block_number)) {
+		if (m_cache->block_number_get(transaction, td->blockHash, block_number)) {
 			throw "";
 		}
 
@@ -5343,7 +5343,7 @@ void mcp::rpc_handler::eth_getTransactionReceipt(mcp::json & j_response, bool &)
 			throw "";
 		
 		uint64_t block_number = 0;
-		if (!m_cache->block_number_get(transaction, td->blockHash, block_number)) {
+		if (m_cache->block_number_get(transaction, td->blockHash, block_number)) {
 			throw "";
 		}
 
