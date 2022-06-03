@@ -4984,6 +4984,7 @@ void mcp::rpc_handler::eth_getBlockByNumber(mcp::json & j_response, bool &)
 	{
 		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
 	}
+	bool is_full = params[1].is_null() ? false : params[1];
 
 	uint64_t block_number = 0;
 	std::string blockText = params[0];
@@ -4998,48 +4999,88 @@ void mcp::rpc_handler::eth_getBlockByNumber(mcp::json & j_response, bool &)
 	}
 
 	mcp::db::db_transaction transaction(m_store.create_transaction());
+	auto block(m_cache->block_get(transaction, block_number));
 	mcp::block_hash block_hash;
-	if (m_store.stable_block_get(transaction, block_number, block_hash))
+	if (block == nullptr || m_cache->block_number_get(transaction, block_number, block_hash))
 	{
-		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidBlock());
+		return;
 	}
 
-	auto state(m_cache->block_state_get(transaction, block_hash));
-	auto block(m_cache->block_get(transaction, block_hash));
-	if (state == nullptr || !state->is_stable || block == nullptr)
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidBlock());
-	}
+	mcp::json j_block = toJson(*block, true);
+	j_block["number"] = toJS(block_number);
 
-	j_response["result"] = toJson(*block);
+	u256 gasUsed = 0;
+	u256 minGasPrice = 0;
+	
+	for (auto & th : block->links())
+	{
+		auto t = m_cache->transaction_get(transaction, th);
+		gasUsed += t->gas();
+		minGasPrice = minGasPrice == 0 ? t->gasPrice() : std::min(minGasPrice, t->gasPrice());
+		
+		auto td = m_store.transaction_address_get(transaction, th);
+		j_block["transactions"].push_back(
+			is_full ?
+			toJson(LocalisedTransaction(*t, block_hash, td->index, block_number)) :
+			th.hexPrefixed()
+		);
+	}
+	j_block["gasUsed"] = toJS(gasUsed);
+	j_block["minGasPrice"] = toJS(minGasPrice);
+
+	j_response["result"] = j_block;
 }
 
 void mcp::rpc_handler::eth_getBlockByHash(mcp::json & j_response, bool &)
 {
 	mcp::json params = request["params"];
-	if (params.size() < 1)
+	if (params.size() < 1 || !params[0].is_string())
 	{
 		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
 	}
+	bool is_full = params[1].is_null() ? false : params[1];
 
 	try
 	{
-		mcp::block_hash hash = jsToHash(params[0]);
+		mcp::block_hash block_hash = jsToHash(params[0]);
 
 		mcp::db::db_transaction transaction(m_store.create_transaction());
-		auto block = m_cache->block_get(transaction, hash);
-		auto state = m_cache->block_state_get(transaction, hash);
-
-		if (block == nullptr || state == nullptr || !state->is_stable)
+		auto block = m_cache->block_get(transaction, block_hash);
+		uint64_t block_number;
+		if (block == nullptr)
 		{
 			throw "";
 		}
 
-		j_response["result"] = toJson(*block);
+		mcp::json j_block = toJson(*block, true);
+		if (!m_cache->block_number_get(transaction, block_hash, block_number))
+		{
+			j_block["number"] = toJS(block_number);
+		}
+
+		u256 gasUsed = 0;
+		u256 minGasPrice = 0;
+		for (auto & th : block->links())
+		{
+			auto t = m_cache->transaction_get(transaction, th);
+			gasUsed += t->gas();
+			minGasPrice = minGasPrice == 0 ? t->gasPrice() : std::min(minGasPrice, t->gasPrice());
+			
+			auto td = m_store.transaction_address_get(transaction, th);
+			j_block["transactions"].push_back(
+				is_full ?
+				toJson(LocalisedTransaction(*t, block_hash, td->index, block_number)) :
+				th.hexPrefixed()
+			);
+		}
+		j_block["gasUsed"] = toJS(gasUsed);
+		j_block["minGasPrice"] = toJS(minGasPrice);
+
+		j_response["result"] = j_block;
 	}
 	catch (...)
 	{
-		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidHash());
+		
 	}
 }
 
@@ -5224,30 +5265,36 @@ void mcp::rpc_handler::eth_getTransactionByHash(mcp::json & j_response, bool &)
 
 		auto transaction = m_store.create_transaction();
 		auto t = m_cache->transaction_get(transaction, hash);
-		auto td = m_cache->transaction_address_get(transaction, hash);
-		if (t == nullptr || td == nullptr)
+		if (t == nullptr)
 		{
 			throw "";
 		}
+		auto lt = LocalisedTransaction(*t, mcp::block_hash(0), 0, 0);
+		mcp::json j_transaction = toJson(lt);
 
-		uint64_t block_number = 0;
-		if (m_cache->block_number_get(transaction, td->blockHash, block_number)) {
-			throw "";
+		auto td = m_cache->transaction_address_get(transaction, hash);
+		if (td != nullptr)
+		{
+			j_transaction["blockHash"] = td->blockHash.hexPrefixed();
+			j_transaction["transactionIndex"] = toJS(td->index);
 		}
 
-		auto lt = LocalisedTransaction(*t, td->blockHash, td->index, block_number);
-		j_response["result"] = toJson(lt);
+		uint64_t block_number = 0;
+		if (!m_cache->block_number_get(transaction, td->blockHash, block_number)) {
+			j_transaction["blockNumber"] = toJS(block_number);
+		}
+
+		j_response["result"] = j_transaction;
 	}
 	catch (...)
 	{
-		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidHash());
 	}
 }
 
 void mcp::rpc_handler::eth_getTransactionByBlockHashAndIndex(mcp::json & j_response, bool &)
 {
 	mcp::json params = request["params"];
-	if (params.size() < 2 || params[1] != "0x0")
+	if (params.size() < 2)
 	{
 		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
 	}
@@ -5255,20 +5302,38 @@ void mcp::rpc_handler::eth_getTransactionByBlockHashAndIndex(mcp::json & j_respo
 	try
 	{
 		mcp::block_hash block_hash = jsToHash(params[0]);
+		uint64_t index = jsToInt(params[1]);
+
 		auto transaction = m_store.create_transaction();
-		
-		// get the transaction from block_hash
+		auto block(m_cache->block_get(transaction, block_hash));
+		uint64_t block_number;
+		if (block == nullptr ||
+			m_cache->block_number_get(transaction, block_hash, block_number) ||
+			index >= block->links().size())
+		{
+			throw "";
+		}
+
+		dev::h256 hash = block->links().at(index);
+		auto t = m_cache->transaction_get(transaction, hash);
+		if (t == nullptr)
+		{
+			throw "";
+		}
+
+		auto lt = LocalisedTransaction(*t, block->hash(), index, block_number);
+		j_response["result"] = toJson(lt);
 	}
 	catch (...)
 	{
-		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidHash());
+		
 	}
 }
 
 void mcp::rpc_handler::eth_getTransactionByBlockNumberAndIndex(mcp::json & j_response, bool &)
 {
 	mcp::json params = request["params"];
-	if (params.size() < 2 || params[1] != "0x0")
+	if (params.size() < 2)
 	{
 		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
 	}
@@ -5284,41 +5349,36 @@ void mcp::rpc_handler::eth_getTransactionByBlockNumberAndIndex(mcp::json & j_res
 	else {
 		block_number = jsToInt(blockText);
 	}
+	uint64_t index = jsToInt(params[1]);
 
-	mcp::db::db_transaction transaction(m_store.create_transaction());
-	mcp::block_hash block_hash;
-	if (m_store.main_chain_get(transaction, block_number, block_hash))
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidBlock());
-	}
-
-	try
-	{
-		auto transaction = m_store.create_transaction();
-		
-		// get the transaction from block_hash
-	}
-	catch (...)
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidBlock());
-	}
-}
-
-void mcp::rpc_handler::eth_getBalance(mcp::json & j_response, bool &) {
-	mcp::json params = request["params"];
-	if (params.size() < 1)
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
-	}
 	try
 	{
 		mcp::db::db_transaction transaction(m_store.create_transaction());
-		chain_state c_state(transaction, 0, m_store, m_chain, m_cache);
-		j_response["result"] = toJS(c_state.balance(jsToAddress(params[0])));
+		mcp::block_hash block_hash;
+		if (m_store.main_chain_get(transaction, block_number, block_hash))
+		{
+			throw "";
+		}
+		
+		auto block(m_cache->block_get(transaction, block_hash));
+		if (block == nullptr || index >= block->links().size())
+		{
+			throw "";
+		}
+
+		dev::h256 hash = block->links().at(index);
+		auto t = m_cache->transaction_get(transaction, hash);
+		if (t == nullptr)
+		{
+			throw "";
+		}
+
+		auto lt = LocalisedTransaction(*t, block_hash, index, block_number);
+		j_response["result"] = toJson(lt);
 	}
 	catch (...)
 	{
-		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidAccount());
+		
 	}
 }
 
@@ -5331,7 +5391,6 @@ void mcp::rpc_handler::eth_getTransactionReceipt(mcp::json & j_response, bool &)
 	}
 	try
 	{
-		//todo localisedTransaction, have block hash and block number. but how to associate blocks before witness
 		h256 hash = jsToHash(params[0]);
 
 		auto transaction = m_store.create_transaction();
@@ -5349,8 +5408,8 @@ void mcp::rpc_handler::eth_getTransactionReceipt(mcp::json & j_response, bool &)
 
 		auto lt = dev::eth::LocalisedTransactionReceipt(
 			*tr,
-			t->sha3(), // transaction hash
-			td->blockHash, // block hash
+			t->sha3(),
+			td->blockHash,
 			block_number,
 			t->from(),
 			t->to(),
@@ -5361,7 +5420,7 @@ void mcp::rpc_handler::eth_getTransactionReceipt(mcp::json & j_response, bool &)
 	}
 	catch (...)
 	{
-		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidHash());
+		
 	}
 }
 
@@ -5376,15 +5435,19 @@ void mcp::rpc_handler::eth_getBlockTransactionCountByHash(mcp::json & j_response
 	try
 	{
 		mcp::block_hash block_hash = jsToHash(params[0]);
-		mcp::db::db_transaction transaction(m_store.create_transaction());
-		
-		// check if transaction exists
 
-		j_response["result"] = 0;
+		mcp::db::db_transaction transaction(m_store.create_transaction());
+		auto block(m_cache->block_get(transaction, block_hash));
+		if (block == nullptr)
+		{
+			throw "";
+		}
+
+		j_response["result"] = toJS(block->links().size());
 	}
 	catch (...)
 	{
-		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidHash());
+		j_response["result"] = 0;
 	}
 }
 
@@ -5407,12 +5470,46 @@ void mcp::rpc_handler::eth_getBlockTransactionCountByNumber(mcp::json & j_respon
 	else {
 		block_number = jsToInt(blockText);
 	}
+	
+	try
+	{
+		mcp::db::db_transaction transaction(m_store.create_transaction());
+		mcp::block_hash block_hash;
+		if (m_store.main_chain_get(transaction, block_number, block_hash))
+		{
+			throw "";
+		}
 
-	mcp::db::db_transaction transaction(m_store.create_transaction());
-	
-	// check if transaction exists
-	
-	j_response["result"] = 0;
+		auto block(m_cache->block_get(transaction, block_hash));
+		if (block == nullptr)
+		{
+			throw "";
+		}
+
+		j_response["result"] = toJS(block->links().size());
+	}
+	catch (...)
+	{
+		j_response["result"] = 0;
+	}
+}
+
+void mcp::rpc_handler::eth_getBalance(mcp::json & j_response, bool &) {
+	mcp::json params = request["params"];
+	if (params.size() < 1)
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
+	}
+	try
+	{
+		mcp::db::db_transaction transaction(m_store.create_transaction());
+		chain_state c_state(transaction, 0, m_store, m_chain, m_cache);
+		j_response["result"] = toJS(c_state.balance(jsToAddress(params[0])));
+	}
+	catch (...)
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidAccount());
+	}
 }
 
 void mcp::rpc_handler::eth_accounts(mcp::json & j_response, bool &)

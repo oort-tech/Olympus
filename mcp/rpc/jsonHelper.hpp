@@ -35,7 +35,5 @@ namespace mcp
 
 	mcp::json toJson(mcp::log_entry const& _e);
 
-	mcp::json toJson(mcp::block & _b);
-
-	mcp::json toJson(mcp::block & _b, Transaction const& _t);
+	mcp::json toJson(mcp::block & _b, bool is_eth = false);
 }
