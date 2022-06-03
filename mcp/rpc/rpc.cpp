@@ -5222,7 +5222,7 @@ void mcp::rpc_handler::eth_getCode(mcp::json & j_response, bool &)
 	}
 	catch (...)
 	{
-		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidAccount());
+		
 	}
 }
 
@@ -5247,7 +5247,7 @@ void mcp::rpc_handler::eth_getStorageAt(mcp::json & j_response, bool &)
 	}
 	catch (...)
 	{
-		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
+		
 	}
 }
 
@@ -5288,6 +5288,7 @@ void mcp::rpc_handler::eth_getTransactionByHash(mcp::json & j_response, bool &)
 	}
 	catch (...)
 	{
+
 	}
 }
 
