@@ -5799,19 +5799,16 @@ void mcp::rpc_handler::personal_listAccounts(mcp::json & j_response, bool &)
 void mcp::rpc_handler::personal_lockAccount(mcp::json & j_response, bool &)
 {
 	mcp::json params = request["params"];
-	try
+
+	j_response["result"] = false;
+
+	if (mcp::isAddress(params[0]))
 	{
 		dev::Address account = jsToAddress(params[0]);
-		if (!m_key_manager->exists(account)) {
-			throw "";
+		if (m_key_manager->exists(account)) {
+			m_key_manager->lock(account);
+			j_response["result"] = true;
 		}
-
-		m_key_manager->lock(account);
-		j_response["result"] = true;
-	}
-	catch (...)
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidAccount());
 	}
 }
 
@@ -5843,23 +5840,17 @@ void mcp::rpc_handler::personal_unlockAccount(mcp::json & j_response, bool &)
 		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
 	}
 
-	if (!mcp::isAddress(params[0]))
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidAccount());
-	}
+	j_response["result"] = false;
 
-	dev::Address account = jsToAddress(params[0]);
-	if (!m_key_manager->exists(account))
+	if (mcp::isAddress(params[0]))
 	{
-		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidAccount());
+		dev::Address account = jsToAddress(params[0]);
+		if (m_key_manager->exists(account) ||
+			!m_key_manager->unlock(account, params[1]))
+		{
+			j_response["result"] = true;
+		}
 	}
-
-	if (m_key_manager->unlock(account, params[1]))
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidPassword());
-	}
-	
-	j_response["result"] = true;
 }
 
 void mcp::rpc_handler::personal_sendTransaction(mcp::json & j_response, bool & async)
