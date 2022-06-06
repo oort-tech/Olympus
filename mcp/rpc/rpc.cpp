@@ -2284,6 +2284,8 @@ void mcp::rpc_handler::call(mcp::json & j_response, bool &)
 {
 	TransactionSkeleton ts = mcp::toTransactionSkeletonForMcp(request);
 	Transaction t(ts);
+	ts.gasPrice = 0;
+	ts.gas = mcp::block_max_gas;
 
 	dev::eth::McInfo mc_info;
 	if (!try_get_mc_info(mc_info))
@@ -5117,6 +5119,9 @@ void mcp::rpc_handler::eth_call(mcp::json & j_response, bool &)
 	}
 
 	TransactionSkeleton ts = mcp::toTransactionSkeletonForEth(params[0]);
+	ts.gasPrice = 0;
+	ts.gas = mcp::block_max_gas;
+
 	Transaction t(ts);
 
 	uint64_t block_number = 0;

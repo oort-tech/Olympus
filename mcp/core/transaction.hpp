@@ -13,7 +13,7 @@ namespace mcp
 	{
 		Address from;
 		Address to;
-		u256 value;
+		u256 value = 0;
 		bytes data;
 		u256 nonce = Invalid256;
 		u256 gas = Invalid256;
