@@ -1876,7 +1876,7 @@ void mcp::rpc_handler::block_traces(mcp::json & j_response, bool &)
 	{
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidHash());
 	}
-	
+
 	mcp::json response_l;
 	mcp::db::db_transaction transaction(m_store.create_transaction());
 	std::list<std::shared_ptr<mcp::trace>> traces;
@@ -2002,7 +2002,6 @@ void mcp::rpc_handler::block_traces(mcp::json & j_response, bool &)
 void mcp::rpc_handler::stable_blocks(mcp::json & j_response, bool &)
 {
 	bool error(false);
-	mcp::rpc_stable_blocks_error_code error_code_l;
 
 	uint64_t index(0);
 	if (request.count("index"))
@@ -2014,20 +2013,16 @@ void mcp::rpc_handler::stable_blocks(mcp::json & j_response, bool &)
 	}
 
 	uint64_t limit_l(0);
-	if (!request.count("limit"))
-	{
+	try {
+		if (!try_get_uint64_t_from_json("limit", limit_l) || limit_l > list_max_limit)
+		{
+			BOOST_THROW_EXCEPTION(RPC_Error_InvalidLimit());
+		}
+	}
+	catch (...) {
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidLimit());
 	}
-	if (!try_get_uint64_t_from_json("limit", limit_l))
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidLimit());
-	}
-
-	if (limit_l > list_max_limit)
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidLimitTooLarge());
-	}
-
+	
 	mcp::db::db_transaction transaction(m_store.create_transaction());
 	uint64_t last_stable_index(m_chain->last_stable_index());
 
