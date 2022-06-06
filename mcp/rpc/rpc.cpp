@@ -1867,23 +1867,20 @@ void mcp::rpc_handler::block_states(mcp::json & j_response, bool &)
 
 void mcp::rpc_handler::block_traces(mcp::json & j_response, bool &)
 {
-	/*if (!request.count("hash") || (!request["hash"].is_string()))
+	mcp::block_hash block_hash(0);
+	try
 	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidHash());
+		block_hash = jsToHash(request["hash"]);
 	}
-
-	std::string hash_text = request["hash"];
-	mcp::uint256_union hash;
-	auto error(hash.decode_hex(hash_text));
-
-	if (error) {
+	catch (...)
+	{
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidHash());
 	}
 	
 	mcp::json response_l;
 	mcp::db::db_transaction transaction(m_store.create_transaction());
 	std::list<std::shared_ptr<mcp::trace>> traces;
-	m_store.traces_get(transaction, hash, traces);
+	m_store.traces_get(transaction, block_hash, traces);
 
 	mcp::json traces_l = mcp::json::array();
 	std::deque<uint32_t> trace_address;
@@ -1927,7 +1924,7 @@ void mcp::rpc_handler::block_traces(mcp::json & j_response, bool &)
 		traces_l.push_back(trace_l);
 	}
 
-	j_response["block_traces"] = traces_l;*/
+	j_response["block_traces"] = traces_l;
 		
 	
 	/*mcp::rpc_block_error_code error_code_l;
