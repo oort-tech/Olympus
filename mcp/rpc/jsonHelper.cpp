@@ -138,7 +138,12 @@ namespace mcp
 		{
 			res["hash"] = toJS(_t.sha3());
 			res["input"] = toJS(_t.data());
-			res["to"] = _t.isCreation() ? "" : toJS(_t.receiveAddress());
+			if (_t.isCreation()) {
+				res["to"] = nullptr;
+			}
+			else {
+				res["to"] = toJS(_t.receiveAddress());
+			}
 			res["from"] = toJS(_t.safeSender());
 			res["gas"] = toJS(_t.gas());
 			res["gasPrice"] = toJS(_t.gasPrice());
@@ -161,7 +166,12 @@ namespace mcp
 		{
 			res["hash"] = toJS(_t.sha3());
 			res["input"] = toJS(_t.data());
-			res["to"] = _t.isCreation() ? nullptr : toJS(_t.receiveAddress());
+			if (_t.isCreation()) {
+				res["to"] = nullptr;
+			}
+			else {
+				res["to"] = toJS(_t.receiveAddress());
+			}
 			res["from"] = toJS(_t.safeSender());
 			res["gas"] = toJS(_t.gas());
 			res["gasPrice"] = toJS(_t.gasPrice());
@@ -173,9 +183,9 @@ namespace mcp
 				res["blockNumber"] = nullptr;
 			}
 			else {
-				res["blockHash"] = _t.blockHash() == mcp::block_hash(0) ? nullptr : _t.blockHash().hexPrefixed();
-				res["transactionIndex"] = _t.blockHash() == mcp::block_hash(0) ? nullptr : toJS(_t.transactionIndex());
-				res["blockNumber"] = _t.blockHash() == mcp::block_hash(0) ? nullptr : toJS(_t.blockNumber());
+				res["blockHash"] = _t.blockHash().hexPrefixed();
+				res["transactionIndex"] = toJS(_t.transactionIndex());
+				res["blockNumber"] = toJS(_t.blockNumber());
 			}
 			res["r"] = toJS(_t.signature().r);
 			res["s"] = toJS(_t.signature().s);
@@ -192,10 +202,15 @@ namespace mcp
 		res["blockHash"] = _t.blockHash().hexPrefixed();
 		res["blockNumber"] = toJS(_t.blockNumber());
 		res["from"] = toJS(_t.from());
-		res["to"] = toJS(_t.to());
+		if (_t.to() == dev::Address(0)) {
+			res["to"] = nullptr;
+			res["contractAddress"] = toJS(_t.contractAddress());
+		}
+		else {
+			res["to"] = toJS(_t.to());
+		}
 		res["cumulativeGasUsed"] = toJS(_t.cumulativeGasUsed());
 		res["gasUsed"] = toJS(_t.gasUsed());
-		res["contractAddress"] = toJS(_t.contractAddress());
 		res["logs"] = toJson(_t.localisedLogs());
 		res["logsBloom"] = toJS(_t.bloom());
 		res["status"] = toJS(_t.statusCode());
