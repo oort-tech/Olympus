@@ -2280,10 +2280,11 @@ void mcp::rpc_handler::estimate_gas(mcp::json & j_response, bool &)
 void mcp::rpc_handler::call(mcp::json & j_response, bool &)
 {
 	TransactionSkeleton ts = mcp::toTransactionSkeletonForMcp(request);
-
-	Transaction t(ts);
 	ts.gasPrice = 0;
 	ts.gas = mcp::block_max_gas;
+
+	Transaction t(ts);
+	t.setSinature(h256(0), h256(0), 0);
 
 	dev::eth::McInfo mc_info;
 	uint64_t block_number = m_chain->last_stable_mci();
