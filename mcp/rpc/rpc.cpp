@@ -4919,7 +4919,7 @@ void mcp::rpc_handler::eth_getTransactionCount(mcp::json & j_response, bool &)
 	}
 	catch (...)
 	{
-		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidAccount());
+		j_response["result"] = 0;
 	}
 }
 
@@ -5162,7 +5162,7 @@ void mcp::rpc_handler::eth_call(mcp::json & j_response, bool &)
 
 void mcp::rpc_handler::net_version(mcp::json & j_response, bool &)
 {
-	j_response["result"] = (int)mcp::mcp_network + 800;
+	j_response["result"] = STR(MCP_VERSION);
 }
 
 void mcp::rpc_handler::net_listening(mcp::json & j_response, bool &)
