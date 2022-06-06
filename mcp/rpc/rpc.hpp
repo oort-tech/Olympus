@@ -581,9 +581,9 @@ private:
 	std::map<std::string, RPCMethodPointer> m_mcpRpcMethods;
 	std::map<std::string, RPCMethodPointer> m_ethRpcMethods;
 	
-	bool try_get_bool_from_json(std::string const& field_name_a,bool & value_a );
-    bool try_get_uint64_t_from_json(std::string const& field_name_a, uint64_t & value_a);
-	bool try_get_mc_info(dev::eth::McInfo & mc_info_a);
+	// bool try_get_bool_from_json(std::string const& field_name_a,bool & value_a );
+    // bool try_get_uint64_t_from_json(std::string const& field_name_a, uint64_t & value_a);
+	// bool try_get_mc_info(dev::eth::McInfo & mc_info_a);
 
     // mcp::rpc_error_msg err;
     mcp::log m_log = { mcp::log("rpc") };

@@ -10,6 +10,8 @@ namespace mcp
 	TransactionSkeleton toTransactionSkeletonForEth(mcp::json const& _json)
 	{
 		TransactionSkeleton ret;
+		ret.from.clear();
+		ret.to.clear();
 
 		if (!_json.is_object() || _json.empty())
 			return ret;
@@ -63,6 +65,8 @@ namespace mcp
 	TransactionSkeleton toTransactionSkeletonForMcp(mcp::json const& _json)
 	{
 		TransactionSkeleton ret;
+		ret.from.clear();
+		ret.to.clear();
 
 		if (!_json.is_object() || _json.empty())
 			return ret;

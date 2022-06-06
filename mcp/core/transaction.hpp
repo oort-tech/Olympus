@@ -6,6 +6,8 @@
 #include <libdevcrypto/Common.h>
 #include <boost/optional.hpp>
 
+#include "config.hpp"
+
 using namespace dev;
 namespace mcp
 {
@@ -49,7 +51,8 @@ namespace mcp
 			m_receiveAddress(_dest), 
 			m_gasPrice(_gasPrice), 
 			m_gas(_gas), 
-			m_data(_data) 
+			m_data(_data),
+			m_chainId(mcp::chain_id)
 		{}
 
 		/// Constructs an unsigned contract-creation transaction.
@@ -58,7 +61,8 @@ namespace mcp
 			m_value(_value), 
 			m_gasPrice(_gasPrice), 
 			m_gas(_gas), 
-			m_data(_data) 
+			m_data(_data),
+			m_chainId(mcp::chain_id)
 		{}
 
 		/// Constructs a transaction from the given RLP.

@@ -349,7 +349,6 @@ void mcp::rpc_response(std::function<void(mcp::json const &)> response_a, int co
 	mcp::json j_response;
 	mcp::rpc_response(response_a, error_code, message_a, j_response);
 }
-*/
 namespace
 {
 	bool decode_unsigned(std::string const &text, uint64_t &number)
@@ -477,6 +476,7 @@ bool mcp::rpc_handler::try_get_mc_info(dev::eth::McInfo &mc_info_a)
 
 	return try_get_mc_info(mc_info_a, mci);
 }
+*/
 
 bool mcp::rpc_handler::try_get_mc_info(dev::eth::McInfo &mc_info_a, uint64_t &mci)
 {
@@ -549,10 +549,10 @@ void mcp::rpc_handler::account_create(mcp::json & j_response, bool &)
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidCharactersPassword());
 	}
 
-	bool backup_l(true);
-	if (request.count("backup") && try_get_bool_from_json("backup", backup_l)) {
+	if (request.count("backup") || !request["backup"].is_boolean()) {
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidGenNextWorkValue());
 	}
+	bool backup_l = request["backup"];
 
 	bool gen_next_work_l(false);
 	dev::Address new_account = m_key_manager->create(password, gen_next_work_l, backup_l);
@@ -1806,7 +1806,6 @@ void mcp::rpc_handler::block_states(mcp::json & j_response, bool &)
 		std::shared_ptr<mcp::block_state> state(m_store.block_state_get(transaction, block_hash));
 		state->serialize_json(state_l);
 		states_l.push_back(state_l);
-
 	}
 	j_response["block_states"] = states_l;
 
@@ -2004,22 +2003,20 @@ void mcp::rpc_handler::stable_blocks(mcp::json & j_response, bool &)
 	bool error(false);
 
 	uint64_t index(0);
-	if (request.count("index"))
+	if (!request.count("index"))
 	{
-		if (!try_get_uint64_t_from_json("index", index))
-		{
-			BOOST_THROW_EXCEPTION(RPC_Error_InvalidIndex());
-		}
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidIndex());
 	}
+	index = jsToInt(request["index"]);
 
 	uint64_t limit_l(0);
-	try {
-		if (!try_get_uint64_t_from_json("limit", limit_l) || limit_l > list_max_limit)
-		{
-			BOOST_THROW_EXCEPTION(RPC_Error_InvalidLimit());
-		}
+	if (!request.count("limit"))
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidLimit());
 	}
-	catch (...) {
+	limit_l = jsToInt(request["limit"]);
+	if (limit_l > list_max_limit)
+	{
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidLimit());
 	}
 	
@@ -2283,12 +2280,14 @@ void mcp::rpc_handler::estimate_gas(mcp::json & j_response, bool &)
 void mcp::rpc_handler::call(mcp::json & j_response, bool &)
 {
 	TransactionSkeleton ts = mcp::toTransactionSkeletonForMcp(request);
+
 	Transaction t(ts);
 	ts.gasPrice = 0;
 	ts.gas = mcp::block_max_gas;
 
 	dev::eth::McInfo mc_info;
-	if (!try_get_mc_info(mc_info))
+	uint64_t block_number = m_chain->last_stable_mci();
+	if (!try_get_mc_info(mc_info, block_number))
 	{
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidMci());
 	}
@@ -2408,43 +2407,30 @@ void mcp::rpc_handler::call(mcp::json & j_response, bool &)
 void mcp::rpc_handler::logs(mcp::json & j_response, bool &)
 {
 	uint64_t from_stable_block_index(0);
-	if (request.count("from_stable_block_index") && !request["from_stable_block_index"].is_null())
+	if (request.count("from_stable_block_index"))
 	{
-		if (!try_get_uint64_t_from_json("from_stable_block_index", from_stable_block_index))
-		{
-			BOOST_THROW_EXCEPTION(RPC_Error_InvalidFromStableBlockIndex());
-		}
+		from_stable_block_index = jsToInt(request["from_stable_block_index"]);
 	}
 
 	uint64_t to_stable_block_index;
-	if (request.count("to_stable_block_index") && !request["to_stable_block_index"].is_null())
+	if (request.count("to_stable_block_index"))
 	{
-		if (!try_get_uint64_t_from_json("to_stable_block_index", to_stable_block_index))
-		{
-			BOOST_THROW_EXCEPTION(RPC_Error_InvalidToStableBlockIndex());
-		}
+		to_stable_block_index = jsToInt(request["to_stable_block_index"]);
 	}
 	else
 	{
 		to_stable_block_index = m_chain->last_stable_index();
 	}
 
-	dev::Address search_account;
-	if (request.count("account") && !request["account"].is_null())
+	dev::Address search_account(0);
+	if (request.count("account") && request["account"].is_string())
 	{
-		if (!request["account"].is_string())
-		{
-			BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccount());
-		}
-
 		std::string account_text = request["account"];
-		bool error = !mcp::isAddress(account_text);
-		if (error)
+		if (!mcp::isAddress(account_text))
 		{
 			BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccount());
 		}
-		dev::Address account(account_text);
-		search_account = account;
+		search_account = dev::Address(account_text);
 	}
 
 	std::vector<dev::h256> search_topics;
@@ -2478,47 +2464,53 @@ void mcp::rpc_handler::logs(mcp::json & j_response, bool &)
 	for (uint64_t i(from_stable_block_index); i <= to_stable_block_index; i++)
 	{
 		mcp::block_hash block_hash;
-		bool exists(!m_store.stable_block_get(transaction, i, block_hash));
-		assert_x(exists);
-		std::shared_ptr<mcp::block_state> block_state(m_cache->block_state_get(transaction, block_hash));
-		assert_x(block_state);
-
-		if (!block_state->is_stable) {
+		if (m_store.stable_block_get(transaction, i, block_hash)) {
 			continue;
 		}
-		/*
-		auto t = m_store.transaction_get(transaction, block_hash);
-		auto tr = m_store.transaction_receipt_get(transaction, block_hash);
-		if (t == nullptr || tr == nullptr)
+
+		auto block_state = m_cache->block_state_get(transaction, block_hash);
+		if (!block_state || !block_state->is_stable) {
 			continue;
-		
-		log_bloom bloom = tr->bloom();
-		if (!bloom.containsBloom<3>(dev::sha3(search_account.ref())))
-			continue;
-		
-		std::unordered_set<dev::h256> existed_topics;
-		for (dev::h256 const &topic : search_topics)
+		}
+
+		auto block = m_cache->block_get(transaction, block_hash);
+		for (auto & th : block->links())
 		{
+			auto t = m_cache->transaction_get(transaction, th);
+			auto tr = m_store.transaction_receipt_get(transaction, th);
+			auto td = m_cache->transaction_address_get(transaction, th);
+			if (t == nullptr || tr == nullptr || td == nullptr)
+				continue;
+
 			log_bloom bloom = tr->bloom();
-			if (bloom.containsBloom<3>(dev::sha3(topic)))
-				existed_topics.insert(topic);
+			if (search_account != dev::Address(0) && !bloom.containsBloom<3>(dev::sha3(search_account.ref())))
+				continue;
+
+			std::unordered_set<dev::h256> existed_topics;
+			for (dev::h256 const &topic : search_topics)
+			{
+				if (bloom.containsBloom<3>(dev::sha3(topic)))
+					existed_topics.insert(topic);
+			}
+
+			if (search_topics.size() > 0 && existed_topics.size() == 0)
+				continue;
+
+			auto lt = dev::eth::LocalisedTransactionReceipt(
+				*tr,
+				t->sha3(),
+				block_hash,
+				i,
+				t->from(),
+				t->to(),
+				td->index,
+				toAddress(t->from(), t->nonce()));
+
+			mcp::json logs = toJson(lt.localisedLogs());
+			if (logs.size() > 0) {
+				logs_l.push_back(logs);
+			}
 		}
-
-		if (search_topics.size() > 0 && existed_topics.size() == 0)
-			continue;
-		mcp::json logs_l = mcp::json::array();
-		auto lt = dev::eth::LocalisedTransactionReceipt(
-			*tr,
-			t->sha3(),//transaction hash
-			block_hash,
-			i,
-			t->from(),
-			t->to(),
-			0,
-			toAddress(t->from(), t->nonce()));
-
-		logs_l.push_back(toJson(lt.localisedLogs()));
-		*/
 	}
 
 	j_response["logs"] = logs_l;
@@ -3073,7 +3065,6 @@ void mcp::rpc_handler::send_offline_block(mcp::json & j_response, bool &)
 
 void mcp::rpc_handler::block_summary(mcp::json & j_response, bool &)
 {
-
 	if (!request.count("hash") || (!request["hash"].is_string()))
 	{
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidHash());
@@ -3324,7 +3315,6 @@ void mcp::rpc_handler::sign_msg(mcp::json & j_response, bool &)
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidMsg());
 	}
 
-
 	if (!request.count("password") || (!request["password"].is_string()))
 	{
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidPassword());
@@ -3442,7 +3432,6 @@ void mcp::rpc_handler::status(mcp::json & j_response, bool &)
 
 void mcp::rpc_handler::peers(mcp::json & j_response, bool &)
 {
-
 	mcp::json peers_l = mcp::json::array();
 	std::unordered_map<p2p::node_id, bi::tcp::endpoint> peers(m_host->peers());
 	for (auto i : peers)
@@ -3462,7 +3451,6 @@ void mcp::rpc_handler::peers(mcp::json & j_response, bool &)
 
 void mcp::rpc_handler::nodes(mcp::json & j_response, bool &)
 {
-
 	mcp::json nodes_l = mcp::json::array();
 	std::list<p2p::node_info> nodes(m_host->nodes());
 	for (p2p::node_info node : nodes)
@@ -3504,7 +3492,6 @@ void mcp::rpc_handler::debug_trace_transaction(mcp::json & j_response, bool &)
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidHash());
 	}
 	
-
 	mcp::db::db_transaction transaction(m_store.create_transaction());
 	dev::eth::McInfo mc_info;
 	if (!m_chain->get_mc_info_from_block_hash(transaction, m_cache, hash, mc_info))
@@ -3544,7 +3531,6 @@ void mcp::rpc_handler::debug_trace_transaction(mcp::json & j_response, bool &)
 		/*mcp::json trace = m_chain->traceTransaction(e, transaction, options);
 		j_response["return_value"] = er.output.hexPrefixed();
 		j_response["struct_logs"] = trace;*/
-
 	}
 	catch (Exception const &_e)
 	{
@@ -3637,7 +3623,6 @@ void mcp::rpc_handler::debug_trace_transaction(mcp::json & j_response, bool &)
 
 void mcp::rpc_handler::debug_storage_range_at(mcp::json & j_response, bool &)
 {
-
 	if (!request.count("hash") || !request["hash"].is_string())
 	{
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidHash());
@@ -3653,11 +3638,14 @@ void mcp::rpc_handler::debug_storage_range_at(mcp::json & j_response, bool &)
 	}
 
 	dev::Address acct(0);
-	if (!request.count("account") || !request["account"].is_string() || !mcp::isAddress(request["account"]))
+	if (!request.count("account") || !request["account"].is_string())
 	{
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccount());
 	}
 	std::string account_text = request["account"];
+	if (!mcp::isAddress(request["account"])) {
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccount());
+	}
 	acct = dev::Address(account_text);
 	
 	h256 begin;
@@ -3669,10 +3657,11 @@ void mcp::rpc_handler::debug_storage_range_at(mcp::json & j_response, bool &)
 	}
 
 	uint64_t max_results(0);
-	if (!request.count("max_results") || !try_get_uint64_t_from_json("max_results", max_results))
+	if (!request.count("max_results"))
 	{
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidBegin());
 	}
+	max_results = jsToInt(request["max_results"]);
 
 	j_response["storage"] = mcp::json::object();
 
@@ -3700,8 +3689,6 @@ void mcp::rpc_handler::debug_storage_range_at(mcp::json & j_response, bool &)
 
 			j_response["storage"][hashedKey] = keyValue;
 		}
-
-		
 	}
 	catch (Exception const &_e)
 	{
@@ -5123,6 +5110,7 @@ void mcp::rpc_handler::eth_call(mcp::json & j_response, bool &)
 	ts.gas = mcp::block_max_gas;
 
 	Transaction t(ts);
+	t.setSinature(h256(0), h256(0), 0);
 
 	uint64_t block_number = 0;
 	std::string blockText = params[1];
@@ -5157,7 +5145,7 @@ void mcp::rpc_handler::eth_call(mcp::json & j_response, bool &)
 
 void mcp::rpc_handler::net_version(mcp::json & j_response, bool &)
 {
-	j_response["result"] = STR(MCP_VERSION);
+	j_response["result"] = toJS(mcp::chain_id);
 }
 
 void mcp::rpc_handler::net_listening(mcp::json & j_response, bool &)
@@ -5677,7 +5665,7 @@ void mcp::rpc_handler::eth_getLogs(mcp::json & j_response, bool &)
 
 		for (uint64_t i(fromBlock); i <= toBlock; i++)
 		{
-			if (!m_store.stable_block_get(transaction, i, block_hash)) {
+			if (m_store.stable_block_get(transaction, i, block_hash)) {
 				continue;
 			}
 

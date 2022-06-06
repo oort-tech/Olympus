@@ -1026,6 +1026,7 @@ std::pair<u256, bool> mcp::chain::estimate_gas(mcp::db::db_transaction& transact
 				t = Transaction(_value, gasPrice, mid, _data, n);
 			t.setSinature(h256(0), h256(0), 0);
 			t.forceSender(_from);
+			c_state.ts = t;
 			c_state.addBalance(_from, mid * _gasPrice + _value);
 			std::pair<mcp::ExecutionResult, dev::eth::TransactionReceipt> result = c_state.execute(env, Permanence::Reverted, t, dev::eth::OnOpFunc());
 			er = result.first;

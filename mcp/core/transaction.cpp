@@ -4,8 +4,6 @@
 #include <boost/endian/conversion.hpp>
 #include <mcp/common/common.hpp>
 #include <mcp/common/log.hpp>
-#include "config.hpp"
-
 
 mcp::Transaction::Transaction(TransactionSkeleton const& ts, boost::optional<Secret> const& s) :
 	m_nonce(ts.nonce),
