@@ -41,6 +41,10 @@ namespace mcp
 
 		void block_number_put(mcp::db::db_transaction & transaction_a, uint64_t const & index_a, mcp::block_hash const & hash_a);
 
+		bool transaction_receipt_exists(mcp::db::db_transaction & transaction_a, h256 const& _hash);
+		std::shared_ptr<dev::eth::TransactionReceipt> transaction_receipt_get(mcp::db::db_transaction & transaction_a, h256 const&_hash);
+		void transaction_receipt_put(mcp::db::db_transaction & transaction_a, h256 const& _hash, std::shared_ptr<dev::eth::TransactionReceipt> _t);
+
 		void mark_as_changing();
 		void commit_and_clear_changing();
 
@@ -124,6 +128,16 @@ namespace mcp
 			boost::multi_index::hashed_unique<boost::multi_index::member<put_item<mcp::block_hash, mcp::block_hash>, mcp::block_hash, &put_item<mcp::block_hash, mcp::block_hash>::key>>
 			>>
 			m_block_summary_puts;
+
+		size_t m_max_transaction_receipt_puts_size = 10000;
+		std::unordered_set<h256> m_transaction_receipt_puts_flushed;
+		boost::multi_index_container<
+			put_item<h256, std::shared_ptr<dev::eth::TransactionReceipt>>,
+			boost::multi_index::indexed_by<
+			boost::multi_index::sequenced<>,
+			boost::multi_index::hashed_unique<boost::multi_index::member<put_item<h256, std::shared_ptr<dev::eth::TransactionReceipt>>, h256, &put_item<h256, std::shared_ptr<dev::eth::TransactionReceipt>>::key>>
+			>>
+			m_transaction_receipt_puts;
 	};
 
 } // namespace mcp

@@ -162,8 +162,6 @@ bool mcp::process_block_cache::transaction_exists(mcp::db::db_transaction & tran
 std::shared_ptr<mcp::Transaction> mcp::process_block_cache::transaction_get(mcp::db::db_transaction & transaction_a, h256 const& _hash)
 {
 	std::shared_ptr<mcp::Transaction> t = nullptr;
-	//if (m_transaction_dels.count(_hash))
-	//	return nullptr;
 
 	auto it(m_transaction_puts.get<1>().find(_hash));
 	if (it != m_transaction_puts.get<1>().end())
@@ -186,7 +184,6 @@ void mcp::process_block_cache::transaction_put(mcp::db::db_transaction & transac
 	m_store.transaction_put(transaction_a, h, *_t);
 	auto r = m_transaction_puts.push_back(put_item<h256, std::shared_ptr<mcp::Transaction>>(h, _t));
 	assert_x(r.second);
-	//m_transaction_dels.erase(h);
 
 	if (m_transaction_puts.size() >= m_max_transaction_puts_size)
 	{
@@ -316,6 +313,48 @@ void mcp::process_block_cache::block_number_put(mcp::db::db_transaction & transa
 	m_cache->block_number_put(index_a, hash_a);
 }
 
+bool mcp::process_block_cache::transaction_receipt_exists(mcp::db::db_transaction & transaction_a, h256 const& _hash)
+{
+	auto t = transaction_receipt_get(transaction_a, _hash);
+	return t != nullptr;
+}
+
+std::shared_ptr<dev::eth::TransactionReceipt> mcp::process_block_cache::transaction_receipt_get(mcp::db::db_transaction & transaction_a, h256 const& _hash)
+{
+	std::shared_ptr<dev::eth::TransactionReceipt> t = nullptr;
+
+	auto it(m_transaction_receipt_puts.get<1>().find(_hash));
+	if (it != m_transaction_receipt_puts.get<1>().end())
+	{
+		t = it->value;
+	}
+	else
+	{
+		if (m_transaction_receipt_puts_flushed.count(_hash))
+			t = m_store.transaction_receipt_get(transaction_a, _hash);
+		else
+			t = m_cache->transaction_receipt_get(transaction_a, _hash);
+	}
+	return t;
+}
+
+void mcp::process_block_cache::transaction_receipt_put(mcp::db::db_transaction & transaction_a, h256 const& _hash, std::shared_ptr<dev::eth::TransactionReceipt> _t)
+{
+	m_store.transaction_receipt_put(transaction_a, _hash, *_t);
+	auto r = m_transaction_receipt_puts.push_back(put_item<h256, std::shared_ptr<dev::eth::TransactionReceipt>>(_hash, _t));
+	assert_x(r.second);
+
+	if (m_transaction_receipt_puts.size() >= m_max_transaction_receipt_puts_size)
+	{
+		while (m_transaction_receipt_puts.size() >= m_max_transaction_receipt_puts_size / 2)
+		{
+			put_item<h256, std::shared_ptr<dev::eth::TransactionReceipt>> const & item(m_transaction_receipt_puts.front());
+			m_transaction_receipt_puts_flushed.insert(std::move(item.key));
+			m_transaction_receipt_puts.pop_front();
+		}
+	}
+}
+
 
 void mcp::process_block_cache::mark_as_changing()
 {
@@ -342,8 +381,6 @@ void mcp::process_block_cache::mark_as_changing()
 	std::unordered_set<h256> transaction_changings(m_transaction_puts_flushed);
 	for (put_item<h256, std::shared_ptr<mcp::Transaction>> const & item : m_transaction_puts)
 		transaction_changings.insert(item.key);
-	//for (h256 const & hash : m_transaction_dels)
-	//	transaction_changings.insert(hash);
 	m_cache->mark_transaction_as_changing(transaction_changings);
 
 	//successor
@@ -359,6 +396,12 @@ void mcp::process_block_cache::mark_as_changing()
 	for (put_item<mcp::block_hash, mcp::summary_hash> const & item : m_block_summary_puts)
 		block_summary_changings.insert(item.key);
 	m_cache->mark_block_summary_as_changing(block_summary_changings);
+
+	//transaction receipt
+	std::unordered_set<h256> receipt_changings(m_transaction_receipt_puts_flushed);
+	for (put_item<h256, std::shared_ptr<dev::eth::TransactionReceipt>> const & item : m_transaction_receipt_puts)
+		receipt_changings.insert(item.key);
+	m_cache->mark_transaction_receipt_as_changing(receipt_changings);
 }
 
 void mcp::process_block_cache::commit_and_clear_changing()
@@ -386,14 +429,13 @@ void mcp::process_block_cache::commit_and_clear_changing()
 
 	//modify transaction cache
 	m_cache->transaction_earse(m_transaction_puts_flushed);
-	//m_cache->transaction_earse(m_transaction_dels);
 	for (auto h : m_transaction_dels)
 		m_tq->drop(h);
 	for (put_item<h256, std::shared_ptr<mcp::Transaction>> const & item : m_transaction_puts)
 		m_cache->transaction_put(item.key, item.value);
 	m_transaction_puts.clear();
 	m_transaction_puts_flushed.clear();
-	//m_transaction_dels.clear();
+	m_transaction_dels.clear();
 
 
 	//modify successor cache
@@ -412,13 +454,20 @@ void mcp::process_block_cache::commit_and_clear_changing()
 	m_block_summary_puts.clear();
 	m_block_summary_puts_flushed.clear();
 
+	//modify transaction receipt cache
+	m_cache->transaction_receipt_earse(m_transaction_receipt_puts_flushed);
+	for (put_item<h256, std::shared_ptr<dev::eth::TransactionReceipt>> const & item : m_transaction_receipt_puts)
+		m_cache->transaction_receipt_put(item.key, item.value);
+	m_transaction_receipt_puts.clear();
+	m_transaction_receipt_puts_flushed.clear();
+
 	//clear changing
 	m_cache->clear_block_changing();
 	m_cache->clear_block_state_changing();
 	m_cache->clear_latest_account_state_changing();
 	m_cache->clear_transaction_changing();
-	//m_cache->clear_account_changing();
 	m_cache->clear_successor_changing();
 	m_cache->clear_block_summary_changing();
+	m_cache->clear_transaction_receipt_changing();
 }
 

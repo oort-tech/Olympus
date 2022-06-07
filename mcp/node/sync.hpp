@@ -1,4 +1,5 @@
 #pragma once
+#include "common.hpp"
 #include <mcp/node/node_capability.hpp>
 #include <mcp/p2p/host.hpp>
 #include <mcp/common/stopwatch.hpp>
@@ -18,7 +19,6 @@ namespace mcp
 		request_next_hash_tree_no_summary
 	};
 
-	enum class sub_packet_type;
 	class sync_request_status
 	{
 	public:
@@ -108,9 +108,11 @@ namespace mcp
 		void hash_tree_response_handler(p2p::node_id const &, mcp::hash_tree_response_message const &);
 
 		void peer_info_request_handler(p2p::node_id const &);
-		void request_new_missing_joints(mcp::joint_request_item& item_a, uint64_t& millisecondsSinceEpoch, bool const& is_timeout = false);
+		void request_new_missing_joints(mcp::requesting_item& item_a, bool const& is_timeout = false);
+		void request_new_missing_transactions(mcp::requesting_item& item_a, bool const& is_timeout = false);
 
 		void joint_request_handler(p2p::node_id const &, mcp::joint_request_message const &);
+		void transaction_request_handler(p2p::node_id const &, mcp::transaction_request_message const &);
 		void send_peer_info_request(p2p::node_id id);
 		void send_peer_info(p2p::node_id const &, mcp::peer_info_message const &);
 
@@ -137,6 +139,7 @@ namespace mcp
 		void process_hash_tree(p2p::node_id const &, mcp::hash_tree_response_message const &);
 
 		void send_block(p2p::node_id const & id, mcp::joint_message const & message);
+		void send_transaction(p2p::node_id const & id, mcp::Transaction const & message);
 
 		bool is_request_hash_tree();
 		bool check_summaries_exist(mcp::db::db_transaction &transaction, std::list<mcp::summary_hash> const& summaries);
@@ -151,6 +154,7 @@ namespace mcp
 
 		void process_request_joints();
 		void send_joint_request(p2p::node_id const &, mcp::joint_request_message const &);
+		void send_transaction_request(p2p::node_id const &, mcp::transaction_request_message const &);
 
 		void clear_catchup_info(bool lock = true);
 		void del_catchup_index(std::map<uint64_t, uint64_t> const& map_a);
@@ -178,7 +182,7 @@ namespace mcp
 		std::unique_ptr<boost::asio::deadline_timer> m_sync_request_timer;
 
 		//thread 
-		std::deque<mcp::joint_request_item> m_joint_request_pending;
+		std::deque<mcp::requesting_item> m_joint_request_pending;
 		std::mutex m_mutex_joint_request;
 		std::condition_variable m_condition;
 		std::thread m_request_joints_thread;

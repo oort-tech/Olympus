@@ -136,25 +136,15 @@ class joint_request_message
 	mcp::block_hash block_hash;
 };
 
-enum joint_request_item_from
-{
-	missing = 0,
-	peerinfo
-};
-
-class joint_request_item
+class transaction_request_message
 {
 public:
-	joint_request_item(p2p::node_id const &id_a, std::shared_ptr<mcp::block_hash> block_hash_a, mcp::requesting_block_cause const& cause_a) :
-		id(id_a), block_hash(block_hash_a), cause(cause_a), request_id(0)
-	{
-	}
+	transaction_request_message(mcp::sync_request_hash const& _request_id, h256 const & _hash):request_id(_request_id), hash(_hash){}
+	transaction_request_message(bool &error_a, dev::RLP const &r) { if (r.itemCount() != 3) return; request_id = (mcp::sync_request_hash)r[0]; hash = (h256)r[1];}
+	void stream_RLP(dev::RLPStream &s) const { s.appendList(2); s << request_id << hash; }
 
-	mcp::p2p::node_id id;
-	std::shared_ptr<mcp::block_hash> block_hash;
-	mcp::requesting_block_cause cause;
 	mcp::sync_request_hash request_id;
-	mcp::joint_request_item_from from = mcp::joint_request_item_from::missing;
+	h256 hash;
 };
 
 //syncing status

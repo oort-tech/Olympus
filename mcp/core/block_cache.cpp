@@ -10,7 +10,8 @@ mcp::block_cache::block_cache(mcp::block_store &store_a) :
 	m_successors(1000),
 	m_block_summarys(1000),
 	m_block_numbers(1000),
-	m_number_blocks(1000)
+	m_number_blocks(1000),
+	m_transaction_receipts(50000)
 {
 }
 
@@ -383,6 +384,59 @@ void mcp::block_cache::block_number_put(uint64_t const & index_a, mcp::block_has
 	m_block_numbers.insert(index_a, hash_a);
 	m_number_blocks.insert(hash_a, index_a);
 }
+
+bool mcp::block_cache::transaction_receipt_exists(mcp::db::db_transaction & transaction_a, h256 const & hash)
+{
+	auto t = transaction_receipt_get(transaction_a, hash);
+	return t != nullptr;
+}
+
+std::shared_ptr<dev::eth::TransactionReceipt> mcp::block_cache::transaction_receipt_get(mcp::db::db_transaction &transaction_a, h256 const &hash)
+{
+	std::shared_ptr<dev::eth::TransactionReceipt> t = nullptr;
+	std::lock_guard<std::mutex> lock(m_transaction_receipt_mutex);
+	if (!m_transaction_receipt_changings.count(hash))
+	{
+		bool exists = m_transaction_receipts.tryGet(hash, t);
+		if (!exists)
+		{
+			t = m_store.transaction_receipt_get(transaction_a, hash);
+			if (t)
+				m_transaction_receipts.insert(hash, t);
+		}
+	}
+	else
+		t = m_store.transaction_receipt_get(transaction_a, hash);
+
+	return t;
+}
+
+void mcp::block_cache::transaction_receipt_put(h256 const &hash, std::shared_ptr<dev::eth::TransactionReceipt> const & t)
+{
+	std::lock_guard<std::mutex> lock(m_transaction_receipt_mutex);
+	m_transaction_receipts.insert(hash, t);
+}
+
+void mcp::block_cache::transaction_receipt_earse(std::unordered_set<h256> const & hashs)
+{
+	std::lock_guard<std::mutex> lock(m_transaction_receipt_mutex);
+	for (auto const & block_hash : hashs)
+		m_transaction_receipts.remove(block_hash);
+}
+
+void mcp::block_cache::mark_transaction_receipt_as_changing(std::unordered_set<h256> const & hashs)
+{
+	std::lock_guard<std::mutex> lock(m_transaction_receipt_mutex);
+	for (auto const & block_hash : hashs)
+		m_transaction_receipt_changings.insert(block_hash);
+}
+
+void mcp::block_cache::clear_transaction_receipt_changing()
+{
+	std::lock_guard<std::mutex> lock(m_transaction_receipt_mutex);
+	m_transaction_receipt_changings.clear();
+}
+
 
 
 std::string mcp::block_cache::report_cache_size()
