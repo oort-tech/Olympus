@@ -1,8 +1,6 @@
 /*
  * public class for sync,processor,capability.decoupling
  */
-#pragma once
-
 #include "common.hpp"
 #include <blake2/blake2.h>
 
