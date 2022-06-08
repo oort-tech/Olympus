@@ -338,7 +338,7 @@ mcp::peer_info_message::peer_info_message(bool & error_a, dev::RLP const &r)
 	if (error_a)
 		return;
 
-	error_a = r.itemCount() != 2;
+	error_a = r.itemCount() != 3;
 	if (error_a)
 		return;
 
@@ -351,7 +351,7 @@ mcp::peer_info_message::peer_info_message(bool & error_a, dev::RLP const &r)
 
 void mcp::peer_info_message::stream_RLP(dev::RLPStream & s) const
 {
-	s.appendList(2);
+	s.appendList(3);
 	s << min_retrievable_mci;
 	s.appendList(arr_tip_blocks.size());
 	for (auto hash : arr_tip_blocks)

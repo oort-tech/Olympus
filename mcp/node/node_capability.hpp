@@ -1,5 +1,6 @@
 #pragma once
 
+#include "common.hpp"
 #include <mcp/node/message.hpp>
 #include <mcp/core/block_store.hpp>
 #include <mcp/core/block_cache.hpp>
@@ -13,25 +14,6 @@
 
 namespace mcp
 {
-	enum class sub_packet_type
-	{
-		joint = 0,
-		joint_request,
-		transaction,
-		transaction_request,
-		catchup_request,
-		catchup_response,
-		hash_tree_request,
-		hash_tree_response,
-		peer_info,
-		peer_info_request,
-        hello_info,
-        hello_info_request,
-        hello_info_ack,
-		packet_count = 0x10
-	};
-
-
 	class peer_info
 	{
 	public:
@@ -89,55 +71,11 @@ namespace mcp
         bool l_r_result;
     };
 
-    class capability_metrics
-    {
-    public:
-        uint64_t  joint = 0;
-        uint64_t  broadcast_joint = 0;
-        uint64_t  joint_request = 0;
-		uint64_t  transaction = 0;
-		uint64_t  broadcast_transaction = 0;
-		uint64_t  transaction_request = 0;
-        uint64_t  catchup_request = 0;
-        uint64_t  catchup_response = 0;
-        uint64_t  hash_tree_request = 0;
-        uint64_t  hash_tree_response = 0;
-        uint64_t  peer_info = 0;
-        uint64_t  peer_info_request = 0;
-        uint64_t  hello_info = 0;
-        uint64_t  hello_info_request = 0;
-        uint64_t  hello_info_ack = 0;
-    };
-
-	class requesting_item
-	{
-	public:
-		requesting_item() = default;
-		requesting_item(mcp::p2p::node_id const & node_id_a,mcp::block_hash const& hash_a, 
-			uint64_t const& time_a, mcp::sub_packet_type const& type_a = mcp::sub_packet_type::joint_request) :
-			m_node_id(node_id_a),
-			m_request_hash(hash_a),
-			m_time(time_a),
-			m_type(type_a),
-			m_request_id(0),
-			m_request_count(1)
-		{
-		}
-
-		mcp::p2p::node_id		m_node_id;
-		mcp::block_hash			m_request_hash;
-		uint64_t				m_time;
-		mcp::sub_packet_type	m_type;
-
-		mcp::sync_request_hash	m_request_id;
-		uint8_t					m_request_count;
-	};
-
-	class node_capability;
+	//class node_capability;
 	class requesting_mageger
 	{
 	public:
-		requesting_mageger(mcp::node_capability & capability_a) :m_capability(capability_a), m_timeout(120000){}
+		requesting_mageger(){}
 		bool add(mcp::requesting_item& item_a, bool const& count_a = false);
 		bool exist_erase(mcp::sync_request_hash const& request_id_a);
 		void erase(mcp::block_hash const& hash_a);
@@ -154,9 +92,8 @@ namespace mcp
 				boost::multi_index::hashed_non_unique<boost::multi_index::member<mcp::requesting_item, uint64_t, &mcp::requesting_item::m_time> >
 			>
 		> m_request_info;
-		uint64_t m_timeout;//internal used ,if retry 3 times not get response will be throw away
+		//uint64_t m_timeout;//internal used ,if retry 3 times not get response will be throw away
 		std::atomic<uint64_t> m_random_uint = { 0 };  //random number, create request id
-		mcp::node_capability & m_capability;
 
 		static const int STALLED_TIMEOUT = 5000; //retry time,external used
 		static const int RETYR_TIMES = 3;
@@ -211,7 +148,6 @@ namespace mcp
         void timeout_for_ack_hello(p2p::node_id node_id_a);
         //
         bool is_peer_exsist(p2p::node_id const &id);
-		mcp::sync_request_hash gen_sync_request_hash(p2p::node_id const & id, uint64_t random, mcp::sub_packet_type & request_type_a);
 
         //sync
         static const int COLLECT_PEER_INFO_INTERVAL = 10 * 1000; //ms
@@ -225,8 +161,7 @@ namespace mcp
 
 		uint64_t num_peers();
 
-        std::shared_ptr <mcp::capability_metrics> m_pcapability_metrics;
-        std::unordered_map<p2p::node_id, std::shared_ptr<mcp::capability_metrics>> m_node_id_cap_metrics;
+        //std::unordered_map<p2p::node_id, std::shared_ptr<mcp::capability_metrics>> m_node_id_cap_metrics;
 		mcp::requesting_mageger m_requesting;
 		std::mutex m_requesting_lock;
 

@@ -671,16 +671,15 @@ void mcp::block_processor::do_process_dag_item(mcp::timeout_db_transaction & tim
 	std::shared_ptr<mcp::block> block(item_a->joint.block);
 
 	mcp::block_hash const & block_hash(block->hash());
-	unsigned index = 0;
 	for (auto const & link_hash : block->links())
 	{
 		/// Unprocessed transactions cannot be discarded because the cache is full.  todo zhouyou
 		auto t = m_tq->get(link_hash);
-		if (t == nullptr || m_local_cache->transaction_exists(timeout_tx.get_transaction(), t->sha3())) /// transaction maybe processed yet
+		if (t == nullptr) /// transaction maybe processed yet
 		{
-			index++;
 			continue;
 		}
+		/// m_local_cache->transaction_exists(timeout_tx.get_transaction(), t->sha3()) /// do not need get exist,must exist,if not dag_validate return missing links
 
 		//////test get RAW transaction to test interface
 		//dev::bytes b_value;
@@ -691,7 +690,7 @@ void mcp::block_processor::do_process_dag_item(mcp::timeout_db_transaction & tim
 		//}
 		//LOG(m_log.info) << ":::::::::::" << toJS(b_value);
 
-		m_chain->save_transaction(timeout_tx, m_local_cache, t, block_hash, index);
+		m_chain->save_transaction(timeout_tx, m_local_cache, t);
 	}
 
 	/// save block and try advance 
@@ -712,16 +711,14 @@ void mcp::block_processor::process_missing(std::shared_ptr<mcp::block_processor_
 		uint64_t now = m_steady_clock.now_since_epoch();
 		for (auto it = missings.begin(); it != missings.end(); it++)
 		{
-			auto hash(std::make_shared<mcp::block_hash>(*it));
-			mcp::joint_request_item request_item(item_a->remote_node_id(), hash, mcp::requesting_block_cause::new_unknown);
-			m_sync->request_new_missing_joints(request_item, now);
+			mcp::requesting_item request_item(item_a->remote_node_id(), *it, mcp::requesting_block_cause::new_unknown, now);
+			m_sync->request_new_missing_joints(request_item);
 		}
-		//for (auto it = transactions.begin(); it != transactions.end(); it++)
-		//{
-		//	auto hash(std::make_shared<mcp::block_hash>(*it));
-		//	mcp::joint_request_item request_item(item_a->remote_node_id(), hash, mcp::requesting_block_cause::new_unknown);
-		//	m_sync->request_new_missing_joints(request_item, now);
-		//}
+		for (auto it = transactions.begin(); it != transactions.end(); it++)
+		{
+			mcp::requesting_item request_item(item_a->remote_node_id(), *it, mcp::requesting_block_cause::new_unknown, now);
+			m_sync->request_new_missing_transactions(request_item);
+		}
 	}
 	else
 	{
@@ -747,22 +744,20 @@ void mcp::block_processor::process_existing_missing(mcp::p2p::node_id const & re
 			uint64_t now = m_steady_clock.now_since_epoch();
 			for (auto it = missings.begin(); it != missings.end(); it++)
 			{
-				auto hash(std::make_shared<mcp::block_hash>(*it));
-				mcp::joint_request_item request_item(remote_node_id, hash, mcp::requesting_block_cause::existing_unknown);
-				m_sync->request_new_missing_joints(request_item, now);
+				mcp::requesting_item request_item(remote_node_id, *it, mcp::requesting_block_cause::existing_unknown, now);
+				m_sync->request_new_missing_joints(request_item);
 			}
 		}
 
-		//if (!light_missings.empty())
-		//{
-		//	uint64_t now = m_steady_clock.now_since_epoch();
-		//	for (auto it = light_missings.begin(); it != light_missings.end(); it++)
-		//	{
-		//		auto hash(std::make_shared<mcp::block_hash>(*it));
-		//		mcp::joint_request_item request_item(remote_node_id, hash, mcp::block_type::light, mcp::requesting_block_cause::existing_unknown);
-		//		m_sync->request_new_missing_joints(request_item, now);
-		//	}
-		//}
+		if (!light_missings.empty())
+		{
+			uint64_t now = m_steady_clock.now_since_epoch();
+			for (auto it = light_missings.begin(); it != light_missings.end(); it++)
+			{
+				mcp::requesting_item request_item(remote_node_id, *it, mcp::requesting_block_cause::existing_unknown, now);
+				m_sync->request_new_missing_transactions(request_item);
+			}
+		}
 	}
 }
 

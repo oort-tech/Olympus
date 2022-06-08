@@ -77,6 +77,13 @@ class block_cache : public mcp::iblock_cache
 	bool block_number_get(mcp::db::db_transaction & transaction_a, mcp::block_hash const & hash_a, uint64_t & index_a);
 	void block_number_put(uint64_t const & index_a, mcp::block_hash const & hash_a);
 
+	bool transaction_receipt_exists(mcp::db::db_transaction & transaction_a, h256 const & hash);
+	std::shared_ptr<dev::eth::TransactionReceipt> transaction_receipt_get(mcp::db::db_transaction & transaction_a, h256 const & hash);
+	void transaction_receipt_put(h256 const & hash, std::shared_ptr<dev::eth::TransactionReceipt> const& t);
+	void transaction_receipt_earse(std::unordered_set<h256> const & hash);
+	void mark_transaction_receipt_as_changing(std::unordered_set<h256> const & hash);
+	void clear_transaction_receipt_changing();
+
 	std::string report_cache_size();
 
 private:
@@ -112,5 +119,9 @@ private:
 	std::mutex m_block_number_mutex;
 	mcp::Cache<uint64_t, mcp::block_hash> m_block_numbers;
 	mcp::Cache<mcp::block_hash, uint64_t> m_number_blocks;
+
+	std::mutex m_transaction_receipt_mutex;
+	std::unordered_set<h256> m_transaction_receipt_changings;
+	mcp::Cache<h256, std::shared_ptr<dev::eth::TransactionReceipt>> m_transaction_receipts;
 };
 } // namespace mcp

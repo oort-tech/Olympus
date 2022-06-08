@@ -321,6 +321,8 @@ add_library (node
 	mcp/node/debug.hpp
 	mcp/node/transaction_queue.cpp
 	mcp/node/transaction_queue.hpp
+	mcp/node/common.cpp
+	mcp/node/common.hpp
     )
 
 add_library (p2p

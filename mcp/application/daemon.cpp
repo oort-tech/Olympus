@@ -1058,40 +1058,48 @@ void mcp_daemon::ongoing_report(
 
 	LOG(log.info) << "TQ:" << tq->getInfo();
 
-	auto p_cap_metrics = capability->m_pcapability_metrics;
-	if (p_cap_metrics)
-	{
-		LOG(log.info) << "capability send: "
-			<< ", broadcast_joint:" << p_cap_metrics->broadcast_joint
-			<< ", joint_request:" << p_cap_metrics->joint_request
-
-			<< ", broadcast_transaction:" << p_cap_metrics->broadcast_transaction
-			<< ", transaction_request:" << p_cap_metrics->transaction_request
-
-			<< ", catchup_request:" << p_cap_metrics->catchup_request
-			<< ", catchup_response:" << p_cap_metrics->catchup_response
-
-			<< ", hash_tree_request:" << p_cap_metrics->hash_tree_request
-			<< ", hash_tree_response:" << p_cap_metrics->hash_tree_response
-
-			<< ", peer_info count:" << p_cap_metrics->peer_info
-			<< ", peer_info_request:" << p_cap_metrics->peer_info_request
-
-			<< ", hello_info:" << p_cap_metrics->hello_info
-			<< ", hello_info_request:" << p_cap_metrics->hello_info_request
-			<< ", hello_info_ack:" << p_cap_metrics->hello_info_ack;
-	}
-
+	LOG(log.info) << "capability send: "
+		<< ", broadcast_joint:" << mcp::CapMetricsSend.broadcast_joint
+		<< ", joint_request:" << mcp::CapMetricsSend.joint_request
+		<< ", send_joint:" << mcp::CapMetricsSend.send_joint
+		<< ", joint:" << mcp::CapMetricsSend.joint
+		<< ", broadcast_transaction:" << mcp::CapMetricsSend.broadcast_transaction
+		<< ", transaction_request:" << mcp::CapMetricsSend.transaction_request
+		<< ", send_transaction:" << mcp::CapMetricsSend.send_transaction
+		<< ", transaction:" << mcp::CapMetricsSend.transaction
+		<< ", catchup_request:" << mcp::CapMetricsSend.catchup_request
+		<< ", send_catchup:" << mcp::CapMetricsSend.send_catchup
+		<< ", catchup_response:" << mcp::CapMetricsSend.catchup_response
+		<< ", hash_tree_request:" << mcp::CapMetricsSend.hash_tree_request
+		<< ", send_hash_tree:" << mcp::CapMetricsSend.send_hash_tree
+		<< ", hash_tree_response:" << mcp::CapMetricsSend.hash_tree_response
+		<< ", peer_info_request:" << mcp::CapMetricsSend.peer_info_request
+		<< ", send_peer_info:" << mcp::CapMetricsSend.send_peer_info
+		<< ", peer_info:" << mcp::CapMetricsSend.peer_info
+		<< ", hello_info_request:" << mcp::CapMetricsSend.hello_info_request
+		<< ", send_hello_info:" << mcp::CapMetricsSend.send_hello_info
+		<< ", hello_info:" << mcp::CapMetricsSend.hello_info
+		<< ", hello_info_ack:" << mcp::CapMetricsSend.hello_info_ack;
 	LOG(log.info) << "capability receive: "
-		<< "joint:" << p_cap_metrics->joint
-		<< ", transaction:" << p_cap_metrics->transaction
-		<< ", joint_request:" << capability->receive_joint_request_count
-		<< ", catchup_request:" << capability->receive_catchup_request_count
-		<< ", catchup_response:" << capability->receive_catchup_response_count
-		<< ", hash_tree_request:" << capability->receive_hash_tree_request_count
-		<< ", hash_tree_response:" << capability->receive_hash_tree_response_count
-		<< ", peer_info_request:" << capability->receive_peer_info_request_count
-		<< ", peer_info:" << capability->receive_peer_info_count;
+		<< ", joint_request:" << mcp::CapMetricsRecieved.joint_request
+		<< ", send_joint:" << mcp::CapMetricsRecieved.send_joint
+		<< ", joint:" << mcp::CapMetricsRecieved.joint
+		<< ", transaction_request:" << mcp::CapMetricsRecieved.transaction_request
+		<< ", send_transaction:" << mcp::CapMetricsRecieved.send_transaction
+		<< ", transaction:" << mcp::CapMetricsRecieved.transaction
+		<< ", catchup_request:" << mcp::CapMetricsRecieved.catchup_request
+		<< ", send_catchup:" << mcp::CapMetricsRecieved.send_catchup
+		<< ", catchup_response:" << mcp::CapMetricsRecieved.catchup_response
+		<< ", hash_tree_request:" << mcp::CapMetricsRecieved.hash_tree_request
+		<< ", send_hash_tree:" << mcp::CapMetricsRecieved.send_hash_tree
+		<< ", hash_tree_response:" << mcp::CapMetricsRecieved.hash_tree_response
+		<< ", peer_info_request:" << mcp::CapMetricsRecieved.peer_info_request
+		<< ", send_peer_info:" << mcp::CapMetricsRecieved.send_peer_info
+		<< ", peer_info:" << mcp::CapMetricsRecieved.peer_info
+		<< ", hello_info_request:" << mcp::CapMetricsRecieved.hello_info_request
+		<< ", send_hello_info:" << mcp::CapMetricsRecieved.send_hello_info
+		<< ", hello_info:" << mcp::CapMetricsRecieved.hello_info
+		<< ", hello_info_ack:" << mcp::CapMetricsRecieved.hello_info_ack;
 
 
 	LOG(log.info) << store.get_rocksdb_state(32 * 1024 * 1024);

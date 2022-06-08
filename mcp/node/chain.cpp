@@ -170,7 +170,7 @@ void mcp::chain::save_dag_block(mcp::timeout_db_transaction & timeout_tx_a, std:
 	}
 }
 
-void mcp::chain::save_transaction(mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a, std::shared_ptr<mcp::Transaction> t_a, mcp::block_hash const& block_hash_a, unsigned index_a)
+void mcp::chain::save_transaction(mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a, std::shared_ptr<mcp::Transaction> t_a)
 {
 	if (m_stopped)
 		return;
@@ -191,9 +191,6 @@ void mcp::chain::save_transaction(mcp::timeout_db_transaction & timeout_tx_a, st
 
 				//save transaction, need put first
 				cache_a->transaction_put(transaction, t_a);
-				std::shared_ptr<mcp::TransactionAddress> td(std::make_shared<mcp::TransactionAddress>(block_hash_a, index_a));
-				cache_a->transaction_address_put(transaction, hash, td);
-
 				m_store.transaction_unstable_count_add(transaction);
 				m_store.transaction_count_add(transaction);
 				cache_a->transaction_del_from_queue(hash);
@@ -628,12 +625,12 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 				for (auto i = 0; i < links.size(); i++)
 				{
 					h256 const& link_hash = links[i];
-					// if processed break
-					//std::shared_ptr<mcp::block_state> light_block_state(cache_a->block_state_get(transaction_a, link_hash));
-					//assert_x(light_block_state);
-					//if (light_block_state->is_stable)
-					//	break;
-					auto _t = m_store.transaction_get(transaction_a, link_hash);
+					if (cache_a->transaction_receipt_exists(transaction_a, link_hash))/// transaction maybe processed yet
+					{
+						index++;
+						continue;
+					}
+					auto _t = cache_a->transaction_get(transaction_a, link_hash);
 					/// exec transactions
 					try
 					{
@@ -651,7 +648,9 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 
 						/// commit transaction receipt
 						/// the account states were committed in Executive::go()
-						m_store.transaction_receipt_put(transaction_a, _t->sha3(), result.second);//maybe need block hash
+						m_store.transaction_receipt_put(transaction_a, link_hash, result.second);
+						std::shared_ptr<mcp::TransactionAddress> td(std::make_shared<mcp::TransactionAddress>(dag_stable_block_hash, index));
+						cache_a->transaction_address_put(transaction_a, link_hash, td);
 
 						RLPStream receiptRLP;
 						result.second.streamRLP(receiptRLP);
