@@ -545,7 +545,7 @@ bool mcp::node_capability::read_packet(std::shared_ptr<p2p::peer> peer_a, unsign
 				m_async_task->sync_async([peer_a, hash, this]() {
 					try
 					{
-						if (!m_tq->exist(*hash))
+						if (m_tq->exist(*hash))
 							return;
 						mcp::db::db_transaction transaction(m_store.create_transaction());
 						if (!m_cache->transaction_exists(transaction, *hash))

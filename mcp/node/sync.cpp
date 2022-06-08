@@ -148,11 +148,14 @@ void mcp::node_sync::transaction_request_handler(p2p::node_id const &id, mcp::tr
 		if (m_stoped)
 			return;
 
-		mcp::db::db_transaction transaction(m_store.create_transaction());
-
-		std::shared_ptr<mcp::Transaction> t = m_cache->transaction_get(transaction, request.hash);
+		std::shared_ptr<mcp::Transaction> t = m_tq->get(request.hash);
 		if (nullptr == t)
-			return;
+		{
+			mcp::db::db_transaction transaction(m_store.create_transaction());
+			t = m_cache->transaction_get(transaction, request.hash);
+			if (nullptr == t) /// not existed
+				return;
+		}
 
 		//mcp::joint_message joint(block);
 		//joint.request_id = request.request_id;
@@ -2011,7 +2014,7 @@ void mcp::node_sync::send_transaction_request(p2p::node_id const & id, mcp::tran
 			message.stream_RLP(s);
 			p->send(s);
 
-			//LOG(log_sync.info) << "id:" << id .to_string() << " , send_joint_request hash:" << message.block_hash.to_string();
+			//LOG(log_sync.info) << "id:" << id .to_string() << " , send_transaction_request hash:" << message.hash.hex();
 		}
 	}
 }
@@ -2038,7 +2041,7 @@ void mcp::node_sync::send_peer_info_request(p2p::node_id id)
 					mcp::peer_info_request_message message;
 					message.stream_RLP(s);
 					p->send(s);
-					LOG(log_sync.debug) << "send_peer_info_request:node id:" << id.to_string();
+					//LOG(log_sync.debug) << "send_peer_info_request:node id:" << id.to_string();
 				}
 			}
 		}

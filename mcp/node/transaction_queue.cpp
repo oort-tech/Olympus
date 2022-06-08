@@ -123,7 +123,7 @@ namespace mcp
 		std::vector<h256> ret;
 		for (auto cs = m_currentByAddressAndNonce.begin(); ret.size() < _limit && cs != m_currentByAddressAndNonce.end(); ++cs)
 		{
-			assert_x(!cs->second.size()); /// must have transaction
+			assert_x(cs->second.size()); /// must have transaction
 			auto last = cs->second.end();
 			last--;
 			ret.push_back((*last->second).transaction.sha3());
