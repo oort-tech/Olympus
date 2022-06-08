@@ -53,9 +53,6 @@ namespace mcp
 			}
 		}
 
-		//if (!_json["code"].empty() && _json["gasPrice"].is_string())
-		//	ret.data = jsToBytes(_json["code"].asString(), OnFailed::Throw);
-
 		if (_json.count("nonce") && !_json["nonce"].empty() && _json["nonce"].is_string())
 			ret.nonce = jsToU256(_json["nonce"]);
 
@@ -107,9 +104,6 @@ namespace mcp
 				BOOST_THROW_EXCEPTION(RPC_Error_InvalidData());
 			}
 		}
-
-		//if (!_json["code"].empty() && _json["gasPrice"].is_string())
-		//	ret.data = jsToBytes(_json["code"].asString(), OnFailed::Throw);
 
 		if (_json.count("nonce") && !_json["nonce"].empty() && _json["nonce"].is_string())
 			ret.nonce = jsToU256(_json["nonce"]);

@@ -89,7 +89,7 @@ public:
 	std::atomic_flag responded;
     mcp::log m_log = { mcp::log("rpc") };
 };
-
+/*
 enum class rpc_account_create_error_code
 {
     ok = 0,
@@ -421,7 +421,7 @@ enum class rpc_eth_error_code
 // added by michael at 3/7
 // void error_eth_response(std::function<void(mcp::json const &)> response_a, mcp::rpc_eth_error_code error_code, mcp::json& json_a);
 //
-/*
+
 class rpc_error_msg 
 {
 public:

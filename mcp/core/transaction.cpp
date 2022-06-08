@@ -141,7 +141,7 @@ void mcp::Transaction::sign(Secret const& priv)
 	if (sigStruct.isValid())
 		m_vrs = sigStruct;
 	else
-		BOOST_THROW_EXCEPTION(InvalidSignature() << errinfo_comment("signatue invalid"));
+		BOOST_THROW_EXCEPTION(InvalidSignature() << errinfo_comment("signature invalid"));
 }
 
 void mcp::Transaction::streamRLP(RLPStream& s, IncludeSignature sig) const

@@ -5503,20 +5503,17 @@ void mcp::rpc_handler::eth_sign(mcp::json & j_response, bool &)
 		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
 	}
 
-	if (!mcp::isAddress(params[0]))
-	{
+	if (!mcp::isAddress(params[0])) {
 		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidAccount());
 	}
 	
 	dev::Address account = jsToAddress(params[0]);
-	if (!m_key_manager->exists(account))
-	{
+	if (!m_key_manager->exists(account)) {
 		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidAccount());
 	}
 
 	dev::bytes data = jsToBytes(params[1]);
-	if (data.empty() || data.size() > mcp::max_data_size)
-	{
+	if (data.empty() || data.size() > mcp::max_data_size) {
 		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidData());
 	}
 
@@ -5535,8 +5532,7 @@ void mcp::rpc_handler::eth_sign(mcp::json & j_response, bool &)
 void mcp::rpc_handler::eth_signTransaction(mcp::json & j_response, bool &)
 {
 	mcp::json params = request["params"][0];
-	if (params.size() < 1 || !params[0].is_object())
-	{
+	if (params.size() < 1 || !params[0].is_object()) {
 		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
 	}
 

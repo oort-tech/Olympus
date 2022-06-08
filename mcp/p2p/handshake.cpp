@@ -21,9 +21,7 @@ mcp::p2p::hankshake_msg::hankshake_msg(dev::RLP const & r)
 	id = r[0].toHash<node_id>();
 	version = (uint16_t)r[1];
 	network = (mcp::mcp_networks)r[2].toInt<uint8_t>();
-
-	// added by michael at 4/5
-	pubkey = (dev::PublicCompressed) r[3];
+	pubkey = (dev::PublicCompressed)r[3];
 
 	for (auto const & i : r[4])
 		cap_descs.push_back(capability_desc(i));
@@ -308,7 +306,6 @@ void mcp::p2p::hankshake::readInfo()
 	m_transferVersion = mcp::p2p::version < msg.version ? mcp::p2p::version : msg.version;
 	m_remoteVersion = msg.version;
 	m_remote = msg.id;
-	// added by michael at 4/5
 	m_ecdheRemote = msg.pubkey;
 
 	if (msg.network != mcp::mcp_network)
