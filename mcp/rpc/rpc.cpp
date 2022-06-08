@@ -5249,14 +5249,14 @@ void mcp::rpc_handler::eth_getTransactionByHash(mcp::json & j_response, bool &)
 		{
 			j_transaction["blockHash"] = td->blockHash.hexPrefixed();
 			j_transaction["transactionIndex"] = toJS(td->index);
-		}
 
-		uint64_t block_number = 0;
-		if (!m_cache->block_number_get(transaction, td->blockHash, block_number)) {
-			j_transaction["blockNumber"] = toJS(block_number);
-		}
+			uint64_t block_number = 0;
+			if (!m_cache->block_number_get(transaction, td->blockHash, block_number)) {
+				j_transaction["blockNumber"] = toJS(block_number);
+			}
 
-		j_response["result"] = j_transaction;
+			j_response["result"] = j_transaction;
+		}
 	}
 	catch (...)
 	{
