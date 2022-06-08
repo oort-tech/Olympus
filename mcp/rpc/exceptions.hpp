@@ -148,6 +148,12 @@ namespace mcp
 		else if (instanceof<dev::UnknownTransactionValidationError>(&e)) {
 			RPC_Error_ValidateError().toJson(j_response);
 		}
+		else if (instanceof<dev::AccountLocked>(&e)) {
+			RPC_Error_AccountLocked().toJson(j_response);
+		}
+		else if (instanceof<dev::UnknownAccount>(&e)) {
+			RPC_Error_InvalidAccount().toJson(j_response);
+		}
 		else {
 			RPC_Error_InvalidParams().toJson(j_response);
 		}
@@ -173,6 +179,12 @@ namespace mcp
 		}
 		else if (instanceof<dev::UnknownTransactionValidationError>(&e)) {
 			RPC_Error_Eth_Validation().toJson(j_response);
+		}
+		else if (instanceof<dev::AccountLocked>(&e)) {
+			RPC_Error_Eth_LockedAccount().toJson(j_response);
+		}
+		else if (instanceof<dev::UnknownAccount>(&e)) {
+			RPC_Error_Eth_InvalidAccount().toJson(j_response);
 		}
 		else {
 			RPC_Error_Eth_InvalidParams().toJson(j_response);

@@ -5254,9 +5254,9 @@ void mcp::rpc_handler::eth_getTransactionByHash(mcp::json & j_response, bool &)
 			if (!m_cache->block_number_get(transaction, td->blockHash, block_number)) {
 				j_transaction["blockNumber"] = toJS(block_number);
 			}
-
-			j_response["result"] = j_transaction;
 		}
+
+		j_response["result"] = j_transaction;
 	}
 	catch (...)
 	{
@@ -5531,7 +5531,7 @@ void mcp::rpc_handler::eth_sign(mcp::json & j_response, bool &)
 
 void mcp::rpc_handler::eth_signTransaction(mcp::json & j_response, bool &)
 {
-	mcp::json params = request["params"][0];
+	mcp::json params = request["params"];
 	if (params.size() < 1 || !params[0].is_object()) {
 		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
 	}
@@ -5547,7 +5547,14 @@ void mcp::rpc_handler::eth_signTransaction(mcp::json & j_response, bool &)
 	}
 
 	Transaction t(ts, prv);
-	j_response["result"] = ((dev::Signature*)&t.signature())->hexPrefixed();
+	mcp::json result;
+	
+	RLPStream s;
+	t.streamRLP(s);
+	result["raw"] = toJS(s.out());
+	result["tx"] = toJson(t);
+
+	j_response["result"] = result;
 }
 
 void mcp::rpc_handler::eth_protocolVersion(mcp::json & j_response, bool &)
