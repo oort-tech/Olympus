@@ -1023,7 +1023,7 @@ std::pair<u256, bool> mcp::chain::estimate_gas(mcp::db::db_transaction& transact
 				t = Transaction(_value, gasPrice, mid, _dest, _data, n);
 			else
 				t = Transaction(_value, gasPrice, mid, _data, n);
-			t.setSinature(h256(0), h256(0), 0);
+			t.setSignature(h256(0), h256(0), 0);
 			t.forceSender(_from);
 			c_state.ts = t;
 			c_state.addBalance(_from, mid * _gasPrice + _value);

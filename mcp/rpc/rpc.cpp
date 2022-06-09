@@ -2284,7 +2284,7 @@ void mcp::rpc_handler::call(mcp::json & j_response, bool &)
 	ts.gas = mcp::block_max_gas;
 
 	Transaction t(ts);
-	t.setSinature(h256(0), h256(0), 0);
+	t.setSignature(h256(0), h256(0), 0);
 
 	dev::eth::McInfo mc_info;
 	uint64_t block_number = m_chain->last_stable_mci();
@@ -2864,7 +2864,7 @@ void mcp::rpc_handler::send_offline_block(mcp::json & j_response, bool &)
 	{
 		Transaction t(ts);
 		dev::SignatureStruct *sig = (dev::SignatureStruct*)&signature;
-		t.setSinature(sig->r, sig->s, sig->v);
+		t.setSignature(sig->r, sig->s, sig->v);
 		j_response["hash"] = m_wallet->importTransaction(t).hex();
 	}
 	catch (dev::Exception & e)
@@ -4956,7 +4956,7 @@ void mcp::rpc_handler::eth_getBlockByNumber(mcp::json & j_response, bool &)
 
 	uint64_t block_number = 0;
 	std::string blockText = params[0];
-	if (blockText == "latest") {
+	if (blockText == "latest" || blockText == "pending") {
 		block_number = m_chain->last_stable_index();
 	}
 	else if (blockText == "earliest") {
@@ -5111,11 +5111,11 @@ void mcp::rpc_handler::eth_call(mcp::json & j_response, bool &)
 	ts.gas = mcp::block_max_gas;
 
 	Transaction t(ts);
-	t.setSinature(h256(0), h256(0), 0);
+	t.setSignature(h256(0), h256(0), 0);
 
 	uint64_t block_number = 0;
 	std::string blockText = params[1];
-	if (blockText == "latest") {
+	if (blockText == "latest" || blockText == "pending") {
 		block_number = m_chain->last_stable_index();
 	}
 	else if (blockText == "earliest") {
@@ -5313,7 +5313,7 @@ void mcp::rpc_handler::eth_getTransactionByBlockNumberAndIndex(mcp::json & j_res
 
 	uint64_t block_number = 0;
 	std::string blockText = params[0];
-	if (blockText == "latest") {
+	if (blockText == "latest" || blockText == "pending") {
 		block_number = m_chain->last_stable_index();
 	}
 	else if (blockText == "earliest") {
@@ -5434,7 +5434,7 @@ void mcp::rpc_handler::eth_getBlockTransactionCountByNumber(mcp::json & j_respon
 
 	uint64_t block_number = 0;
 	std::string blockText = params[0];
-	if (blockText == "latest") {
+	if (blockText == "latest" || blockText == "pending") {
 		block_number = m_chain->last_stable_index();
 	}
 	else if (blockText == "earliest") {
@@ -5591,7 +5591,7 @@ void mcp::rpc_handler::eth_getLogs(mcp::json & j_response, bool &)
 		if (params.count("fromBlock"))
 		{
 			std::string blockText = params["fromBlock"];
-			if (blockText == "latest") {
+			if (blockText == "latest" || blockText == "pending") {
 				fromBlock = m_chain->last_stable_index();
 			}
 			else if (blockText == "earliest") {
@@ -5606,7 +5606,7 @@ void mcp::rpc_handler::eth_getLogs(mcp::json & j_response, bool &)
 		if (params.count("toBlock"))
 		{
 			std::string blockText = params["toBlock"];
-			if (blockText == "latest") {
+			if (blockText == "latest" || blockText == "pending") {
 				toBlock = m_chain->last_stable_index();
 			}
 			else if (blockText == "earliest") {
