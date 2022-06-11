@@ -72,8 +72,7 @@ void mcp::witness::start()
 {
 	std::weak_ptr<mcp::witness> this_w(shared_from_this());
 	
-	//uint32_t ms = mcp::mcp_network == mcp::mcp_networks::mcp_mini_test_network ? 50 : mcp::random_pool.GenerateWord32(500, 1000);
-	uint32_t ms = 1000;
+	uint32_t ms = mcp::mcp_network == mcp::mcp_networks::mcp_mini_test_network ? 50 : mcp::random_pool.GenerateWord32(500, 1000);
 	m_alarm->add(std::chrono::steady_clock::now() + std::chrono::milliseconds(ms), [this_w]() {
 		if (auto this_l = this_w.lock())
 		{

@@ -63,8 +63,8 @@ namespace mcp
 		/// @returns accounts disorder,but transactions of account is order by nonce
 		h256s topTransactions(unsigned _limit, h256Hash const& _avoid = h256Hash()) const;
 
-		/// Get account's last nonce from the queue. Randomly returned are not removed from the queue automatically.
-		std::vector<h256> topAccountAndNonce(unsigned _limit) const;
+		///// Get account's last nonce from the queue. Randomly returned are not removed from the queue automatically.
+		//std::vector<h256> topAccountAndNonce(unsigned _limit) const;
 
 		/// Determined transaction exist.
 		/// @param Address.

@@ -117,20 +117,20 @@ namespace mcp
 		return ret;
 	}
 
-	std::vector<h256> TransactionQueue::topAccountAndNonce(unsigned _limit) const
-	{
-		ReadGuard l(m_lock);
-		std::vector<h256> ret;
-		for (auto cs = m_currentByAddressAndNonce.begin(); ret.size() < _limit && cs != m_currentByAddressAndNonce.end(); ++cs)
-		{
-			assert_x(cs->second.size()); /// must have transaction
-			auto last = cs->second.end();
-			last--;
-			ret.push_back((*last->second).transaction.sha3());
-		}
+	//std::vector<h256> TransactionQueue::topAccountAndNonce(unsigned _limit) const
+	//{
+	//	ReadGuard l(m_lock);
+	//	std::vector<h256> ret;
+	//	for (auto cs = m_currentByAddressAndNonce.begin(); ret.size() < _limit && cs != m_currentByAddressAndNonce.end(); ++cs)
+	//	{
+	//		assert_x(cs->second.size()); /// must have transaction
+	//		auto last = cs->second.end();
+	//		last--;
+	//		ret.push_back((*last->second).transaction.sha3());
+	//	}
 
-		return ret;
-	}
+	//	return ret;
+	//}
 
 	bool TransactionQueue::exist(Address const&_acco, u256 const& _nonce)
 	{

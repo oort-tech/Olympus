@@ -131,6 +131,7 @@ bool mcp::genesis::try_initialize(mcp::db::db_transaction & transaction_a, mcp::
 	to_state.incNonce();//nonce + 1 Stored for the next nonce
 	store_a.account_state_put(transaction_a, to_state.hash(), to_state);
 	store_a.latest_account_state_put(transaction_a, ts.to(), to_state.hash());
+	store_a.account_nonce_put(transaction_a, ts.sender(), _t.nonce);
 
 	dev::eth::TransactionReceipt const receipt = dev::eth::TransactionReceipt(true, 0, mcp::log_entries());
 	std::vector<bytes> receipts;

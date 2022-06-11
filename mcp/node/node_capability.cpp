@@ -825,7 +825,10 @@ void mcp::node_capability::onTransactionImported(ImportResult _ir, h256 const& _
 			return;
 		if (_h != h256())
 		{
+			mcp::block_hash h(_h);
 			m_peers.at(_nodeId).mark_as_known_transaction(_h);
+			std::lock_guard<std::mutex> lock(m_requesting_lock);
+			m_requesting.erase(h);
 		}
 		else
 		{

@@ -601,7 +601,7 @@ void mcp::block_processor::do_process_one(mcp::timeout_db_transaction & timeout_
 	}
 	case mcp::validate_result_codes::parents_and_previous_include_invalid_block:
 	{
-		LOG(m_log.trace) << boost::str(boost::format("Invalid block: %1%, error message: %2%") % block_hash.to_string() % result.err_msg);
+		LOG(m_log.debug) << boost::str(boost::format("Invalid block: %1%, error message: %2%") % block_hash.to_string() % result.err_msg);
 		assert_x(!item->is_local());
 		//cache invalid block
 		m_invalid_block_cache.add(block_hash);

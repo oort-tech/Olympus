@@ -1675,7 +1675,7 @@ void mcp::node_sync::peer_info_request_handler(p2p::node_id const &id)
 
 	assert_x(have_get_block_count < max_send_count);
 	//unsigned max_latest_unlink_send_count = max_send_count - have_get_block_count;
-	pi.arr_light_tip_blocks = m_tq->topAccountAndNonce(max_send_count - have_get_block_count);
+	pi.arr_light_tip_blocks = m_tq->topTransactions(max_send_count - have_get_block_count);
 	
 	send_peer_info(id, pi);
 	return;
