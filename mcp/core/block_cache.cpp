@@ -6,6 +6,7 @@ mcp::block_cache::block_cache(mcp::block_store &store_a) :
 	m_block_states(1000),
 	m_latest_account_states(50000),
 	m_transactions(50000),
+	m_account_nonces(30000),
 	m_transaction_address(50000),
 	m_successors(1000),
 	m_block_summarys(1000),
@@ -237,6 +238,47 @@ void mcp::block_cache::clear_transaction_changing()
 {
 	std::lock_guard<std::mutex> lock(m_transaction_mutex);
 	m_transaction_changings.clear();
+}
+
+
+
+bool mcp::block_cache::account_nonce_get(mcp::db::db_transaction & transaction_a, Address const & account_a, u256 & nonce_a)
+{
+	std::lock_guard<std::mutex> lock(m_account_nonce_mutex);
+	bool exists = m_account_nonces.tryGet(account_a, nonce_a);
+	if (!exists)
+	{
+		exists = m_store.account_nonce_get(transaction_a, account_a, nonce_a);
+		if (exists)
+			m_account_nonces.insert(account_a, nonce_a);
+	}
+	return exists;
+}
+
+void mcp::block_cache::account_nonce_put(Address const & account_a, u256 const & nonce_a)
+{
+	std::lock_guard<std::mutex> lock(m_account_nonce_mutex);
+	m_account_nonces.insert(account_a, nonce_a);
+}
+
+void mcp::block_cache::account_nonce_earse(std::unordered_set<Address> const & accounts_a)
+{
+	std::lock_guard<std::mutex> lock(m_account_nonce_mutex);
+	for (Address const & accou : accounts_a)
+		m_account_nonces.remove(accou);
+}
+
+void mcp::block_cache::mark_account_nonce_as_changing(std::unordered_set<Address> const & accounts_a)
+{
+	std::lock_guard<std::mutex> lock(m_account_nonce_mutex);
+	for (Address const & acco : accounts_a)
+		m_account_nonce_changings.insert(acco);
+}
+
+void mcp::block_cache::clear_account_nonce_changing()
+{
+	std::lock_guard<std::mutex> lock(m_account_nonce_mutex);
+	m_account_nonce_changings.clear();
 }
 
 

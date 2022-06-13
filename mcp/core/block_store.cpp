@@ -11,6 +11,7 @@ mcp::block_store::block_store(bool & error_a, boost::filesystem::path const & pa
 	latest_account_state(0),
 	blocks(0),
 	transactions(0),
+	account_nonce(0),
 	transaction_address(0),
 	block_state(0),
 	contract_main(0),
@@ -58,26 +59,27 @@ mcp::block_store::block_store(bool & error_a, boost::filesystem::path const & pa
 	blocks = m_db->set_column_family(default_col, "005");
 	transactions = m_db->set_column_family(default_col, "006");
 	transaction_address = m_db->set_column_family(default_col, "007");
-	block_state = m_db->set_column_family(default_col, "008");
-	successor = m_db->set_column_family(default_col, "009");
-	main_chain = m_db->set_column_family(default_col, "010");
-	skiplist = m_db->set_column_family(default_col, "011");
-	block_summary = m_db->set_column_family(default_col, "012");
-	summary_block = m_db->set_column_family(default_col, "013");
-	stable_block = m_db->set_column_family(default_col, "014");
-	stable_block_number = m_db->set_column_family(default_col, "015");
-	contract_main = m_db->set_column_family(default_col, "016");
-	prop = m_db->set_column_family(default_col, "017");
-	catchup_chain_summaries = m_db->set_column_family(default_col, "018");
-	catchup_chain_block_summary = m_db->set_column_family(default_col, "019");
-	catchup_chain_summary_block = m_db->set_column_family(default_col, "020");
-	hash_tree_summary = m_db->set_column_family(default_col, "021");
-	unlink_block = m_db->set_column_family(default_col, "022");
-	traces = m_db->set_column_family(default_col, "023");
-	next_unlink = m_db->set_column_family(default_col, "024");
-	next_unlink_index = m_db->set_column_family(default_col, "025");
-	contract_aux = m_db->set_column_family(default_col, "026");
-	transaction_receipt = m_db->set_column_family(default_col, "027");
+	account_nonce = m_db->set_column_family(default_col, "008");
+	block_state = m_db->set_column_family(default_col, "009");
+	successor = m_db->set_column_family(default_col, "010");
+	main_chain = m_db->set_column_family(default_col, "011");
+	skiplist = m_db->set_column_family(default_col, "012");
+	block_summary = m_db->set_column_family(default_col, "013");
+	summary_block = m_db->set_column_family(default_col, "014");
+	stable_block = m_db->set_column_family(default_col, "015");
+	stable_block_number = m_db->set_column_family(default_col, "016");
+	contract_main = m_db->set_column_family(default_col, "017");
+	prop = m_db->set_column_family(default_col, "018");
+	catchup_chain_summaries = m_db->set_column_family(default_col, "019");
+	catchup_chain_block_summary = m_db->set_column_family(default_col, "020");
+	catchup_chain_summary_block = m_db->set_column_family(default_col, "021");
+	hash_tree_summary = m_db->set_column_family(default_col, "022");
+	unlink_block = m_db->set_column_family(default_col, "023");
+	traces = m_db->set_column_family(default_col, "024");
+	next_unlink = m_db->set_column_family(default_col, "025");
+	next_unlink_index = m_db->set_column_family(default_col, "026");
+	contract_aux = m_db->set_column_family(default_col, "027");
+	transaction_receipt = m_db->set_column_family(default_col, "028");
 
 	//use iterator
 	dag_free = m_db->set_column_family(default_col, "101");
@@ -250,6 +252,19 @@ void mcp::block_store::transaction_put(mcp::db::db_transaction & transaction_a, 
 	transaction_a.put(transactions, mcp::h256_to_slice(hash_a), s_value);
 }
 
+bool mcp::block_store::account_nonce_get(mcp::db::db_transaction & transaction_a, Address const & account_a, u256& nonce_a)
+{
+	std::string value;
+	bool exists(transaction_a.get(account_nonce, mcp::account_to_slice(account_a), value));
+	if (exists)
+		nonce_a = ((dev::h256::Arith)mcp::slice_to_h256(value)).convert_to<u256>();
+	return exists;
+}
+
+void mcp::block_store::account_nonce_put(mcp::db::db_transaction & transaction_a, Address const & account_a, u256 const& nonce_a)
+{
+	transaction_a.put(account_nonce, mcp::account_to_slice(account_a), mcp::h256_to_slice(nonce_a));
+}
 
 std::shared_ptr<mcp::TransactionAddress> mcp::block_store::transaction_address_get(mcp::db::db_transaction & transaction_a, h256 const& hash_a)
 {

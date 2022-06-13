@@ -20,8 +20,9 @@ public:
 	virtual std::shared_ptr<mcp::block> block_get(mcp::db::db_transaction & transaction_a, mcp::block_hash const & block_hash_a) = 0;
 	virtual std::shared_ptr<mcp::block_state> block_state_get(mcp::db::db_transaction & transaction_a, mcp::block_hash const & block_hash_a) = 0;
 	virtual std::shared_ptr<mcp::account_state> latest_account_state_get(mcp::db::db_transaction & transaction_a, Address const & account_a) = 0;
-	//virtual std::shared_ptr<Transaction> transaction_get(mcp::db::db_transaction & transaction_a, h256 const & hash) = 0;
+	virtual std::shared_ptr<Transaction> transaction_get(mcp::db::db_transaction & transaction_a, h256 const & hash) = 0;
 	virtual bool transaction_exists(mcp::db::db_transaction & transaction_a, h256 const & hash) = 0;
+	virtual bool account_nonce_get(mcp::db::db_transaction & transaction_a, Address const & account_a, u256 & nonce_a) = 0;
 	virtual bool successor_get(mcp::db::db_transaction & transaction_a, mcp::block_hash const & root_a, mcp::block_hash & successor_a) = 0;
 	virtual bool block_summary_get(mcp::db::db_transaction & transaction_a, mcp::block_hash const & block_hash_a, mcp::summary_hash & summary_a) = 0;
 };
@@ -57,6 +58,13 @@ class block_cache : public mcp::iblock_cache
 	void transaction_earse(std::unordered_set<h256> const & hash);
 	void mark_transaction_as_changing(std::unordered_set<h256> const & hash);
 	void clear_transaction_changing();
+
+	/// return true if exist
+	bool account_nonce_get(mcp::db::db_transaction & transaction_a, Address const & account_a, u256 & nonce_a);
+	void account_nonce_put(Address const & account_a, u256 const & nonce_a);
+	void account_nonce_earse(std::unordered_set<Address> const & accounts_a);
+	void mark_account_nonce_as_changing(std::unordered_set<Address> const & accounts_a);
+	void clear_account_nonce_changing();
 
 	std::shared_ptr<TransactionAddress> transaction_address_get(mcp::db::db_transaction & transaction_a, h256 const & hash);
 	void transaction_address_put(h256 const & hash, std::shared_ptr<mcp::TransactionAddress> const& td);
@@ -104,6 +112,10 @@ private:
 	std::mutex m_transaction_mutex;
 	std::unordered_set<h256> m_transaction_changings;
 	mcp::Cache<h256, std::shared_ptr<mcp::Transaction>> m_transactions;
+
+	std::mutex m_account_nonce_mutex;
+	std::unordered_set<Address> m_account_nonce_changings;
+	mcp::Cache<Address, u256> m_account_nonces;
 
 	std::mutex m_transaction_address_mutex;
 	mcp::Cache<h256, std::shared_ptr<mcp::TransactionAddress>> m_transaction_address;
