@@ -973,7 +973,7 @@ std::pair<u256, bool> mcp::chain::estimate_gas(mcp::db::db_transaction& transact
 		do
 		{
 			int64_t mid = (lowerBound + upperBound) / 2;
-			dev::eth::EnvInfo env(transaction_a, m_store, cache_a, mc_info_a);
+			dev::eth::EnvInfo env(transaction_a, m_store, cache_a, mc_info_a, mcp::chainID());
 			auto chain_ptr(shared_from_this());
 			chain_state c_state(transaction_a, 0, m_store, chain_ptr, cache_a);
 			u256 n = c_state.getNonce(_from);
@@ -1026,7 +1026,7 @@ std::pair<u256, bool> mcp::chain::estimate_gas(mcp::db::db_transaction& transact
 // be called other methods except chain::set_block_stable
 std::pair<mcp::ExecutionResult, dev::eth::TransactionReceipt> mcp::chain::execute(mcp::db::db_transaction& transaction_a, std::shared_ptr<mcp::iblock_cache> cache_a, Transaction const& _t, dev::eth::McInfo const & mc_info_a ,Permanence _p, dev::eth::OnOpFunc const& _onOp)
 {
-	dev::eth::EnvInfo env(transaction_a, m_store, cache_a, mc_info_a);
+	dev::eth::EnvInfo env(transaction_a, m_store, cache_a, mc_info_a, mcp::chainID());
 	// sichaoy: startNonce = 0
 	auto chain_ptr(shared_from_this());
 	chain_state c_state(transaction_a, 0, m_store, chain_ptr, cache_a);

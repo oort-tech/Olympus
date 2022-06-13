@@ -37,11 +37,12 @@ public:
     /// Full constructor.
     ExtVM(mcp::chain_state& _s, EnvInfo const& _envInfo, Address _myAddress,
         Address _caller, Address _origin, u256 _value, u256 _gasPrice, bytesConstRef _data,
-        bytesConstRef _code, h256 const& _codeHash, unsigned _depth, bool _isCreate,
-        bool _staticCall)
+        bytesConstRef _code, h256 const& _codeHash, u256 const& _version, unsigned _depth,
+        bool _isCreate, bool _staticCall)
       : ExtVMFace(_envInfo, _myAddress, _caller, _origin, _value, _gasPrice, _data, _code.toBytes(),
-            _codeHash, _depth, _isCreate, _staticCall),
-        m_s(_s)
+            _codeHash, _version, _depth, _isCreate, _staticCall),
+        m_s(_s),
+        m_evmSchedule(initEvmSchedule(envInfo().number(), _version))
     {
         // Contract: processing account must exist. In case of CALL, the ExtVM
         // is created only if an account has code (so exist). In case of CREATE
@@ -91,23 +92,26 @@ public:
         return m_s.addressInUse(_a);
     }
 
-    /// Suicide the associated contract to the given address.
-    void suicide(Address _a) final;
+    /// Selfdestruct the associated contract to the given address.
+    void selfdestruct(Address _a) final;
 
-    /*
     /// Return the EVM gas-price schedule for this execution context.
-    EVMSchedule const& evmSchedule() const final
-    {
-        return m_sealEngine.evmSchedule(envInfo().number());
-    }
-    */
+    EVMSchedule const& evmSchedule() const final { return m_evmSchedule; }
     
     mcp::chain_state const& state() const { return m_s; }
 
 	h256 mcBlockHash(h256 mci_a);
 
+    h256 blockHash(u256 mci_a);
+
 private:
+    EVMSchedule const& initEvmSchedule(int64_t _blockNumber, u256 const& _version) const
+    {
+        return BerlinSchedule;
+    }
+
     mcp::chain_state & m_s;  ///< A reference to the base state.
+    EVMSchedule const& m_evmSchedule;
 };
 
 }

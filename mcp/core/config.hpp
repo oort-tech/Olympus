@@ -24,7 +24,7 @@ extern dev::u256 gas_price;
 extern uint64_t chain_id;
 
 bool is_test_network();
-
+mcp::uint256_t chainID();
 
 size_t const static max_data_size(32000); //32k
 size_t const static skiplist_divisor(10);
