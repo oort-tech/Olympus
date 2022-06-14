@@ -3520,7 +3520,7 @@ void mcp::rpc_handler::debug_trace_transaction(mcp::json & j_response, bool &)
 
 	try
 	{
-		dev::eth::EnvInfo env(transaction, m_store, m_cache, mc_info);
+		dev::eth::EnvInfo env(transaction, m_store, m_cache, mc_info, mcp::chain_id);
 		auto block(m_cache->block_get(transaction, hash));
 		assert_x(block);
 		chain_state c_state(transaction, 0, m_store, m_chain, m_cache);
