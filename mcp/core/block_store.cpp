@@ -255,15 +255,15 @@ void mcp::block_store::transaction_put(mcp::db::db_transaction & transaction_a, 
 bool mcp::block_store::account_nonce_get(mcp::db::db_transaction & transaction_a, Address const & account_a, u256& nonce_a)
 {
 	std::string value;
-	bool exists(transaction_a.get(account_nonce, mcp::address_to_slice(account_a), value));
+	bool exists(transaction_a.get(account_nonce, mcp::account_to_slice(account_a), value));
 	if (exists)
-		nonce_a = mcp::slice_to_uint256(value).number();
+		nonce_a = ((dev::h256::Arith)mcp::slice_to_h256(value)).convert_to<u256>();
 	return exists;
 }
 
 void mcp::block_store::account_nonce_put(mcp::db::db_transaction & transaction_a, Address const & account_a, u256 const& nonce_a)
 {
-	transaction_a.put(account_nonce, mcp::address_to_slice(account_a), mcp::uint256_to_slice(nonce_a));
+	transaction_a.put(account_nonce, mcp::account_to_slice(account_a), mcp::h256_to_slice(nonce_a));
 }
 
 std::shared_ptr<mcp::TransactionAddress> mcp::block_store::transaction_address_get(mcp::db::db_transaction & transaction_a, h256 const& hash_a)
