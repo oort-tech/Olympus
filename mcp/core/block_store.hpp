@@ -31,6 +31,11 @@ namespace mcp
 		std::shared_ptr<mcp::Transaction> transaction_get(mcp::db::db_transaction &, h256 const &);
 		void transaction_put(mcp::db::db_transaction &, h256 const &, mcp::Transaction const &);
 
+		/// account processed nonce, but maybe not stable
+		/// return true if exist
+		bool account_nonce_get(mcp::db::db_transaction & transaction_a, Address const & account_a, u256& nonce_a);
+		void account_nonce_put(mcp::db::db_transaction & transaction_a, Address const & account_a, u256 const& nonce_a);
+
 		/// transaction -> block
 		std::shared_ptr<mcp::TransactionAddress> transaction_address_get(mcp::db::db_transaction &, h256 const &);
 		void transaction_address_put(mcp::db::db_transaction &, h256 const &, mcp::TransactionAddress const &);
@@ -173,6 +178,9 @@ namespace mcp
 
 		// transaction hash -> transaction
 		int transactions;
+
+		// account -> nonce
+		int account_nonce;
 
 		// transaction hash -> TransactionAddress
 		int transaction_address;

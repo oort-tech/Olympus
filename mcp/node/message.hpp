@@ -140,7 +140,7 @@ class transaction_request_message
 {
 public:
 	transaction_request_message(mcp::sync_request_hash const& _request_id, h256 const & _hash):request_id(_request_id), hash(_hash){}
-	transaction_request_message(bool &error_a, dev::RLP const &r) { if (r.itemCount() != 3) return; request_id = (mcp::sync_request_hash)r[0]; hash = (h256)r[1];}
+	transaction_request_message(bool &error_a, dev::RLP const &r) { error_a = r.itemCount() != 2; if (error_a) return; request_id = (mcp::sync_request_hash)r[0]; hash = (h256)r[1];}
 	void stream_RLP(dev::RLPStream &s) const { s.appendList(2); s << request_id << hash; }
 
 	mcp::sync_request_hash request_id;

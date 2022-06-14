@@ -202,6 +202,53 @@ void mcp::process_block_cache::transaction_del_from_queue(h256 const& _hash)
 	assert_x(r.second);
 }
 
+
+bool mcp::process_block_cache::account_nonce_get(mcp::db::db_transaction & transaction_a, Address const & account_a, u256 & nonce_a)
+{
+	auto it(m_account_nonce_puts.get<1>().find(account_a));
+	bool exists(it != m_account_nonce_puts.get<1>().end());
+	if (exists)
+	{
+		nonce_a = it->value;
+	}
+	else
+	{
+		if (m_account_nonce_puts_flushed.count(account_a))
+			exists = m_store.account_nonce_get(transaction_a, account_a, nonce_a);
+		else
+			exists = m_cache->account_nonce_get(transaction_a, account_a, nonce_a);
+	}
+	return exists;
+}
+
+void mcp::process_block_cache::account_nonce_put(mcp::db::db_transaction & transaction_a, Address const & account_a, u256 const & nonce_a)
+{
+	m_store.account_nonce_put(transaction_a, account_a, nonce_a);
+	auto it(m_account_nonce_puts.get<1>().find(account_a));
+	if (it != m_account_nonce_puts.get<1>().end())
+	{
+		m_account_nonce_puts.get<1>().modify(it, [nonce_a](put_item<Address, u256> & item_a)
+		{
+			item_a.value = nonce_a;
+		});
+	}
+	else
+	{
+		auto r = m_account_nonce_puts.push_back(put_item<Address, u256>(account_a, nonce_a));
+		assert_x(r.second);
+		if (m_account_nonce_puts.size() >= m_max_account_nonce_puts_size)
+		{
+			while (m_account_nonce_puts.size() >= m_max_account_nonce_puts_size / 2)
+			{
+				put_item<Address, u256> const & item(m_account_nonce_puts.front());
+				m_account_nonce_puts_flushed.insert(std::move(item.key));
+				m_account_nonce_puts.pop_front();
+			}
+		}
+	}
+}
+
+
 void mcp::process_block_cache::transaction_address_put(mcp::db::db_transaction & transaction_a, h256 const & hash, std::shared_ptr<mcp::TransactionAddress> const& td)
 {
 	m_store.transaction_address_put(transaction_a, hash, *td);
@@ -383,6 +430,12 @@ void mcp::process_block_cache::mark_as_changing()
 		transaction_changings.insert(item.key);
 	m_cache->mark_transaction_as_changing(transaction_changings);
 
+	//account nonce
+	std::unordered_set<Address> account_nonce_changings(m_account_nonce_puts_flushed);
+	for (put_item<Address, u256> const & item : m_account_nonce_puts)
+		account_nonce_changings.insert(item.key);
+	m_cache->mark_account_nonce_as_changing(account_nonce_changings);
+
 	//successor
 	std::unordered_set<mcp::block_hash> successor_changings(m_successor_puts_flushed);
 	for (put_item<mcp::block_hash, mcp::block_hash> const & item : m_successor_puts)
@@ -438,6 +491,14 @@ void mcp::process_block_cache::commit_and_clear_changing()
 	m_transaction_dels.clear();
 
 
+	//modify account nonce cache
+	m_cache->account_nonce_earse(m_account_nonce_puts_flushed);
+	for (put_item<Address, u256> const & item : m_account_nonce_puts)
+		m_cache->account_nonce_put(item.key, item.value);
+	m_account_nonce_puts.clear();
+	m_account_nonce_puts_flushed.clear();
+
+
 	//modify successor cache
 	m_cache->successor_earse(m_successor_puts_flushed);
 	m_cache->successor_earse(m_successor_dels);
@@ -466,6 +527,7 @@ void mcp::process_block_cache::commit_and_clear_changing()
 	m_cache->clear_block_state_changing();
 	m_cache->clear_latest_account_state_changing();
 	m_cache->clear_transaction_changing();
+	m_cache->clear_account_nonce_changing();
 	m_cache->clear_successor_changing();
 	m_cache->clear_block_summary_changing();
 	m_cache->clear_transaction_receipt_changing();

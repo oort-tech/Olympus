@@ -30,6 +30,9 @@ namespace mcp
 		void transaction_put(mcp::db::db_transaction & transaction_a, std::shared_ptr<Transaction> _t);
 		void transaction_del_from_queue(h256 const& _hash);
 
+		bool account_nonce_get(mcp::db::db_transaction & transaction_a, Address const & account_a, u256 & nonce_a);
+		void account_nonce_put(mcp::db::db_transaction & transaction_a, Address const & account_a, u256 const & nonce_a);
+
 		void transaction_address_put(mcp::db::db_transaction & transaction_a, h256 const & hash, std::shared_ptr<mcp::TransactionAddress> const& td);
 
 		bool successor_get(mcp::db::db_transaction & transaction_a, mcp::block_hash const & root_a, mcp::block_hash & successor_a);
@@ -107,6 +110,16 @@ namespace mcp
 			>>
 			m_transaction_puts;
 		std::unordered_set<h256> m_transaction_dels;///delete from transaction queue
+
+		size_t m_max_account_nonce_puts_size = 10000;
+		std::unordered_set<Address> m_account_nonce_puts_flushed;
+		boost::multi_index_container<
+			put_item<Address, u256>,
+			boost::multi_index::indexed_by<
+			boost::multi_index::sequenced<>,
+			boost::multi_index::hashed_unique<boost::multi_index::member<put_item<Address, u256>, Address, &put_item<Address, u256>::key>>
+			>>
+			m_account_nonce_puts;
 
 		size_t m_max_successor_puts_size = 10000;
 		std::unordered_set<mcp::block_hash> m_successor_puts_flushed;
