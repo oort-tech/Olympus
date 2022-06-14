@@ -55,7 +55,7 @@ void mcp::Executive::initialize(Transaction const& _transaction)
 			<< m_s.balance(m_t.sender()) << " for sender: " << m_t.sender();
 		m_excepted = TransactionException::NotEnoughCash;
 		m_excepted = TransactionException::NotEnoughCash;
-		BOOST_THROW_EXCEPTION(dev::NotEnoughCash() << RequirementError(totalCost, (bigint)m_s.balance(m_t.sender())) << errinfo_comment(m_t.sender().hex()));
+		BOOST_THROW_EXCEPTION(dev::eth::NotEnoughCash() << RequirementError(totalCost, (bigint)m_s.balance(m_t.sender())) << errinfo_comment(m_t.sender().hex()));
 	}
     m_gasCost = (u256)gasCost;  // Convert back to 256-bit, safe now.
 }
@@ -136,7 +136,7 @@ bool mcp::Executive::call(dev::eth::CallParameters const& _p, u256 const& _gasPr
 			h256 codeHash = m_s.codeHash(_p.codeAddress);
 			m_ext = std::make_shared<ExtVM>(m_s, m_envInfo, _p.receiveAddress,
 				_p.senderAddress, _origin, _p.apparentValue, _gasPrice, _p.data, &c, codeHash,
-				m_depth + 1, false, _p.staticCall);
+				0, m_depth + 1, false, _p.staticCall);
 		}
 	}
 
@@ -263,7 +263,7 @@ bool mcp::Executive::executeCreate(Address const& _sender, u256 const& _endowmen
 		//dev::bytesConstRef code_hash_ref(code_hash.data(), code_hash.size);
 		//h256 code_hash(code_hash_ref);
 		m_ext = std::make_shared<ExtVM>(m_s, m_envInfo, m_newAddress, _sender, _origin, _endowment, _gasPrice, 
-			dev::bytesConstRef(), _init, code_hash, m_depth + 1, true, false);
+			dev::bytesConstRef(), _init, code_hash, 0, m_depth + 1, true, false);
 	}
 
 	//create trace action
@@ -431,8 +431,9 @@ bool mcp::Executive::finalize()
 
     if (m_ext)
     {
-        // Accumulate refunds for suicides.
-        m_ext->sub.refunds += m_ext->evmSchedule().suicideRefundGas * m_ext->sub.suicides.size();
+         // Accumulate refunds for selfdestructs.
+        m_ext->sub.refunds +=
+            m_ext->evmSchedule().selfdestructRefundGas * m_ext->sub.selfdestructs.size();
 
         // Refunds must be applied before the miner gets the fees.
         assert_x(m_ext->sub.refunds >= 0);
@@ -450,7 +451,7 @@ bool mcp::Executive::finalize()
 
     // Suicides
     if (m_ext)
-        for (auto a: m_ext->sub.suicides)
+        for (auto a: m_ext->sub.selfdestructs)
             m_s.kill(a);
 
     // Logs..
