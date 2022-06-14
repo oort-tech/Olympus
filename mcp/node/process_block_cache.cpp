@@ -224,15 +224,26 @@ bool mcp::process_block_cache::account_nonce_get(mcp::db::db_transaction & trans
 void mcp::process_block_cache::account_nonce_put(mcp::db::db_transaction & transaction_a, Address const & account_a, u256 const & nonce_a)
 {
 	m_store.account_nonce_put(transaction_a, account_a, nonce_a);
-	auto r = m_account_nonce_puts.push_back(put_item<Address, u256>(account_a, nonce_a));
-	assert_x(r.second);
-	if (m_account_nonce_puts.size() >= m_max_account_nonce_puts_size)
+	auto it(m_account_nonce_puts.get<1>().find(account_a));
+	if (it != m_account_nonce_puts.get<1>().end())
 	{
-		while (m_account_nonce_puts.size() >= m_max_account_nonce_puts_size / 2)
+		m_account_nonce_puts.get<1>().modify(it, [nonce_a](put_item<Address, u256> & item_a)
 		{
-			put_item<Address, u256> const & item(m_account_nonce_puts.front());
-			m_account_nonce_puts_flushed.insert(std::move(item.key));
-			m_account_nonce_puts.pop_front();
+			item_a.value = nonce_a;
+		});
+	}
+	else
+	{
+		auto r = m_account_nonce_puts.push_back(put_item<Address, u256>(account_a, nonce_a));
+		assert_x(r.second);
+		if (m_account_nonce_puts.size() >= m_max_account_nonce_puts_size)
+		{
+			while (m_account_nonce_puts.size() >= m_max_account_nonce_puts_size / 2)
+			{
+				put_item<Address, u256> const & item(m_account_nonce_puts.front());
+				m_account_nonce_puts_flushed.insert(std::move(item.key));
+				m_account_nonce_puts.pop_front();
+			}
 		}
 	}
 }

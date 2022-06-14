@@ -12,6 +12,13 @@
 
 namespace mcp
 {
+	enum NonceRange
+	{
+		Current = 0,
+		Future = 1,
+		FutureTooBig = 2,
+	};
+
 	class chain;
 	class node_capability;
 	class TransactionQueue : public iTransactionQueue
@@ -30,18 +37,13 @@ namespace mcp
 
 		void set_capability(std::shared_ptr<mcp::node_capability> capability_a) { m_capability = capability_a; }
 
-		size_t size() { return m_current.size(); }
+		size_t size() { return m_currentByAddressAndNonce.size(); }
 
-		/// Verify and add transaction to the queue synchronously.
-		/// @param _tx RLP encoded transaction data.
-		/// @param _ik Set to Retry to force re-addinga transaction that was previously dropped.
-		/// @returns Import result code.
-		ImportResult import(bytes const& _tx, IfDropped _ik = IfDropped::Ignore) { return import(&_tx, _ik); }
 		/// Verify and add transaction to the queue synchronously.
 		/// @param _tx Trasnaction data.
 		/// @param _ik Set to Retry to force re-addinga transaction that was previously dropped.
 		/// @returns Import result code.
-		ImportResult import(Transaction const& _tx, IfDropped _ik = IfDropped::Ignore);
+		ImportResult import(Transaction const& _tx, bool isLoccal, IfDropped _ik = IfDropped::Ignore);
 
 		ImportResult importLocal(Transaction const& _tx);
 
@@ -63,13 +65,9 @@ namespace mcp
 		/// @returns accounts disorder,but transactions of account is order by nonce
 		h256s topTransactions(unsigned _limit, h256Hash const& _avoid = h256Hash()) const;
 
-		///// Get account's last nonce from the queue. Randomly returned are not removed from the queue automatically.
-		//std::vector<h256> topAccountAndNonce(unsigned _limit) const;
-
 		/// Determined transaction exist.
 		/// @param Address.
 		/// @param nonce.
-		bool exist(Address const&_acco, u256 const& _nonce);
 		bool exist(h256 const& _hash);
 
 		/// Get a hash set of transactions in the queue
@@ -118,8 +116,7 @@ namespace mcp
 			UnverifiedTransaction& operator=(UnverifiedTransaction const&) = delete;
 
 			bytes transaction;  ///< RLP encoded transaction data
-			//h512 nodeId;        ///< Network Id of the peer transaction comes from
-			p2p::node_id nodeId;
+			p2p::node_id nodeId;	///< Network Id of the peer transaction comes from
 		};
 
 		struct PriorityCompare
@@ -137,14 +134,15 @@ namespace mcp
 		// Use a set with dynamic comparator for minmax priority queue. The comparator takes into account min account nonce. Updating it does not affect the order.
 		using PriorityQueue = std::multiset<VerifiedTransaction, PriorityCompare>;
 
-		ImportResult import(bytesConstRef _tx, IfDropped _ik = IfDropped::Ignore);
 		ImportResult check_WITH_LOCK(h256 const& _h, IfDropped _ik);
-		ImportResult manageImport_WITH_LOCK(h256 const& _h, Transaction const& _transaction);
+		ImportResult manageImport_WITH_LOCK(h256 const& _h, Transaction const& _transaction, bool isLocal);
 
-		void insertCurrent_WITH_LOCK(std::pair<h256, Transaction> const& _p);
+		ImportResult insertCurrent_WITH_LOCK(std::pair<h256, Transaction> const& _p, bool isLocal);
+		ImportResult insertFuture_WITH_LOCK(std::pair<h256, Transaction> const& _p, bool isLocal);
 		void makeCurrent_WITH_LOCK(Transaction const& _t);
 		bool remove_WITH_LOCK(h256 const& _txHash);
 		u256 maxNonce_WITH_LOCK(Address const& _a) const;
+		NonceRange isFuture_WITH_LOCK(Transaction const& _transaction);
 		void verifierBody();
 
 		void validateTx(Transaction const& _t);
@@ -162,7 +160,8 @@ namespace mcp
 		std::unordered_map<Address, std::map<u256, PriorityQueue::iterator>> m_currentByAddressAndNonce; ///< Transactions grouped by account and nonce
 		std::unordered_map<Address, std::map<u256, VerifiedTransaction>> m_future;	/// Future transactions
 
-		unsigned m_limit;															///< Max number of pending transactions
+		std::unordered_map<Address, std::map<u256, std::map<h256, PriorityQueue::iterator>>> m_sameCurrentByAddressAndNonce; ///< Transactions that exist in parallel, transaction maybe have same from and nonce,but have different hash. 
+
 		unsigned m_futureLimit;														///< Max number of future transactions
 		unsigned m_futureSize = 0;													///< Current number of future transactions
 

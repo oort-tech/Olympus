@@ -79,6 +79,8 @@ h256 mcp::wallet::importTransaction(Transaction const& _t)
 		BOOST_THROW_EXCEPTION(PendingTransactionAlreadyExists());
 	case ImportResult::AlreadyInChain:
 		BOOST_THROW_EXCEPTION(TransactionAlreadyInChain());
+	case ImportResult::FutureTimeKnown:
+		BOOST_THROW_EXCEPTION(PendingTransactionTooMuch());
 	default:
 		BOOST_THROW_EXCEPTION(UnknownTransactionValidationError());
 	}
@@ -94,7 +96,6 @@ u256 mcp::wallet::getTransactionCount(Address const& from)
 	if (!m_cache->account_nonce_get(transaction, from, accNonce))
 		return tqNonce;
 	accNonce++; /// next nonce
-	LOG(m_log.info) << "from: " << from.hex() << " ,ret:" << accNonce << " ,m_tq->maxNonce:" << tqNonce;
 	return std::max<u256>(accNonce, tqNonce);
 }
 
