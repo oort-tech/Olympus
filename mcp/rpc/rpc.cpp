@@ -5172,14 +5172,8 @@ void mcp::rpc_handler::web3_sha3(mcp::json & j_response, bool &)
 		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
 	}
 
-	dev::bytes digest;
-	CryptoPP::Keccak_256 hash;
 	dev::bytes msg = jsToBytes(params[0]);
-	hash.Update((const byte*)msg.data(), msg.size());
-	digest.resize(hash.DigestSize());
-	hash.Final(digest.data());
-
-	j_response["result"] = toJS(digest);
+	j_response["result"] = toJS(dev::sha3(msg));
 }
 
 void mcp::rpc_handler::eth_getCode(mcp::json & j_response, bool &)
@@ -5933,7 +5927,5 @@ void mcp::rpc_handler::get_eth_signed_msg(dev::bytes & data, dev::h256 & hash)
 	dev::bytesRef((unsigned char*)prefix.data(), prefix.size()).copyTo(dev::bytesRef(msg.data() + 1, prefix.size()));
 	dev::bytesRef(data.data(), data.size()).copyTo(dev::bytesRef(msg.data() + prefix.size() + 1, data.size()));
 
-	CryptoPP::Keccak_256 kHash;
-	kHash.Update((const byte*)msg.data(), msg.size());
-	kHash.Final(hash.data());
+	hash = dev::sha3(msg);
 }
