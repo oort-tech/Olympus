@@ -48,8 +48,8 @@ namespace mcp
 		uint64_t peer_info_joint = 0;
 		uint64_t existing_unknown_joint = 0;
 
-		mcp::summary_hash	request_hash_tree_from_summary = 0;
-		mcp::summary_hash	request_hash_tree_to_summary = 0;
+		mcp::summary_hash	request_hash_tree_from_summary = mcp::summary_hash(0);
+		mcp::summary_hash	request_hash_tree_to_summary = mcp::summary_hash(0);
 		uint64_t			request_hash_tree_start_index = 0;
 		mcp::block_hash		last_stable_block_expected;
 		std::list<joint_message> unstable_mc_joints;
@@ -61,7 +61,7 @@ namespace mcp
 		std::map<uint64_t, uint64_t> catchup_del_index;
 		uint64_t			current_del_catchup = 0;
 		std::unordered_map<mcp::block_hash, uint64_t> to_summary_index;
-		p2p::node_id id = 0;
+		p2p::node_id		id = p2p::node_id(0);
 		uint64_t			del_catchup_index = 0;
 		uint64_t			version = 0;
 		std::mutex			version_mutex;
@@ -176,7 +176,7 @@ namespace mcp
 
 		std::map<uint64_t, mcp::sync_request_status> m_sync_requests;
 		std::atomic<uint64_t> m_sync_request_id = { 0 };
-		mcp::sync_request_hash m_current_request_id = 0;
+		mcp::sync_request_hash m_current_request_id = mcp::sync_request_hash(0);
 		mcp::catchup_request_message m_current_catchup_request;
 		std::unique_ptr<boost::asio::deadline_timer> m_sync_timer;
 		std::unique_ptr<boost::asio::deadline_timer> m_sync_request_timer;

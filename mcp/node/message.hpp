@@ -44,9 +44,9 @@ class joint_message
 	joint_message(bool &error_a, dev::RLP const &r);
 	void stream_RLP(dev::RLPStream &s) const;
 
-	mcp::sync_request_hash request_id = 0;
+	mcp::sync_request_hash request_id = mcp::sync_request_hash(0);
 	std::shared_ptr<mcp::block> block;
-	mcp::summary_hash summary_hash = 0;
+	mcp::summary_hash summary_hash = mcp::summary_hash(0);
 	mcp::joint_processor_level level = mcp::joint_processor_level::broadcast;
 };
 
