@@ -5540,6 +5540,8 @@ void mcp::rpc_handler::eth_signTransaction(mcp::json & j_response, bool &)
 		BOOST_THROW_EXCEPTION(RPC_Error_Eth_LockedAccount());
 	}
 
+	m_wallet->populateTransactionWithDefaults(ts);
+
 	Transaction t(ts, prv);
 	mcp::json result;
 	

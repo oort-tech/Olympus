@@ -45,9 +45,11 @@ public:
 	void stop();
 
 	//std::shared_ptr<mcp::composer> composer;
-private:
+
 	/// Populate the uninitialized fields in the supplied transaction with default values
 	void populateTransactionWithDefaults(TransactionSkeleton& _t);
+
+private:
 	//mcp::send_result handle_compose_result(mcp::compose_result const & compose_result_a, bool const & async_a);
 	void do_wallet_actions();
 	void queue_wallet_action(std::function<void()> const & action_a);

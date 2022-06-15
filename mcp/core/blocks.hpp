@@ -59,6 +59,6 @@ namespace mcp
 		uint64_t m_exec_timestamp;
 		SignatureStruct m_vrs;	///< The signature of the transaction. Encodes the sender.
 
-		mutable mcp::block_hash m_hashWith = 0;  ///< Cached hash of block 
+		mutable mcp::block_hash m_hashWith = mcp::block_hash(0);  ///< Cached hash of block 
 	};
 }
