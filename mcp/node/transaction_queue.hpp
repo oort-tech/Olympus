@@ -76,7 +76,7 @@ namespace mcp
 
 		/// Get max nonce for an account
 		/// @returns Max transaction nonce for account in the queue
-		u256 maxNonce(Address const& _a) const;
+		u256 maxNonce(Address const& _a, BlockNumber const blockTag = PendingBlock) const;
 
 		/// Register a handler that will be called once asynchronous verification is comeplte an transaction has been imported
 		void onImport(std::function<void(ImportResult, h256 const&, p2p::node_id const&)> const& _t){ m_onImport.add(_t);}
@@ -141,7 +141,7 @@ namespace mcp
 		ImportResult insertFuture_WITH_LOCK(std::pair<h256, Transaction> const& _p, bool isLocal);
 		void makeCurrent_WITH_LOCK(Transaction const& _t);
 		bool remove_WITH_LOCK(h256 const& _txHash);
-		u256 maxNonce_WITH_LOCK(Address const& _a) const;
+		u256 maxNonce_WITH_LOCK(Address const& _a, BlockNumber const blockTag = PendingBlock) const;
 		NonceRange isFuture_WITH_LOCK(Transaction const& _transaction);
 		void verifierBody();
 

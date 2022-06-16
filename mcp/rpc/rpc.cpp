@@ -4897,10 +4897,14 @@ void mcp::rpc_handler::eth_getTransactionCount(mcp::json & j_response, bool &)
 	{
 		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
 	}
+	BlockNumber blockTag = LatestBlock;
+	if (params.size() >= 2 && params[1].is_string()) {
+		blockTag = jsToBlockNumber(params[1]);
+	}
 
 	try
 	{
-		j_response["result"] = toJS(m_wallet->getTransactionCount(jsToAddress(params[0])));
+		j_response["result"] = toJS(m_wallet->getTransactionCount(jsToAddress(params[0]), blockTag));
 	}
 	catch (...)
 	{
@@ -5621,24 +5625,24 @@ void mcp::rpc_handler::eth_getLogs(mcp::json & j_response, bool &)
 			block_hash = jsToHash(params["blockhash"]);
 		}
 
-		std::vector<dev::Address> search_address;
+		std::unordered_set<dev::Address> search_address;
 		if (params.count("address") && !params["address"].is_null())
 		{
-			if (request["address"].is_string())
+			if (params["address"].is_string())
 			{
-				search_address.push_back(jsToAddress(params["account"]));
+				search_address.insert(jsToAddress(params["address"]));
 			}
 			else if (params["address"].is_array())
 			{
 				std::vector<std::string> address_l = params["address"];
 				for (std::string const &address_text : address_l)
 				{
-					search_address.push_back(jsToAddress(address_text));
+					search_address.insert(jsToAddress(address_text));
 				}
 			}
 		}
 
-		std::vector<dev::h256> search_topics;
+		std::unordered_set<dev::h256> search_topics;
 		if (params.count("topics") && !params["topics"].is_null())
 		{
 			if (!params["topics"].is_array())
@@ -5649,7 +5653,7 @@ void mcp::rpc_handler::eth_getLogs(mcp::json & j_response, bool &)
 			std::vector<std::string> topics_l = params["topics"];
 			for (std::string const &topic_text : topics_l)
 			{
-				search_topics.push_back(jsToHash(topic_text));
+				search_topics.insert(jsToHash(topic_text));
 			}
 		}
 
@@ -5684,28 +5688,7 @@ void mcp::rpc_handler::eth_getLogs(mcp::json & j_response, bool &)
 				auto td = m_cache->transaction_address_get(transaction, th);
 				if (t == nullptr || tr == nullptr || td == nullptr)
 					continue;
-
-				std::unordered_set<dev::Address> existed_addresses;
-				for (dev::Address const &address : search_address)
-				{
-					log_bloom bloom = tr->bloom();
-					if (bloom.containsBloom<3>(dev::sha3(address.ref())))
-						existed_addresses.insert(address);
-				}
-				if (search_address.size() > 0 && existed_addresses.size() == 0)
-					continue;
-
-				std::unordered_set<dev::h256> existed_topics;
-				for (dev::h256 const &topic : search_topics)
-				{
-					log_bloom bloom = tr->bloom();
-					if (bloom.containsBloom<3>(dev::sha3(topic)))
-						existed_topics.insert(topic);
-				}
-
-				if (search_topics.size() > 0 && existed_topics.size() == 0)
-					continue;
-
+				
 				auto lt = dev::eth::LocalisedTransactionReceipt(
 					*tr,
 					t->sha3(),
@@ -5714,7 +5697,10 @@ void mcp::rpc_handler::eth_getLogs(mcp::json & j_response, bool &)
 					t->from(),
 					t->to(),
 					td->index,
-					toAddress(t->from(), t->nonce()));
+					toAddress(t->from(), t->nonce()),
+					search_address,
+					search_topics
+				);
 
 				mcp::json logs = toJson(lt.localisedLogs());
 				if (logs.size() > 0) {

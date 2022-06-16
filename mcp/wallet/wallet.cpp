@@ -95,10 +95,10 @@ h256 mcp::wallet::importTransaction(Transaction const& _t)
 	return _t.sha3();
 }
 
-u256 mcp::wallet::getTransactionCount(Address const& from)
+u256 mcp::wallet::getTransactionCount(Address const& from, BlockNumber const blockTag)
 {
 	mcp::db::db_transaction transaction(m_block_store.create_transaction());
-	u256 tqNonce = m_tq->maxNonce(from);
+	u256 tqNonce = m_tq->maxNonce(from, blockTag);
 	u256 accNonce = 0;
 	if (!m_cache->account_nonce_get(transaction, from, accNonce))
 		return tqNonce;

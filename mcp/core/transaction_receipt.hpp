@@ -26,6 +26,8 @@
 #include <libdevcore/Address.h>
 #include <array>
 
+#include <boost/optional.hpp>
+
 namespace dev
 {
 namespace eth
@@ -73,7 +75,9 @@ public:
 		Address const& _to,
 		unsigned _transactionIndex,
 		//u256 const& _gasUsed,
-		Address const& _contractAddress = Address()
+		Address const& _contractAddress = Address(),
+		boost::optional<std::unordered_set<Address> &> addresses = boost::none,
+		boost::optional<std::unordered_set<h256> &> topics = boost::none
 	):
 		TransactionReceipt(_t),
 		m_hash(_hash),
@@ -86,7 +90,39 @@ public:
 		m_contractAddress(_contractAddress)
 	{
 		mcp::log_entries entries = log();
-		for (unsigned i = 0; i < entries.size(); i++)
+		for (unsigned i = 0; i < entries.size(); i++) {
+			log_bloom bloom = entries[i].bloom();
+			if (addresses && (*addresses).size()) {
+				bool is = false;
+				for (auto const& a : *addresses) {
+					if (bloom.containsBloom<3>(dev::sha3(a)) && (*addresses).count(entries[i].address)) {
+						is = true;
+						break;
+					}
+				}
+				if (!is) {
+					continue;
+				}
+			}
+			if (topics && (*topics).size()) {
+				bool is = false;
+				for (auto const& t : *topics) {
+					if (bloom.containsBloom<3>(dev::sha3(t))) {
+						for (auto const& et : entries[i].topics) {
+							if ((*topics).count(et)) {
+								is = true;
+								break;
+							}
+						}
+						if (is) {
+							break;
+						}
+					}
+				}
+				if (!is) {
+					continue;
+				}
+			}
 			m_localisedLogs.push_back(mcp::localised_log_entry(
 				entries[i],
 				m_blockHash,
@@ -95,6 +131,7 @@ public:
 				m_transactionIndex,
 				i
 			));
+		}
 	}
 
 	h256 const& hash() const { return m_hash; }

@@ -21,6 +21,18 @@ namespace mcp
 
 	inline u64 jsToU64(std::string const& _s) { return jsToInt<8>(_s); }
 
+	inline BlockNumber jsToBlockNumber(std::string const& _js)
+	{
+		if (_js == "latest")
+			return LatestBlock;
+		else if (_js == "earliest")
+			return 0;
+		else if (_js == "pending")
+			return PendingBlock;
+		else
+			return (BlockNumber)jsToInt(_js);
+	}
+
 	//enum class OnFailed { InterpretRaw, Empty, Throw };
 	//bytes jsToBytes(std::string const& _s, OnFailed _f = OnFailed::Empty);
 

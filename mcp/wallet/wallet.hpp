@@ -41,7 +41,7 @@ public:
 	//mcp::send_result send_action(std::shared_ptr<mcp::block> const p_block, dev::Signature const & signature_a, std::function<void(mcp::send_result)> const & action_a, bool const & gen_next_work_a, bool const & async_a);
 	/// Imports the given transaction into the transaction queue
 	h256 importTransaction(Transaction const& _t);
-	u256 getTransactionCount(Address const& from);
+	u256 getTransactionCount(Address const& from, BlockNumber const blockTag = PendingBlock);
 	void stop();
 
 	//std::shared_ptr<mcp::composer> composer;
