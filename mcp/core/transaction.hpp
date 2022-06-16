@@ -40,7 +40,7 @@ namespace mcp
 	class Transaction
 	{
 	public:
-		Transaction() {}
+		Transaction():isTransation(false){}
 		/// Constructs a transaction from a transaction skeleton & optional secret.
 		Transaction(TransactionSkeleton const& ts, boost::optional<Secret> const& _s = boost::none);
 
@@ -98,7 +98,7 @@ namespace mcp
 		void checkChainId(uint64_t _chainId) const;
 
 		/// @returns true if transaction is non-null.
-		explicit operator bool() const { return true; }
+		explicit operator bool() const { return isTransation; }
 
 		/// @returns true if transaction is contract-creation.
 		bool isCreation() const { return m_receiveAddress == ZeroAddress; }
@@ -181,6 +181,8 @@ namespace mcp
 
 		mutable h256 m_hashWith;			///< Cached hash of transaction with signature.
 		mutable boost::optional<Address> m_sender;  ///< Cached sender, determined from signature.
+
+		bool isTransation = true;/// for evm
 	};
 
 	/// Nice name for vector of Transaction.
