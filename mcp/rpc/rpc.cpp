@@ -1150,7 +1150,8 @@ void mcp::rpc_handler::account_block_list(mcp::json & j_response, bool &)
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidLimit());
 	}
 
-	u64 limit_l = jsToU64(request["limit"]);
+	// u64 limit_l = jsToInt(request["limit"]);
+	uint64_t limit_l = jsToInt(request["limit"]);
 	if (limit_l > list_max_limit)
 	{
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidLimitTooLarge());
@@ -1324,7 +1325,8 @@ void mcp::rpc_handler::account_state_list(mcp::json & j_response, bool &)
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidLimit());
 	}
 
-	u64 limit_l = jsToU64(request["limit"]);
+	// u64 limit_l = jsToU64(request["limit"]);
+	uint64_t limit_l = jsToInt(request["limit"]);
 	if (limit_l > list_max_limit)
 	{
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidLimitTooLarge());
@@ -1778,7 +1780,7 @@ void mcp::rpc_handler::block_states(mcp::json & j_response, bool &)
 	std::vector<std::string> hashes_l;
 	try
 	{
-		hashes_l = request["hashes"];
+		hashes_l = request["hashes"].get<std::vector<std::string>>();
 	}
 	catch (...)
 	{
@@ -4952,7 +4954,7 @@ void mcp::rpc_handler::eth_getBlockByNumber(mcp::json & j_response, bool &)
 	{
 		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
 	}
-	bool is_full = params[1].is_null() ? false : params[1];
+	bool is_full = params[1].is_null() ? false : (bool)params[1];
 
 	uint64_t block_number = 0;
 	std::string blockText = params[0];
@@ -4987,11 +4989,11 @@ void mcp::rpc_handler::eth_getBlockByNumber(mcp::json & j_response, bool &)
 		minGasPrice = minGasPrice == 0 ? t->gasPrice() : std::min(minGasPrice, t->gasPrice());
 		
 		auto td = m_store.transaction_address_get(transaction, th);
-		j_block["transactions"].push_back(
-			is_full ?
-			toJson(LocalisedTransaction(*t, block_hash, td->index, block_number)) :
-			th.hexPrefixed()
-		);
+		if (is_full) {
+			j_block["transactions"].push_back(toJson(LocalisedTransaction(*t, block_hash, td->index, block_number)));
+		} else {
+			j_block["transactions"].push_back(th.hexPrefixed());
+		}
 	}
 	j_block["gasUsed"] = toJS(gasUsed);
 	j_block["minGasPrice"] = toJS(minGasPrice);
@@ -5006,7 +5008,7 @@ void mcp::rpc_handler::eth_getBlockByHash(mcp::json & j_response, bool &)
 	{
 		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
 	}
-	bool is_full = params[1].is_null() ? false : params[1];
+	bool is_full = params[1].is_null() ? false : (bool)params[1];
 
 	try
 	{
@@ -5035,11 +5037,11 @@ void mcp::rpc_handler::eth_getBlockByHash(mcp::json & j_response, bool &)
 			minGasPrice = minGasPrice == 0 ? t->gasPrice() : std::min(minGasPrice, t->gasPrice());
 			
 			auto td = m_store.transaction_address_get(transaction, th);
-			j_block["transactions"].push_back(
-				is_full ?
-				toJson(LocalisedTransaction(*t, block_hash, td->index, block_number)) :
-				th.hexPrefixed()
-			);
+			if (is_full) {
+				j_block["transactions"].push_back(toJson(LocalisedTransaction(*t, block_hash, td->index, block_number)));
+			} else {
+				j_block["transactions"].push_back(th.hexPrefixed());
+			}
 		}
 		j_block["gasUsed"] = toJS(gasUsed);
 		j_block["minGasPrice"] = toJS(minGasPrice);
