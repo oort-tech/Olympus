@@ -25,10 +25,12 @@ void mcp::wallet::send_async(TransactionSkeleton t, std::function<void(h256 &, b
 	this->queue_wallet_action([this, t, action_a, password]()// put queue
 	{
 		try {
-			action_a(send_action(t, password), boost::none);
+			h256 h = send_action(t, password);
+			action_a(h, boost::none);
 		}
-		catch (Exception const & e) {
-			action_a(h256(0), e);
+		catch (dev::Exception const & e) {
+			h256 h = h256(0);
+			action_a(h, e);
 		}
 	});
 }
