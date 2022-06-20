@@ -323,6 +323,8 @@ mcp::rpc_handler::rpc_handler(mcp::rpc &rpc_a, std::string const &body_a, std::f
 	m_ethRpcMethods["personal_sendTransaction"] = &mcp::rpc_handler::personal_sendTransaction;
 	m_ethRpcMethods["personal_sign"] = &mcp::rpc_handler::personal_sign;
 	m_ethRpcMethods["personal_ecRecover"] = &mcp::rpc_handler::personal_ecRecover;
+
+	m_ethRpcMethods["eth_requestAccounts"] = &mcp::rpc_handler::eth_accounts;
 }
 /*
 void mcp::rpc_response(std::function<void(mcp::json const &)> response_a, std::string const &message_a)
@@ -2425,7 +2427,7 @@ void mcp::rpc_handler::logs(mcp::json & j_response, bool &)
 		to_stable_block_index = m_chain->last_stable_index();
 	}
 
-	dev::Address search_account(0);
+	std::unordered_set<dev::Address> search_account;
 	if (request.count("account") && request["account"].is_string())
 	{
 		std::string account_text = request["account"];
@@ -2433,10 +2435,10 @@ void mcp::rpc_handler::logs(mcp::json & j_response, bool &)
 		{
 			BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccount());
 		}
-		search_account = dev::Address(account_text);
+		search_account.insert(dev::Address(account_text));
 	}
 
-	std::vector<dev::h256> search_topics;
+	std::unordered_set<dev::h256> search_topics;
 	if (request.count("topics") && !request["topics"].is_null())
 	{
 		if (!request["topics"].is_array())
@@ -2457,7 +2459,7 @@ void mcp::rpc_handler::logs(mcp::json & j_response, bool &)
 				BOOST_THROW_EXCEPTION(RPC_Error_InvalidTopics());
 			}
 
-			search_topics.push_back(dev::h256(topic.ref()));
+			search_topics.insert(dev::h256(topic.ref()));
 		}
 	}
 
@@ -2484,21 +2486,7 @@ void mcp::rpc_handler::logs(mcp::json & j_response, bool &)
 			auto td = m_cache->transaction_address_get(transaction, th);
 			if (t == nullptr || tr == nullptr || td == nullptr)
 				continue;
-
-			log_bloom bloom = tr->bloom();
-			if (search_account != dev::Address(0) && !bloom.containsBloom<3>(dev::sha3(search_account.ref())))
-				continue;
-
-			std::unordered_set<dev::h256> existed_topics;
-			for (dev::h256 const &topic : search_topics)
-			{
-				if (bloom.containsBloom<3>(dev::sha3(topic)))
-					existed_topics.insert(topic);
-			}
-
-			if (search_topics.size() > 0 && existed_topics.size() == 0)
-				continue;
-
+			
 			auto lt = dev::eth::LocalisedTransactionReceipt(
 				*tr,
 				t->sha3(),
@@ -2507,7 +2495,10 @@ void mcp::rpc_handler::logs(mcp::json & j_response, bool &)
 				t->from(),
 				t->to(),
 				td->index,
-				toAddress(t->from(), t->nonce()));
+				toAddress(t->from(), t->nonce()),
+				search_account,
+				search_topics
+			);
 
 			mcp::json logs = toJson(lt.localisedLogs());
 			if (logs.size() > 0) {
