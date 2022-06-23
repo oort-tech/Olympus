@@ -124,6 +124,8 @@ bool mcp::genesis::try_initialize(mcp::db::db_transaction & transaction_a, mcp::
 	store_a.dag_account_get(transaction_a, genesis_account, info);
 	info.latest_stable_block = block_hash;
 	store_a.dag_account_put(transaction_a, genesis_account, info);
+	//genesis maybe is witness too.
+	store_a.successor_put(transaction_a, mcp::block_hash(genesis_account.number()), info.latest_stable_block);
 
 	//genesis account state
     // sichaoy: nonce of genesis account?

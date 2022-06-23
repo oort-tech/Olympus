@@ -68,7 +68,7 @@ void mcp::joint_request_message::stream_RLP(dev::RLPStream & s) const
 
 mcp::joint_request_message::joint_request_message(bool & error_a, dev::RLP const & r)
 {
-	error_a = r.itemCount() != 3;
+	error_a = r.itemCount() != 2;
 	if (error_a)
 		return;
 

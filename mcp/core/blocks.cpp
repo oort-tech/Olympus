@@ -176,7 +176,7 @@ mcp::block_hash & mcp::block::hash() const
 
 mcp::block_hash mcp::block::root() const
 {
-	return isZeroH256(m_previous.is_zero()) ? (const mcp::block_hash)m_from : m_previous; //todo maybe error
+	return m_previous.is_zero() ? (const mcp::block_hash)m_from : m_previous;
 }
 
 void mcp::block::init_from_genesis_transaction(mcp::account const& from, h256 const& hash, std::string time)

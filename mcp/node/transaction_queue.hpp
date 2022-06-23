@@ -81,6 +81,9 @@ namespace mcp
 		/// Register a handler that will be called once asynchronous verification is comeplte an transaction has been imported
 		void onImport(std::function<void(ImportResult, h256 const&, p2p::node_id const&)> const& _t){ m_onImport.add(_t);}
 
+		/// Register a handler that will be called once asynchronous verification is comeplte an transaction has been imported
+		void onImportProcessed(std::function<void(h256 const&)> const& _t) { m_onImportProcessed.add(_t); }
+
 		/// Get transaction queue information
 		std::string getInfo();
 
@@ -145,7 +148,8 @@ namespace mcp
 		NonceRange isFuture_WITH_LOCK(Transaction const& _transaction);
 		void verifierBody();
 
-		void validateTx(Transaction const& _t);
+		void validateTx(Transaction const& _t);/// Base format check
+		void checkTx(Transaction const& _t);/// nonce and balance check
 
 		mutable SharedMutex m_lock;  ///< General lock.
 		h256Hash m_known;            ///< Headers of transactions in both sets.
@@ -168,6 +172,7 @@ namespace mcp
 		/// verified broadcast incoming transaction
 		std::condition_variable m_queueReady;
 		Signal<ImportResult, h256 const&, p2p::node_id const&> m_onImport;			///< Called for each import attempt. Arguments are result, transaction id an node id. Be nice and exit fast.
+		Signal<h256 const&> m_onImportProcessed; ///< First import notification unhandle processing dependency.
 		std::vector<std::thread> m_verifiers;
 		std::deque<UnverifiedTransaction> m_unverified;  ///< Pending verification queue
 		mutable Mutex x_queue;                           ///< Verification queue mutex
