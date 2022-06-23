@@ -1036,9 +1036,6 @@ void mcp_daemon::ongoing_report(
 	size_t transaction_unstable_count(store.transaction_unstable_count(transaction));
 	size_t transaction_count(store.transaction_count(transaction));
 	size_t dag_free_count(store.dag_free_count(transaction));
-	//size_t unlink_count(store.unlink_info_count(transaction));
-	//size_t unlink_block_count(store.unlink_block_count(transaction));
-	//size_t head_count(store.head_unlink_count(transaction));
 
 	uint64_t last_mci = chain->last_mci();
 	uint64_t last_stable_mci = chain->last_stable_mci();

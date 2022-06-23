@@ -377,7 +377,7 @@ bool mcp::node_capability::read_packet(std::shared_ptr<p2p::peer> peer_a, unsign
 
 			if (error)
 			{
-				LOG(m_log.error) << "Invalid joint request message rlp: " << r[0];
+				LOG(m_log.error) << "Invalid transaction request message rlp: " << r[0];
 				peer_a->disconnect(p2p::disconnect_reason::bad_protocol);
 				return true;
 			}
@@ -818,26 +818,33 @@ void mcp::node_capability::send_hello_info_ack(p2p::node_id const &id)
 
 void mcp::node_capability::onTransactionImported(ImportResult _ir, h256 const& _h, p2p::node_id const& _nodeId)
 {
-	///io service execute delay, maybe some transactions through the filter
-	m_async_task->sync_async([this, _ir, _h, _nodeId]() {
+	///if used sync_async io service execute delay, maybe some transactions through the filter
+	if (_h != h256())
+	{
 		std::lock_guard<std::mutex> lock(m_peers_mutex);
 		if (!m_peers.count(_nodeId))
 			return;
-		if (_h != h256())
+		mcp::block_hash h(_h);
+		m_peers.at(_nodeId).mark_as_known_transaction(_h);
+		std::lock_guard<std::mutex> rlock(m_requesting_lock);
+		m_requesting.erase(h);
+	}
+	else
+	{
+		std::shared_ptr<p2p::peer> p = nullptr;
 		{
-			mcp::block_hash h(_h);
-			m_peers.at(_nodeId).mark_as_known_transaction(_h);
-			std::lock_guard<std::mutex> lock(m_requesting_lock);
-			m_requesting.erase(h);
-		}
-		else
-		{
+			std::lock_guard<std::mutex> lock(m_peers_mutex);
+			if (!m_peers.count(_nodeId))
+				return;
+
 			mcp::peer_info &pi(m_peers.at(_nodeId));
-			if (auto p = pi.try_lock_peer())
-				p->disconnect(p2p::disconnect_reason::bad_protocol);
+			p = pi.try_lock_peer();
 		}
-		/// todo different import result add or reduce rating for the peer
-	});
+		/// todo:disconnect call drop.drop call on_disconnect.on_disconnect will used m_peers_mutex. So it locks twice. need modify logic.
+		if (p)
+			p->disconnect(p2p::disconnect_reason::bad_protocol);
+	}
+	/// todo different import result add or reduce rating for the peer
 }
 
 

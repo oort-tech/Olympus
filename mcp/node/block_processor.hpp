@@ -90,9 +90,11 @@ namespace mcp
 
 		void add_many_to_mt_process(std::queue<std::shared_ptr<mcp::block_processor_item>> items_a);
 		void add_to_mt_process(std::shared_ptr<mcp::block_processor_item> item_a);
-		void add_to_process(std::shared_ptr<mcp::block_processor_item> item_a);
+		void add_to_process(std::shared_ptr<mcp::block_processor_item> item_a,bool retry = false);
 		
 		void on_sync_completed(mcp::p2p::node_id const & remote_node_id_a);
+
+		void onTransactionImported(h256 const& _t);
 
 		bool is_full();
 

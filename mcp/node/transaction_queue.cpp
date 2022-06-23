@@ -68,8 +68,9 @@ namespace mcp
 				return ir;
 
 			{
-				_transaction.safeSender();  // Perform EC recovery outside of the write lock
+				_transaction.safeSender();  /// Perform EC recovery outside of the write lock
 				UpgradeGuard ul(l);
+				checkTx(_transaction); ///check balance and nonce
 				ret = manageImport_WITH_LOCK(h, _transaction, isLoccal);
 
 #if 0	///////////////////////////////test
@@ -549,6 +550,7 @@ namespace mcp
 
 				if (ImportResult::Success == ir)/// first import && successed,broadcast it
 				{
+					m_onImportProcessed(t.sha3());
 					m_async_task->sync_async([this, t]() {
 						m_capability->broadcast_transaction(t);
 					});
@@ -587,7 +589,10 @@ namespace mcp
 			BOOST_THROW_EXCEPTION(BlockGasLimitReached() << RequirementErrorComment(
 			(bigint)(mcp::block_max_gas), (bigint)_t.gas(),
 				std::string("_gasUsed + (bigint)_t.gas() < lower.gasLimit()")));
+	}
 
+	void TransactionQueue::checkTx(Transaction const& _t)
+	{
 		/// nonce great than last stable transaction nonce,It doesn't mean it's right,meybe exist pending transactions
 		mcp::db::db_transaction transaction(m_store.create_transaction());
 		mcp::chain_state c_state(transaction, 0, m_store, m_chain, m_cache);
