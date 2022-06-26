@@ -651,7 +651,7 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 
 						/// commit transaction receipt
 						/// the account states were committed in Executive::go()
-						m_store.transaction_receipt_put(transaction_a, link_hash, result.second);
+						cache_a->transaction_receipt_put(transaction_a, link_hash, std::make_shared<dev::eth::TransactionReceipt>(result.second));
 						std::shared_ptr<mcp::TransactionAddress> td(std::make_shared<mcp::TransactionAddress>(dag_stable_block_hash, index));
 						cache_a->transaction_address_put(transaction_a, link_hash, td);
 

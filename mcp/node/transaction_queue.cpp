@@ -548,9 +548,12 @@ namespace mcp
 				ImportResult ir = import(t,false);
 				m_onImport(ir, t.sha3(), work.nodeId);
 
+				///Notify unHandle to handle dependencies,block process block missing links,but before add to unhandle transaction come in.
+				if (ImportResult::Success == ir || ImportResult::AlreadyKnown == ir || ImportResult::AlreadyInChain == ir)
+					m_onImportProcessed(t.sha3());
+
 				if (ImportResult::Success == ir)/// first import && successed,broadcast it
 				{
-					m_onImportProcessed(t.sha3());
 					m_async_task->sync_async([this, t]() {
 						m_capability->broadcast_transaction(t);
 					});
