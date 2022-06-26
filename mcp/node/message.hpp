@@ -213,22 +213,21 @@ class hash_tree_response_message
 		mcp::summary_hash summary;
 		mcp::summary_hash previous_summary;
 		std::list<mcp::summary_hash> parent_summaries;
-		std::list<mcp::summary_hash> link_summaries;
+		h256 receiptsRoot;
 		std::set<mcp::summary_hash> skiplist_summaries;
 		mcp::block_status status;
 		uint64_t stable_index;
 		uint64_t mc_timestamp;
-		//boost::optional<transaction_receipt> receipt;
 		uint64_t level;
 		std::shared_ptr<mcp::block> block;
+		std::vector<std::shared_ptr<Transaction>> transactions;
 		uint64_t mci;
 		std::set<mcp::block_hash> skiplist_block;
 
 		summary_items(mcp::block_hash const & bh, mcp::summary_hash const & sh, mcp::summary_hash const & previous_summary_a,
-			std::list<mcp::summary_hash> const & p_summary, std::list<mcp::summary_hash> const & l_summary, 
+			std::list<mcp::summary_hash> const & p_summary, h256 receiptsRoot_a,
 			std::set<mcp::summary_hash> const & s_summary, mcp::block_status const & status_a, uint64_t const& stable_index_a, uint64_t const& mc_timestamp_a,
-			//boost::optional<transaction_receipt> receipt_a,
-			uint64_t level_a, std::shared_ptr<mcp::block> const & block_a, uint64_t mci_a, std::set<mcp::summary_hash> const & skiplist_block_a);
+			uint64_t level_a, std::shared_ptr<mcp::block> const & block_a, std::vector<std::shared_ptr<Transaction>> t_a, uint64_t mci_a, std::set<mcp::summary_hash> const & skiplist_block_a);
 
 		summary_items(bool &error_a, dev::RLP const &r);
 		void stream_RLP(dev::RLPStream &s) const;

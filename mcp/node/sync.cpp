@@ -1,4 +1,5 @@
 #include <mcp/node/sync.hpp>
+#include <libdevcore/TrieHash.h>
 
 mcp::sync_request_status::sync_request_status(mcp::p2p::node_id const & request_node_id_a,
 	mcp::sub_packet_type const & request_type_a) :
@@ -68,7 +69,6 @@ mcp::node_sync::node_sync(
 	m_task_clear_flag(false)
 {
 	m_request_joints_thread = std::thread([this]() { this->process_request_joints(); });
-	//m_request_transaction_thread = std::thread([this]() { this->process_request_transactions(); });
 	m_sync_timer = std::make_unique<ba::deadline_timer>(io_service_a);
 	m_sync_request_timer = std::make_unique<ba::deadline_timer>(io_service_a);
 }
@@ -92,11 +92,6 @@ void mcp::node_sync::stop()
 	{
 		m_request_joints_thread.join();
 	}
-
-	//if (m_request_transaction_thread.joinable())
-	//{
-	//	m_request_transaction_thread.join();
-	//}
 }
 
 void mcp::node_sync::joint_request_handler(p2p::node_id const &id, mcp::joint_request_message const &request)
@@ -918,7 +913,9 @@ mcp::sync_result mcp::node_sync::process_catchup_chain(mcp::catchup_response_mes
 			for (auto joint : arr_witness_joints)
 			{
 				std::shared_ptr<mcp::block> block = joint.block;
-				//if (!validate_message(block->from(), block->hash(), block->signature()))//todo used eth sign ----------------------------------------
+				dev::Public p = dev::recover(block->signature(), block->hash().number());
+				mcp::public_key pubkey(p);
+				if (mcp::account(pubkey) != block->from())   //todo used eth sign----------------------------------------
 				{
 					LOG(log_sync.info) << "process_catchup_chain_error:invalid signature";
 					process_catchup_result = mcp::sync_result::catchup_chain_summary_check_fail;
@@ -1166,6 +1163,8 @@ void mcp::node_sync::read_hash_tree(mcp::hash_tree_request_message const& hash_t
 	{
 		from_index = hash_tree_request.next_start_index;
 	}
+	if (from_index == 0)
+		from_index++; /// skip genesis block
 	uint64_t to_index = to_block_state->stable_index;
 
 	//LOG(log_sync.debug) << "read_hash_tree_start:from_summary = " << hash_tree_request.from_summary.to_string()
@@ -1180,7 +1179,7 @@ void mcp::node_sync::read_hash_tree(mcp::hash_tree_request_message const& hash_t
 		assert_x(exists);
 
 		if (hash_tree_response.arr_summaries.size() >= mcp::p2p::max_summary_items
-			|| all_link_size > 250000)
+			|| all_link_size > 1024)
 		{
 			hash_tree_response.next_start_index = index;
 			//LOG(log_sync.debug) << "read_hash_tree_next:" << "index:" << index;
@@ -1201,7 +1200,6 @@ void mcp::node_sync::read_hash_tree(mcp::hash_tree_request_message const& hash_t
 		}
 
 		std::list<mcp::summary_hash> p_summaries;
-		std::list<mcp::summary_hash> l_summaries;
 		std::set<mcp::summary_hash> s_summaries;
 
 		// check if all the parent have summaries
@@ -1219,20 +1217,34 @@ void mcp::node_sync::read_hash_tree(mcp::hash_tree_request_message const& hash_t
 		}
 
 		// check if all the links have summaries
+		std::vector<bytes> receipts;
+		std::vector<std::shared_ptr<Transaction>> trannsactions;
 		auto links(block_ptr->links());
-		for (auto it = links.begin(); it != links.end(); ++it)
+		for (auto it : block_ptr->links())
 		{
-			//mcp::summary_hash sh;
-			//if (m_cache->block_summary_get(transaction, *it, sh))
-			//{
-			//	LOG(log_sync.info) << "read_hash_tree: some parents have no summaries";
-			//	l_summaries.clear();
-			//	return;
-			//}
-			//BOOST_LOG(log) << "read_hash_tree:"<<"block:"<< bh.to_string() <<",parent summary: " << sh.to_string();
-			l_summaries.push_back(sh);
+			mcp::summary_hash sh;
+			auto receipt = m_cache->transaction_receipt_get(transaction, it);
+			if (receipt == nullptr)
+			{
+				LOG(log_sync.info) << "read_hash_tree: some parents have no summaries";
+				receipts.clear();
+				return;
+			}
+			RLPStream receiptRLP;
+			receipt->streamRLP(receiptRLP);
+			receipts.push_back(receiptRLP.out());
+
+			auto t = m_cache->transaction_get(transaction, it);
+			if (t == nullptr)
+			{
+				LOG(log_sync.info) << "read_hash_tree: some parents have no summaries";
+				receipts.clear();
+				return;
+			}
+			trannsactions.push_back(t);
 		}
-		all_link_size += l_summaries.size();
+		all_link_size += links.size();
+		h256 receiptsRoot = dev::orderedTrieRoot(receipts);
 
 		// check if all the blocks on skiplist have summaries
 		mcp::skiplist_info s_info;
@@ -1251,7 +1263,7 @@ void mcp::node_sync::read_hash_tree(mcp::hash_tree_request_message const& hash_t
 		}
 
 		// fill the summary items
-		mcp::hash_tree_response_message::summary_items s(bh, sh, previous_summary, p_summaries, l_summaries, s_summaries, bs->status, bs->stable_index, bs->mc_timestamp, bs->level, block_ptr, *bs->main_chain_index, s_info.list);
+		mcp::hash_tree_response_message::summary_items s(bh, sh, previous_summary, p_summaries, receiptsRoot, s_summaries, bs->status, bs->stable_index, bs->mc_timestamp, bs->level, block_ptr, trannsactions, *bs->main_chain_index, s_info.list);
 		hash_tree_response.arr_summaries.insert(s);
 
 		//dev::RLPStream rlp_stream;
@@ -1360,12 +1372,15 @@ void mcp::node_sync::process_hash_tree(p2p::node_id const &id, mcp::hash_tree_re
 				break;
 			}
 
+			/// Strict processing here requires pre-processing transactions to get to the receiptRoot,
+			/// but, if the transaction or receipt is forged, the summary of the previously processed block is inconsistent, and the subsequent processing will check the parent's summary(not exist)
+			/// so, don't must to do the check
+
 			mcp::summary_hash s_hash = mcp::summary::gen_summary_hash(
 				s_item.block_hash,			   /// block hash
 				s_item.previous_summary,	///previous summary hash
 				s_item.parent_summaries,	/// parent summary hashs
-				h256(0),
-				//s_item.link_summaries,	/// link summary hashs
+				s_item.receiptsRoot,	/// link transactions receipt root
 				s_item.skiplist_summaries, /// skip_list
 				s_item.status,
 				s_item.stable_index,
@@ -1375,20 +1390,13 @@ void mcp::node_sync::process_hash_tree(p2p::node_id const &id, mcp::hash_tree_re
 			if (s_item.summary != s_hash)
 			{
 				LOG(log_sync.info) << "process_hash_tree:wrong summary hash" << ", local_summary: " << s_hash.to_string() << ",remote_hash:" << s_item.summary.to_string();
-				LOG(log_sync.info) << "process_hash_tree:wrong summary hash" << ", block: " << s_item.block_hash.to_string() << ".status:" << (int)s_item.status;
-				//if (s_item.receipt)
-				//{
-				//	LOG(log_sync.info) << "process_hash_tree:wrong summary hash" << ", to_state: " << s_item.receipt->from_state.to_string() << ".status:" << s_item.receipt->from_state.to_string();
-				//}
+				LOG(log_sync.info) << "process_hash_tree:wrong summary hash" << ", block: " << s_item.block_hash.to_string() << ".status:" << (int)s_item.status << ".stable_index:" << s_item.stable_index << ".mc_timestamp:" << s_item.mc_timestamp;
 				LOG(log_sync.info) << "process_hash_tree:wrong summary hash" << ", previous_summary: " << s_item.previous_summary.to_string();
 				for (auto i : s_item.parent_summaries)
 				{
 					LOG(log_sync.info) << "process_hash_tree:wrong summary hash" << ", parent_summary: " << i.to_string();
 				}
-				for (auto i : s_item.link_summaries)
-				{
-					LOG(log_sync.info) << "process_hash_tree:wrong summary hash" << ", link_summary: " << i.to_string();
-				}
+				LOG(log_sync.info) << "process_hash_tree:wrong summary hash" << ", receipt root hash: " << s_item.receiptsRoot.hex();
 				for (auto i : s_item.skiplist_summaries)
 				{
 					LOG(log_sync.info) << "process_hash_tree:wrong summary hash" << ", skiplist_summary: " << i.to_string();
@@ -1429,12 +1437,12 @@ void mcp::node_sync::process_hash_tree(p2p::node_id const &id, mcp::hash_tree_re
 					break;
 				}
 
-				if (!check_summaries_exist(transaction, s_item.link_summaries))
-				{
-					LOG(log_sync.info) << "process_hash_tree:check_summaries_exist:not exsist" << ",block:" << s_item.block_hash.to_string() << ", summary: " << s_hash.to_string();
-					error = true;
-					break;
-				}
+				//if (!check_summaries_exist(transaction, s_item.link_summaries))
+				//{
+				//	LOG(log_sync.info) << "process_hash_tree:check_summaries_exist:not exsist" << ",block:" << s_item.block_hash.to_string() << ", summary: " << s_hash.to_string();
+				//	error = true;
+				//	break;
+				//}
 
 				if (!check_summaries_exist(transaction, s_item.skiplist_summaries))
 				{
@@ -1461,6 +1469,19 @@ void mcp::node_sync::process_hash_tree(p2p::node_id const &id, mcp::hash_tree_re
 			mcp::joint_message joint(s_item.block, s_item.summary);
 			std::shared_ptr<mcp::block_processor_item> item(std::make_shared<mcp::block_processor_item>(std::move(joint), id, mcp::remote_type::sync));
 			items.push(item);
+			try
+			{
+				for (auto t : s_item.transactions)
+				{
+					m_tq->import(*t, false);
+				}
+			}
+			catch (const std::exception& e)
+			{
+				LOG(log_sync.info) << "process_hash_tree import transaction error:" << e.what();
+				error = true;
+				break;
+			}
 			//LOG(log_sync.debug) << "level: " << s_item.level << ",block: "<< s_item.block.to_string() << ", summary: " << s_hash.to_string() ;
 		}
 		tx.commit();

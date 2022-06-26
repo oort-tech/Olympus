@@ -202,21 +202,21 @@ mcp::hash_tree_response_message::hash_tree_response_message(bool & error_a, dev:
 }
 
 mcp::hash_tree_response_message::summary_items::summary_items(mcp::block_hash const & bh, mcp::summary_hash const & sh,
-	mcp::summary_hash const & previous_summary_a, std::list<mcp::summary_hash> const & p_summary, std::list<mcp::summary_hash> const & l_summary, std::set<mcp::summary_hash> const & s_summary,
+	mcp::summary_hash const & previous_summary_a, std::list<mcp::summary_hash> const & p_summary, h256 receiptsRoot_a, std::set<mcp::summary_hash> const & s_summary,
 	mcp::block_status const & status_a, uint64_t const& stable_index_a, uint64_t const& mc_timestamp_a,
-	uint64_t level_a, std::shared_ptr<mcp::block> const & block_a, uint64_t mci_a, std::set<mcp::summary_hash> const & skiplist_block_a) :
+	uint64_t level_a, std::shared_ptr<mcp::block> const & block_a, std::vector<std::shared_ptr<Transaction>> t_a, uint64_t mci_a, std::set<mcp::summary_hash> const & skiplist_block_a) :
 	block_hash(bh), 
 	summary(sh),
 	previous_summary(previous_summary_a),
 	parent_summaries(p_summary), 
-	link_summaries(l_summary),
+	receiptsRoot(receiptsRoot_a),
 	skiplist_summaries(s_summary),
 	status(status_a),
 	stable_index(stable_index_a),
 	mc_timestamp(mc_timestamp_a),
-	//receipt(receipt_a),
 	level(level_a), 
 	block(block_a),
+	transactions(t_a),
 	mci(mci_a), 
 	skiplist_block(skiplist_block_a)
 {
@@ -240,9 +240,7 @@ mcp::hash_tree_response_message::summary_items::summary_items(bool & error_a, de
 	for(dev::RLP const & p_summary : parent_rlp)
 		parent_summaries.push_back((mcp::summary_hash)p_summary);
 
-	dev::RLP const & link_rlp = r[4];
-	for (dev::RLP const & l_summary : link_rlp)
-		link_summaries.push_back((mcp::summary_hash)l_summary);
+	receiptsRoot = (h256)r[4];
 
 	dev::RLP const & skiplist_rlp = r[5];
 	for(dev::RLP const & s_summary : skiplist_rlp)
@@ -251,21 +249,24 @@ mcp::hash_tree_response_message::summary_items::summary_items(bool & error_a, de
 	status = mcp::block_status(r[6].toInt<uint8_t>());
 	stable_index = r[7].toInt<uint64_t>();
 	mc_timestamp = r[8].toInt<uint64_t>();
-
-	//dev::RLP const & receipt_rlp = r[9];
-	//if (receipt_rlp.itemCount() == 1)
-	//{
-	//	receipt = transaction_receipt(error_a, receipt_rlp[0]);
-	//	assert_x(!error_a);
-	//}
-	//else
-	//	receipt = boost::none;
-
-	level = (uint64_t)r[10];
+	level = (uint64_t)r[9];
 
 	try
 	{
-		block = std::make_shared<mcp::block>(r[11]);
+		block = std::make_shared<mcp::block>(r[10]);
+	}
+	catch (Exception& _e)
+	{
+		error_a = true;
+	}
+
+	try
+	{
+		for (dev::RLP const & tr : r[11])
+		{
+			auto t = std::make_shared<mcp::Transaction>(tr, CheckTransaction::Everything);
+			transactions.push_back(t);
+		}
 	}
 	catch (Exception& _e)
 	{
@@ -281,16 +282,14 @@ mcp::hash_tree_response_message::summary_items::summary_items(bool & error_a, de
 
 void mcp::hash_tree_response_message::summary_items::stream_RLP(dev::RLPStream & s) const
 {
-	s.appendList(13);
+	s.appendList(14);
 	s << block_hash << summary << previous_summary;
 
 	s.appendList(parent_summaries.size());
 	for (auto p_summary : parent_summaries)
 		s << p_summary;
 
-	s.appendList(link_summaries.size());
-	for (auto l_summary : link_summaries)
-		s << l_summary;
+	s << receiptsRoot;
 
 	s.appendList(skiplist_summaries.size());
 	for (auto s_summary: skiplist_summaries)
@@ -299,20 +298,13 @@ void mcp::hash_tree_response_message::summary_items::stream_RLP(dev::RLPStream &
 	s << (uint8_t)status;
 	s << stable_index;
 	s << mc_timestamp;
-
-	//if (receipt)
-	//{
-	//	s.appendList(1);
-	//	receipt->stream_RLP(s);
-	//}
-	//else
-	//{
-	//	s.appendList(0);
-	//}
-	
 	s << level;
 
     block->streamRLP(s);
+	s.appendList(transactions.size());
+	for (auto t : transactions)
+		t->streamRLP(s);
+
     s << mci;
 
     s.appendList(skiplist_block.size());
