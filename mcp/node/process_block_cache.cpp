@@ -480,6 +480,15 @@ void mcp::process_block_cache::commit_and_clear_changing()
 	m_latest_account_state_puts.clear();
 	m_latest_account_state_puts_flushed.clear();
 
+	/// The global cache must be updated before the drop transaction.else getTransactionCount maybe error,because transaction drop from queue but nonce not update.
+	//modify account nonce cache
+	m_cache->account_nonce_earse(m_account_nonce_puts_flushed);
+	for (put_item<Address, u256> const & item : m_account_nonce_puts)
+		m_cache->account_nonce_put(item.key, item.value);
+	m_account_nonce_puts.clear();
+	m_account_nonce_puts_flushed.clear();
+
+
 	//modify transaction cache
 	m_cache->transaction_earse(m_transaction_puts_flushed);
 	for (auto h : m_transaction_dels)
@@ -489,15 +498,6 @@ void mcp::process_block_cache::commit_and_clear_changing()
 	m_transaction_puts.clear();
 	m_transaction_puts_flushed.clear();
 	m_transaction_dels.clear();
-
-
-	//modify account nonce cache
-	m_cache->account_nonce_earse(m_account_nonce_puts_flushed);
-	for (put_item<Address, u256> const & item : m_account_nonce_puts)
-		m_cache->account_nonce_put(item.key, item.value);
-	m_account_nonce_puts.clear();
-	m_account_nonce_puts_flushed.clear();
-
 
 	//modify successor cache
 	m_cache->successor_earse(m_successor_puts_flushed);

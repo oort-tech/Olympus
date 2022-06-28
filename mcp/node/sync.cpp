@@ -1986,9 +1986,11 @@ void mcp::node_sync::request_new_missing_transactions(mcp::requesting_item& item
 		//else
 		//	assert_x(false);
 
+		std::lock_guard<std::mutex> lock(m_capability->m_requesting_lock);
 		if (!m_capability->m_requesting.add(item_a, is_timeout))
 		{
-			//LOG(log_sync.info) << "block already requested:" << item_a.block_hash->to_string();
+			//h256 h(item_a.m_request_hash.number());
+			//LOG(log_sync.info) << "block already requested:" << h.hex();
 			return;
 		}
 	}

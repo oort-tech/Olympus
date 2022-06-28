@@ -52,7 +52,7 @@ void node_table::start()
 			mcp::p2p::node_id id(mcp::slice_to_uint256(it.value()));
 
 			dev::bytes result(it.key().size());
-			std::copy((byte *)it.key().data(), (byte *)it.key().data() + sizeof(result), result.data());
+			std::copy((byte *)it.key().data(), (byte *)it.key().data() + result.size(), result.data());
 			dev::RLP r(result);
 			if (r.itemCount() == 3)
 			{

@@ -52,7 +52,7 @@ namespace mcp
 		return ImportResult::Success;
 	}
 
-	ImportResult TransactionQueue::import(Transaction const& _transaction, bool isLoccal, IfDropped _ik)
+	ImportResult TransactionQueue::import(Transaction const& _transaction, bool isLoccal, bool ignoreFuture, IfDropped _ik)
 	{
 		validateTx(_transaction);
 		//if (_transaction.hasZeroSignature())
@@ -71,7 +71,7 @@ namespace mcp
 				_transaction.safeSender();  /// Perform EC recovery outside of the write lock
 				UpgradeGuard ul(l);
 				checkTx(_transaction); ///check balance and nonce
-				ret = manageImport_WITH_LOCK(h, _transaction, isLoccal);
+				ret = manageImport_WITH_LOCK(h, _transaction, isLoccal, ignoreFuture);
 
 #if 0	///////////////////////////////test
 				LOG(m_log.debug) << getInfo();
@@ -170,7 +170,7 @@ namespace mcp
 	}
 
 
-	ImportResult TransactionQueue::manageImport_WITH_LOCK(h256 const& _h, Transaction const& _transaction, bool isLocal)
+	ImportResult TransactionQueue::manageImport_WITH_LOCK(h256 const& _h, Transaction const& _transaction, bool isLocal, bool ignoreFuture)
 	{
 		try
 		{
@@ -180,6 +180,9 @@ namespace mcp
 			
 			// If valid, append to transactions.
 			auto r = isFuture_WITH_LOCK(_transaction);
+			if (NonceRange::FutureTooBig == r && ignoreFuture)/// request block
+				r = NonceRange::Future;
+
 			if (NonceRange::FutureTooBig == r)
 			{
 				return ImportResult::FutureTimeKnown; ///if local throw error,if broadcast punish remote node.
@@ -541,7 +544,10 @@ namespace mcp
 			try
 			{
 				Transaction t(work.transaction, CheckTransaction::Everything);
-				ImportResult ir = import(t,false);
+				bool ignoreFuture = false;
+				if (m_capability->m_requesting.exist(mcp::block_hash(t.sha3())))
+					ignoreFuture = true;
+				ImportResult ir = import(t,false, ignoreFuture);
 				m_onImport(ir, t.sha3(), work.nodeId);
 
 				///Notify unHandle to handle dependencies,block process block missing links,but before add to unhandle transaction come in.

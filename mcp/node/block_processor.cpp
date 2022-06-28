@@ -702,7 +702,8 @@ void mcp::block_processor::do_process_dag_item(mcp::timeout_db_transaction & tim
 
 void mcp::block_processor::process_missing(std::shared_ptr<mcp::block_processor_item> item_a, std::unordered_set<mcp::block_hash> const & missings, h256Hash const & transactions)
 {
-    if (m_sync->is_syncing())
+	/// if the block links too much,request_catchup exec before this function, modify_syncing status, ensures that the block's missing transactions are requested.
+    if (m_sync->is_syncing() && !(!item_a->is_sync() && !item_a->joint.summary_hash.is_zero()))
         return;
 	bool success(unhandle->add(item_a->block_hash, missings, transactions, item_a));
 	if (success)

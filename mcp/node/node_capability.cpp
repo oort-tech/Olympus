@@ -901,6 +901,12 @@ void mcp::requesting_mageger::erase(mcp::block_hash const& hash_a)
 	}
 }
 
+bool mcp::requesting_mageger::exist(mcp::block_hash const& hash_a)
+{
+	auto it(m_request_info.get<1>().find(hash_a));
+	return it != m_request_info.get<1>().end();
+}
+
 std::list<mcp::requesting_item> mcp::requesting_mageger::clear_by_time(uint64_t const& time_a)
 {
 	std::list<mcp::requesting_item> result;
@@ -926,7 +932,7 @@ std::list<mcp::requesting_item> mcp::requesting_mageger::clear_by_time(uint64_t 
 
 std::string mcp::requesting_mageger::get_info()
 {
-	std::string ret = " ,arrival_filter_count:" + std::to_string(arrival_filter_count);
+	std::string ret = "size:" + std::to_string(size()) + " ,arrival_filter_count:" + std::to_string(arrival_filter_count);
 	return ret;
 }
 

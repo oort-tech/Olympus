@@ -79,6 +79,7 @@ namespace mcp
 		bool add(mcp::requesting_item& item_a, bool const& count_a = false);
 		bool exist_erase(mcp::sync_request_hash const& request_id_a);
 		void erase(mcp::block_hash const& hash_a);
+		bool exist(mcp::block_hash const& hash_a);
 		std::list<requesting_item> clear_by_time(uint64_t const& time_a);
 		uint64_t size() { return m_request_info.size(); }
 

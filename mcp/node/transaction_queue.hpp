@@ -43,7 +43,7 @@ namespace mcp
 		/// @param _tx Trasnaction data.
 		/// @param _ik Set to Retry to force re-addinga transaction that was previously dropped.
 		/// @returns Import result code.
-		ImportResult import(Transaction const& _tx, bool isLoccal, IfDropped _ik = IfDropped::Ignore);
+		ImportResult import(Transaction const& _tx, bool isLoccal, bool ignoreFuture = false, IfDropped _ik = IfDropped::Ignore);
 
 		ImportResult importLocal(Transaction const& _tx);
 
@@ -138,7 +138,7 @@ namespace mcp
 		using PriorityQueue = std::multiset<VerifiedTransaction, PriorityCompare>;
 
 		ImportResult check_WITH_LOCK(h256 const& _h, IfDropped _ik);
-		ImportResult manageImport_WITH_LOCK(h256 const& _h, Transaction const& _transaction, bool isLocal);
+		ImportResult manageImport_WITH_LOCK(h256 const& _h, Transaction const& _transaction, bool isLocal, bool ignoreFuture);
 
 		ImportResult insertCurrent_WITH_LOCK(std::pair<h256, Transaction> const& _p, bool isLocal);
 		ImportResult insertFuture_WITH_LOCK(std::pair<h256, Transaction> const& _p, bool isLocal);
