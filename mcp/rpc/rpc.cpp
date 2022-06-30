@@ -1182,7 +1182,7 @@ void mcp::rpc_handler::block()
 
 	std::string hash_text = request["hash"];
 	mcp::uint256_union hash;
-	auto error(hash.decode_hex(hash_text));
+	auto error(hash.decode_hex(hash_text,true));
 	if (!error)
 	{
 		mcp::json response_l;
@@ -1271,7 +1271,7 @@ void mcp::rpc_handler::block_state()
 
 	std::string hash_text = request["hash"];
 	mcp::uint256_union hash;
-	auto error(hash.decode_hex(hash_text));
+	auto error(hash.decode_hex(hash_text, true));
 	if (!error)
 	{
 		mcp::json response_l;
@@ -1284,14 +1284,6 @@ void mcp::rpc_handler::block_state()
 
 			mcp::json block_state_l;
 			block_state_l["hash"] = hash.to_string();
-			//mcp::account contract_account(0);
-			//if (block->type() == mcp::block_type::light && block->isCreation() && state->is_stable && (state->status == mcp::block_status::ok))
-			//{
-			//	std::shared_ptr<mcp::account_state> acc_state(m_store.account_state_get(transaction, state->receipt->from_state));
-			//	assert_x(acc_state);
-			//	contract_account = toAddress(block->from(), acc_state->nonce() - 1);
-			//}
-
 			state->serialize_json(block_state_l);
 
 			response_l["block_state"] = block_state_l;
@@ -1314,59 +1306,49 @@ void mcp::rpc_handler::block_state()
 
 void mcp::rpc_handler::block_states()
 {
-	//mcp::rpc_blocks_error_code error_code_l;
+	mcp::rpc_blocks_error_code error_code_l;
 
-	//std::vector<std::string> hashes;
-	//mcp::json response_l;
-	//mcp::json states_l = mcp::json::array();
-	//mcp::db::db_transaction transaction(m_store.create_transaction());
+	std::vector<std::string> hashes;
+	mcp::json response_l;
+	mcp::json states_l = mcp::json::array();
+	mcp::db::db_transaction transaction(m_store.create_transaction());
 
-	//if (!request.count("hashes") || (!request["hashes"].is_array()))
-	//{
-	//	error_code_l = mcp::rpc_blocks_error_code::invalid_hash;
-	//	error_response(response, (int)error_code_l, err.msg(error_code_l));
-	//	return;
-	//}
+	if (!request.count("hashes") || (!request["hashes"].is_array()))
+	{
+		error_code_l = mcp::rpc_blocks_error_code::invalid_hash;
+		error_response(response, (int)error_code_l, err.msg(error_code_l));
+		return;
+	}
 
-	//std::vector<std::string> hashes_l = request["hashes"];
-	//for (std::string const &hash_text : hashes_l)
-	//{
-	//	mcp::uint256_union hash;
-	//	auto error(hash.decode_hex(hash_text));
-	//	if (!error)
-	//	{
-	//		auto state(m_cache->block_state_get(transaction, hash));
-	//		mcp::json state_l;
-	//		if (state != nullptr)
-	//		{
-	//			auto block(m_cache->block_get(transaction, hash));
-	//			assert_x(block);
+	std::vector<std::string> hashes_l = request["hashes"];
+	for (std::string const &hash_text : hashes_l)
+	{
+		mcp::uint256_union hash;
+		auto error(hash.decode_hex(hash_text, true));
+		if (!error)
+		{
+			auto state(m_cache->block_state_get(transaction, hash));
+			mcp::json state_l;
+			if (state != nullptr)
+			{
+				state_l["hash"] = hash.to_string();
+				state->serialize_json(state_l);
+			}
+			else
+				state_l = nullptr;
 
-	//			state_l["hash"] = hash.to_string();
-	//			//mcp::account contract_address;
-	//			//if (block->type() == mcp::block_type::light && block->isCreation() && state->is_stable && (state->status == mcp::block_status::ok))
-	//			//{
-	//			//	std::shared_ptr<mcp::account_state> acc_state(m_store.account_state_get(transaction, state->receipt->from_state));
-	//			//	assert_x(acc_state);
-	//			//	contract_address = toAddress(block->from(), acc_state->nonce() - 1);
-	//			//}
-	//			state->serialize_json(state_l);
-	//		}
-	//		else
-	//			state_l = nullptr;
-
-	//		states_l.push_back(state_l);
-	//	}
-	//	else
-	//	{
-	//		error_code_l = mcp::rpc_blocks_error_code::invalid_hash;
-	//		error_response(response, (int)error_code_l, err.msg(error_code_l) + "," + hash_text);
-	//		return;
-	//	}
-	//}
-	//response_l["block_states"] = states_l;
-	//error_code_l = mcp::rpc_blocks_error_code::ok;
-	//error_response(response, (int)error_code_l, err.msg(error_code_l), response_l);
+			states_l.push_back(state_l);
+		}
+		else
+		{
+			error_code_l = mcp::rpc_blocks_error_code::invalid_hash;
+			error_response(response, (int)error_code_l, err.msg(error_code_l) + "," + hash_text);
+			return;
+		}
+	}
+	response_l["block_states"] = states_l;
+	error_code_l = mcp::rpc_blocks_error_code::ok;
+	error_response(response, (int)error_code_l, err.msg(error_code_l), response_l);
 }
 
 void mcp::rpc_handler::block_traces()
@@ -1445,7 +1427,7 @@ void mcp::rpc_handler::block_traces()
 
 void mcp::rpc_handler::stable_blocks()
 {
-	/*bool error(false);
+	bool error(false);
 	mcp::rpc_stable_blocks_error_code error_code_l;
 
 	uint64_t index(0);
@@ -1495,8 +1477,7 @@ void mcp::rpc_handler::stable_blocks()
 		auto block = m_cache->block_get(transaction, block_hash_l);
 		assert_x(block);
 
-		mcp::json block_l;
-		block->serialize_json(block_l);
+		mcp::json block_l = toJson(*block);
 		block_list_l.push_back(block_l);
 
 		blocks_count++;
@@ -1513,7 +1494,7 @@ void mcp::rpc_handler::stable_blocks()
 		response_l["next_index"] = nullptr;
 
 	error_code_l = mcp::rpc_stable_blocks_error_code::ok;
-	error_response(response, (int)error_code_l, err.msg(error_code_l), response_l);*/
+	error_response(response, (int)error_code_l, err.msg(error_code_l), response_l);
 }
 
 void mcp::rpc_handler::estimate_gas()

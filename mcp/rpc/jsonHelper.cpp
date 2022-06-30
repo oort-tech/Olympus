@@ -163,12 +163,12 @@ namespace mcp
 		res["hash"] = _b.hash().to_string(true);
 		res["from"] = _b.from().to_account();
 
-		res["previous"] = _b.previous().to_string();
+		res["previous"] = _b.previous().to_string(true);
 
 		mcp::json j_parents = mcp::json::array();
 		for (auto & p : _b.parents())
 		{
-			j_parents.push_back(p.to_string());
+			j_parents.push_back(p.to_string(true));
 		}
 		res["parents"] = j_parents;
 
@@ -177,9 +177,9 @@ namespace mcp
 			j_links.push_back(toJS(l));
 		res["links"] = j_links;
 
-		res["last_summary"] = _b.last_summary().to_string();
-		res["last_summary_block"] = _b.last_summary_block().to_string();
-		res["last_stable_block"] = _b.last_stable_block().to_string();
+		res["last_summary"] = _b.last_summary().to_string(true);
+		res["last_summary_block"] = _b.last_summary_block().to_string(true);
+		res["last_stable_block"] = _b.last_stable_block().to_string(true);
 		res["timestamp"] = _b.exec_timestamp();
 		res["gasLimit"] = toJS(mcp::block_max_gas);
 		res["signature"] = ((Signature)_b.signature()).hex();
