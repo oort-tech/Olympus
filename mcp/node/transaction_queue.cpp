@@ -46,7 +46,7 @@ namespace mcp
 			return ImportResult::AlreadyKnown;
 
 		mcp::db::db_transaction t(m_store.create_transaction());
-		if (_ik == IfDropped::Ignore && (m_dropped.touch(_h) || m_cache->transaction_exists(t, _h)))
+		if (_ik == IfDropped::Ignore && (m_dropped.contains(_h) || m_cache->transaction_exists(t, _h)))
 			return ImportResult::AlreadyInChain;
 
 		return ImportResult::Success;
