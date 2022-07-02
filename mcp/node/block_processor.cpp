@@ -671,27 +671,17 @@ void mcp::block_processor::do_process_one(mcp::timeout_db_transaction & timeout_
 void mcp::block_processor::do_process_dag_item(mcp::timeout_db_transaction & timeout_tx, std::shared_ptr<mcp::block_processor_item> item_a)
 {
 	std::shared_ptr<mcp::block> block(item_a->joint.block);
+	mcp::db::db_transaction & transaction(timeout_tx.get_transaction());
 
 	mcp::block_hash const & block_hash(block->hash());
 	for (auto const & link_hash : block->links())
 	{
 		/// Unprocessed transactions cannot be discarded because the cache is full.  todo zhouyou
 		auto t = m_tq->get(link_hash);
-		if (t == nullptr) /// transaction maybe processed yet
+		if (t == nullptr || m_local_cache->transaction_exists(transaction, link_hash)) /// transaction maybe processed yet
 		{
 			continue;
 		}
-		/// m_local_cache->transaction_exists(timeout_tx.get_transaction(), t->sha3()) /// do not need get exist,must exist,if not dag_validate return missing links
-
-		//////test get RAW transaction to test interface
-		//dev::bytes b_value;
-		//{
-		//	dev::RLPStream s;
-		//	t.streamRLP(s);
-		//	s.swapOut(b_value);
-		//}
-		//LOG(m_log.info) << ":::::::::::" << toJS(b_value);
-
 		m_chain->save_transaction(timeout_tx, m_local_cache, t);
 	}
 
