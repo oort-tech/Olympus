@@ -628,8 +628,13 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 				for (auto i = 0; i < links.size(); i++)
 				{
 					h256 const& link_hash = links[i];
-					if (cache_a->transaction_receipt_exists(transaction_a, link_hash))/// transaction maybe processed yet
+					auto receipt = cache_a->transaction_receipt_get(transaction_a, link_hash);
+					if (receipt)/// transaction maybe processed yet,but summary need used receipt even if it has been processed.
 					{
+						RLPStream receiptRLP;
+						receipt->streamRLP(receiptRLP);
+						receipts.push_back(receiptRLP.out());
+
 						index++;
 						continue;
 					}
