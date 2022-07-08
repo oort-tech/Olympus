@@ -398,12 +398,14 @@ void mcp::rpc_handler::account_create(mcp::json &j_response, bool &)
 	{
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidCharactersPassword());
 	}
+	bool backup_l(true);
 
-	if (request.count("backup") || !request["backup"].is_boolean())
+	if (request.count("backup"))
 	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidGenNextWorkValue());
+		if (!request["backup"].is_boolean())
+			BOOST_THROW_EXCEPTION(RPC_Error_InvalidGenNextWorkValue());
+		backup_l = request["backup"];
 	}
-	bool backup_l = request["backup"];
 
 	bool gen_next_work_l(false);
 	dev::Address new_account = m_key_manager->create(password, gen_next_work_l, backup_l);
