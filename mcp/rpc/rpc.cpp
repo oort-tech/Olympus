@@ -608,7 +608,7 @@ void mcp::rpc_handler::account_code(mcp::json &j_response, bool &)
 	mcp::db::db_transaction transaction(m_store.create_transaction());
 	chain_state c_state(transaction, 0, m_store, m_chain, m_cache);
 
-	j_response["account_code"] = bytes_to_hex(c_state.code(account));
+	j_response["account_code"] = toJS(c_state.code(account));
 }
 
 void mcp::rpc_handler::account_balance(mcp::json &j_response, bool &)
@@ -1839,7 +1839,7 @@ void mcp::rpc_handler::eth_estimateGas(mcp::json &j_response, bool &)
 		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
 	}
 
-	TransactionSkeleton t = mcp::toTransactionSkeletonForEth(params[0]);
+	TransactionSkeleton ts = mcp::toTransactionSkeletonForEth(params[0]);
 
 	dev::eth::McInfo mc_info;
 	uint64_t block_number = m_chain->last_stable_mci();
@@ -1849,7 +1849,17 @@ void mcp::rpc_handler::eth_estimateGas(mcp::json &j_response, bool &)
 	}
 
 	mcp::db::db_transaction transaction(m_store.create_transaction());
-	std::pair<u256, bool> result = m_chain->estimate_gas(transaction, m_cache, t.from, t.value, t.to, t.data, static_cast<int64_t>(t.gas), t.gasPrice, mc_info);
+
+	std::pair<u256, bool> result = m_chain->estimate_gas(
+		transaction,
+		m_cache,
+		ts.from,
+		ts.value,
+		ts.to,
+		ts.data,
+		static_cast<int64_t>(ts.gas),
+		ts.gasPrice,
+		mc_info);
 
 	/// this error is reported if the gas less than 21000, the logic has not been confirmed, response other code ?
 	if (!result.second)
@@ -2503,9 +2513,9 @@ void mcp::rpc_handler::eth_syncing(mcp::json &j_response, bool &)
 	uint64_t last_stable_index(m_chain->last_stable_index());
 
 	mcp::json result;
-	result["startingBlock"] = uint64_to_hex_nofill(last_stable_mci);
-	result["currentBlock"] = uint64_to_hex_nofill(last_mci);
-	result["highestBlock"] = uint64_to_hex_nofill(last_stable_index);
+	result["startingBlock"] = toJS(last_stable_mci);
+	result["currentBlock"] = toJS(last_mci);
+	result["highestBlock"] = toJS(last_stable_index);
 
 	j_response["result"] = result;
 }

@@ -446,6 +446,7 @@ void test_encrypt_decrypt()
 
 void test_eth_sign()
 {
+	/*
 	dev::bytes data;
 	std::string data_text = "0x5363686f6f6c627573";
 	if (mcp::hex_to_bytes(data_text, data))
@@ -468,4 +469,5 @@ void test_eth_sign()
 
 	std::cout << "Message: " << msg.data() << std::endl;
 	std::cout << "Keccak256" << mcp::bytes_to_hex(digest) << std::endl;
+	*/
 }

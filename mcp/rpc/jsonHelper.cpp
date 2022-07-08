@@ -111,24 +111,6 @@ namespace mcp
 		return ret;
 	}
 
-	/*
-	bytes jsToBytes(std::string const & _s, OnFailed _f)
-	{
-		try
-		{
-			return fromHex(_s, WhenError::Throw);
-		}
-		catch (...)
-		{
-			if (_f == OnFailed::InterpretRaw)
-				return asBytes(_s);
-			else if (_f == OnFailed::Throw)
-				BOOST_THROW_EXCEPTION(InvalidData());
-		}
-		return bytes();
-	}
-	*/
-
 	mcp::json toJson(Transaction const& _t)
 	{
 		mcp::json res;
@@ -147,9 +129,6 @@ namespace mcp
 			res["gasPrice"] = toJS(_t.gasPrice());
 			res["nonce"] = toJS(_t.nonce());
 			res["value"] = toJS(_t.value());
-			//res["blockHash"] = toJS(_t.blockHash());
-			//res["transactionIndex"] = toJS(_t.transactionIndex());
-			//res["blockNumber"] = toJS(_t.blockNumber());
 			res["r"] = toJS(_t.signature().r);
 			res["s"] = toJS(_t.signature().s);
 			res["v"] = toJS(_t.rawV());

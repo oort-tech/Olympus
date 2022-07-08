@@ -496,7 +496,7 @@ void hankshake::transition(boost::system::error_code _ech)
 		m_nextState = StartSession;
 
 		// read frame header
-		unsigned const handshakeSize = /*crypto_cipher_len + */mcp::p2p::handshake_header_size;
+		unsigned const handshakeSize = mcp::p2p::handshake_header_size;
 		m_handshakeInBuffer.resize(handshakeSize);
 		ba::async_read(*m_socket, boost::asio::buffer(m_handshakeInBuffer, handshakeSize), [this, self](boost::system::error_code ec, std::size_t)
 		{

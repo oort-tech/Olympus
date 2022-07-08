@@ -33,10 +33,6 @@ namespace mcp
 			return (BlockNumber)jsToInt(_js);
 	}
 
-	//enum class OnFailed { InterpretRaw, Empty, Throw };
-	//bytes jsToBytes(std::string const& _s, OnFailed _f = OnFailed::Empty);
-
-	//response
 	mcp::json toJson(Transaction const& _t);
 
 	mcp::json toJson(LocalisedTransaction const& _t);

@@ -23,24 +23,11 @@
 
 #include <libdevcrypto/Common.h>
 
-// #define crypto_cipher_len crypto_box_MACBYTES
-// #define crypto_sign_len crypto_sign_BYTES
-
 #define STR(s) STR_TEMP(s)
 #define STR_TEMP(s) #s
 
 namespace mcp
 {
-	// some utility functions
-	std::string uint64_to_hex(uint64_t);
-	std::string uint64_to_hex_nofill(uint64_t);
-	std::string uint256_to_hex_nofill(uint256_t);
-	bool hex_to_uint64(std::string const &, uint64_t &, bool show_base = false);
-	bool hex_to_uint256(std::string const & value_a, uint256_t & target_a, bool show_base = false);
-	std::string bytes_to_hex(dev::bytes const & b);
-	int from_hex_char(char c) noexcept;
-	bool hex_to_bytes(std::string const & s, dev::bytes & out);
-
     template <typename... Args>
     class Signal
     {

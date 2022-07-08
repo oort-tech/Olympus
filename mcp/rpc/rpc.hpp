@@ -16,11 +16,6 @@
 
 namespace mcp
 {
-/*
-void rpc_response(std::function<void(mcp::json const &)> response_a, int const& error_code, std::string const & message_a, mcp::json& json_a);
-void rpc_response(std::function<void(mcp::json const &)> response_a, int const& error_code, std::string const & message_a);
-void rpc_response(std::function<void(mcp::json const &)> response_a, std::string const & message_a);
-*/
 
 class rpc_config
 {
@@ -115,7 +110,7 @@ public:
 	void account_block_list(mcp::json & j_response, bool & async);
 	void account_state_list(mcp::json & j_response, bool & async);
 
-	void block (mcp::json & j_response, bool & async);
+	void block(mcp::json & j_response, bool & async);
 	void block_state(mcp::json & j_response, bool & async);
 	void block_states(mcp::json & j_response, bool & async);
 	void block_traces(mcp::json & j_response, bool & async);

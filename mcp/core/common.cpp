@@ -810,7 +810,7 @@ void mcp::call_trace_action::serialize_json(mcp::json & json_a) const
 	json_a["call_type"] = call_type;
 	json_a["from"] = dev::toJS(from);
 	json_a["gas"] = gas.str();
-	json_a["data"] = mcp::bytes_to_hex(data);
+	json_a["data"] = dev::toJS(data);
 	json_a["to"] = dev::toJS(to);
 	json_a["amount"] = amount.str();
 }
@@ -834,7 +834,7 @@ void mcp::call_trace_result::stream_RLP(dev::RLPStream & s) const
 void mcp::call_trace_result::serialize_json(mcp::json & json_a) const
 {
 	json_a["gas_used"] = gas_used.str();
-	json_a["output"] = mcp::bytes_to_hex(output);
+	json_a["output"] = dev::toJS(output);
 }
 
 mcp::create_trace_action::create_trace_action(bool & error_a, dev::RLP const & r)
@@ -859,7 +859,7 @@ void mcp::create_trace_action::serialize_json(mcp::json & json_a) const
 {
 	json_a["from"] = dev::toJS(from);
 	json_a["gas"] = gas.str();
-	json_a["init"] = mcp::bytes_to_hex(init);
+	json_a["init"] = dev::toJS(init);
 	json_a["amount"] = amount.str();
 }
 
@@ -884,7 +884,7 @@ void mcp::create_trace_result::serialize_json(mcp::json & json_a) const
 {
 	json_a["gas_used"] = gas_used.str();
 	json_a["contract_account"] = dev::toJS(contract_account);
-	json_a["code"] = mcp::bytes_to_hex(code);
+	json_a["code"] = dev::toJS(code);
 }
 
 mcp::suicide_trace_action::suicide_trace_action(bool & error_a, dev::RLP const & r)

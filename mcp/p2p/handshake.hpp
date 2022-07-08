@@ -22,7 +22,6 @@ namespace mcp
 			uint16_t version;
 			mcp::mcp_networks network;
 			std::list<capability_desc> cap_descs;
-			// added by michael at 2/26
 			dev::PublicCompressed pubkey;
 		};
 
