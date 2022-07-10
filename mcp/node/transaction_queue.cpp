@@ -60,7 +60,7 @@ namespace mcp
 		// Check if we already know this transaction.
 		h256 h = _transaction.sha3();
 
-		ImportResult ret;
+		std::pair<ImportResult, h256Hash> ret;
 		{
 			UpgradableGuard l(m_lock);
 			auto ir = check_WITH_LOCK(h, _ik);
@@ -125,7 +125,15 @@ namespace mcp
 #endif // 1
 			}
 		}
-		return ret;
+
+		///Notify unHandle to handle dependencies,block process block missing links,but before add to unhandle transaction come in.
+		if (ImportResult::Success == ret.first)/// first import && successed,broadcast it
+		{
+			if (ret.second.size() > 0)
+				m_onImportProcessed(ret.second);
+			
+		}
+		return ret.first;
 	}
 
 	ImportResult TransactionQueue::importLocal(Transaction const& _transaction)
@@ -144,13 +152,17 @@ namespace mcp
 	{
 		ReadGuard l(m_lock);
 		h256s ret;
-		for (auto cs = m_currentByAddressAndNonce.begin(); ret.size() < _limit && cs != m_currentByAddressAndNonce.end(); ++cs)
+		for (auto cs = m_currentByAddressAndNonce.begin(); cs != m_currentByAddressAndNonce.end(); ++cs)
 		{
 			for (auto t = cs->second.begin(); t != cs->second.end(); t++)
 			{
 				auto hash = (*t->second).transaction.sha3();
 				if (!_avoid.count(hash))
+				{
 					ret.push_back(hash);
+					if (ret.size() == _limit)
+						return ret;
+				}
 			}
 		}
 			
@@ -170,7 +182,7 @@ namespace mcp
 	}
 
 
-	ImportResult TransactionQueue::manageImport_WITH_LOCK(h256 const& _h, Transaction const& _transaction, bool isLocal, bool ignoreFuture)
+	std::pair<ImportResult, h256Hash> TransactionQueue::manageImport_WITH_LOCK(h256 const& _h, Transaction const& _transaction, bool isLocal, bool ignoreFuture)
 	{
 		try
 		{
@@ -185,16 +197,19 @@ namespace mcp
 
 			if (NonceRange::FutureTooBig == r)
 			{
-				return ImportResult::FutureTimeKnown; ///if local throw error,if broadcast punish remote node.
+				return make_pair(ImportResult::FutureTimeKnown, h256Hash()); ///if local throw error,if broadcast punish remote node.
 			}
 			else if (NonceRange::Future == r)/// future
 			{
-				return insertFuture_WITH_LOCK(make_pair(_h, _transaction), isLocal);
+				auto r = insertFuture_WITH_LOCK(make_pair(_h, _transaction), isLocal);
+				return make_pair(r, h256Hash());
 				LOG(m_log.debug) << "Queued vaguely not legit-looking transaction " << _h.hex();
 			}
 			else ///current
 			{
-				return insertCurrent_WITH_LOCK(make_pair(_h, _transaction), isLocal);
+				auto r = insertCurrent_WITH_LOCK(make_pair(_h, _transaction), isLocal);
+				r.second.insert(_h);
+				return r;
 				LOG(m_log.debug) << "Queued vaguely legit-looking transaction " << _h.hex();
 			}
 
@@ -203,15 +218,13 @@ namespace mcp
 		catch (Exception const& _e)
 		{
 			LOG(m_log.debug) << "Ignoring invalid transaction: " << diagnostic_information(_e);
-			return ImportResult::Malformed;
+			return make_pair(ImportResult::Malformed, h256Hash());
 		}
 		catch (std::exception const& _e)
 		{
 			LOG(m_log.debug) << "Ignoring invalid transaction: " << _e.what();
-			return ImportResult::Malformed;
+			return make_pair(ImportResult::Malformed, h256Hash());
 		}
-
-		return ImportResult::Success;
 	}
 
 	u256 TransactionQueue::maxNonce(Address const& _a) const
@@ -233,12 +246,12 @@ namespace mcp
 	}
 
 
-	ImportResult TransactionQueue::insertCurrent_WITH_LOCK(std::pair<h256, Transaction> const& _p, bool isLocal)
+	std::pair<ImportResult, h256Hash> TransactionQueue::insertCurrent_WITH_LOCK(std::pair<h256, Transaction> const& _p, bool isLocal)
 	{
 		if (m_currentByHash.count(_p.first))
 		{
 			LOG(m_log.debug) << "Transaction hash" << _p.first.hex() << "already in current?!";
-			return ImportResult::Success;
+			return make_pair(ImportResult::Success, h256Hash());
 		}
 		Transaction const& ts = _p.second;
 		auto from = ts.sender();
@@ -251,7 +264,7 @@ namespace mcp
 				if (ts.gasPrice() < (*t->second).transaction.gasPrice())
 				{
 					if (isLocal) /// if local return error
-						return ImportResult::OverbidGasPrice;
+						return make_pair(ImportResult::OverbidGasPrice, h256Hash());
 
 					/// insert into parallel queue
 					PriorityQueue::iterator handle = m_current.emplace(VerifiedTransaction(ts));
@@ -288,7 +301,7 @@ namespace mcp
 					t->second = handle;
 				}
 				m_known.insert(_p.first);
-				return ImportResult::Success;
+				return make_pair(ImportResult::Success, h256Hash());
 			}
 		}
 
@@ -300,9 +313,9 @@ namespace mcp
 		m_currentByHash[_p.first] = handle;
 
 		/// Move following transactions from future to current
-		makeCurrent_WITH_LOCK(ts);
+		auto hashs = makeCurrent_WITH_LOCK(ts);
 		m_known.insert(_p.first);
-		return ImportResult::Success;
+		return make_pair(ImportResult::Success, hashs);
 	}
 
 	ImportResult TransactionQueue::insertFuture_WITH_LOCK(std::pair<h256, Transaction> const& _p, bool isLocal)
@@ -420,8 +433,9 @@ namespace mcp
 	}
 
 
-	void TransactionQueue::makeCurrent_WITH_LOCK(Transaction const& _t)
+	h256Hash TransactionQueue::makeCurrent_WITH_LOCK(Transaction const& _t)
 	{
+		h256Hash ret;
 		//bool newCurrent = false;
 		auto fs = m_future.find(_t.from());
 		if (fs != m_future.end())
@@ -437,6 +451,7 @@ namespace mcp
 					PriorityQueue::iterator handle = m_current.emplace(move(ft->second));
 					inserted.first->second = handle;
 					m_currentByHash[(*handle).transaction.sha3()] = handle;
+					ret.insert((*handle).transaction.sha3());
 					--m_futureSize;
 					++ft;
 					++nonce;
@@ -448,6 +463,8 @@ namespace mcp
 			}
 		}
 
+		return ret;
+		/// todo used 
 		//if (newCurrent)
 		//	m_onReady();
 	}
@@ -547,12 +564,8 @@ namespace mcp
 				bool ignoreFuture = false;
 				if (m_capability->m_requesting.exist(mcp::block_hash(t.sha3())))
 					ignoreFuture = true;
-				ImportResult ir = import(t,false, ignoreFuture);
+				auto ir = import(t,false, ignoreFuture);
 				m_onImport(ir, t.sha3(), work.nodeId);
-
-				///Notify unHandle to handle dependencies,block process block missing links,but before add to unhandle transaction come in.
-				if (ImportResult::Success == ir || ImportResult::AlreadyKnown == ir || ImportResult::AlreadyInChain == ir)
-					m_onImportProcessed(t.sha3());
 
 				if (ImportResult::Success == ir)/// first import && successed,broadcast it
 				{

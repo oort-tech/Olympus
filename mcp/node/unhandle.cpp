@@ -13,14 +13,15 @@ mcp::unhandle_item::unhandle_item(
 {
 }
 
-mcp::unhandle_cache::unhandle_cache(std::shared_ptr<mcp::block_arrival> block_arrival_a, size_t const &capacity_a) :
+mcp::unhandle_cache::unhandle_cache(std::shared_ptr<mcp::block_arrival> block_arrival_a, std::shared_ptr<TransactionQueue> tq, size_t const &capacity_a) :
 	m_block_arrival(block_arrival_a),
+	m_tq(tq),
 	m_capacity(capacity_a)
 {
 }
 
 /// hash_a must be block hash
-bool mcp::unhandle_cache::add(mcp::block_hash const &hash_a, 
+mcp::unhandle_add_result mcp::unhandle_cache::add(mcp::block_hash const &hash_a,
 	std::unordered_set<mcp::block_hash> const &dependency_hashs_a, 
 	h256Hash const &transactions,
 	std::shared_ptr<mcp::block_processor_item> item_a)
@@ -29,11 +30,22 @@ bool mcp::unhandle_cache::add(mcp::block_hash const &hash_a,
 
 	assert_x(!dependency_hashs_a.count(hash_a));
 
+	/// Determine if a transaction exists
+	/// validation maybe missing,but transaction maybe arrived before add unhandle.
+	h256Hash trs;
+	for (h256 const &h : transactions)
+	{
+		if (!m_tq->exist(h))
+			trs.insert(h);
+	}
+	if (dependency_hashs_a.empty() && trs.empty())
+		return unhandle_add_result::Retry;
+
     bool exists(m_unhandles.count(hash_a));
     if (exists)
     {
 		unhandle_exist_count++;
-        return false;
+        return unhandle_add_result::Exist;
     }
 
 	/// only accept unknown dependencies when size reach at half of capacity
@@ -41,12 +53,12 @@ bool mcp::unhandle_cache::add(mcp::block_hash const &hash_a,
 		&& !m_missings.count(hash_a))
 	{
 		unhandle_full_count++;
-        return false;
+        return unhandle_add_result::Exist;
 	}
 	
 	add_unhandle_ok_count++;
 
-	mcp::unhandle_item u_item(hash_a, item_a, dependency_hashs_a, transactions);
+	mcp::unhandle_item u_item(hash_a, item_a, dependency_hashs_a, trs);
 	m_unhandles[hash_a] = u_item;
 	/// delete unknown dependency
 	if (m_missings.count(hash_a))
@@ -158,7 +170,7 @@ bool mcp::unhandle_cache::add(mcp::block_hash const &hash_a,
              break;
 		}
 	}
-    return true;
+    return unhandle_add_result::Success;
 }
 
 std::unordered_set<std::shared_ptr<mcp::block_processor_item>> mcp::unhandle_cache::release_dependency(mcp::block_hash const &dependency_hash_a)
@@ -203,44 +215,48 @@ std::unordered_set<std::shared_ptr<mcp::block_processor_item>> mcp::unhandle_cac
             m_unhandles.erase(dependency_hash_a);
         }
 	}
+
 	return result;
 }
 
-std::unordered_set<std::shared_ptr<mcp::block_processor_item>> mcp::unhandle_cache::release_transaction_dependency(h256 const &h)
+std::unordered_set<std::shared_ptr<mcp::block_processor_item>> mcp::unhandle_cache::release_transaction_dependency(h256Hash const &hashs)
 {
 	std::lock_guard<std::mutex> lock(m_mutux);
-
 	std::unordered_set<std::shared_ptr<mcp::block_processor_item>> result;
-	if (!m_transactions.count(h))
-		return result;
-
-	std::shared_ptr<std::unordered_set<mcp::block_hash>> unhandle_hashs = m_transactions[h];
-	for (auto it : *unhandle_hashs)
+	for (auto h : hashs)
 	{
-		mcp::block_hash const &unhandle_hash = it;
+		if (!m_transactions.count(h))
+			continue;
 
-		if (!m_unhandles.count(unhandle_hash))
+		std::shared_ptr<std::unordered_set<mcp::block_hash>> unhandle_hashs = m_transactions[h];
+		for (auto it : *unhandle_hashs)
 		{
-			LOG(m_log.info) << "m_unhandles dont have:hash:" << unhandle_hash.to_string() << ",dependency_hash:" << h.hex();
-		}
-		assert_x(m_unhandles.count(unhandle_hash));
-		auto &unhandle = m_unhandles[unhandle_hash];
-		unhandle.transactions.erase(h);
-		if (unhandle.dependency_hashs.empty() && unhandle.transactions.empty())
-		{
-			result.insert(unhandle.item);
+			mcp::block_hash const &unhandle_hash = it;
 
-			del_unhandle_in_dependencies(unhandle_hash);
-			m_unhandles.erase(unhandle_hash);
-			//LOG(m_log.info) << "release_dependency:m_unhandles.erase to process hash:" << unhandle_hash.to_string();
-			m_tips.erase(unhandle_hash);
+			if (!m_unhandles.count(unhandle_hash))
+			{
+				LOG(m_log.info) << "m_unhandles dont have:hash:" << unhandle_hash.to_string() << ",dependency_hash:" << h.hex();
+			}
+			assert_x(m_unhandles.count(unhandle_hash));
+			auto &unhandle = m_unhandles[unhandle_hash];
+			unhandle.transactions.erase(h);
+			if (unhandle.dependency_hashs.empty() && unhandle.transactions.empty())
+			{
+				result.insert(unhandle.item);
+
+				del_unhandle_in_dependencies(unhandle_hash);
+				m_unhandles.erase(unhandle_hash);
+				//LOG(m_log.info) << "release_dependency:m_unhandles.erase to process hash:" << unhandle_hash.to_string();
+				m_tips.erase(unhandle_hash);
+			}
 		}
+
+		//delete dependency
+		m_transactions.erase(h);
+		//delete unknown dependencies
+		m_light_missings.erase(h);
 	}
 
-	//delete dependency
-	m_transactions.erase(h);
-	//delete unknown dependencies
-	m_light_missings.erase(h);
 	return result;
 }
 

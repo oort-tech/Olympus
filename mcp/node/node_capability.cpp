@@ -821,11 +821,12 @@ void mcp::node_capability::onTransactionImported(ImportResult _ir, h256 const& _
 	///if used sync_async io service execute delay, maybe some transactions through the filter
 	if (_h != h256())
 	{
-		std::lock_guard<std::mutex> lock(m_peers_mutex);
-		if (!m_peers.count(_nodeId))
-			return;
 		mcp::block_hash h(_h);
-		m_peers.at(_nodeId).mark_as_known_transaction(_h);
+		std::lock_guard<std::mutex> lock(m_peers_mutex);
+		if (m_peers.count(_nodeId))
+		{
+			m_peers.at(_nodeId).mark_as_known_transaction(_h);
+		}
 		std::lock_guard<std::mutex> rlock(m_requesting_lock);
 		m_requesting.erase(h);
 	}

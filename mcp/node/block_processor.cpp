@@ -71,7 +71,7 @@ mcp::block_processor::block_processor(bool & error_a,
 	m_stopped(false),
 	m_local_cache(std::make_shared<process_block_cache>(cache_a, store_a, tq)),
 	m_last_request_unknown_missing_time(std::chrono::steady_clock::now()),
-	unhandle(std::make_shared<mcp::unhandle_cache>(block_arrival_a))
+	unhandle(std::make_shared<mcp::unhandle_cache>(block_arrival_a, tq))
 {
 	if (error_a)
 		return;
@@ -104,7 +104,7 @@ mcp::block_processor::block_processor(bool & error_a,
 	if (error_a)
 		return;
 
-	m_tq->onImportProcessed([this](h256 const& _h) { onTransactionImported(_h); });
+	m_tq->onImportProcessed([this](h256Hash const& _h) { onTransactionImported(_h); });
 
 	m_mt_process_block_thread = std::thread([this]() { this->mt_process_blocks(); });
 	m_process_block_thread = std::thread([this]() { this->process_blocks(); });
@@ -174,7 +174,7 @@ void mcp::block_processor::add_item(std::shared_ptr<mcp::block_processor_item> i
 		if (is_full() && item_a->joint.level != mcp::joint_processor_level::request)
 			return;
 
-		if (m_block_arrival->recent(block_hash))
+		if (m_block_arrival->recent(block_hash) && item_a->joint.level != mcp::joint_processor_level::request)
 		{
 			//LOG(m_log.debug) << "Recent block:" << block_hash.to_string();
 
@@ -692,14 +692,12 @@ void mcp::block_processor::do_process_dag_item(mcp::timeout_db_transaction & tim
 
 void mcp::block_processor::process_missing(std::shared_ptr<mcp::block_processor_item> item_a, std::unordered_set<mcp::block_hash> const & missings, h256Hash const & transactions)
 {
+	unhandle_add_result r(unhandle->add(item_a->block_hash, missings, transactions, item_a));
 	/// if the block links too much,request_catchup exec before this function, modify_syncing status, ensures that the block's missing transactions are requested.
-    if (m_sync->is_syncing() && !(!item_a->is_sync() && !item_a->joint.summary_hash.is_zero()))
-        return;
-	bool success(unhandle->add(item_a->block_hash, missings, transactions, item_a));
-	if (success)
+	if (m_sync->is_syncing())
+		return;
+	if (r == unhandle_add_result::Success)
 	{
-		//LOG(m_log.debug) << "Add unhandle:" << item_a->block_hash.to_string();
-
 		//to request missing_parents_and_previous
 		uint64_t now = m_steady_clock.now_since_epoch();
 		for (auto it = missings.begin(); it != missings.end(); it++)
@@ -713,9 +711,13 @@ void mcp::block_processor::process_missing(std::shared_ptr<mcp::block_processor_
 			m_sync->request_new_missing_transactions(request_item);
 		}
 	}
-	else
+	else if (r == unhandle_add_result::Exist)
 	{
 		process_existing_missing(item_a->remote_node_id());
+	}
+	else if (r == unhandle_add_result::Retry)
+	{
+		m_blocks_pending.push_front(item_a);
 	}
 }
 
@@ -796,7 +798,7 @@ void mcp::block_processor::on_sync_completed(mcp::p2p::node_id const & remote_no
 	process_existing_missing(remote_node_id_a);
 }
 
-void mcp::block_processor::onTransactionImported(h256 const& _t)
+void mcp::block_processor::onTransactionImported(h256Hash const& _t)
 {
 	std::unordered_set<std::shared_ptr<mcp::block_processor_item>> unhandle_items = unhandle->release_transaction_dependency(_t);
 	if (!unhandle_items.empty())

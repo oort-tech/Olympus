@@ -1945,9 +1945,13 @@ void mcp::node_sync::process_request_joints()
 				h256 h(item_a.m_request_hash.number());
 				if (!m_tq->exist(h))
 				{
-					mcp::transaction_request_message message(item_a.m_request_id, h);
-					send_transaction_request(item_a.m_node_id, message);
-					//LOG(log_sync.info) << "process_request_joints hash:" << message.block_hash.to_string();
+					mcp::db::db_transaction transaction(m_store.create_transaction());
+					if (!m_cache->transaction_exists(transaction,h))
+					{
+						mcp::transaction_request_message message(item_a.m_request_id, h);
+						send_transaction_request(item_a.m_node_id, message);
+						//LOG(log_sync.info) << "process_request_joints hash:" << h.hex();
+					}
 				}
 			}
 			else if (!m_block_processor->unhandle->exists(item_a.m_request_hash) || /// block if existed not request again
@@ -1990,7 +1994,7 @@ void mcp::node_sync::request_new_missing_transactions(mcp::requesting_item& item
 		if (!m_capability->m_requesting.add(item_a, is_timeout))
 		{
 			//h256 h(item_a.m_request_hash.number());
-			//LOG(log_sync.info) << "block already requested:" << h.hex();
+			//LOG(log_sync.info) << "transaction already requested:" << h.hex();
 			return;
 		}
 	}

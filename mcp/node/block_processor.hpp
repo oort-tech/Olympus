@@ -71,6 +71,7 @@ namespace mcp
 	class node_sync;
 	class node_capability;
 	class TransactionQueue;
+	class unhandle_cache;
 	// Processing blocks is a potentially long IO operation
 	// This class isolates block insertion from other operations like servicing network operations
 	class block_processor
@@ -94,7 +95,7 @@ namespace mcp
 		
 		void on_sync_completed(mcp::p2p::node_id const & remote_node_id_a);
 
-		void onTransactionImported(h256 const& _t);
+		void onTransactionImported(h256Hash const& _t);
 
 		bool is_full();
 
