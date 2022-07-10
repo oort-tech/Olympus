@@ -70,7 +70,6 @@ namespace mcp
 			{
 				_transaction.safeSender();  /// Perform EC recovery outside of the write lock
 				UpgradeGuard ul(l);
-				checkTx(_transaction); ///check balance and nonce
 				ret = manageImport_WITH_LOCK(h, _transaction, isLoccal, ignoreFuture);
 
 #if 0	///////////////////////////////test
@@ -138,6 +137,7 @@ namespace mcp
 
 	ImportResult TransactionQueue::importLocal(Transaction const& _transaction)
 	{
+		checkTx(_transaction); ///check balance and nonce
 		auto ret = import(_transaction,true);
 		if (ImportResult::Success == ret)/// first import && successed,broadcast it
 		{
