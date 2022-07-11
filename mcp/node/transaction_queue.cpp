@@ -202,15 +202,15 @@ namespace mcp
 			else if (NonceRange::Future == r)/// future
 			{
 				auto r = insertFuture_WITH_LOCK(make_pair(_h, _transaction), isLocal);
-				return make_pair(r, h256Hash());
 				LOG(m_log.debug) << "Queued vaguely not legit-looking transaction " << _h.hex();
+				return make_pair(r, h256Hash());
 			}
 			else ///current
 			{
 				auto r = insertCurrent_WITH_LOCK(make_pair(_h, _transaction), isLocal);
 				r.second.insert(_h);
-				return r;
 				LOG(m_log.debug) << "Queued vaguely legit-looking transaction " << _h.hex();
+				return r;
 			}
 
 			//m_onReady();

@@ -198,8 +198,7 @@ void mcp::process_block_cache::transaction_put(mcp::db::db_transaction & transac
 
 void mcp::process_block_cache::transaction_del_from_queue(h256 const& _hash)
 {
-	auto r(m_transaction_dels.insert(_hash));
-	assert_x(r.second);
+	m_transaction_dels.push_back(_hash);
 }
 
 
