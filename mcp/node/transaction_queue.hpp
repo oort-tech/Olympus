@@ -43,7 +43,7 @@ namespace mcp
 		/// @param _tx Trasnaction data.
 		/// @param _ik Set to Retry to force re-addinga transaction that was previously dropped.
 		/// @returns Import result code.
-		ImportResult import(Transaction const& _tx, bool isLoccal, IfDropped _ik = IfDropped::Ignore);
+		ImportResult import(Transaction const& _tx, bool isLoccal, bool ignoreFuture = false, IfDropped _ik = IfDropped::Ignore);
 
 		ImportResult importLocal(Transaction const& _tx);
 
@@ -82,7 +82,7 @@ namespace mcp
 		void onImport(std::function<void(ImportResult, h256 const&, p2p::node_id const&)> const& _t){ m_onImport.add(_t);}
 
 		/// Register a handler that will be called once asynchronous verification is comeplte an transaction has been imported
-		void onImportProcessed(std::function<void(h256 const&)> const& _t) { m_onImportProcessed.add(_t); }
+		void onImportProcessed(std::function<void(h256Hash const&)> const& _t) { m_onImportProcessed.add(_t); }
 
 		/// Get transaction queue information
 		std::string getInfo();
@@ -138,11 +138,11 @@ namespace mcp
 		using PriorityQueue = std::multiset<VerifiedTransaction, PriorityCompare>;
 
 		ImportResult check_WITH_LOCK(h256 const& _h, IfDropped _ik);
-		ImportResult manageImport_WITH_LOCK(h256 const& _h, Transaction const& _transaction, bool isLocal);
+		std::pair<ImportResult, h256Hash> manageImport_WITH_LOCK(h256 const& _h, Transaction const& _transaction, bool isLocal, bool ignoreFuture);
 
-		ImportResult insertCurrent_WITH_LOCK(std::pair<h256, Transaction> const& _p, bool isLocal);
+		std::pair<ImportResult, h256Hash> insertCurrent_WITH_LOCK(std::pair<h256, Transaction> const& _p, bool isLocal);
 		ImportResult insertFuture_WITH_LOCK(std::pair<h256, Transaction> const& _p, bool isLocal);
-		void makeCurrent_WITH_LOCK(Transaction const& _t);
+		h256Hash makeCurrent_WITH_LOCK(Transaction const& _t);
 		bool remove_WITH_LOCK(h256 const& _txHash);
 		u256 maxNonce_WITH_LOCK(Address const& _a, BlockNumber const blockTag = PendingBlock) const;
 		NonceRange isFuture_WITH_LOCK(Transaction const& _transaction);
@@ -172,7 +172,7 @@ namespace mcp
 		/// verified broadcast incoming transaction
 		std::condition_variable m_queueReady;
 		Signal<ImportResult, h256 const&, p2p::node_id const&> m_onImport;			///< Called for each import attempt. Arguments are result, transaction id an node id. Be nice and exit fast.
-		Signal<h256 const&> m_onImportProcessed; ///< First import notification unhandle processing dependency.
+		Signal<h256Hash const&> m_onImportProcessed; ///< First import notification unhandle processing dependency.
 		std::vector<std::thread> m_verifiers;
 		std::deque<UnverifiedTransaction> m_unverified;  ///< Pending verification queue
 		mutable Mutex x_queue;                           ///< Verification queue mutex

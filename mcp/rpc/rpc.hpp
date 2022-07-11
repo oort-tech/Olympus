@@ -185,7 +185,7 @@ public:
 	std::string body;
 	mcp::rpc & rpc;
 
-	static const uint32_t list_max_limit = 1000;
+	static const uint32_t list_max_limit = 100;
 
     mcp::json request;
     std::function<void(mcp::json const& )> response;

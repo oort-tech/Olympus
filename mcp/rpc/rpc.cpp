@@ -895,7 +895,6 @@ void mcp::rpc_handler::block_state(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::block_states(mcp::json &j_response, bool &)
 {
-
 	mcp::json states_l = mcp::json::array();
 	mcp::db::db_transaction transaction(m_store.create_transaction());
 
@@ -997,8 +996,6 @@ void mcp::rpc_handler::block_traces(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::stable_blocks(mcp::json &j_response, bool &)
 {
-	bool error(false);
-
 	uint64_t index(0);
 	if (!request.count("index"))
 	{

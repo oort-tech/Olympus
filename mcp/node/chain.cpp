@@ -628,8 +628,13 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 				for (auto i = 0; i < links.size(); i++)
 				{
 					h256 const& link_hash = links[i];
-					if (cache_a->transaction_receipt_exists(transaction_a, link_hash))/// transaction maybe processed yet
+					auto receipt = cache_a->transaction_receipt_get(transaction_a, link_hash);
+					if (receipt)/// transaction maybe processed yet,but summary need used receipt even if it has been processed.
 					{
+						RLPStream receiptRLP;
+						receipt->streamRLP(receiptRLP);
+						receipts.push_back(receiptRLP.out());
+
 						index++;
 						continue;
 					}
@@ -654,6 +659,8 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 						cache_a->transaction_receipt_put(transaction_a, link_hash, std::make_shared<dev::eth::TransactionReceipt>(result.second));
 						std::shared_ptr<mcp::TransactionAddress> td(std::make_shared<mcp::TransactionAddress>(dag_stable_block_hash, index));
 						cache_a->transaction_address_put(transaction_a, link_hash, td);
+						/// exec transaction can reduce, if two or more block linked a transaction,reduce once.
+						m_store.transaction_unstable_count_reduce(transaction_a);
 
 						RLPStream receiptRLP;
 						result.second.streamRLP(receiptRLP);
@@ -821,12 +828,6 @@ void mcp::chain::set_block_stable(mcp::timeout_db_transaction & timeout_tx_a, st
 
 			cache_a->block_summary_put(transaction_a, stable_block_hash, summary_hash);
 			m_store.summary_block_put(transaction_a, summary_hash, stable_block_hash);
-
-			auto linksize = stable_block->links().size();
-			if (linksize > 0)
-			{
-				m_store.transaction_unstable_count_reduce(transaction_a, linksize);
-			}
 
 #pragma endregion
 

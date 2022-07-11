@@ -10,9 +10,21 @@
 #include <boost/multi_index/member.hpp>
 #include <boost/multi_index_container.hpp>
 #include <mcp/node/arrival.hpp>
+#include "transaction_queue.hpp"
 
 namespace mcp
 {
+	enum unhandle_add_result : int
+	{
+		/// block in unhandle,need request exist missing,not block missing
+		Exist,
+
+		/// first import,request block missing
+		Success,
+
+		/// just dependence on transaction,and transaction in the cache
+		Retry,
+	};
 
 class unhandle_item
 {
@@ -28,11 +40,11 @@ class unhandle_item
 class unhandle_cache
 {
   public:
-	unhandle_cache(std::shared_ptr<mcp::block_arrival> block_arrival_a, size_t const &capacity_a = 100000);
+	unhandle_cache(std::shared_ptr<mcp::block_arrival> block_arrival_a, std::shared_ptr<TransactionQueue> tq, size_t const &capacity_a = 100000);
 
-	bool add(mcp::block_hash const &hash_a, std::unordered_set<mcp::block_hash> const &dependency_hashs_a, h256Hash const &transactions, std::shared_ptr<mcp::block_processor_item> item_a);
+	unhandle_add_result add(mcp::block_hash const &hash_a, std::unordered_set<mcp::block_hash> const &dependency_hashs_a, h256Hash const &transactions, std::shared_ptr<mcp::block_processor_item> item_a);
 	std::unordered_set<std::shared_ptr<mcp::block_processor_item>> release_dependency(mcp::block_hash const &dependency_hash_a);
-	std::unordered_set<std::shared_ptr<mcp::block_processor_item>> release_transaction_dependency(h256 const &h);
+	std::unordered_set<std::shared_ptr<mcp::block_processor_item>> release_transaction_dependency(h256Hash const &hashs);
 	void get_missings(size_t const & missing_limit_a, std::vector<mcp::block_hash>& missings_a, std::vector<h256>& light_missings_a);
 
 	bool exists(mcp::block_hash const & block_hash_a);
@@ -67,6 +79,7 @@ class unhandle_cache
     const int m_max_search_count = 100;
 	std::mutex m_mutux;
 	std::shared_ptr<mcp::block_arrival> m_block_arrival;
+	std::shared_ptr<TransactionQueue> m_tq;                  ///< Maintains a list of incoming transactions not yet in a block on the blockchain.
 
     mcp::log m_log = { mcp::log("node") };
 };

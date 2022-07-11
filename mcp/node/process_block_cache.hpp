@@ -109,7 +109,7 @@ namespace mcp
 			boost::multi_index::hashed_unique<boost::multi_index::member<put_item<h256, std::shared_ptr<Transaction>>, h256, &put_item<h256, std::shared_ptr<Transaction>>::key>>
 			>>
 			m_transaction_puts;
-		std::unordered_set<h256> m_transaction_dels;///delete from transaction queue
+		h256s m_transaction_dels;///delete from transaction queue
 
 		size_t m_max_account_nonce_puts_size = 10000;
 		std::unordered_set<Address> m_account_nonce_puts_flushed;

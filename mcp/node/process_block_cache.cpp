@@ -198,8 +198,7 @@ void mcp::process_block_cache::transaction_put(mcp::db::db_transaction & transac
 
 void mcp::process_block_cache::transaction_del_from_queue(h256 const& _hash)
 {
-	auto r(m_transaction_dels.insert(_hash));
-	assert_x(r.second);
+	m_transaction_dels.push_back(_hash);
 }
 
 
@@ -480,17 +479,7 @@ void mcp::process_block_cache::commit_and_clear_changing()
 	m_latest_account_state_puts.clear();
 	m_latest_account_state_puts_flushed.clear();
 
-	//modify transaction cache
-	m_cache->transaction_earse(m_transaction_puts_flushed);
-	for (auto h : m_transaction_dels)
-		m_tq->drop(h);
-	for (put_item<h256, std::shared_ptr<mcp::Transaction>> const & item : m_transaction_puts)
-		m_cache->transaction_put(item.key, item.value);
-	m_transaction_puts.clear();
-	m_transaction_puts_flushed.clear();
-	m_transaction_dels.clear();
-
-
+	/// The global cache must be updated before the drop transaction.else getTransactionCount maybe error,because transaction drop from queue but nonce not update.
 	//modify account nonce cache
 	m_cache->account_nonce_earse(m_account_nonce_puts_flushed);
 	for (put_item<Address, u256> const & item : m_account_nonce_puts)
@@ -498,6 +487,16 @@ void mcp::process_block_cache::commit_and_clear_changing()
 	m_account_nonce_puts.clear();
 	m_account_nonce_puts_flushed.clear();
 
+
+	//modify transaction cache
+	m_cache->transaction_earse(m_transaction_puts_flushed);
+	for (put_item<h256, std::shared_ptr<mcp::Transaction>> const & item : m_transaction_puts)
+		m_cache->transaction_put(item.key, item.value);
+	for (auto h : m_transaction_dels)
+		m_tq->drop(h);
+	m_transaction_puts.clear();
+	m_transaction_puts_flushed.clear();
+	m_transaction_dels.clear();
 
 	//modify successor cache
 	m_cache->successor_earse(m_successor_puts_flushed);
