@@ -265,16 +265,12 @@ mcp::rpc_handler::rpc_handler(mcp::rpc &rpc_a, std::string const &body_a, std::f
 	m_mcpRpcMethods["block_states"] = &mcp::rpc_handler::block_states;
 	m_mcpRpcMethods["block_traces"] = &mcp::rpc_handler::block_traces;
 	m_mcpRpcMethods["stable_blocks"] = &mcp::rpc_handler::stable_blocks;
-	m_mcpRpcMethods["send_block"] = &mcp::rpc_handler::send_block;
-	m_mcpRpcMethods["send_offline_block"] = &mcp::rpc_handler::send_offline_block;
 	m_mcpRpcMethods["block_summary"] = &mcp::rpc_handler::block_summary;
-	m_mcpRpcMethods["sign_msg"] = &mcp::rpc_handler::sign_msg;
 	m_mcpRpcMethods["version"] = &mcp::rpc_handler::version;
 	m_mcpRpcMethods["status"] = &mcp::rpc_handler::status;
 	m_mcpRpcMethods["peers"] = &mcp::rpc_handler::peers;
 	m_mcpRpcMethods["nodes"] = &mcp::rpc_handler::nodes;
 	m_mcpRpcMethods["witness_list"] = &mcp::rpc_handler::witness_list;
-	m_mcpRpcMethods["estimate_gas"] = &mcp::rpc_handler::estimate_gas;
 	m_mcpRpcMethods["logs"] = &mcp::rpc_handler::logs;
 	m_mcpRpcMethods["debug_trace_transaction"] = &mcp::rpc_handler::debug_trace_transaction;
 	m_mcpRpcMethods["debug_storage_range_at"] = &mcp::rpc_handler::debug_storage_range_at;
@@ -1045,56 +1041,6 @@ void mcp::rpc_handler::stable_blocks(mcp::json &j_response, bool &)
 		j_response["next_index"] = nullptr;
 }
 
-void mcp::rpc_handler::estimate_gas(mcp::json &j_response, bool &)
-{
-	TransactionSkeleton t = mcp::toTransactionSkeletonForMcp(request);
-
-	dev::eth::McInfo mc_info;
-	uint64_t block_number = m_chain->last_stable_mci();
-	if (!try_get_mc_info(mc_info, block_number))
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidMci());
-	}
-
-	mcp::db::db_transaction transaction(m_store.create_transaction());
-	std::pair<u256, bool> result = m_chain->estimate_gas(transaction, m_cache, t.from, t.value, t.to, t.data, static_cast<int64_t>(t.gas), t.gasPrice, mc_info);
-
-	/// this error is reported if the gas less than 21000, the logic has not been confirmed, response other code ?
-	if (!result.second)
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidGas());
-	}
-
-	j_response["gas"] = result.first;
-}
-
-void mcp::rpc_handler::call(mcp::json &j_response, bool &)
-{
-	TransactionSkeleton ts = mcp::toTransactionSkeletonForMcp(request);
-	ts.gasPrice = 0;
-	ts.gas = mcp::block_max_gas;
-
-	Transaction t(ts);
-	t.setSignature(h256(0), h256(0), 0);
-
-	dev::eth::McInfo mc_info;
-	uint64_t block_number = m_chain->last_stable_mci();
-	if (!try_get_mc_info(mc_info, block_number))
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidMci());
-	}
-
-	mcp::db::db_transaction transaction(m_store.create_transaction());
-	std::pair<mcp::ExecutionResult, dev::eth::TransactionReceipt> result = m_chain->execute(
-		transaction,
-		m_cache,
-		t,
-		mc_info,
-		Permanence::Reverted,
-		dev::eth::OnOpFunc());
-
-	j_response["output"] = dev::toHex(result.first.output);
-}
 
 void mcp::rpc_handler::logs(mcp::json &j_response, bool &)
 {
@@ -1199,62 +1145,6 @@ void mcp::rpc_handler::logs(mcp::json &j_response, bool &)
 	j_response["logs"] = logs_l;
 }
 
-void mcp::rpc_handler::send_block(mcp::json &j_response, bool &async)
-{
-	TransactionSkeleton t = mcp::toTransactionSkeletonForMcp(request);
-
-	boost::optional<std::string> password;
-	if (request.count("password") && request["password"].is_string())
-	{
-		password = request["password"].get<std::string>();
-	}
-
-	auto rpc_l(shared_from_this());
-	auto fun = [rpc_l, j_response, this](h256 &h, boost::optional<dev::Exception const &> e)
-	{
-		mcp::json j_resp = j_response;
-		if (!e)
-		{
-			j_resp["hash"] = h.hex();
-		}
-		else
-		{
-			toRpcExceptionJson(*e, j_resp);
-		}
-		response(j_resp);
-	};
-
-	async = true;
-	m_wallet->send_async(t, fun, password);
-}
-
-void mcp::rpc_handler::send_offline_block(mcp::json &j_response, bool &)
-{
-	TransactionSkeleton ts = mcp::toTransactionSkeletonForMcp(request);
-
-	dev::Signature signature(0);
-	try
-	{
-		signature = jsToSignature(request["signature"]);
-	}
-	catch (...)
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidSignature());
-	}
-
-	try
-	{
-		Transaction t(ts);
-		dev::SignatureStruct *sig = (dev::SignatureStruct *)&signature;
-		t.setSignature(sig->r, sig->s, sig->v);
-		j_response["hash"] = m_wallet->importTransaction(t).hex();
-	}
-	catch (dev::Exception &e)
-	{
-		toRpcExceptionJson(e, j_response);
-	}
-}
-
 void mcp::rpc_handler::block_summary(mcp::json &j_response, bool &)
 {
 	if (!request.count("hash") || (!request["hash"].is_string()))
@@ -1349,59 +1239,6 @@ void mcp::rpc_handler::block_summary(mcp::json &j_response, bool &)
 
 		j_response["status"] = (uint64_t)block_state->status;
 	}
-}
-
-void mcp::rpc_handler::sign_msg(mcp::json &j_response, bool &)
-{
-	dev::Address account(0);
-	try
-	{
-		std::string account_text = request["account"];
-		if (!mcp::isAddress(account_text))
-		{
-			BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccount());
-		}
-		account = dev::Address(account_text);
-	}
-	catch (...)
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccount());
-	}
-
-	h256 sign_msg(0);
-	try
-	{
-		std::string sign_msg_text = request["msg"];
-		sign_msg = jsToHash(sign_msg_text);
-	}
-	catch (...)
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidMsg());
-	}
-
-	if (!request.count("password") || (!request["password"].is_string()))
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidPassword());
-	}
-	std::string password_a = request["password"];
-	dev::Secret prv;
-	if (password_a.empty())
-	{
-		if (!m_key_manager->find_unlocked_prv(account, prv))
-		{
-			BOOST_THROW_EXCEPTION(RPC_Error_WrongPassword());
-		}
-	}
-	else
-	{
-		if (m_key_manager->decrypt_prv(account, password_a, prv))
-		{
-			BOOST_THROW_EXCEPTION(RPC_Error_WrongPassword());
-		}
-	}
-
-	dev::Signature sig(dev::sign(prv, sign_msg));
-	j_response["signature"] = sig.hex();
 }
 
 void mcp::rpc_handler::version(mcp::json &j_response, bool &)
@@ -1662,7 +1499,7 @@ void mcp::rpc_connection::read()
 					try
 					{
                         std::string body = js.dump();
-						LOG(this_l->m_log.error) << "RESPONSE:" << body;
+						LOG(this_l->m_log.debug) << "RESPONSE:" << body;
 						this_l->write_result(body, version);
 						boost::beast::http::async_write(this_l->socket, this_l->res, [this_l](boost::system::error_code const & e, size_t size)
 						{
@@ -1715,7 +1552,7 @@ void mcp::rpc_handler::process_request()
 
 		request = mcp::json::parse(body);
 
-		LOG(m_log.error) << "REQUEST:" << request;
+		LOG(m_log.debug) << "REQUEST:" << request;
 
 		if (request.count("action"))
 		{

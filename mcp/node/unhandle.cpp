@@ -335,7 +335,7 @@ void mcp::unhandle_cache::get_missings(size_t const & missing_limit_a, std::vect
 		{
 			//if (!m_unhandles.count(*it))
 				light_missings_a.push_back(*it);
-			if (start == mcp::block_hash(0))
+			if (start == h256(0))
 				start = *it;
 			it++;
 			if (it == m_light_missings.end())
