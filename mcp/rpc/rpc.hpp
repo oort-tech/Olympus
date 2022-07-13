@@ -116,19 +116,13 @@ public:
 	void block_traces(mcp::json & j_response, bool & async);
 	void stable_blocks(mcp::json & j_response, bool & async);
 
-	void send_block(mcp::json & j_response, bool & async);
-	void send_offline_block(mcp::json & j_response, bool & async);
 	void block_summary(mcp::json & j_response, bool & async);
-	void sign_msg(mcp::json & j_response, bool & async);
 
 	void version(mcp::json & j_response, bool & async);
 	void status(mcp::json & j_response, bool & async);
 	void peers(mcp::json & j_response, bool & async);
 	void nodes(mcp::json & j_response, bool & async);
 	void witness_list(mcp::json & j_response, bool & async);
-
-    void estimate_gas(mcp::json & j_response, bool & async);
-    void call(mcp::json & j_response, bool & async);
 
 	void debug_trace_transaction(mcp::json & j_response, bool & async);
 	void debug_storage_range_at(mcp::json & j_response, bool & async);

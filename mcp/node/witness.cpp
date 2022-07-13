@@ -24,7 +24,7 @@ mcp::witness::witness(mcp::error_message & error_msg,
     m_last_witness_block_hash(last_witness_block_hash_a)
 {
 	bool error(!mcp::isAddress(account_or_file_text));
-	if (error)
+	if (error) /// Specifies the keystore that needs to be imported. like: --witness_account=\home\0x1144B522F45265C2DFDBAEE8E324719E63A1694C.json
 	{
 		mcp::key_content kc;
 		bool error(key_manager_a->import(account_or_file_text, kc, false));
@@ -35,24 +35,17 @@ mcp::witness::witness(mcp::error_message & error_msg,
 			return;
 		}
 		m_account = kc.account;
-		error  = key_manager_a->decrypt_prv(m_account, password_a, m_secret);
-		if (error)
-		{
-			error_msg.error = true;
-			LOG(m_log.error) << "Witness error: Account not exists, " << m_account.hexPrefixed();
-			return;
-		}
 	}
-	else
+	else /// Specify an account(just address) that has been imported.like: --witness_account=0x1144B522F45265C2DFDBAEE8E324719E63A1694C
 	{
 		m_account = dev::Address(account_or_file_text);
 	}
 
-	error = key_manager_a->unlock(m_account, password_a);
+	error = key_manager_a->decrypt_prv(m_account, password_a, m_secret);
 	if (error)
 	{
 		error_msg.error = true;
-		error_msg.message = "Account not exists or password wrong";
+		LOG(m_log.error) << "Witness error: Account not exists, " << m_account.hexPrefixed();
 		return;
 	}
 

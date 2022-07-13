@@ -9,8 +9,6 @@ namespace mcp
 {
 	TransactionSkeleton toTransactionSkeletonForEth(mcp::json const& _json);
 
-	TransactionSkeleton toTransactionSkeletonForMcp(mcp::json const& _json);
-
 	inline Address jsToAddress(std::string const& _s) { return jsToFixed<20>(_s); }
 
 	inline h256 jsToHash(std::string const& _s) { return jsToFixed<32>(_s);  }

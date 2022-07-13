@@ -1742,7 +1742,7 @@ void mcp::node_sync::send_transaction(p2p::node_id const & id, mcp::Transaction 
 
 bool mcp::node_sync::is_request_hash_tree()
 {
-	return (m_request_info.request_hash_tree_from_summary == mcp::summary_hash(0) && m_request_info.request_hash_tree_start_index != 0);
+	return (m_request_info.request_hash_tree_from_summary != mcp::summary_hash(0) && m_request_info.request_hash_tree_start_index != 0);
 }
 
 // check if all the summaries in the parameter exists in the node
