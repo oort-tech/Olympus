@@ -12,7 +12,7 @@ bool mcp::is_test_network()
 
 mcp::uint256_t mcp::chainID()
 {
-	return 848;
+	return mcp::chain_id;
 }
 
 std::map<uint64_t, mcp::block_param> mcp::param::block_param_map = {};

@@ -2173,16 +2173,18 @@ void mcp::rpc_handler::eth_getTransactionByHash(mcp::json &j_response, bool &)
 		mcp::json j_transaction = toJson(lt);
 
 		auto td = m_cache->transaction_address_get(transaction, hash);
-		if (td != nullptr)
+		if (td == nullptr)
 		{
-			j_transaction["blockHash"] = td->blockHash.hexPrefixed();
-			j_transaction["transactionIndex"] = toJS(td->index);
+			throw "";
+		}
 
-			uint64_t block_number = 0;
-			if (!m_cache->block_number_get(transaction, td->blockHash, block_number))
-			{
-				j_transaction["blockNumber"] = toJS(block_number);
-			}
+		j_transaction["blockHash"] = td->blockHash.hexPrefixed();
+		j_transaction["transactionIndex"] = toJS(td->index);
+
+		uint64_t block_number = 0;
+		if (!m_cache->block_number_get(transaction, td->blockHash, block_number))
+		{
+			j_transaction["blockNumber"] = toJS(block_number);
 		}
 
 		j_response["result"] = j_transaction;

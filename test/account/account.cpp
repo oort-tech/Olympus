@@ -15,16 +15,16 @@ void test_create_account()
 	std::cout << "-------------test_create_account---------------" << std::endl;
 
 	dev::h128 kdf_salt;
-	// mcp::random_pool.GenerateBlock((byte*)kdf_salt.data(), kdf_salt.size);
-	kdf_salt = dev::h128("59555A1474D77707BC6CF1FA7DE67199");
+	mcp::random_pool.GenerateBlock((byte*)kdf_salt.data(), kdf_salt.size);
+	// kdf_salt = dev::h128("59555A1474D77707BC6CF1FA7DE67199");
 
 	dev::h128 iv;
-	// mcp::random_pool.GenerateBlock((byte*)iv.data(), iv.size);
-	iv = dev::h128("E9A53520669C4131592E581CA81E873C");
+	mcp::random_pool.GenerateBlock((byte*)iv.data(), iv.size);
+	// iv = dev::h128("E9A53520669C4131592E581CA81E873C");
 
-	dev::Secret prv;
-	// mcp::random_pool.GenerateBlock((byte*)prv.data(), prv.size);
-	prv = dev::Secret("D79703A37D55FD5AFC17FA4BF98047F9C6592559ABE107D01FAD13F8CDD0CD2A");
+	dev::h256 prv;
+	mcp::random_pool.GenerateBlock((byte*)prv.data(), prv.size);
+	// prv = dev::Secret("D79703A37D55FD5AFC17FA4BF98047F9C6592559ABE107D01FAD13F8CDD0CD2A");
 
 	std::string password = "12345678";
 
@@ -37,7 +37,7 @@ void test_create_account()
 	dev::h256 ciphertext;
 	mcp::encry::encryption(ciphertext.data(), prv.data(), prv.size, iv.data(), derive_pwd.data());
 	
-	dev::Public pub = dev::toPublic(prv);
+	dev::Public pub = dev::toPublic(dev::Secret(prv));
 
 	std::chrono::nanoseconds dur = std::chrono::duration_cast<std::chrono::nanoseconds> (std::chrono::high_resolution_clock::now() - start);
 	std::cout << "duration:" << dur.count() / 1000000 << "ms" << std::endl;
@@ -47,6 +47,7 @@ void test_create_account()
 	std::cout << "iv:" << iv.hex() << std::endl;
 	std::cout << std::endl;
 	std::cout << "ciphertext:" << ciphertext.hex() << std::endl;
+	std::cout << "prv:" << prv.hex() << std::endl;
 	std::cout << "pub:" << pub.hex() << std::endl;
 	std::cout << "account:" << toAddress(pub).hexPrefixed() << std::endl;
 	
