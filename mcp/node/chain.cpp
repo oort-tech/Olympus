@@ -640,6 +640,7 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 					}
 					auto _t = cache_a->transaction_get(transaction_a, link_hash);
 					/// exec transactions
+					bool invalid = false;
 					try
 					{
 						dev::eth::McInfo mc_info(mci, mc_timestamp, mc_last_summary_mci);
@@ -657,11 +658,6 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 						/// commit transaction receipt
 						/// the account states were committed in Executive::go()
 						cache_a->transaction_receipt_put(transaction_a, link_hash, std::make_shared<dev::eth::TransactionReceipt>(result.second));
-						std::shared_ptr<mcp::TransactionAddress> td(std::make_shared<mcp::TransactionAddress>(dag_stable_block_hash, index));
-						cache_a->transaction_address_put(transaction_a, link_hash, td);
-						/// exec transaction can reduce, if two or more block linked a transaction,reduce once.
-						m_store.transaction_unstable_count_reduce(transaction_a);
-
 						RLPStream receiptRLP;
 						result.second.streamRLP(receiptRLP);
 						receipts.push_back(receiptRLP.out());
@@ -672,6 +668,15 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 							<< ", from: " << dev::toJS(_t->sender())
 							<< ", to: " << dev::toJS(_t->to())
 							<< ", value: " << _t->value();
+						invalid = true;
+					}
+					catch (dev::eth::InvalidNonce const& _e)
+					{
+						LOG(m_log.info) << "transaction exec not expect nonce,hash: " << _t->sha3().hex()
+							<< ", from: " << dev::toJS(_t->sender())
+							<< ", to: " << dev::toJS(_t->to())
+							<< ", value: " << _t->value();
+						invalid = true;
 					}
 					//catch (Exception const& _e)
 					//{
@@ -684,6 +689,20 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 						std::cerr << _e.what() << std::endl;
 						throw;
 					}
+
+					if (invalid)
+					{
+						TransactionReceipt const receipt = TransactionReceipt(0, 0, mcp::log_entries());
+						cache_a->transaction_receipt_put(transaction_a, link_hash, std::make_shared<dev::eth::TransactionReceipt>(receipt));
+						RLPStream receiptRLP;
+						receipt.streamRLP(receiptRLP);
+						receipts.push_back(receiptRLP.out());
+					}
+
+					std::shared_ptr<mcp::TransactionAddress> td(std::make_shared<mcp::TransactionAddress>(dag_stable_block_hash, index));
+					cache_a->transaction_address_put(transaction_a, link_hash, td);
+					/// exec transaction can reduce, if two or more block linked a transaction,reduce once.
+					m_store.transaction_unstable_count_reduce(transaction_a);
 				}
 			}
 

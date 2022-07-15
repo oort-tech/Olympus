@@ -45,6 +45,17 @@ void mcp::Executive::initialize(Transaction const& _transaction)
 	m_baseGasRequired = m_t.baseGasRequired(dev::eth::ConstantinopleSchedule);
 
 	// Avoid unaffordable transactions.
+	u256 nonceReq;
+	nonceReq = m_s.getNonce(m_t.sender());
+	if (m_t.nonce() != nonceReq)
+	{
+		LOG(m_log.debug) << "Sender: " << m_t.sender().hex() << " Invalid Nonce: Required "
+			<< nonceReq << ", received " << m_t.nonce();
+		m_excepted = TransactionException::InvalidNonce;
+		BOOST_THROW_EXCEPTION(
+			dev::eth::InvalidNonce() << RequirementError((bigint)nonceReq, (bigint)m_t.nonce()));
+	}
+
 	bigint gasCost = (bigint)m_t.gas() * m_t.gasPrice();
 	bigint totalCost = m_t.value() + gasCost;
 

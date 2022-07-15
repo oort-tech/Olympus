@@ -265,7 +265,7 @@ namespace mcp
 			auto t = fs->second.find(ts.nonce());
 			if (t != fs->second.end()) /// have same nonce
 			{
-				if (ts.gasPrice() < (*t->second).transaction.gasPrice())
+				if (ts.gasPrice() <= (*t->second).transaction.gasPrice())
 				{
 					if (isLocal) /// if local return error
 						return make_pair(ImportResult::OverbidGasPrice, h256Hash());
@@ -303,6 +303,36 @@ namespace mcp
 					PriorityQueue::iterator handle = m_current.emplace(VerifiedTransaction(ts));
 					m_currentByHash[_p.first] = handle;
 					t->second = handle;
+				}
+				m_known.insert(_p.first);
+				return make_pair(ImportResult::Success, h256Hash());
+			}
+		}
+		else
+		{
+			u256 pNonce = 0;
+			mcp::db::db_transaction t(m_store.create_transaction());
+			/// exist && and it's not equal to the last transaction plus 1
+			m_cache->account_nonce_get(t, ts.sender(), pNonce);
+			if (ts.nonce() <= pNonce)
+			{
+				if (isLocal) /// if local return error
+					return make_pair(ImportResult::OverbidGasPrice, h256Hash());
+				else
+				{
+					/// insert into parallel queue
+					PriorityQueue::iterator handle = m_current.emplace(VerifiedTransaction(ts));
+					m_currentByHash[_p.first] = handle;
+					if (!m_sameCurrentByAddressAndNonce.count(from) || !m_sameCurrentByAddressAndNonce[from].count(ts.nonce()))
+					{
+						std::map<h256, PriorityQueue::iterator> m;
+						m.insert(std::make_pair(_p.first, handle));
+						m_sameCurrentByAddressAndNonce[from].insert(std::make_pair(ts.nonce(), m));
+					}
+					else /// account and nonce existed
+					{
+						m_sameCurrentByAddressAndNonce[from][ts.nonce()].emplace(std::make_pair(_p.first, handle));
+					}
 				}
 				m_known.insert(_p.first);
 				return make_pair(ImportResult::Success, h256Hash());
@@ -383,7 +413,11 @@ namespace mcp
 	{
 		auto t = m_currentByHash.find(_txHash);
 		if (t == m_currentByHash.end())
+		{
+			LOG(m_log.debug) << "remove_WITH_LOCK Transaction hash" << _txHash.hex() << "already in current?!";
 			return false;
+		}
+			
 		Address from = (*t->second).transaction.from();
 		u256 nonce = (*t->second).transaction.nonce();
 
@@ -511,7 +545,10 @@ namespace mcp
 		UpgradableGuard l(m_lock);
 
 		if (!m_known.count(_txHash))
+		{
+			LOG(m_log.debug) << "drop Transaction hash" << _txHash.hex() << "already known?!";
 			return;
+		}
 
 		UpgradeGuard ul(l);
 		m_dropped.insert(_txHash, true /* placeholder value */);
@@ -633,11 +670,17 @@ namespace mcp
 
 	std::string TransactionQueue::getInfo()
 	{
+		int size = 0;
+		for (auto it = m_future.begin(); it != m_future.end(); it++)
+		{
+			size += it->second.size();
+		}
 		std::string str = "transactionQueue current:" + std::to_string(m_current.size())
 			+ " ,currentByHash:" + std::to_string(m_currentByHash.size())
 			+ " ,currentByAddressAndNonce:" + std::to_string(m_currentByAddressAndNonce.size())
 			+ " ,sameCurrentByAddressAndNonce:" + std::to_string(m_sameCurrentByAddressAndNonce.size())
 			+ " ,future:" + std::to_string(m_future.size())
+			+ " ,future transaction:" + std::to_string(size)
 			+ " ,m_unverified:" + std::to_string(m_unverified.size());
 
 		return str;
