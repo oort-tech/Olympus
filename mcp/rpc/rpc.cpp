@@ -785,14 +785,14 @@ void mcp::rpc_handler::account_state_list(mcp::json &j_response, bool &)
 			break;
 
 		mcp::json acc_state_l;
-		acc_state_l["hash"] = acc_state->hash().hex();
+		acc_state_l["hash"] = acc_state->hash().hexPrefixed();
 		acc_state_l["account"] = acc_state->account().hexPrefixed();
 		// acc_state_l["block_hash"] = acc_state->block_hash.to_string();
 		// acc_state_l["previous"] = acc_state->previous.to_string();
 		acc_state_l["balance"] = acc_state->balance().str();
 		acc_state_l["nonce"] = acc_state->nonce().str();
-		acc_state_l["storage_root"] = acc_state->baseRoot().hex();
-		acc_state_l["code_hash"] = acc_state->codeHash().hex();
+		acc_state_l["storage_root"] = acc_state->baseRoot().hexPrefixed();
+		acc_state_l["code_hash"] = acc_state->codeHash().hexPrefixed();
 		acc_state_l["is_alive"] = acc_state->isAlive();
 
 		acc_states_l.push_back(acc_state_l);
@@ -803,7 +803,7 @@ void mcp::rpc_handler::account_state_list(mcp::json &j_response, bool &)
 
 	j_response["account_states"] = acc_states_l;
 	if (search_hash != dev::h256(0))
-		j_response["next_index"] = search_hash.hex();
+		j_response["next_index"] = search_hash.hexPrefixed();
 	else
 		j_response["next_index"] = nullptr;
 }
@@ -1172,7 +1172,7 @@ void mcp::rpc_handler::block_summary(mcp::json &j_response, bool &)
 	}
 	else
 	{
-		j_response["summary"] = summary.hex();
+		j_response["summary"] = summary.hexPrefixed();
 
 		auto block(m_cache->block_get(transaction, hash));
 		assert_x(block);
@@ -1186,7 +1186,7 @@ void mcp::rpc_handler::block_summary(mcp::json &j_response, bool &)
 			bool previous_summary_hash_error(m_cache->block_summary_get(transaction, block->previous(), previous_summary_hash));
 			assert_x(!previous_summary_hash_error);
 		}
-		j_response["previous_summary"] = previous_summary_hash.hex();
+		j_response["previous_summary"] = previous_summary_hash.hexPrefixed();
 
 		// parent summary hashs
 		mcp::json parent_summaries_l = mcp::json::array();
@@ -1196,7 +1196,7 @@ void mcp::rpc_handler::block_summary(mcp::json &j_response, bool &)
 			bool p_summary_hash_error(m_cache->block_summary_get(transaction, pblock_hash, p_summary_hash));
 			assert_x(!p_summary_hash_error);
 
-			parent_summaries_l.push_back(p_summary_hash.hex());
+			parent_summaries_l.push_back(p_summary_hash.hexPrefixed());
 		}
 		j_response["parent_summaries"] = parent_summaries_l;
 
@@ -1210,7 +1210,7 @@ void mcp::rpc_handler::block_summary(mcp::json &j_response, bool &)
 			bool l_summary_hash_error(m_cache->block_summary_get(transaction, link_hash, l_summary_hash));
 			assert_x(!l_summary_hash_error);
 
-			link_summaries_l.push_back(l_summary_hash.hex());
+			link_summaries_l.push_back(l_summary_hash.hexPrefixed());
 		}
 		j_response["link_summaries"] = link_summaries_l;
 
@@ -1233,7 +1233,7 @@ void mcp::rpc_handler::block_summary(mcp::json &j_response, bool &)
 			}
 
 			for (mcp::summary_hash s : summary_skiplist)
-				skiplist_summaries_l.push_back(s.hex());
+				skiplist_summaries_l.push_back(s.hexPrefixed());
 		}
 		j_response["skiplist_summaries"] = skiplist_summaries_l;
 
@@ -1271,7 +1271,7 @@ void mcp::rpc_handler::peers(mcp::json &j_response, bool &)
 		bi::tcp::endpoint endpoint(i.second);
 
 		mcp::json peer_l;
-		peer_l["id"] = id.hex();
+		peer_l["id"] = id.hexPrefixed();
 		std::stringstream ss_endpoint;
 		ss_endpoint << endpoint;
 		peer_l["endpoint"] = ss_endpoint.str();
@@ -1287,7 +1287,7 @@ void mcp::rpc_handler::nodes(mcp::json &j_response, bool &)
 	for (p2p::node_info node : nodes)
 	{
 		mcp::json node_l;
-		node_l["id"] = node.id.hex();
+		node_l["id"] = node.id.hexPrefixed();
 		std::stringstream ss_endpoint;
 		ss_endpoint << (bi::tcp::endpoint)node.endpoint;
 		node_l["endpoint"] = ss_endpoint.str();

@@ -199,14 +199,14 @@ namespace mcp
 			res["transactions"] = mcp::json::array();
 		}
 		else {
-			res["hash"] = _b.hash().hex();
+			res["hash"] = _b.hash().hexPrefixed();
 			res["from"] = _b.from().hexPrefixed();
-			res["previous"] = _b.previous().hex();
+			res["previous"] = _b.previous().hexPrefixed();
 
 			mcp::json j_parents = mcp::json::array();
 			for (auto & p : _b.parents())
 			{
-				j_parents.push_back(p.hex());
+				j_parents.push_back(p.hexPrefixed());
 			}
 			res["parents"] = j_parents;
 
@@ -215,12 +215,12 @@ namespace mcp
 				j_links.push_back(toJS(l));
 			res["links"] = j_links;
 
-			res["last_summary"] = _b.last_summary().hex();
-			res["last_summary_block"] = _b.last_summary_block().hex();
-			res["last_stable_block"] = _b.last_stable_block().hex();
+			res["last_summary"] = _b.last_summary().hexPrefixed();
+			res["last_summary_block"] = _b.last_summary_block().hexPrefixed();
+			res["last_stable_block"] = _b.last_stable_block().hexPrefixed();
 			res["timestamp"] = _b.exec_timestamp();
 			res["gasLimit"] = toJS(mcp::block_max_gas);
-			res["signature"] = ((Signature)_b.signature()).hex();
+			res["signature"] = ((Signature)_b.signature()).hexPrefixed();
 		}
 
 		return res;
