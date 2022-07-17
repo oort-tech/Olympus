@@ -52,8 +52,8 @@ namespace mcp
 		std::shared_ptr<Transaction> get(h256 const& _txHash) const;
 
 		/// Remove transaction from the queue
-		/// @param _txHash Trasnaction hash
-		void drop(h256 const& _txHash);
+		/// @param _txHash Trasnaction hashs
+		void drop(h256s const& _txHash);
 
 		/// Get top transactions from the queue. Returned transactions are not removed from the queue automatically.
 		/// @param _limit Max number of transactions to return.

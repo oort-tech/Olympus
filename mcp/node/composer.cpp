@@ -50,6 +50,12 @@ void mcp::composer::pick_parents_and_last_summary_and_wl_block(mcp::db::db_trans
 {
 	mcp::stopwatch_guard sw("compose:pick_parents");
 
+	{
+		mcp::stopwatch_guard sw("compose:pick_parents2");
+
+		links = m_tq->topTransactions(4096);
+	}
+
 	auto snapshot = m_store.create_snapshot();
 	mcp::db::forward_iterator best_dag_free_it(m_store.dag_free_begin(transaction_a, snapshot));
 	mcp::free_key best_dag_free_key(best_dag_free_it.key());
@@ -165,12 +171,6 @@ void mcp::composer::pick_parents_and_last_summary_and_wl_block(mcp::db::db_trans
 			parents.push_back(std::move(parent));
 
 		assert_x(parents.size() <= b_param.max_parent_size);
-	}
-
-	{
-		mcp::stopwatch_guard sw("compose:pick_parents2");
-
-		links = m_tq->topTransactions(b_param.max_link_size);
 	}
 
 	//release snapshot

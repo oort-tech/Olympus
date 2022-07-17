@@ -452,34 +452,9 @@ void mcp::block_processor::process_blocks()
 			lock.unlock();
 			{
 				mcp::stopwatch_guard sw("process_blocks");
-
-				std::shared_ptr<rocksdb::WriteOptions> write_option(mcp::db::database::default_write_options());
-				std::shared_ptr<rocksdb::TransactionOptions> tx_option(mcp::db::db_transaction::default_trans_options());
-				tx_option->skip_concurrency_control = true;
-
-				std::shared_ptr<mcp::chain> chain(m_chain);
-				mcp::timeout_db_transaction timeout_tx(m_store, m_tx_timeout_ms, write_option, tx_option,
-					std::bind(&block_processor::before_db_commit_event, this),
-					std::bind(&block_processor::after_db_commit_event, this));
-				try
+				if (!to_processing.empty())
 				{
-					if (!to_processing.empty())
-					{
-						do_process(timeout_tx, to_processing);
-						timeout_tx.commit();
-					}
-				}
-				catch (std::exception const &e)
-				{
-					LOG(m_log.error) << "Block process do_process error: " << e.what() << std::endl << boost::stacktrace::stacktrace();
-					timeout_tx.rollback();
-					throw;
-				}
-				catch (...)
-				{
-					LOG(m_log.error) << "Block process do_process unknown error." << std::endl << boost::stacktrace::stacktrace();
-					timeout_tx.rollback();
-					throw;
+					do_process(to_processing);
 				}
 			}
 
@@ -493,7 +468,7 @@ void mcp::block_processor::process_blocks()
 	}
 }
 
-bool mcp::block_processor::try_process_local_item_first(mcp::timeout_db_transaction & timeout_tx)
+bool mcp::block_processor::try_process_local_item_first()
 {
 	bool has_local(false);
 	if (!m_local_blocks_pending.empty())
@@ -510,12 +485,12 @@ bool mcp::block_processor::try_process_local_item_first(mcp::timeout_db_transact
 			}
 		}
 		if (has_local)
-			do_process_one(timeout_tx, local_item);
+			do_process_one(local_item);
 	}
 	return has_local;
 }
 
-void mcp::block_processor::do_process(mcp::timeout_db_transaction & timeout_tx, std::deque<std::shared_ptr<mcp::block_processor_item>> & blocks_processing)
+void mcp::block_processor::do_process(std::deque<std::shared_ptr<mcp::block_processor_item>> & blocks_processing)
 {
 	//mcp::stopwatch_guard sw("process_blocks: do_process");
 
@@ -528,143 +503,160 @@ void mcp::block_processor::do_process(mcp::timeout_db_transaction & timeout_tx, 
 
 		if (!item->is_local())
 		{
-			bool has_local(try_process_local_item_first(timeout_tx));
+			bool has_local(try_process_local_item_first());
 			if (has_local)
 				continue;
 		}
 
 		blocks_processing.pop_front();
-		do_process_one(timeout_tx, item);
+		do_process_one(item);
 	}
 }
 
-void mcp::block_processor::do_process_one(mcp::timeout_db_transaction & timeout_tx, std::shared_ptr<mcp::block_processor_item> item)
+void mcp::block_processor::do_process_one(std::shared_ptr<mcp::block_processor_item> item)
 {
 	mcp::joint_message const & joint(item->joint);
 	std::shared_ptr<mcp::block> block(joint.block);
 	mcp::block_hash const & block_hash(block->hash());
-	
+
 	if (unhandle->exists(block_hash))
 	{
 		process_existing_missing(item->remote_node_id());
 		return;
 	}
 
-	mcp::db::db_transaction & transaction(timeout_tx.get_transaction());
-	//dag validate
-	mcp::validate_result result(m_validation->dag_validate(transaction, m_local_cache, joint));
-	switch (result.code)
-	{
-	case mcp::validate_result_codes::ok:
-	{
-		//broadcast
-		if (!item->is_local() && !item->is_sync() && item->joint.summary_hash == mcp::summary_hash(0))
-		{
-			m_async_task->sync_async([this, joint]() {
-				m_capability->broadcast_block(joint);
-			});
-		}
+	std::shared_ptr<rocksdb::WriteOptions> write_option(mcp::db::database::default_write_options());
+	std::shared_ptr<rocksdb::TransactionOptions> tx_option(mcp::db::db_transaction::default_trans_options());
+	tx_option->skip_concurrency_control = true;
+	std::shared_ptr<mcp::chain> chain(m_chain);
+	mcp::timeout_db_transaction timeout_tx(m_store, m_tx_timeout_ms, write_option, tx_option,
+		std::bind(&block_processor::before_db_commit_event, this),
+		std::bind(&block_processor::after_db_commit_event, this));
 
-		do_process_dag_item(timeout_tx, item);
-
-		break;
-	}
-	case mcp::validate_result_codes::old:
+	try
 	{
-		dag_old_size++;
-		LOG(m_log.trace) << boost::str(boost::format("Old block: %1%") % block_hash.hex());
-		break;
-	}
-	case mcp::validate_result_codes::missing_parents_and_previous:
-	{
-		if (item->is_local() && result.missing_links.size() > 0)
-			break;
-
-		if (result.missing_parents_and_previous.size() > 0 || result.missing_links.size() > 0)
-		{
-			if (result.missing_parents_and_previous.size() > 0)
-			{
-				assert_x(!item->is_local());
-			}
-			process_missing(item, result.missing_parents_and_previous, result.missing_links);
-		}
-
-		LOG(m_log.trace) << boost::str(boost::format("Missing parents and previous for: %1%") % block_hash.hex());
-
-		break;
-	}
-	case mcp::validate_result_codes::invalid_block:
-	{
-		LOG(m_log.info) << boost::str(boost::format("Invalid block: %1%, error message: %2%") % block_hash.hex() % result.err_msg);
-		assert_x(!item->is_local());
-		//cache invalid block
-		m_invalid_block_cache.add(block_hash);
-		break;
-	}
-	case mcp::validate_result_codes::parents_and_previous_include_invalid_block:
-	{
-		LOG(m_log.trace) << boost::str(boost::format("Invalid block: %1%, error message: %2%") % block_hash.hex() % result.err_msg);
-		assert_x(!item->is_local());
-		//cache invalid block
-		m_invalid_block_cache.add(block_hash);
-		break;
-	}
-	case mcp::validate_result_codes::known_invalid_block:
-	{
-		LOG(m_log.trace) << boost::str(boost::format("Known invalid block: %1%") % block_hash.hex());
-		assert_x(!item->is_local());
-		break;
-	}
-	}
-
-	//local dag
-	if (item->is_local())
-	{
+		mcp::db::db_transaction & transaction(timeout_tx.get_transaction());
+		//dag validate
+		mcp::validate_result result(m_validation->dag_validate(transaction, m_local_cache, joint));
 		switch (result.code)
 		{
 		case mcp::validate_result_codes::ok:
-		case mcp::validate_result_codes::old:
-			m_ok_local_promises.push_back(item->get_local_promise());
+		{
+			//broadcast
+			if (!item->is_local() && !item->is_sync() && item->joint.summary_hash == mcp::summary_hash(0))
+			{
+				m_async_task->sync_async([this, joint]() {
+					m_capability->broadcast_block(joint);
+				});
+			}
+
+			do_process_dag_item(timeout_tx, item);
 			break;
+		}
+		case mcp::validate_result_codes::old:
+		{
+			dag_old_size++;
+			LOG(m_log.trace) << boost::str(boost::format("Old block: %1%") % block_hash.hex());
+			break;
+		}
 		case mcp::validate_result_codes::missing_parents_and_previous:
 		{
-			std::string msg = "missing parents or previous or links";
-			item->set_local_promise(mcp::validate_status(false, msg));
+			if (item->is_local() && result.missing_links.size() > 0)
+				break;
+
+			if (result.missing_parents_and_previous.size() > 0 || result.missing_links.size() > 0)
+			{
+				if (result.missing_parents_and_previous.size() > 0)
+				{
+					assert_x(!item->is_local());
+				}
+				process_missing(item, result.missing_parents_and_previous, result.missing_links);
+			}
+
+			LOG(m_log.trace) << boost::str(boost::format("Missing parents and previous for: %1%") % block_hash.hex());
+
+			break;
+		}
+		case mcp::validate_result_codes::invalid_block:
+		{
+			LOG(m_log.info) << boost::str(boost::format("Invalid block: %1%, error message: %2%") % block_hash.hex() % result.err_msg);
+			assert_x(!item->is_local());
+			//cache invalid block
+			m_invalid_block_cache.add(block_hash);
+			break;
+		}
+		case mcp::validate_result_codes::parents_and_previous_include_invalid_block:
+		{
+			LOG(m_log.trace) << boost::str(boost::format("Invalid block: %1%, error message: %2%") % block_hash.hex() % result.err_msg);
+			assert_x(!item->is_local());
+			//cache invalid block
+			m_invalid_block_cache.add(block_hash);
+			break;
+		}
+		case mcp::validate_result_codes::known_invalid_block:
+		{
+			LOG(m_log.trace) << boost::str(boost::format("Known invalid block: %1%") % block_hash.hex());
+			assert_x(!item->is_local());
+			break;
+		}
+		}
+
+		//local dag
+		if (item->is_local())
+		{
+			switch (result.code)
+			{
+			case mcp::validate_result_codes::ok:
+			case mcp::validate_result_codes::old:
+				m_ok_local_promises.push_back(item->get_local_promise());
+				break;
+			case mcp::validate_result_codes::missing_parents_and_previous:
+			{
+				std::string msg = "missing parents or previous or links";
+				item->set_local_promise(mcp::validate_status(false, msg));
+				break;
+			}
+			default:
+			{
+				std::string msg = "validate error";
+				item->set_local_promise(mcp::validate_status(false, msg));
+				break;
+			}
+			}
+		}
+
+		//unhandle
+		switch (result.code)
+		{
+		case mcp::validate_result_codes::ok:
+		{
+			try_process_unhandle(item);
+			break;
+		}
+		case mcp::validate_result_codes::invalid_block:
+		case mcp::validate_result_codes::parents_and_previous_include_invalid_block:
+		case mcp::validate_result_codes::known_invalid_block:
+		{
+			try_remove_invalid_unhandle(item->block_hash);
 			break;
 		}
 		default:
-		{
-			std::string msg = "validate error";
-			item->set_local_promise(mcp::validate_status(false, msg));
 			break;
 		}
-		}
-	}
 
-	//unhandle
-	switch (result.code)
-	{
-	case mcp::validate_result_codes::ok:
-	{
-		try_process_unhandle(item);
-		break;
+		timeout_tx.commit();
 	}
-	case mcp::validate_result_codes::invalid_block:
-	case mcp::validate_result_codes::parents_and_previous_include_invalid_block:
-	case mcp::validate_result_codes::known_invalid_block:
+	catch (std::exception const &e)
 	{
-		try_remove_invalid_unhandle(item->block_hash);
-		break;
+		LOG(m_log.error) << "Block process do_process_one error: " << e.what() << std::endl << boost::stacktrace::stacktrace();
+		timeout_tx.rollback();
+		throw;
 	}
-	default:
-		break;
-	}
-
-
-	if (item->is_local())
+	catch (...)
 	{
-		//commit local item right now
-		timeout_tx.commit_and_continue();
+		LOG(m_log.error) << "Block process do_process_one unknown error." << std::endl << boost::stacktrace::stacktrace();
+		timeout_tx.rollback();
+		throw;
 	}
 }
 

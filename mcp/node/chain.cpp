@@ -201,7 +201,7 @@ void mcp::chain::save_transaction(mcp::timeout_db_transaction & timeout_tx_a, st
 
 			//m_new_blocks.push(block_a->block);
 
-			timeout_tx_a.commit_if_timeout();
+			//timeout_tx_a.commit_if_timeout();
 		}
 		catch (std::exception const & e)
 		{
@@ -236,7 +236,7 @@ void mcp::chain::try_advance(mcp::timeout_db_transaction & timeout_tx_a, std::sh
 
 			//m_stable_mcis.push(m_last_stable_mci_internal);
 
-			timeout_tx_a.commit_if_timeout();
+			//timeout_tx_a.commit_if_timeout();
 		}
 		catch (std::exception const & e)
 		{
@@ -856,7 +856,7 @@ void mcp::chain::set_block_stable(mcp::timeout_db_transaction & timeout_tx_a, st
 
 		//m_stable_blocks.push(stable_block);
 
-		timeout_tx_a.commit_if_timeout();
+		//timeout_tx_a.commit_if_timeout();
 	}
 	catch (std::exception const & e)
 	{

@@ -112,9 +112,9 @@ namespace mcp
 		void mt_process_blocks();
 
 		void process_blocks();
-		bool try_process_local_item_first(mcp::timeout_db_transaction & timeout_tx);
-		void do_process(mcp::timeout_db_transaction & timeout_tx, std::deque<std::shared_ptr<mcp::block_processor_item>>& dag_blocks_processing);
-		void do_process_one(mcp::timeout_db_transaction & timeout_tx, std::shared_ptr<mcp::block_processor_item> item);
+		bool try_process_local_item_first();
+		void do_process(std::deque<std::shared_ptr<mcp::block_processor_item>>& dag_blocks_processing);
+		void do_process_one(std::shared_ptr<mcp::block_processor_item> item);
 		void do_process_dag_item(mcp::timeout_db_transaction & timeout_tx, std::shared_ptr<mcp::block_processor_item> item_a);
 
 		void process_missing(std::shared_ptr<mcp::block_processor_item> item_a, std::unordered_set<mcp::block_hash> const & missings, h256Hash const & transactions);

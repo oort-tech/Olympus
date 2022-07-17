@@ -492,8 +492,7 @@ void mcp::process_block_cache::commit_and_clear_changing()
 	m_cache->transaction_earse(m_transaction_puts_flushed);
 	for (put_item<h256, std::shared_ptr<mcp::Transaction>> const & item : m_transaction_puts)
 		m_cache->transaction_put(item.key, item.value);
-	for (auto h : m_transaction_dels)
-		m_tq->drop(h);
+	m_tq->drop(m_transaction_dels);
 	m_transaction_puts.clear();
 	m_transaction_puts_flushed.clear();
 	m_transaction_dels.clear();

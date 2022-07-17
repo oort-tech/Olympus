@@ -313,8 +313,8 @@ namespace mcp
 			u256 pNonce = 0;
 			mcp::db::db_transaction t(m_store.create_transaction());
 			/// exist && and it's not equal to the last transaction plus 1
-			m_cache->account_nonce_get(t, ts.sender(), pNonce);
-			if (ts.nonce() <= pNonce)
+			auto exist = m_cache->account_nonce_get(t, ts.sender(), pNonce);
+			if (exist && ts.nonce() <= pNonce)
 			{
 				if (isLocal) /// if local return error
 					return make_pair(ImportResult::OverbidGasPrice, h256Hash());
@@ -540,19 +540,24 @@ namespace mcp
 		return NonceRange::Current;
 	}
 
-	void TransactionQueue::drop(h256 const& _txHash)
+	void TransactionQueue::drop(h256s const& _txHashs)
 	{
 		UpgradableGuard l(m_lock);
-
-		if (!m_known.count(_txHash))
+		h256s dels;
+		for (auto h : _txHashs)
 		{
-			LOG(m_log.debug) << "drop Transaction hash" << _txHash.hex() << "already known?!";
-			return;
+			if (m_known.count(h))
+			{
+				dels.push_back(h);
+			}
 		}
 
 		UpgradeGuard ul(l);
-		m_dropped.insert(_txHash, true /* placeholder value */);
-		remove_WITH_LOCK(_txHash);
+		for (auto h : dels)
+		{
+			m_dropped.insert(h, true /* placeholder value */);
+			remove_WITH_LOCK(h);
+		}
 	}
 
 	std::shared_ptr<Transaction> TransactionQueue::get(h256 const& _txHash) const
