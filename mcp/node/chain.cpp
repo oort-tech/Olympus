@@ -643,7 +643,7 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 					bool invalid = false;
 					try
 					{
-						dev::eth::McInfo mc_info(mci, mc_timestamp, mc_last_summary_mci);
+						dev::eth::McInfo mc_info(m_last_stable_index_internal, mci, mc_timestamp, mc_last_summary_mci);
 						//mcp::stopwatch_guard sw("set_block_stable2_1");
 						std::pair<ExecutionResult, dev::eth::TransactionReceipt> result = execute(transaction_a, cache_a, *_t, mc_info, Permanence::Committed, dev::eth::OnOpFunc());
 
@@ -969,7 +969,7 @@ bool mcp::chain::get_mc_info_from_block_hash(mcp::db::db_transaction & transacti
 		assert_x(last_summary_state->main_chain_index);
 		last_summary_mci = *last_summary_state->main_chain_index;
 
-		mc_info_a = dev::eth::McInfo(*mc_state->main_chain_index, mc_state->mc_timestamp, last_summary_mci);
+		mc_info_a = dev::eth::McInfo(mc_state->stable_index, *mc_state->main_chain_index, mc_state->mc_timestamp, last_summary_mci);
 		return true;
 	}
 	else
