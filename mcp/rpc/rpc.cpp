@@ -1888,7 +1888,7 @@ void mcp::rpc_handler::eth_call(mcp::json &j_response, bool &)
 	std::string blockText = params[1];
 	if (blockText == "latest" || blockText == "pending")
 	{
-		block_number = m_chain->last_stable_index();
+		block_number = m_chain->last_stable_mci();
 	}
 	else if (blockText == "earliest")
 	{
