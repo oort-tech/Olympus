@@ -94,7 +94,7 @@ private:
 		block_param_map.insert({ 0, b_param_v0 });
 
 		//chain_id = (uint64_t)mcp::mcp_network;
-		chain_id = (uint64_t)804;
+		chain_id = (uint64_t)971;
 		switch (mcp::mcp_network)
 		{
 		case mcp::mcp_networks::mcp_mini_test_network:
