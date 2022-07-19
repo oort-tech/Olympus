@@ -320,22 +320,24 @@ mcp::rpc_handler::rpc_handler(mcp::rpc &rpc_a, std::string const &body_a, std::f
 	m_ethRpcMethods["eth_requestAccounts"] = &mcp::rpc_handler::eth_accounts;
 }
 
-bool mcp::rpc_handler::try_get_mc_info(dev::eth::McInfo &mc_info_a, uint64_t &mci)
+bool mcp::rpc_handler::try_get_mc_info(dev::eth::McInfo &mc_info_a, uint64_t &block_number)
 {
 	mcp::db::db_transaction transaction(m_store.create_transaction());
-	mcp::block_hash mc_hash;
-	bool exists(!m_store.main_chain_get(transaction, mci, mc_hash));
-	assert_x(exists);
-	std::shared_ptr<mcp::block_state> mc_state(m_cache->block_state_get(transaction, mc_hash));
+	mcp::block_hash block_hash;
+	bool exists(!m_cache->block_number_get(transaction, block_number, block_hash));
+	if (!exists)
+		return false;
+
+	std::shared_ptr<mcp::block_state> mc_state(m_cache->block_state_get(transaction, block_hash));
 	assert_x(mc_state);
 	assert_x(mc_state->is_stable);
 	assert_x(mc_state->main_chain_index);
 	assert_x(mc_state->mc_timestamp > 0);
 
 	uint64_t last_summary_mci(0);
-	if (mc_hash != mcp::genesis::block_hash)
+	if (block_hash != mcp::genesis::block_hash)
 	{
-		std::shared_ptr<mcp::block> mc_block(m_cache->block_get(transaction, mc_hash));
+		std::shared_ptr<mcp::block> mc_block(m_cache->block_get(transaction, block_hash));
 		assert_x(mc_block);
 		std::shared_ptr<mcp::block_state> last_summary_state(m_cache->block_state_get(transaction, mc_block->last_summary_block()));
 		assert_x(last_summary_state);
@@ -1890,7 +1892,7 @@ void mcp::rpc_handler::eth_call(mcp::json &j_response, bool &)
 	std::string blockText = params[1];
 	if (blockText == "latest" || blockText == "pending")
 	{
-		block_number = m_chain->last_stable_mci();
+		block_number = m_chain->last_stable_index();
 	}
 	else if (blockText == "earliest")
 	{
