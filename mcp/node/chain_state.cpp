@@ -213,8 +213,7 @@ void mcp::chain_state::commit()
     m_unchangedCacheEntries.clear();
 
 	//save traces
-	//assert_x(block);
-	//store.traces_put(transaction, block->hash(), traces);		//todo
+	store.traces_put(transaction, ts.sha3(), traces);
 	traces.clear();
 }
 

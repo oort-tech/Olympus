@@ -2602,7 +2602,7 @@ void mcp::rpc_handler::personal_unlockAccount(mcp::json &j_response, bool &)
 	if (mcp::isAddress(params[0]))
 	{
 		dev::Address account = jsToAddress(params[0]);
-		if (m_key_manager->exists(account) ||
+		if (m_key_manager->exists(account) &&
 			!m_key_manager->unlock(account, params[1]))
 		{
 			j_response["result"] = true;
