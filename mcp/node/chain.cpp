@@ -6,6 +6,7 @@
 #include <mcp/node/evm/Executive.hpp>
 #include <libdevcore/TrieHash.h>
 #include <libdevcore/CommonJS.h>
+#include <mcp/core/config.hpp>
 
 #include <queue>
 
@@ -86,6 +87,8 @@ void mcp::chain::init(bool & error_a, mcp::timeout_db_transaction & timeout_tx_a
 	m_advance_info = m_store.advance_info_get(transaction);
 
 	update_cache();
+
+	init_vrf_outputs(transaction, cache_a);
 }
 
 void mcp::chain::stop()
@@ -205,11 +208,245 @@ void mcp::chain::save_transaction(mcp::timeout_db_transaction & timeout_tx_a, st
 		}
 		catch (std::exception const & e)
 		{
-			LOG(m_log.error) << "Chain save block error: " << e.what();
+			LOG(m_log.error) << "Chain save transaction error: " << e.what();
 			timeout_tx_a.rollback();
 			throw;
 		}
 	}
+}
+
+void mcp::chain::save_approve(mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a, std::shared_ptr<mcp::approve> t_a)
+{
+	if (m_stopped)
+		return;
+
+	{
+		//mcp::stopwatch_guard sw("process:save_block:not commit");
+
+		mcp::db::db_transaction & transaction(timeout_tx_a.get_transaction());
+		try
+		{
+			{
+				//mcp::stopwatch_guard sw("save_block:write_block");
+				auto const& hash = t_a->sha3();
+				if (cache_a->approve_exists(transaction, hash))
+				{
+					assert_x_msg(false, "block exist do not added count,hash:" + hash.hex());
+				}
+
+				//save approve, need put first
+				cache_a->approve_put(transaction, t_a);
+				m_store.epoch_approves_put(transaction, mcp::epoch_approves_key(t_a->m_epoch, t_a->sha3()));
+				m_store.approve_unstable_count_add(transaction);
+				LOG(m_log.info) << "approve_unstable: add " << m_store.approve_unstable_count(transaction);
+				m_store.approve_count_add(transaction);
+			}
+
+			//m_new_blocks.push(block_a->block);
+
+			timeout_tx_a.commit_if_timeout();
+		}
+		catch (std::exception const & e)
+		{
+			LOG(m_log.error) << "Chain save approve error: " << e.what();
+			timeout_tx_a.rollback();
+			throw;
+		}
+	}
+}
+
+void mcp::chain::switch_witness(mcp::db::db_transaction & transaction_a, uint64_t mc_last_summary_mci){
+	static uint64_t old_summary_mci = 0;
+	if(old_summary_mci == mc_last_summary_mci)
+		return;
+	else
+		old_summary_mci = mc_last_summary_mci;
+
+	LOG(m_log.info) << "[switch_witness] in " << mc_last_summary_mci;
+	if(mc_last_summary_mci <= 2) return;
+
+	if (mcp::mcp_network == mcp::mcp_networks::mcp_mini_test_network)
+	{
+		if(mc_last_summary_mci%mcp::epoch_period == 0){
+
+			Address a = vrf_outputs.rbegin()->second.from();
+			uint32_t output = vrf_outputs.rbegin()->first;
+			LOG(m_log.info) << "switch to " << a.hex() << " output:" << output;
+			std::vector<std::string> mini_test_witness = {std::string("0x")+a.hex()};
+			mcp::witness_param w_param;
+			w_param.witness_count = 1;
+			w_param.majority_of_witnesses = w_param.witness_count * 2 / 3 + 1;
+			w_param.witness_list = mcp::param::to_witness_list(mini_test_witness);
+			assert_x(w_param.witness_list.size() == w_param.witness_count);
+
+			#if 0
+			std::vector<std::string> mini_test_witness_str_list_v0 = {
+				"0x1144B522F45265C2DFDBAEE8E324719E63A1694C"
+			};
+			std::vector<std::string> mini_test_witness_str_list_v1 = {
+				"0xd11c69cf2a766bee0d7b5186687e70e0ca0530db"
+			};
+			std::vector<std::string> mini_test_witness_str_list_v2 = {
+				"0xc086b09411e4c16b90e1b4b32a7f5d34f0f8eee4"
+			};
+			std::vector<std::string> mini_test_witness_str_list_v3 = {
+				"0xdb06ba6181c94d4b30ad8f3d8c29737e4222d7e7"
+			};
+			mcp::witness_param w_param;
+			w_param.witness_count = 1;
+			w_param.majority_of_witnesses = w_param.witness_count * 2 / 3 + 1;
+
+			if(mc_last_summary_mci/mcp::epoch_period%4 == 0){
+				w_param.witness_list = mcp::param::to_witness_list(mini_test_witness_str_list_v0);
+			}
+			else if(mc_last_summary_mci/mcp::epoch_period%4 == 1){
+				w_param.witness_list = mcp::param::to_witness_list(mini_test_witness_str_list_v1);
+			}
+			else if(mc_last_summary_mci/mcp::epoch_period%4 == 2){
+				w_param.witness_list = mcp::param::to_witness_list(mini_test_witness_str_list_v2);
+			}
+			else if(mc_last_summary_mci/mcp::epoch_period%4 == 3){
+				w_param.witness_list = mcp::param::to_witness_list(mini_test_witness_str_list_v3);
+			}
+			assert_x(w_param.witness_list.size() == w_param.witness_count);
+			#endif
+
+			mcp::param::add_witness_param(mc_last_summary_mci + mcp::epoch_period, w_param);
+
+			vrf_outputs.clear();
+			LOG(m_log.info) << "switch to witness_list "<< a.hex() <<  "and clear vrf ";
+		}
+	}
+	else if (mcp::mcp_network == mcp::mcp_networks::mcp_test_network)
+	{
+		if(mc_last_summary_mci%mcp::epoch_period == 0){
+			LOG(m_log.info) << "[switch_witness] in testmode" << mc_last_summary_mci;
+			
+			#if 1
+			epoch_elected_list elected_list;
+			if(vrf_outputs.size() < 14)
+			{
+				LOG(m_log.info) << "Not switch witness_list because elector's number is too short: " << vrf_outputs.size();
+				return;
+			}
+			std::vector<std::string> test_witness;
+			auto it = vrf_outputs.rbegin();
+			for(int i=0; i<14; i++){
+				//Address a=(vrf_outputs.rbegin()+i)->second;
+				//uint32_t output = (vrf_outputs.rbegin()+i)->first;
+				Address a = it->second.from();
+				uint32_t output = it->first;
+				it++;
+				LOG(m_log.info) << "switch to " << a.hex() << " output:" << output;
+				test_witness.emplace_back(std::string("0x")+a.hex());
+				elected_list.hashs.emplace_back(it->second.approve_hash());
+			}
+			mcp::witness_param w_param;
+			w_param.witness_count = 14;
+			w_param.majority_of_witnesses = w_param.witness_count * 2 / 3 + 1;
+			w_param.witness_list = mcp::param::to_witness_list(test_witness);
+			
+			assert_x(w_param.witness_list.size() == w_param.witness_count);
+
+			#else
+			std::vector<std::string> test_witness_str_list_v0 = {
+				"0x1144B522F45265C2DFDBAEE8E324719E63A1694C",
+				"0xd11c69cf2a766bee0d7b5186687e70e0ca0530db",
+				"0xc086b09411e4c16b90e1b4b32a7f5d34f0f8eee4",
+				"0xdb06ba6181c94d4b30ad8f3d8c29737e4222d7e7",
+				"0x5a1f0a142d687fefe59282698b78318c7fd7dcf3",
+				"0x15bcdfac7f421350ae41fa901bdb178ee7ea8e1a",
+				"0x140e5b65015a6a8c8df979ef528682d14a9855d1",
+				"0x777dbf4dff1dcb7165ebb4d8dc3590b6dba05868",
+				"0x6900e0e415284ee2d34bffdfa3800d25dda1f789",
+				"0x23936f76f1225fdd6147646fa9082dabadac469f",
+				"0xa55bb0fb21612faf9e182f4a8c90bd1bf941c164",
+				"0xb98e786e0e399842196bc9d3c7dab81dcceac2c2",
+				"0xc3f3e6c0696ffae1f7101c18b9b43bff4cb7f42f",
+				"0xc2499e9b66d7f4081bb5915dfddb386c53228fa4"
+			};
+			std::vector<std::string> test_witness_str_list_v1 = {
+				"0xe9c1b8c09a32ed572441024953c591ae28c87380",
+				"0xed1f63367fd7af0310c5b46aeca14680bb1d270b",
+				"0xf9197377df0e45094f6fa555325a085c0c9c0afe",
+				"0xfd708ba83a168077c9999d98e3b81c1cc975bdef",
+				"0x3ef22091fcf552b4e9371608e7066dcbbd5fec15",
+				"0x3fd605e394b6c61a2ec2538ac0f779e2968abd43",
+				"0x4deb824c0e6035f97654aa231a8bf2b6e988b7e5",
+				"0x9ac7ea2b68c7ebd821d0e6f1f73c8678ade7ea4d",
+				"0x15986059d08c85c7c8b66ec9bba06518e1982e25",
+				"0xae0bf9072b885722f3c2eae8edebed3b461ea19a",
+				"0xb3d132b42dc41de85aa13bcf3047cd04e85c435a",
+				"0xbb1f86e871852225163c3c0c15fcbe4357c2667e",
+				"0xdb61485d67b173efdcdcdb3e68be5b8c68e7adde",
+				"0xde4dd6efe9bd7ba5ad3525098946cc19571eba1c"
+			};
+			mcp::witness_param w_param;
+			w_param.witness_count = 14;
+			w_param.majority_of_witnesses = w_param.witness_count * 2 / 3 + 1;
+
+			if(mc_last_summary_mci/mcp::epoch_period%2 == 1){
+				w_param.witness_list = mcp::param::to_witness_list(test_witness_str_list_v1);
+			}
+			else{
+				w_param.witness_list = mcp::param::to_witness_list(test_witness_str_list_v0);
+			}
+			assert_x(w_param.witness_list.size() == w_param.witness_count);
+			#endif
+
+			mcp::param::add_witness_param(mc_last_summary_mci + mcp::epoch_period, w_param);
+			m_last_epoch = mcp::approve::calc_curr_epoch(mc_last_summary_mci);
+			//The elected_list corresponds to next epoch.
+			m_store.epoch_elected_approve_receipts_put(transaction_a, m_last_epoch + 1, elected_list);
+			vrf_outputs.clear();
+		}
+	}
+}
+
+void mcp::chain::init_vrf_outputs(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a)
+{
+	if(m_last_stable_mci <= 18) return;
+	
+	std::map<uint64_t, std::set<mcp::block_hash>> dag_stable_block_hashs; //order by block level and hash
+	//to do: check the releationship between m_last_stable_mci and m_last_summary_mci
+	for(uint64_t mci=m_last_stable_mci -18 - (m_last_stable_mci-18) % mcp::epoch_period; mci <= m_last_stable_mci - 18; mci++){
+		mcp::block_hash hash;
+		bool exists(!m_store.stable_block_get(transaction_a, mci, hash));
+		assert_x(exists);
+
+		search_already_stable_block(transaction_a, cache_a, hash, mci, dag_stable_block_hashs);
+		LOG(m_log.info) << "[init_vrf_outputs] dag_stable_block_hashs size=" << dag_stable_block_hashs.size();
+		std::shared_ptr<mcp::block> mc_stable_block = cache_a->block_get(transaction_a, hash);
+		assert_x(mc_stable_block != nullptr);
+	}
+
+	for (auto iter_p(dag_stable_block_hashs.begin()); iter_p != dag_stable_block_hashs.end(); iter_p++)
+	{
+		std::set<mcp::block_hash> const & hashs(iter_p->second);
+		for (auto iter(hashs.begin()); iter != hashs.end(); iter++)
+		{
+			mcp::block_hash const & dag_stable_block_hash(*iter);
+			{
+				std::shared_ptr<mcp::block> dag_stable_block = cache_a->block_get(transaction_a, dag_stable_block_hash);
+				assert_x(dag_stable_block);
+
+				///handle approve stable block 
+				auto approves(dag_stable_block->approves());
+				LOG(m_log.trace) << "[advance_stable_mci] approves.size=" << approves.size();
+				for (auto i = 0; i < approves.size(); i++)
+				{
+					h256 const& approve_hash = approves[i];
+					
+					auto receipt = cache_a->approve_receipt_get(transaction_a, approve_hash);
+					if (receipt)
+					{
+						LOG(m_log.info) << "[init_vrf_outputs] insert from=" << receipt->from().hex() << " output=" << *(uint32_t*)receipt->output().data();
+					}
+				}
+			}
+		}
+	}
+	LOG(m_log.info) << "[init_vrf_outputs] size=" << vrf_outputs.size();
 }
 
 void mcp::chain::try_advance(mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a)
@@ -217,7 +454,8 @@ void mcp::chain::try_advance(mcp::timeout_db_transaction & timeout_tx_a, std::sh
 	while (!m_stopped && ((dev::h64::Arith) m_advance_info.mci).convert_to<uint64_t>() > m_last_stable_mci_internal)
 	{
 		m_last_stable_mci_internal++;
-		advance_stable_mci(timeout_tx_a, cache_a, m_last_stable_mci_internal, m_advance_info.witness_block);
+		advance_stable_mci(timeout_tx_a, cache_a, m_last_stable_mci_internal, m_advance_info.witness_block, m_last_summary_mci_internal);
+		LOG(m_log.info) << "[try_advance] m_last_summary_mci_internal=" << m_last_summary_mci_internal;
 
 		//update last stable mci
 		mcp::db::db_transaction & transaction(timeout_tx_a.get_transaction());
@@ -237,6 +475,8 @@ void mcp::chain::try_advance(mcp::timeout_db_transaction & timeout_tx_a, std::sh
 			//m_stable_mcis.push(m_last_stable_mci_internal);
 
 			//timeout_tx_a.commit_if_timeout();
+			
+			switch_witness(transaction, m_last_summary_mci_internal);
 		}
 		catch (std::exception const & e)
 		{
@@ -405,6 +645,7 @@ void mcp::chain::update_mci(mcp::db::db_transaction & transaction_a, std::shared
 		cache_a->block_state_put(transaction_a, new_mc_block_hash, new_mc_block_state_copy);
 
 		m_store.main_chain_put(transaction_a, new_mci, new_mc_block_hash);
+		LOG(m_log.info) << "[update_mci] retreat_mci=" << retreat_mci << ", new mci=" << new_mci;
 	}
 
 #pragma endregion
@@ -579,7 +820,7 @@ void mcp::chain::update_latest_included_mci(mcp::db::db_transaction & transactio
 	//LOG(m_log.debug) << "update limci:" << to_update_hashs.size();
 }
 
-void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a, uint64_t const &mci, mcp::block_hash const & block_hash_a)
+void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a, uint64_t const &mci, mcp::block_hash const & block_hash_a, uint64_t & mc_last_summary_mci)
 {
 	mcp::db::db_transaction & transaction_a(timeout_tx_a.get_transaction());
 
@@ -598,7 +839,7 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 	assert_x(last_summary_state->is_stable);
 	assert_x(last_summary_state->is_on_main_chain);
 	assert_x(last_summary_state->main_chain_index);
-	uint64_t const & mc_last_summary_mci = *last_summary_state->main_chain_index;
+	mc_last_summary_mci = *last_summary_state->main_chain_index;
 
 	auto block_to_advance = cache_a->block_get(transaction_a, block_hash_a);
 	uint64_t const & stable_timestamp = block_to_advance->exec_timestamp();
@@ -704,6 +945,74 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 					/// exec transaction can reduce, if two or more block linked a transaction,reduce once.
 					m_store.transaction_unstable_count_reduce(transaction_a);
 				}
+
+				///handle approve stable block 
+				auto approves(dag_stable_block->approves());
+				LOG(m_log.trace) << "[advance_stable_mci] approves.size=" << approves.size();
+				for (auto i = 0; i < approves.size(); i++)
+				{
+					h256 const& approve_hash = approves[i];
+					
+					auto receipt = cache_a->approve_receipt_get(transaction_a, approve_hash);
+					if (receipt)/// transaction maybe processed yet,but summary need used receipt even if it has been processed.
+					{
+						RLPStream receiptRLP;
+						receipt->streamRLP(receiptRLP);
+						receipts.push_back(receiptRLP.out());
+
+						index++;
+						continue;
+					}
+
+					auto ap = cache_a->approve_get(transaction_a, approve_hash);
+
+					/// exec approves
+					try{
+						mcp::block_hash hash;
+						bool exists(!m_store.stable_block_get(transaction_a, (ap->m_epoch-1)*epoch_period, hash));
+						assert_x(exists);
+						std::vector<uint8_t> output;
+						if(ap->m_epoch != mcp::approve::calc_elect_epoch(mc_last_summary_mci))
+						{
+							LOG(m_log.info) << "epoch " << ap->m_epoch << " mismatch last_summary_mci " << mc_last_summary_mci;
+							continue;
+						}
+						ap->vrf_verify(output, hash.hex());
+
+						/// exec approve can reduce, if two or more block linked a approve,reduce once.
+						m_store.approve_unstable_count_reduce(transaction_a);
+						LOG(m_log.info) << "approve_unstable: reduce " << m_store.approve_unstable_count(transaction_a);
+
+						std::shared_ptr<dev::ApproveReceipt> preceipt = std::make_shared<dev::ApproveReceipt>(ap->sender(), ap->m_epoch, output, approve_hash);
+						cache_a->approve_receipt_put(transaction_a, approve_hash, preceipt);
+						m_store.epoch_approve_receipts_put(transaction_a, mcp::epoch_approves_key(ap->m_epoch, ap->sha3()));
+					
+						vrf_outputs.insert(std::make_pair(*(uint32_t*)output.data(), *preceipt));
+						LOG(m_log.info) << "add vrf output: sender=" << ap->sender().hex() << "output="<<*(uint32_t*)output.data() << " epoch="<<ap->m_epoch<<" proof="<<toHex(ap->m_proof);
+						
+
+						RLPStream receiptRLP;
+						preceipt->streamRLP(receiptRLP);
+						receipts.push_back(receiptRLP.out());
+					}
+					catch (dev::eth::NotEnoughCash const& _e)
+					{
+						LOG(m_log.info) << "approve exec not enough cash,hash: " << ap->sha3().hex()
+							<< ", from: " << dev::toJS(ap->sender());
+					}
+					//catch (Exception const& _e)
+					//{
+					//	cerror << "Unexpected exception in VM. There may be a bug in this implementation. "
+					//		<< diagnostic_information(_e);
+					//	exit(1);
+					//}
+					catch (std::exception const& _e)
+					{
+						std::cerr << _e.what() << std::endl;
+						throw;
+					}
+					
+				}
 			}
 
 			// set block stable
@@ -785,6 +1094,12 @@ void mcp::chain::set_block_stable(mcp::timeout_db_transaction & timeout_tx_a, st
 		{
 			//mcp::stopwatch_guard sw("set_block_stable3");
 
+			if(stable_block_state_copy->main_chain_index.is_initialized()){
+				LOG(m_log.info) << "[set_block_stable] main_chain_index=" << stable_block_state_copy->main_chain_index << " mci="<<mci;
+			}
+			else{
+				LOG(m_log.info) << "[set_block_stable] main_chain_index is empty" << " mci="<<mci;
+			}
 			if (!stable_block_state_copy->main_chain_index || *stable_block_state_copy->main_chain_index != mci)
 				stable_block_state_copy->main_chain_index = mci;
 			stable_block_state_copy->mc_timestamp = mc_timestamp;
@@ -897,6 +1212,37 @@ void mcp::chain::search_stable_block(mcp::db::db_transaction & transaction_a, st
 	}
 }
 
+void mcp::chain::search_already_stable_block(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a, mcp::block_hash const &block_hash_a, uint64_t const &mci, std::map<uint64_t, std::set<mcp::block_hash>> &stable_block_level_and_hashs)
+{
+	std::queue<mcp::block_hash> queue;
+	queue.push(block_hash_a);
+
+	while (!queue.empty())
+	{
+		mcp::block_hash block_hash(queue.front());
+		queue.pop();
+
+		if (block_hash == mcp::genesis::block_hash)
+			continue;
+
+		std::shared_ptr<mcp::block_state> state(cache_a->block_state_get(transaction_a, block_hash));
+		assert_x(state);
+
+		if (!state->is_stable)
+			continue;
+
+		auto r = stable_block_level_and_hashs[state->level].insert(block_hash);
+		if (!r.second)
+			continue;
+
+		std::shared_ptr<mcp::block> block(cache_a->block_get(transaction_a, block_hash));
+		for (mcp::block_hash const &pblock_hash : block->parents())
+		{
+			queue.push(pblock_hash);
+		}
+	}
+}
+
 std::vector<uint64_t> mcp::chain::cal_skip_list_mcis(uint64_t const &mci)
 {
 	std::vector<uint64_t> skip_list_mcis;
@@ -917,6 +1263,7 @@ void mcp::chain::update_cache()
 {
 	m_last_mci = m_last_mci_internal;
 	m_last_stable_mci = m_last_stable_mci_internal;
+	m_last_summary_mci = m_last_summary_mci_internal;
 	m_min_retrievable_mci = m_min_retrievable_mci_internal;
 	m_last_stable_index = m_last_stable_index_internal;
 }
@@ -939,6 +1286,16 @@ uint64_t mcp::chain::min_retrievable_mci()
 uint64_t mcp::chain::last_stable_index()
 {
 	return m_last_stable_index;
+}
+
+uint64_t mcp::chain::last_epoch()
+{
+	return m_last_epoch;
+}
+
+uint64_t mcp::chain::last_summary_mci()
+{
+	return m_last_summary_mci;
 }
 
 bool mcp::chain::get_mc_info_from_block_hash(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::iblock_cache> cache_a, mcp::block_hash hash_a, dev::eth::McInfo & mc_info_a)

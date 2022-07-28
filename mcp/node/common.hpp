@@ -11,18 +11,20 @@ namespace mcp
 	enum class sub_packet_type
 	{
 		joint = 0,
-		joint_request,
-		transaction,
-		transaction_request,
-		catchup_request,
-		catchup_response,
-		hash_tree_request,
-		hash_tree_response,
-		peer_info,
-		peer_info_request,
-		hello_info,
-		hello_info_request,
-		hello_info_ack,
+		joint_request, //1
+		transaction, //2
+		transaction_request, //3
+		approve, //4
+		approve_request, //5
+		catchup_request, //6
+		catchup_response, //7
+		hash_tree_request, //8
+		hash_tree_response, //9
+		peer_info, //10
+		peer_info_request, //11
+		hello_info, //12
+		hello_info_request, //13
+		hello_info_ack, //14
 		packet_count = 0x10
 	};
 
@@ -83,6 +85,11 @@ namespace mcp
 		uint64_t  transaction_request = 0;
 		uint64_t  send_transaction = 0;
 		uint64_t  transaction = 0;
+
+		uint64_t  broadcast_approve = 0;
+		uint64_t  approve_request = 0;
+		uint64_t  send_approve = 0;
+		uint64_t  approve = 0;
 		
 		uint64_t  catchup_request = 0;
 		uint64_t  send_catchup = 0;

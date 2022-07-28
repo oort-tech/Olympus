@@ -4,6 +4,7 @@
 #include <mcp/core/common.hpp>
 #include <mcp/db/database.hpp>
 #include <mcp/core/transaction_receipt.hpp>
+#include <mcp/core/approve_receipt.hpp>
 
 namespace mcp
 {
@@ -39,6 +40,11 @@ namespace mcp
 		/// transaction -> block
 		std::shared_ptr<mcp::TransactionAddress> transaction_address_get(mcp::db::db_transaction &, h256 const &);
 		void transaction_address_put(mcp::db::db_transaction &, h256 const &, mcp::TransactionAddress const &);
+		
+		/// approves
+		bool approve_exists(mcp::db::db_transaction &, h256 const &);
+		std::shared_ptr<mcp::approve> approve_get(mcp::db::db_transaction &, h256 const &);
+		void approve_put(mcp::db::db_transaction &, h256 const &, mcp::approve const &);
 
 		std::shared_ptr<mcp::account_state> account_state_get(mcp::db::db_transaction & transaction_a, h256 const& hash_a);
 		void account_state_put(mcp::db::db_transaction & transaction_a, h256 const& hash_a, mcp::account_state const & value_a);
@@ -85,6 +91,12 @@ namespace mcp
 		void transaction_unstable_count_reduce(mcp::db::db_transaction & transaction_a, uint32_t v = 1);
 		size_t transaction_count(mcp::db::db_transaction & transaction_a);
 		void transaction_count_add(mcp::db::db_transaction & transaction_a, uint32_t v = 1);
+		
+		size_t approve_unstable_count(mcp::db::db_transaction & transaction_a);
+		void approve_unstable_count_add(mcp::db::db_transaction & transaction_a, uint32_t v = 1);
+		void approve_unstable_count_reduce(mcp::db::db_transaction & transaction_a, uint32_t v = 1);
+		size_t approve_count(mcp::db::db_transaction & transaction_a);
+		void approve_count_add(mcp::db::db_transaction & transaction_a, uint32_t v = 1);
 
 		//sync
 		bool catchup_chain_summaries_get(mcp::db::db_transaction & transaction_a, uint64_t const &, mcp::summary_hash &);
@@ -152,6 +164,18 @@ namespace mcp
 		std::shared_ptr<dev::eth::TransactionReceipt> transaction_receipt_get(mcp::db::db_transaction & transaction_a, h256 const& hash_a);
 		void transaction_receipt_put(mcp::db::db_transaction &, h256 const& hash_a, dev::eth::TransactionReceipt const& receipt);
 
+		std::shared_ptr<dev::ApproveReceipt> approve_receipt_get(mcp::db::db_transaction & transaction_a, h256 const& hash_a);
+		void approve_receipt_put(mcp::db::db_transaction &, h256 const& hash_a, dev::ApproveReceipt const& receipt);
+
+		void epoch_approves_get(mcp::db::db_transaction & transaction_a, uint64_t const & epoch, std::list<h256> & hashs_a);
+		void epoch_approves_put(mcp::db::db_transaction & transaction_a, mcp::epoch_approves_key const & key_a);
+
+		void epoch_approve_receipts_get(mcp::db::db_transaction & transaction_a, uint64_t const & epoch, std::list<h256> & hashs_a);
+		void epoch_approve_receipts_put(mcp::db::db_transaction & transaction_a, mcp::epoch_approves_key const & key_a);
+
+		bool epoch_elected_approve_receipts_get(mcp::db::db_transaction & transaction_a, uint64_t const & epoch, epoch_elected_list & list);
+		void epoch_elected_approve_receipts_put(mcp::db::db_transaction & transaction_a, uint64_t const & epoch, epoch_elected_list & list);
+
 		void version_put(mcp::db::db_transaction &, int);
 		int version_get();
 
@@ -178,6 +202,8 @@ namespace mcp
 
 		// transaction hash -> transaction
 		int transactions;
+
+		int approves;
 
 		// account -> nonce
 		int account_nonce;
@@ -232,6 +258,11 @@ namespace mcp
 
 		//hash -> transaction receipt
 		int transaction_receipt;
+		int approve_receipt;
+
+		int epoch_approves;
+		int epoch_approve_receipts;
+		int epoch_elected_approve_receipts;
 
 		//genesis hash key
 		static dev::h256 const genesis_hash_key;

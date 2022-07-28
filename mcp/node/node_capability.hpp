@@ -22,6 +22,7 @@ namespace mcp
 			offset(offset_a),
 			known_blocks(100),
 			known_transactions(10000),
+			known_approves(10000),
 			last_hanlde_peer_info_request_time(std::chrono::steady_clock::now()),
 			last_peer_info_request_time(std::chrono::steady_clock::now())
 		{
@@ -54,6 +55,16 @@ namespace mcp
 
 		int size() { return known_transactions.size(); }
 
+		bool is_known_approve(h256 const & hash_a) const
+		{
+			return known_approves.contains(hash_a);
+		}
+
+		void mark_as_known_approve(h256 const & hash_a)
+		{
+			known_approves.add(hash_a);
+		}
+
 		std::weak_ptr<p2p::peer> peer;
 		unsigned offset;
 		std::chrono::steady_clock::time_point last_hanlde_peer_info_request_time;
@@ -62,6 +73,7 @@ namespace mcp
 	private:
 		mcp::mru_list<mcp::block_hash, std::mutex> known_blocks;
 		mcp::mru_list<h256, std::mutex> known_transactions;
+		mcp::mru_list<h256, std::mutex> known_approves;
 	};
 
     class local_remote_ack_hello {   
@@ -119,6 +131,7 @@ namespace mcp
 
 	class block_processor;
 	class TransactionQueue;
+	class ApproveQueue;
 	class node_sync;
 	class node_capability : public p2p::icapability
 	{
@@ -127,7 +140,8 @@ namespace mcp
 		node_capability(boost::asio::io_service &io_service_a, mcp::block_store& store_a,
 			mcp::fast_steady_clock& steady_clock_a, std::shared_ptr<mcp::block_cache> cache_a,
 			std::shared_ptr<mcp::async_task> async_task_a, std::shared_ptr<mcp::block_arrival> block_arrival_a,
-			std::shared_ptr<mcp::TransactionQueue> tq
+			std::shared_ptr<mcp::TransactionQueue> tq,
+			std::shared_ptr<mcp::ApproveQueue> aq
 		);
 		void set_sync(std::shared_ptr<mcp::node_sync> sync_a) { m_sync = sync_a; }
 		void set_processor(std::shared_ptr<mcp::block_processor> block_processor_a) { m_block_processor = block_processor_a; }
@@ -138,6 +152,7 @@ namespace mcp
 		bool read_packet(std::shared_ptr<p2p::peer> peer_a, unsigned const & type, std::shared_ptr<dev::RLP> r);
 		void broadcast_block(mcp::joint_message const & message);
 		void broadcast_transaction(mcp::Transaction const & message);
+		void broadcast_approve(mcp::approve const & message);
 		void mark_as_known_block(p2p::node_id node_id_a, mcp::block_hash block_hash_a);
 
         bool check_remotenode_hello(mcp::block_hash const & block_hash_a);
@@ -179,6 +194,7 @@ namespace mcp
     private:
 		/// transaction processed callback
 		void onTransactionImported(ImportResult _ir, h256 const& _h, p2p::node_id const& _nodeId);
+		void onApproveImported(ImportResult _ir, h256 const& _h, p2p::node_id const& _nodeId);
 
 		std::unordered_map<p2p::node_id, mcp::peer_info> m_peers;
 		std::mutex m_peers_mutex;
@@ -203,5 +219,6 @@ namespace mcp
 		std::shared_ptr<mcp::async_task> m_async_task;
 		std::shared_ptr<mcp::block_arrival> m_block_arrival;
 		std::shared_ptr<TransactionQueue> m_tq;                  ///< Maintains a list of incoming transactions not yet in a block on the blockchain.
+		std::shared_ptr<ApproveQueue> m_aq;
 	};
 }

@@ -19,7 +19,7 @@
 #include <boost/multi_index/hashed_index.hpp>
 #include <boost/multi_index/member.hpp>
 
-#include <secp256k1.h>
+#include <secp256k1-vrf.h>
 
 #include <libdevcrypto/Common.h>
 
@@ -28,6 +28,18 @@
 
 namespace mcp
 {
+	// some utility functions
+	// todo jeremy: delete?
+	std::string uint64_to_hex(uint64_t);
+	std::string uint64_to_hex_nofill(uint64_t);
+	std::string uint256_to_hex_nofill(uint256_t);
+	bool hex_to_uint64(std::string const &, uint64_t &, bool show_base = false);
+	bool hex_to_uint256(std::string const & value_a, uint256_t & target_a, bool show_base = false);
+	std::string bytes_to_hex(dev::bytes const & b);
+	std::string chars_to_hex(const unsigned char* p, size_t len);
+	int from_hex_char(char c) noexcept;
+	bool hex_to_bytes(std::string const & s, dev::bytes & out);
+
     template <typename... Args>
     class Signal
     {
@@ -210,5 +222,6 @@ namespace mcp
 			const unsigned char *ek);
 
 		bool verify(dev::h256 const &pkSlice, dev::Signature const &sig, dev::h256 const &hash);
+		secp256k1_context const* get_secp256k1_ctx();
 	}
 }

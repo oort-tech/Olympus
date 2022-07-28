@@ -7,13 +7,14 @@
 #include <mcp/common/common.hpp>
 //#include <mcp/common/log.hpp>
 
-mcp::block::block(dev::Address from, mcp::block_hash const & previous, std::vector<mcp::block_hash> const & parents, h256s links,
+mcp::block::block(dev::Address from, mcp::block_hash const & previous, std::vector<mcp::block_hash> const & parents, h256s links, h256s approves,
 	mcp::block_hash const & last_summary, mcp::block_hash const & last_summary_block, mcp::block_hash const & last_stable_block,
 	uint64_t const & exec_timestamp, dev::Secret const& s) :
 	m_from(from),
 	m_previous(previous),
 	m_parents(parents),
 	m_links(links),
+	m_approves(approves),
 	m_last_summary(last_summary),
 	m_last_summary_block(last_summary_block),
 	m_last_stable_block(last_stable_block),
@@ -35,7 +36,7 @@ mcp::block::block(dev::RLP const & rlp)
 		if (!rlp.isList())
 			BOOST_THROW_EXCEPTION(InvalidBlockFormat() << errinfo_comment("block RLP must be a list"));
 
-		if (rlp.itemCount() != 9)
+		if (rlp.itemCount() != 10)
 			BOOST_THROW_EXCEPTION(InvalidBlockFormat() << errinfo_comment("too many or to low fields in the block RLP"));
 		m_from = rlp[0].isEmpty() ? dev::Address() : rlp[0].toHash<dev::Address>(RLP::VeryStrict);
 		m_previous = (mcp::block_hash)rlp[1];
@@ -53,11 +54,18 @@ mcp::block::block(dev::RLP const & rlp)
 			m_links.push_back((h256)link);
 		}
 
-		m_last_summary = (mcp::summary_hash)rlp[4];
-		m_last_summary_block = (mcp::block_hash)rlp[5];
-		m_last_stable_block = (mcp::block_hash)rlp[6];
-		m_exec_timestamp = (uint64_t)rlp[7];
-		m_vrs = (Signature)rlp[8];
+		dev::RLP const & approves_rlp = rlp[4];
+		for (dev::RLP const & approve : approves_rlp)
+		{
+			m_approves.push_back((h256)approve);
+		}
+
+
+		m_last_summary = (mcp::summary_hash)rlp[5];
+		m_last_summary_block = (mcp::block_hash)rlp[6];
+		m_last_stable_block = (mcp::block_hash)rlp[7];
+		m_exec_timestamp = (uint64_t)rlp[8];
+		m_vrs = (Signature)rlp[9];
 		
 	}
 	catch (Exception& _e)
@@ -69,7 +77,7 @@ mcp::block::block(dev::RLP const & rlp)
 
 void mcp::block::streamRLP(dev::RLPStream & s, IncludeSignature sig) const
 {
-	s.appendList((sig ? 1 : 0) + 8);//broadcast 11 fileds,hash 8 fileds
+	s.appendList((sig ? 1 : 0) + 9);//broadcast 11 fileds,hash 8 fileds
 	s << m_from << m_previous;
 
 	s.appendList(m_parents.size());
@@ -78,6 +86,10 @@ void mcp::block::streamRLP(dev::RLPStream & s, IncludeSignature sig) const
 
 	s.appendList(m_links.size());
 	for (auto it(m_links.begin()); it != m_links.end(); it++)
+		s << *it;
+
+	s.appendList(m_approves.size());
+	for (auto it(m_approves.begin()); it != m_approves.end(); it++)
 		s << *it;
 
 	s << m_last_summary << m_last_summary_block << m_last_stable_block << m_exec_timestamp;

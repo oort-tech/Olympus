@@ -867,25 +867,28 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 		std::shared_ptr<mcp::chain> chain(std::make_shared<mcp::chain>(chain_store, ledger));
 
 		/// transaction queue
-		std::shared_ptr<mcp::TransactionQueue> TQ(std::make_shared<mcp::TransactionQueue>(chain_store, cache, chain, sync_async));	
+		std::shared_ptr<mcp::TransactionQueue> TQ(std::make_shared<mcp::TransactionQueue>(chain_store, cache, chain, sync_async));
+		/// approve queue
+		std::shared_ptr<mcp::ApproveQueue> AQ(std::make_shared<mcp::ApproveQueue>(chain_store, cache, chain, sync_async));
 		///validation
-		std::shared_ptr<mcp::validation> validation(std::make_shared<mcp::validation>(chain_store, ledger, invalid_block_cache, cache, TQ));
+		std::shared_ptr<mcp::validation> validation(std::make_shared<mcp::validation>(chain_store, ledger, invalid_block_cache, cache, TQ, AQ));
 		///node_capability
-		std::shared_ptr<mcp::node_capability> capability(std::make_shared<mcp::node_capability>(io_service, chain_store, steady_clock, cache, sync_async, block_arrival, TQ));
+		std::shared_ptr<mcp::node_capability> capability(std::make_shared<mcp::node_capability>(io_service, chain_store, steady_clock, cache, sync_async, block_arrival, TQ, AQ));
 		TQ->set_capability(capability);
+		AQ->set_capability(capability);
 
 		///composer
-		std::shared_ptr<mcp::composer> composer(std::make_shared<mcp::composer>(chain_store, cache, ledger, TQ));
+		std::shared_ptr<mcp::composer> composer(std::make_shared<mcp::composer>(chain_store, cache, ledger, TQ, AQ));
 
 		///sync
-		std::shared_ptr<mcp::node_sync> sync(std::make_shared<mcp::node_sync>(capability, chain_store, chain, cache, TQ, sync_async, steady_clock, bg_io_service));
+		std::shared_ptr<mcp::node_sync> sync(std::make_shared<mcp::node_sync>(capability, chain_store, chain, cache, TQ, AQ, sync_async, steady_clock, bg_io_service));
 		capability->set_sync(sync);
 		chain->set_complete_store_notice_func(
 			std::bind(&mcp::node_sync::put_hash_tree_summaries, sync, std::placeholders::_1)
 		);
 
 		/// block processor
-		std::shared_ptr<mcp::block_processor> processor(std::make_shared<mcp::block_processor>(error, chain_store, cache, chain, sync, capability, validation, sync_async, TQ, steady_clock, block_arrival, bg_io_service, invalid_block_cache, alarm));
+		std::shared_ptr<mcp::block_processor> processor(std::make_shared<mcp::block_processor>(error, chain_store, cache, chain, sync, capability, validation, sync_async, TQ, AQ, steady_clock, block_arrival, bg_io_service, invalid_block_cache, alarm));
 		if (error)
 			return;
 		capability->set_processor(processor);
@@ -909,7 +912,7 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 		{
 			mcp::error_message error_msg;
 			witness = std::make_shared<mcp::witness>(error_msg,
-				ledger, key_manager, chain_store, alarm, composer, chain, processor, cache, TQ,
+				ledger, key_manager, chain_store, alarm, composer, chain, processor, cache, TQ, AQ,
 				config.witness.account_or_file, config.witness.password,
 				last_witness_block_hash_l
 				);
@@ -957,7 +960,7 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 		//}
 
 		ongoing_report(chain_store, host, sync_async, background, cache,
-			sync, processor, capability,chain, alarm, TQ, m_log);
+			sync, processor, capability,chain, alarm, TQ, AQ, m_log);
 
 		std::unique_ptr<mcp::thread_runner> runner = std::make_unique<mcp::thread_runner>(io_service, config.node.io_threads, "io_service");
 		std::unique_ptr<mcp::thread_runner> sync_runner = std::make_unique<mcp::thread_runner>(sync_io_service, config.node.sync_threads, "sync_io_service");
@@ -980,6 +983,7 @@ void mcp_daemon::ongoing_report(
 	std::shared_ptr<mcp::block_processor> processor, std::shared_ptr<mcp::node_capability> capability,
 	std::shared_ptr<mcp::chain> chain, std::shared_ptr<mcp::alarm> alarm,
 	std::shared_ptr<mcp::TransactionQueue> tq,
+	std::shared_ptr<mcp::ApproveQueue> aq,
 	mcp::log& log
 )
 {
@@ -1020,6 +1024,7 @@ void mcp_daemon::ongoing_report(
 		<< ", dependency_size:" << processor->unhandle->dependency_size()
 		<< ", missing_size:" << processor->unhandle->missing_size()
 		<< ", light_missing_size:" << processor->unhandle->light_missing_size()
+		<< ", approve_missing_size:" << processor->unhandle->approve_missing_size()
 		<< ", tips_size:" << processor->unhandle->tips_size();
 
 	LOG(log.info) << "block_processor dag_old_size: " << processor->dag_old_size
@@ -1035,6 +1040,8 @@ void mcp_daemon::ongoing_report(
 	size_t stable_count(store.stable_block_count(transaction));
 	size_t transaction_unstable_count(store.transaction_unstable_count(transaction));
 	size_t transaction_count(store.transaction_count(transaction));
+	size_t approve_unstable_count(store.approve_unstable_count(transaction));
+	size_t approve_count(store.approve_count(transaction));
 	size_t dag_free_count(store.dag_free_count(transaction));
 
 	uint64_t last_mci = chain->last_mci();
@@ -1045,6 +1052,8 @@ void mcp_daemon::ongoing_report(
 		<< ", stable block:" << stable_count
 		<< ", unstable transaction:" << transaction_unstable_count
 		<< ", transaction:" << transaction_count
+		<< ", unstable approve:" << approve_unstable_count
+		<< ", approve:" << approve_count
 		//<< ", unlink block:" << unlink_block_count
 		//<< ", unlink:" << unlink_count
 		//<< ", head:" << head_count
@@ -1054,6 +1063,7 @@ void mcp_daemon::ongoing_report(
 		<< ", last_mci:" << last_mci;
 
 	LOG(log.info) << "TQ:" << tq->getInfo();
+	LOG(log.info) << "AQ:" << aq->getInfo();
 
 	LOG(log.info) << "capability send: "
 		<< ", broadcast_joint:" << mcp::CapMetricsSend.broadcast_joint
@@ -1064,6 +1074,10 @@ void mcp_daemon::ongoing_report(
 		<< ", transaction_request:" << mcp::CapMetricsSend.transaction_request
 		<< ", send_transaction:" << mcp::CapMetricsSend.send_transaction
 		<< ", transaction:" << mcp::CapMetricsSend.transaction
+		<< ", broadcast_approve:" << mcp::CapMetricsSend.broadcast_approve
+		<< ", approve_request:" << mcp::CapMetricsSend.approve_request
+		<< ", send_approve:" << mcp::CapMetricsSend.send_approve
+		<< ", approve:" << mcp::CapMetricsSend.approve
 		<< ", catchup_request:" << mcp::CapMetricsSend.catchup_request
 		<< ", send_catchup:" << mcp::CapMetricsSend.send_catchup
 		<< ", catchup_response:" << mcp::CapMetricsSend.catchup_response
@@ -1084,6 +1098,9 @@ void mcp_daemon::ongoing_report(
 		<< ", transaction_request:" << mcp::CapMetricsRecieved.transaction_request
 		<< ", send_transaction:" << mcp::CapMetricsRecieved.send_transaction
 		<< ", transaction:" << mcp::CapMetricsRecieved.transaction
+		<< ", approve_request:" << mcp::CapMetricsRecieved.approve_request
+		<< ", send_approve:" << mcp::CapMetricsRecieved.send_approve
+		<< ", approve:" << mcp::CapMetricsRecieved.approve
 		<< ", catchup_request:" << mcp::CapMetricsRecieved.catchup_request
 		<< ", send_catchup:" << mcp::CapMetricsRecieved.send_catchup
 		<< ", catchup_response:" << mcp::CapMetricsRecieved.catchup_response
@@ -1108,9 +1125,9 @@ void mcp_daemon::ongoing_report(
 	}
 
 	alarm->add(std::chrono::steady_clock::now() + std::chrono::seconds(20), [&store, host, sync_async, background, cache,
-		sync, processor, capability, chain, alarm, tq, &log]() {
+		sync, processor, capability, chain, alarm, tq, aq, &log]() {
 		ongoing_report(store, host, sync_async, background, cache,
-			sync, processor, capability, chain, alarm, tq, log);
+			sync, processor, capability, chain, alarm, tq, aq, log);
 	});
 }
 

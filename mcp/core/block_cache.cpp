@@ -241,6 +241,59 @@ void mcp::block_cache::clear_transaction_changing()
 }
 
 
+bool mcp::block_cache::approve_exists(mcp::db::db_transaction & transaction_a, h256 const & hash)
+{
+	auto t = approve_get(transaction_a, hash);
+	return t != nullptr;
+}
+
+std::shared_ptr<mcp::approve> mcp::block_cache::approve_get(mcp::db::db_transaction &transaction_a, h256 const &hash)
+{
+	std::shared_ptr<mcp::approve> t = nullptr;
+	std::lock_guard<std::mutex> lock(m_approve_mutex);
+	if (!m_approve_changings.count(hash))
+	{
+		bool exists = m_approves.tryGet(hash, t);
+		if (!exists)
+		{
+			t = m_store.approve_get(transaction_a, hash);
+			if (t)
+				m_approves.insert(hash, t);
+		}
+	}
+	else
+		t = m_store.approve_get(transaction_a, hash);
+
+	return t;
+}
+
+void mcp::block_cache::approve_put(h256 const &hash, std::shared_ptr<mcp::approve> const & t)
+{
+	std::lock_guard<std::mutex> lock(m_approve_mutex);
+	m_approves.insert(hash, t);
+}
+
+void mcp::block_cache::approve_earse(std::unordered_set<h256> const & hashs)
+{
+	std::lock_guard<std::mutex> lock(m_approve_mutex);
+	for (auto const & block_hash : hashs)
+		m_approves.remove(block_hash);
+}
+
+void mcp::block_cache::mark_approve_as_changing(std::unordered_set<h256> const & hashs)
+{
+	std::lock_guard<std::mutex> lock(m_approve_mutex);
+	for (auto const & block_hash : hashs)
+		m_approve_changings.insert(block_hash);
+}
+
+void mcp::block_cache::clear_approve_changing()
+{
+	std::lock_guard<std::mutex> lock(m_approve_mutex);
+	m_approve_changings.clear();
+}
+
+
 
 bool mcp::block_cache::account_nonce_get(mcp::db::db_transaction & transaction_a, Address const & account_a, u256 & nonce_a)
 {
@@ -479,7 +532,57 @@ void mcp::block_cache::clear_transaction_receipt_changing()
 	m_transaction_receipt_changings.clear();
 }
 
+bool mcp::block_cache::approve_receipt_exists(mcp::db::db_transaction & transaction_a, h256 const & hash)
+{
+	auto t = approve_receipt_get(transaction_a, hash);
+	return t != nullptr;
+}
 
+std::shared_ptr<dev::ApproveReceipt> mcp::block_cache::approve_receipt_get(mcp::db::db_transaction &transaction_a, h256 const &hash)
+{
+	std::shared_ptr<dev::ApproveReceipt> t = nullptr;
+	std::lock_guard<std::mutex> lock(m_approve_receipt_mutex);
+	if (!m_approve_receipt_changings.count(hash))
+	{
+		bool exists = m_approve_receipts.tryGet(hash, t);
+		if (!exists)
+		{
+			t = m_store.approve_receipt_get(transaction_a, hash);
+			if (t)
+				m_approve_receipts.insert(hash, t);
+		}
+	}
+	else
+		t = m_store.approve_receipt_get(transaction_a, hash);
+
+	return t;
+}
+
+void mcp::block_cache::approve_receipt_put(h256 const &hash, std::shared_ptr<dev::ApproveReceipt> const & t)
+{
+	std::lock_guard<std::mutex> lock(m_approve_receipt_mutex);
+	m_approve_receipts.insert(hash, t);
+}
+
+void mcp::block_cache::approve_receipt_earse(std::unordered_set<h256> const & hashs)
+{
+	std::lock_guard<std::mutex> lock(m_approve_receipt_mutex);
+	for (auto const & block_hash : hashs)
+		m_approve_receipts.remove(block_hash);
+}
+
+void mcp::block_cache::mark_approve_receipt_as_changing(std::unordered_set<h256> const & hashs)
+{
+	std::lock_guard<std::mutex> lock(m_approve_receipt_mutex);
+	for (auto const & block_hash : hashs)
+		m_approve_receipt_changings.insert(block_hash);
+}
+
+void mcp::block_cache::clear_approve_receipt_changing()
+{
+	std::lock_guard<std::mutex> lock(m_approve_receipt_mutex);
+	m_approve_receipt_changings.clear();
+}
 
 std::string mcp::block_cache::report_cache_size()
 {

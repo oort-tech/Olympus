@@ -1,19 +1,22 @@
 #include "validation.hpp"
 #include <mcp/core/genesis.hpp>
 #include <mcp/common/stopwatch.hpp>
+#include <mcp/common/log.hpp>
 
 mcp::validation::validation(
 	mcp::block_store& store_a, mcp::ledger& ledger_a,
 	mcp::mru_list<mcp::block_hash>& invalid_block_cache_a,
 	std::shared_ptr<mcp::block_cache> cache_a,
-	std::shared_ptr<mcp::iTransactionQueue> tq
+	std::shared_ptr<mcp::iTransactionQueue> tq,
+	std::shared_ptr<mcp::iApproveQueue> aq
 ) :
 	m_store(store_a),
 	m_ledger(ledger_a),
 	m_graph(store_a),
 	m_invalid_block_cache(invalid_block_cache_a),
 	m_cache(cache_a),
-	m_tq(tq)
+	m_tq(tq),
+	m_aq(aq)
 {
 }
 
@@ -23,6 +26,7 @@ mcp::validation::~validation()
 
 mcp::base_validate_result mcp::validation::base_validate(mcp::db::db_transaction& transaction_a, std::shared_ptr<mcp::iblock_cache> cache_a, std::shared_ptr<mcp::block_processor_item> item_a)
 {
+    LOG(g_log.trace) << "[base_validate] in";
 	joint_message message(item_a->joint);
 	assert_x(message.block);
 
@@ -107,6 +111,7 @@ mcp::base_validate_result mcp::validation::base_validate(mcp::db::db_transaction
 
 mcp::validate_result mcp::validation::dag_validate(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::iblock_cache> cache_a, mcp::joint_message const &message)
 {
+    LOG(g_log.trace) << "[dag_validate] in";
 	mcp::validate_result result;
 
 	std::shared_ptr<mcp::block> block(message.block);
@@ -237,7 +242,24 @@ mcp::validate_result mcp::validation::dag_validate(mcp::db::db_transaction & tra
 		accNonce = t->nonce();
 	}
 
-	if (result.missing_parents_and_previous.size() > 0 || result.missing_links.size() > 0)
+	/// check approves
+	/// approves must in cache or processed. if not, the block lack the necessary conditions for processing.
+	auto approves(block->approves());
+	for (auto approve : approves)
+	{
+		auto t = m_aq->get(approve);
+		if (nullptr == t)
+		{
+			t = cache_a->approve_get(transaction_a, approve);
+			if (nullptr == t) /// not existed, missing
+			{
+				result.missing_approves.insert(approve);
+				continue;
+			}
+		}
+	}
+
+	if (result.missing_parents_and_previous.size() > 0 || result.missing_links.size() > 0 || result.missing_approves.size() > 0)
 	{
 		result.code = mcp::validate_result_codes::missing_parents_and_previous;
 		return result;

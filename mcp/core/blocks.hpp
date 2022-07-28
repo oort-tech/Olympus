@@ -2,6 +2,7 @@
 #include <mcp/common/numbers.hpp>
 #include <mcp/common/mcp_json.hpp>
 #include "transaction.hpp"
+#include "approve.hpp"
 
 
 namespace mcp
@@ -10,7 +11,7 @@ namespace mcp
 	{
 	public:
 		block()= default;
-		block(dev::Address from, mcp::block_hash const & previous, std::vector<mcp::block_hash> const & parents, h256s links,
+		block(dev::Address from, mcp::block_hash const & previous, std::vector<mcp::block_hash> const & parents, h256s links, h256s approves,
 			mcp::block_hash const & last_summary, mcp::block_hash const & last_summary_block, mcp::block_hash const & last_stable_block,
 			uint64_t const & exec_timestamp, dev::Secret const& s);
 		block(dev::RLP const & rlp);
@@ -23,6 +24,7 @@ namespace mcp
 		mcp::block_hash const& previous() { return  m_previous; }
 		std::vector<mcp::block_hash> const& parents() { return  m_parents; }
 		h256s const& links() { return  m_links; }
+		h256s const& approves() { return  m_approves; }
 		mcp::block_hash const& last_summary() { return  m_last_summary; }
 		mcp::block_hash const& last_summary_block() { return  m_last_summary_block; }
 		mcp::block_hash const& last_stable_block() { return  m_last_stable_block; }
@@ -53,6 +55,7 @@ namespace mcp
 		mcp::block_hash m_previous;
 		std::vector<mcp::block_hash> m_parents;
 		h256s m_links;
+		h256s m_approves;
 		mcp::block_hash m_last_summary;
 		mcp::block_hash m_last_summary_block;
 		mcp::block_hash m_last_stable_block;

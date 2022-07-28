@@ -175,6 +175,9 @@ public:
 	void personal_sendTransaction(mcp::json & j_response, bool & async);
 	void personal_sign(mcp::json & j_response, bool & async);
 	void personal_ecRecover(mcp::json & j_response, bool & async);
+	void epoch_approves(mcp::json &j_response, bool &);
+	void epoch_approve_receipts(mcp::json &j_response, bool &);
+	void epoch_elected_approve_receipts(mcp::json &j_response, bool &);
 
 	std::string body;
 	mcp::rpc & rpc;

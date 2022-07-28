@@ -5,6 +5,7 @@
 #include <mcp/node/unhandle.hpp>
 #include <mcp/node/process_block_cache.hpp>
 #include <mcp/node/transaction_queue.hpp>
+#include <mcp/node/approve_queue.hpp>
 #include <mcp/core/block_store.hpp>
 #include <mcp/node/chain.hpp>
 #include <mcp/node/sync.hpp>
@@ -71,6 +72,7 @@ namespace mcp
 	class node_sync;
 	class node_capability;
 	class TransactionQueue;
+	class ApproveQueue;
 	class unhandle_cache;
 	// Processing blocks is a potentially long IO operation
 	// This class isolates block insertion from other operations like servicing network operations
@@ -81,7 +83,7 @@ namespace mcp
 			mcp::block_store& store_a, std::shared_ptr<mcp::block_cache> cache_a,
 			std::shared_ptr<mcp::chain> chain_a, std::shared_ptr<mcp::node_sync> sync_a,
 			std::shared_ptr<mcp::node_capability> capability_a, std::shared_ptr<mcp::validation> validation_a,
-			std::shared_ptr<mcp::async_task> async_task_a, std::shared_ptr<TransactionQueue> tq,
+			std::shared_ptr<mcp::async_task> async_task_a, std::shared_ptr<TransactionQueue> tq, std::shared_ptr<ApproveQueue> aq,
 			mcp::fast_steady_clock& steady_clock_a, std::shared_ptr<mcp::block_arrival> block_arrival_a,
 			boost::asio::io_service &io_service_a,
 			mcp::mru_list<mcp::block_hash>& invalid_block_cache_a, std::shared_ptr<mcp::alarm> alarm_a
@@ -96,6 +98,8 @@ namespace mcp
 		void on_sync_completed(mcp::p2p::node_id const & remote_node_id_a);
 
 		void onTransactionImported(h256Hash const& _t);
+
+		void onApproveImported(h256 const& _t);
 
 		bool is_full();
 
@@ -117,7 +121,7 @@ namespace mcp
 		void do_process_one(std::shared_ptr<mcp::block_processor_item> item);
 		void do_process_dag_item(mcp::timeout_db_transaction & timeout_tx, std::shared_ptr<mcp::block_processor_item> item_a);
 
-		void process_missing(std::shared_ptr<mcp::block_processor_item> item_a, std::unordered_set<mcp::block_hash> const & missings, h256Hash const & transactions);
+		void process_missing(std::shared_ptr<mcp::block_processor_item> item_a, std::unordered_set<mcp::block_hash> const & missings, h256Hash const & transactions, h256Hash const & approves);
 		void process_existing_missing(mcp::p2p::node_id const & remote_node_id);
 		void try_process_unhandle(std::shared_ptr<mcp::block_processor_item> item_a);
 		void try_remove_invalid_unhandle(mcp::block_hash const & block_hash_a);
@@ -139,6 +143,7 @@ namespace mcp
 		mcp::mru_list<mcp::block_hash> m_invalid_block_cache;
 		std::shared_ptr<mcp::alarm> m_alarm;
 		std::shared_ptr<TransactionQueue> m_tq;                  ///< Maintains a list of incoming transactions not yet in a block on the blockchain.
+		std::shared_ptr<ApproveQueue> m_aq;                  ///< Maintains a list of incoming approves not yet in a block on the blockchain.
 
 
 		std::shared_ptr<mcp::process_block_cache> m_local_cache;

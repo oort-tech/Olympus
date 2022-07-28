@@ -8,6 +8,7 @@
 #include <libevm/ExtVMFace.h>
 #include <mcp/node/chain.hpp>
 #include <mcp/core/transaction.hpp>
+#include <mcp/core/approve.hpp>
 
 #include <set>
 #include <unordered_set>

@@ -1015,6 +1015,7 @@ void mcp_daemon::ongoing_report(
 		<< ", dependency_size:" << processor->unhandle->dependency_size()
 		<< ", missing_size:" << processor->unhandle->missing_size()
 		<< ", light_missing_size:" << processor->unhandle->light_missing_size()
+		<< ", approve_missing_size:" << processor->unhandle->approve_missing_size()
 		<< ", tips_size:" << processor->unhandle->tips_size();
 
 	LOG(log.info) << "block_processor dag_old_size: " << processor->dag_old_size

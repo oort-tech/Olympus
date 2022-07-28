@@ -6,12 +6,14 @@
 
 mcp::composer::composer(
 	mcp::block_store& store_a, std::shared_ptr<mcp::block_cache> cache_a,
-	mcp::ledger& ledger_a, std::shared_ptr<mcp::TransactionQueue> tq
+	mcp::ledger& ledger_a, std::shared_ptr<mcp::TransactionQueue> tq, 
+	std::shared_ptr<mcp::ApproveQueue> aq
 ) :
 	m_ledger(ledger_a),
 	m_store(store_a),
 	m_cache(cache_a),
-	m_tq(tq)
+	m_tq(tq),
+	m_aq(aq)
 {
 }
 
@@ -21,6 +23,7 @@ mcp::composer::~composer()
 
 std::shared_ptr<mcp::block> mcp::composer::compose_block(dev::Address const & from_a, dev::Secret const& s)
 {
+	LOG(m_log.trace) << "[compose_block] in";
 	mcp::stopwatch_guard sw("compose:compose_block");
 
 	mcp::db::db_transaction transaction(m_store.create_transaction());
@@ -30,23 +33,25 @@ std::shared_ptr<mcp::block> mcp::composer::compose_block(dev::Address const & fr
     //pick parents and last summary
     std::vector<mcp::block_hash> parents;
 	h256s links;
+	h256s approves;
 	mcp::block_hash last_summary_block;
 	mcp::block_hash last_summary;
 	mcp::block_hash last_stable_block;
-    pick_parents_and_last_summary_and_wl_block(transaction, previous, from_a, parents, links, last_summary_block, last_summary, last_stable_block);
+    pick_parents_and_last_summary_and_wl_block(transaction, previous, from_a, parents, links, approves, last_summary_block, last_summary, last_stable_block);
     
 	size_t transaction_unstable_count(m_store.transaction_unstable_count(transaction));
-	if (transaction_unstable_count == 0 && links.empty())//todo throw exception
+	size_t approve_unstable_count(m_store.approve_unstable_count(transaction));
+	if (transaction_unstable_count == 0 && approve_unstable_count==0 && links.empty() && approves.empty())//todo throw exception
 		BOOST_THROW_EXCEPTION(BadComposeBlock()
 			<< errinfo_comment("compose error:block no links"));
 
 	uint64_t exec_timestamp(mcp::seconds_since_epoch());
 
-    return std::make_shared<mcp::block>(from_a, previous, parents, links, 
+    return std::make_shared<mcp::block>(from_a, previous, parents, links, approves, 
 		last_summary, last_summary_block, last_stable_block, exec_timestamp,s);
 }
 
-void mcp::composer::pick_parents_and_last_summary_and_wl_block(mcp::db::db_transaction &  transaction_a, mcp::block_hash const & previous_a, dev::Address const & from_a, std::vector<mcp::block_hash>& parents, h256s& links, mcp::block_hash & last_summary_block, mcp::block_hash & last_summary, mcp::block_hash & last_stable_block)
+void mcp::composer::pick_parents_and_last_summary_and_wl_block(mcp::db::db_transaction &  transaction_a, mcp::block_hash const & previous_a, dev::Address const & from_a, std::vector<mcp::block_hash>& parents, h256s& links, h256s& approves, mcp::block_hash & last_summary_block, mcp::block_hash & last_summary, mcp::block_hash & last_stable_block)
 {
 	mcp::stopwatch_guard sw("compose:pick_parents");
 
@@ -54,6 +59,7 @@ void mcp::composer::pick_parents_and_last_summary_and_wl_block(mcp::db::db_trans
 		mcp::stopwatch_guard sw("compose:pick_parents2");
 
 		links = m_tq->topTransactions(4096);
+		approves = m_aq->topApproves(4096);
 	}
 
 	auto snapshot = m_store.create_snapshot();
@@ -107,6 +113,11 @@ void mcp::composer::pick_parents_and_last_summary_and_wl_block(mcp::db::db_trans
 	assert_x(last_summary_block_state->main_chain_index);
 
 	uint64_t const & last_summary_mci(*last_summary_block_state->main_chain_index);
+	if (!mcp::param::is_witness(last_summary_mci, from_a))
+	{
+		BOOST_THROW_EXCEPTION(BadComposeBlock()
+			<< errinfo_comment("compose error:composer stopped"));
+	}
 
 	mcp::block_param const & b_param(mcp::param::block_param(last_summary_mci));
 

@@ -1,10 +1,12 @@
 #include "process_block_cache.hpp"
 #include "transaction_queue.hpp"
+#include "approve_queue.hpp"
 
-mcp::process_block_cache::process_block_cache(std::shared_ptr<mcp::block_cache> cache_a, mcp::block_store &store_a, std::shared_ptr<mcp::TransactionQueue> tq) :
+mcp::process_block_cache::process_block_cache(std::shared_ptr<mcp::block_cache> cache_a, mcp::block_store &store_a, std::shared_ptr<mcp::TransactionQueue> tq, std::shared_ptr<ApproveQueue> aq) :
 	m_cache(cache_a),
 	m_store(store_a),
-	m_tq(tq)
+	m_tq(tq),
+	m_aq(aq)
 {
 }
 
@@ -199,6 +201,25 @@ void mcp::process_block_cache::transaction_put(mcp::db::db_transaction & transac
 void mcp::process_block_cache::transaction_del_from_queue(h256 const& _hash)
 {
 	m_transaction_dels.push_back(_hash);
+}
+
+
+bool mcp::process_block_cache::approve_exists(mcp::db::db_transaction & transaction_a, h256 const& _hash)
+{
+	auto t = approve_get(transaction_a, _hash);
+	return t != nullptr;
+}
+
+std::shared_ptr<mcp::approve> mcp::process_block_cache::approve_get(mcp::db::db_transaction & transaction_a, h256 const& _hash)
+{
+	return m_cache->approve_get(transaction_a, _hash);
+}
+
+void mcp::process_block_cache::approve_put(mcp::db::db_transaction & transaction_a, std::shared_ptr<approve> _t)
+{
+	auto h = _t->sha3();
+	m_store.approve_put(transaction_a, h, *_t);
+	m_cache->approve_put(h, _t);
 }
 
 
@@ -401,6 +422,23 @@ void mcp::process_block_cache::transaction_receipt_put(mcp::db::db_transaction &
 	}
 }
 
+bool mcp::process_block_cache::approve_receipt_exists(mcp::db::db_transaction & transaction_a, h256 const& _hash)
+{
+	auto t = approve_receipt_get(transaction_a, _hash);
+	return t != nullptr;
+}
+
+std::shared_ptr<dev::ApproveReceipt> mcp::process_block_cache::approve_receipt_get(mcp::db::db_transaction & transaction_a, h256 const& _hash)
+{
+	return m_cache->approve_receipt_get(transaction_a, _hash);
+}
+
+void mcp::process_block_cache::approve_receipt_put(mcp::db::db_transaction & transaction_a, h256 const& _hash, std::shared_ptr<dev::ApproveReceipt> _t)
+{
+	m_store.approve_receipt_put(transaction_a, _hash, *_t);
+	m_cache->approve_receipt_put(_hash, _t);
+}
+
 
 void mcp::process_block_cache::mark_as_changing()
 {
@@ -458,6 +496,7 @@ void mcp::process_block_cache::mark_as_changing()
 
 void mcp::process_block_cache::commit_and_clear_changing()
 {
+	LOG(g_log.trace) << "commit_and_clear_changing in";
 	//modify block cache
 	m_cache->block_earse(m_block_puts_flushed);
 	for (put_item<mcp::block_hash, std::shared_ptr<block>> const & item : m_block_puts)
@@ -525,9 +564,11 @@ void mcp::process_block_cache::commit_and_clear_changing()
 	m_cache->clear_block_state_changing();
 	m_cache->clear_latest_account_state_changing();
 	m_cache->clear_transaction_changing();
+	m_cache->clear_approve_changing();
 	m_cache->clear_account_nonce_changing();
 	m_cache->clear_successor_changing();
 	m_cache->clear_block_summary_changing();
 	m_cache->clear_transaction_receipt_changing();
+	m_cache->clear_approve_receipt_changing();
 }
 

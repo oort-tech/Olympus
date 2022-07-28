@@ -1,12 +1,16 @@
 #include <mcp/node/witness.hpp>
 #include <mcp/core/genesis.hpp>
+#include <mcp/common/common.hpp>
+#include <secp256k1-vrf.h>
+#include <secp256k1_ecdh.h>
+#include <secp256k1_recovery.h>
 
 mcp::witness::witness(mcp::error_message & error_msg,
 	mcp::ledger& ledger_a, std::shared_ptr<mcp::key_manager> key_manager_a,
 	mcp::block_store& store_a, std::shared_ptr<mcp::alarm> alarm_a,
 	std::shared_ptr<mcp::composer> composer_a, std::shared_ptr<mcp::chain> chain_a,
 	std::shared_ptr<mcp::block_processor> block_processor_a,
-	std::shared_ptr<mcp::block_cache> cache_a, std::shared_ptr<TransactionQueue> tq,
+	std::shared_ptr<mcp::block_cache> cache_a, std::shared_ptr<TransactionQueue> tq, std::shared_ptr<ApproveQueue> aq,
 	std::string const & account_or_file_text, std::string const & password_a,
 	mcp::block_hash const & last_witness_block_hash_a
 ) :
@@ -18,6 +22,7 @@ mcp::witness::witness(mcp::error_message & error_msg,
 	m_block_processor(block_processor_a),
 	m_cache(cache_a),
 	m_tq(tq),
+	m_aq(aq),
 	m_last_witness_time(std::chrono::steady_clock::now()),
 	m_witness_interval(std::chrono::milliseconds(m_max_witness_interval)),
     m_witness_get_current_chain(true),
@@ -146,14 +151,46 @@ void mcp::witness::check_and_witness()
 		last_summary_mci = *last_summary_block_state->main_chain_index;
 	}
 
-	mcp::witness_param const & w_param(mcp::param::witness_param(last_summary_mci));
-
-	if (!mcp::param::is_witness(last_summary_mci, m_account))
-	{
-		m_is_witnessing.clear();
-		LOG(m_log.info) << "Not do witness, account:" << m_account.hexPrefixed() << " is not witness, last_summary_mci:" << last_summary_mci;
-		return;
+	if(need_approve(last_summary_mci)){
+		send_approve(last_summary_mci);
 	}
+
+	mcp::witness_param const & w_param(mcp::param::witness_param(last_summary_mci + 1));
+
+	// if (!mcp::param::is_witness(last_summary_mci + 1, m_account))
+	// {
+	// 	m_is_witnessing.clear();
+	// 	//LOG(m_log.trace) << "Not do witness, account:" << m_account.to_account() << " is not witness, last_summary_mci:" << last_summary_mci;
+	// 	return;
+	// }
+
+    //can send witness
+    if (!m_witness_get_current_chain)
+    {
+        if (!m_store.block_exists(transaction, m_last_witness_block_hash))
+        {
+            m_is_witnessing.clear();
+            LOG(m_log.info) << "Not do witness, last_witness_block_hash:" << m_last_witness_block_hash.hex() << " not exsist.";
+            return;
+        }
+        else
+        {
+            m_witness_get_current_chain = true;
+        }
+    }
+
+	if ((m_tq->size() == 0)&&(m_aq->size() == 0))
+	{
+		size_t transaction_unstable_count(m_store.transaction_unstable_count(transaction));
+		size_t approve_unstable_count(m_store.approve_unstable_count(transaction));
+		if ((transaction_unstable_count == 0)&&(approve_unstable_count == 0))
+		{
+			m_is_witnessing.clear();
+			return;
+		}
+	}
+    LOG(m_log.info) << "m_tq:" << m_tq->size()<<" m_aq:"<<m_aq->size() <<" transaction_unstable_count:" <<m_store.transaction_unstable_count(transaction) << " approve_unstable_count:"<<m_store.approve_unstable_count(transaction);
+	
 
 	//check majority different of witnesses
 	bool is_diff_majority(m_ledger.check_majority_witness(transaction, m_cache, mc_block_hash, m_account, w_param));
@@ -167,6 +204,73 @@ void mcp::witness::check_and_witness()
 	do_witness();
 }
 
+//todo by jeremy: change and do not multi send after restart.
+bool mcp::witness::need_approve(uint64_t last_summary_mci){
+	static uint64_t last_epoch_num = UINT64_MAX;
+	if(last_summary_mci <= 2){
+		return false;
+	}
+
+	uint64_t cur_epoch = mcp::approve::calc_elect_epoch(last_summary_mci);
+	if(cur_epoch != last_epoch_num){
+		last_epoch_num = cur_epoch;
+		return true;
+	}
+	else{
+		return false;
+	}
+}
+
+void mcp::witness::send_approve(uint64_t last_summary_mci)
+{
+    LOG(m_log.debug) << "[send_approve] in";
+	ApproveSkeleton as;
+	as.epoch = mcp::approve::calc_elect_epoch(last_summary_mci);
+
+	mcp::db::db_transaction transaction(m_store.create_transaction());
+	mcp::block_hash hash;
+	bool exists(!m_store.stable_block_get(transaction, (as.epoch-1)*epoch_period, hash));
+	assert_x(exists);
+	auto msg = hash.hex();
+	//char msg[3]={0x31,0x32,0x33};
+	as.proof.resize(81);
+	auto* ctx = mcp::encry::get_secp256k1_ctx();
+	secp256k1_pubkey rawPubkey;
+	if (!secp256k1_ec_pubkey_create(ctx, &rawPubkey, m_secret.data()))
+        return;
+	
+	std::array<byte, 65> serializedPubkey;
+    unsigned char output[32]={0};
+    auto serializedPubkeySize = serializedPubkey.size();
+    secp256k1_ec_pubkey_serialize(
+        ctx,
+		serializedPubkey.data(),
+		&serializedPubkeySize,
+		&rawPubkey,
+		SECP256K1_EC_COMPRESSED
+	);
+    if(secp256k1_vrf_prove(as.proof.data(),m_secret.data(),&rawPubkey,msg.data(),msg.size()) == 1){
+        LOG(m_log.debug) << "[send_approve] secp256k1_vrf_prove ok";
+    }
+    else{
+        LOG(m_log.debug) << "[send_approve] secp256k1_vrf_prove fail";
+    }
+	
+    // if(secp256k1_vrf_verify(output, as.proof.data(), serializedPubkey.data(),msg.data(),msg.size()) == 1){
+    //     LOG(m_log.debug) << "[send_approve] secp256k1_vrf_verify ok" << msg;
+    // }
+    // else{
+    //     LOG(m_log.debug) << "[send_approve] secp256k1_vrf_verify fail";
+    // }
+
+	auto a = mcp::approve(as, m_secret);
+	a.show();
+	m_aq->importLocal(a);
+	
+    LOG(m_log.debug) << "[send_approve] out";
+	return;
+}
+
 void mcp::witness::do_witness()
 {
     LOG(m_log.info) << "Do witness";
@@ -174,6 +278,13 @@ void mcp::witness::do_witness()
 	try
 	{
 		auto block = m_composer->compose_block(m_account, m_secret);
+		if(!block)
+		{
+			m_last_witness_time = std::chrono::steady_clock::now();
+			m_is_witnessing.clear();
+			LOG(m_log.info) << "compose_block fail.";
+			return;
+		}
 		std::shared_ptr<mcp::joint_message> joint(new mcp::joint_message(block));
 
 		std::shared_ptr<std::promise<mcp::validate_status>> p(std::make_shared<std::promise<mcp::validate_status>>());

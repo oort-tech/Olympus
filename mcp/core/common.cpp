@@ -1033,3 +1033,32 @@ boost::filesystem::path mcp::unique_path()
 	auto result(working_path() / boost::filesystem::unique_path());
 	return result;
 }
+
+mcp::epoch_approves_key::epoch_approves_key(dev::Slice const & val_a)
+{
+    assert_x(val_a.size() == sizeof(*this));
+    std::copy(reinterpret_cast<uint8_t const *> (val_a.data()), reinterpret_cast<uint8_t const *> (val_a.data()) + sizeof(*this), reinterpret_cast<uint8_t *> (this));
+}
+
+mcp::epoch_elected_list::epoch_elected_list()
+{
+}
+
+mcp::epoch_elected_list::epoch_elected_list(std::vector<h256> const &hashs_a) :
+    hashs(hashs_a)
+{
+}
+
+mcp::epoch_elected_list::epoch_elected_list(dev::RLP const & r)
+{
+    assert_x(r.isList());
+    for (auto sk : r)
+        hashs.emplace_back((h256) sk);
+}
+
+void mcp::epoch_elected_list::stream_RLP(dev::RLPStream & s) const
+{
+    s.appendList(hashs.size());
+    for (h256 sk : hashs)
+        s << sk;
+}

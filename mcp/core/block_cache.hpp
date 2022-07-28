@@ -21,7 +21,9 @@ public:
 	virtual std::shared_ptr<mcp::block_state> block_state_get(mcp::db::db_transaction & transaction_a, mcp::block_hash const & block_hash_a) = 0;
 	virtual std::shared_ptr<mcp::account_state> latest_account_state_get(mcp::db::db_transaction & transaction_a, Address const & account_a) = 0;
 	virtual std::shared_ptr<Transaction> transaction_get(mcp::db::db_transaction & transaction_a, h256 const & hash) = 0;
+	virtual std::shared_ptr<approve> approve_get(mcp::db::db_transaction & transaction_a, h256 const & hash) = 0;
 	virtual bool transaction_exists(mcp::db::db_transaction & transaction_a, h256 const & hash) = 0;
+	virtual bool approve_exists(mcp::db::db_transaction & transaction_a, h256 const & hash) = 0;
 	virtual bool account_nonce_get(mcp::db::db_transaction & transaction_a, Address const & account_a, u256 & nonce_a) = 0;
 	virtual bool successor_get(mcp::db::db_transaction & transaction_a, mcp::block_hash const & root_a, mcp::block_hash & successor_a) = 0;
 	virtual bool block_summary_get(mcp::db::db_transaction & transaction_a, mcp::block_hash const & block_hash_a, mcp::summary_hash & summary_a) = 0;
@@ -59,6 +61,13 @@ class block_cache : public mcp::iblock_cache
 	void mark_transaction_as_changing(std::unordered_set<h256> const & hash);
 	void clear_transaction_changing();
 
+	bool approve_exists(mcp::db::db_transaction & transaction_a, h256 const & hash);
+	std::shared_ptr<approve> approve_get(mcp::db::db_transaction & transaction_a, h256 const & hash);
+	void approve_put(h256 const & hash, std::shared_ptr<mcp::approve> const& t);
+	void approve_earse(std::unordered_set<h256> const & hash);
+	void mark_approve_as_changing(std::unordered_set<h256> const & hash);
+	void clear_approve_changing();
+
 	/// return true if exist
 	bool account_nonce_get(mcp::db::db_transaction & transaction_a, Address const & account_a, u256 & nonce_a);
 	void account_nonce_put(Address const & account_a, u256 const & nonce_a);
@@ -92,6 +101,13 @@ class block_cache : public mcp::iblock_cache
 	void mark_transaction_receipt_as_changing(std::unordered_set<h256> const & hash);
 	void clear_transaction_receipt_changing();
 
+	bool approve_receipt_exists(mcp::db::db_transaction & transaction_a, h256 const & hash);
+	std::shared_ptr<dev::ApproveReceipt> approve_receipt_get(mcp::db::db_transaction & transaction_a, h256 const & hash);
+	void approve_receipt_put(h256 const & hash, std::shared_ptr<dev::ApproveReceipt> const& t);
+	void approve_receipt_earse(std::unordered_set<h256> const & hash);
+	void mark_approve_receipt_as_changing(std::unordered_set<h256> const & hash);
+	void clear_approve_receipt_changing();
+
 	std::string report_cache_size();
 
 private:
@@ -112,6 +128,10 @@ private:
 	std::mutex m_transaction_mutex;
 	std::unordered_set<h256> m_transaction_changings;
 	mcp::Cache<h256, std::shared_ptr<mcp::Transaction>> m_transactions;
+
+	std::mutex m_approve_mutex;
+	std::unordered_set<h256> m_approve_changings;
+	mcp::Cache<h256, std::shared_ptr<mcp::approve>> m_approves;
 
 	std::mutex m_account_nonce_mutex;
 	std::unordered_set<Address> m_account_nonce_changings;
@@ -135,5 +155,9 @@ private:
 	std::mutex m_transaction_receipt_mutex;
 	std::unordered_set<h256> m_transaction_receipt_changings;
 	mcp::Cache<h256, std::shared_ptr<dev::eth::TransactionReceipt>> m_transaction_receipts;
+
+	std::mutex m_approve_receipt_mutex;
+	std::unordered_set<h256> m_approve_receipt_changings;
+	mcp::Cache<h256, std::shared_ptr<dev::ApproveReceipt>> m_approve_receipts;
 };
 } // namespace mcp

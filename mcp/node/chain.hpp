@@ -10,6 +10,8 @@
 #include <queue>
 #include <mcp/node/chain_state.hpp>
 #include <mcp/node/sync.hpp>
+#include <mcp/node/approve_queue.hpp>
+#include <mcp/core/approve_receipt.hpp>
 
 namespace mcp
 {
@@ -35,6 +37,7 @@ namespace mcp
 
 		void save_dag_block(mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a, std::shared_ptr<mcp::block> block_a);
 		void save_transaction(mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a, std::shared_ptr<mcp::Transaction> t_a);
+		void save_approve(mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a, std::shared_ptr<mcp::approve> t_a);
 		void try_advance(mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a);
 
 		void update_cache();
@@ -42,6 +45,8 @@ namespace mcp
 		uint64_t last_stable_mci();
 		uint64_t min_retrievable_mci();
 		uint64_t last_stable_index();
+		uint64_t last_epoch();
+		uint64_t last_summary_mci();
 
 		bool get_mc_info_from_block_hash(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::iblock_cache> cache_a, mcp::block_hash hash_a, dev::eth::McInfo & mc_info_a);
 
@@ -83,10 +88,12 @@ namespace mcp
 		void find_main_chain_changes(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a, std::shared_ptr<mcp::block> block_a, mcp::block_hash const & best_free_block_hash, bool & is_mci_retreat, uint64_t & retreat_mci, uint64_t &retreat_level, std::list<mcp::block_hash>& new_mc_block_hashs);
 		void update_mci(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a, std::shared_ptr<mcp::block> block_a, uint64_t const & retreat_mci, std::list<mcp::block_hash> const & new_mc_block_hashs);
 		void update_latest_included_mci(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a, std::shared_ptr<mcp::block> block_a, bool const &is_mci_retreat, uint64_t const & retreat_mci, uint64_t const &retreat_level);
-		void advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a, uint64_t const & mci, mcp::block_hash const & block_hash_a);
+		void advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a, uint64_t const & mci, mcp::block_hash const & block_hash_a, uint64_t & mc_last_summary_mci);
 		void set_block_stable(mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a, mcp::block_hash const & stable_block_hash, uint64_t const & mci, uint64_t const & mc_timestamp, uint64_t const & mc_last_summary_mci, uint64_t const & stable_timestamp, uint64_t const & stable_index, h256 receiptsRoot);
 		void search_stable_block(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a, mcp::block_hash const & block_hash, uint64_t const & mci, std::map<uint64_t, std::set<mcp::block_hash>>& stable_block_hashs);
-
+		void search_already_stable_block(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a, mcp::block_hash const & block_hash, uint64_t const & mci, std::map<uint64_t, std::set<mcp::block_hash>>& stable_block_hashs);
+		void switch_witness(mcp::db::db_transaction & transaction_a, uint64_t mc_last_summary_mci);
+		void init_vrf_outputs(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a);
 		mcp::block_store m_store;
 		mcp::ledger m_ledger;
 		//std::list<std::function<void(std::shared_ptr<mcp::block>)> > m_new_block_observer;
@@ -104,14 +111,19 @@ namespace mcp
 		uint64_t m_last_mci_internal = 0;
 		uint64_t m_last_stable_mci = 0;
 		uint64_t m_last_stable_mci_internal = 0;
+		uint64_t m_last_summary_mci = 0;
+		uint64_t m_last_summary_mci_internal = 0;
 		uint64_t m_min_retrievable_mci = 0;
 		uint64_t m_min_retrievable_mci_internal = 0;
 		uint64_t m_last_stable_index = 0;
 		uint64_t m_last_stable_index_internal = 0;
+		uint64_t m_last_epoch = 0;
 		
 		mcp::advance_info m_advance_info;
 
 		std::unordered_map<Address, dev::eth::PrecompiledContract> m_precompiled;
+
+		std::map<uint32_t, dev::ApproveReceipt> vrf_outputs;
 
         mcp::log m_log = { mcp::log("node") };
 	};

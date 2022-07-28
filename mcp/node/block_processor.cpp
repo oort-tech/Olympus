@@ -51,7 +51,7 @@ mcp::block_processor::block_processor(bool & error_a,
 	mcp::block_store& store_a, std::shared_ptr<mcp::block_cache> cache_a,
 	std::shared_ptr<mcp::chain> chain_a, std::shared_ptr<mcp::node_sync> sync_a,
 	std::shared_ptr<mcp::node_capability> capability_a, std::shared_ptr<mcp::validation> validation_a,
-	std::shared_ptr<mcp::async_task> async_task_a, std::shared_ptr<TransactionQueue> tq,
+	std::shared_ptr<mcp::async_task> async_task_a, std::shared_ptr<TransactionQueue> tq, std::shared_ptr<ApproveQueue> aq,
 	mcp::fast_steady_clock& steady_clock_a, std::shared_ptr<mcp::block_arrival> block_arrival_a,
 	boost::asio::io_service &io_service_a,
 	mcp::mru_list<mcp::block_hash>& invalid_block_cache_a, std::shared_ptr<mcp::alarm> alarm_a
@@ -64,14 +64,15 @@ mcp::block_processor::block_processor(bool & error_a,
 	m_validation(validation_a),
 	m_async_task(async_task_a),
 	m_tq(tq),
+	m_aq(aq),
 	m_steady_clock(steady_clock_a),
 	m_block_arrival(block_arrival_a),
 	m_invalid_block_cache(invalid_block_cache_a),
 	m_alarm(alarm_a),
 	m_stopped(false),
-	m_local_cache(std::make_shared<process_block_cache>(cache_a, store_a, tq)),
+	m_local_cache(std::make_shared<process_block_cache>(cache_a, store_a, tq, aq)),
 	m_last_request_unknown_missing_time(std::chrono::steady_clock::now()),
-	unhandle(std::make_shared<mcp::unhandle_cache>(block_arrival_a, tq))
+	unhandle(std::make_shared<mcp::unhandle_cache>(block_arrival_a, tq, aq))
 {
 	if (error_a)
 		return;
@@ -105,6 +106,7 @@ mcp::block_processor::block_processor(bool & error_a,
 		return;
 
 	m_tq->onImportProcessed([this](h256Hash const& _h) { onTransactionImported(_h); });
+	m_aq->onImportProcessed([this](h256 const& _h) { onApproveImported(_h); });
 
 	m_mt_process_block_thread = std::thread([this]() { this->mt_process_blocks(); });
 	m_process_block_thread = std::thread([this]() { this->process_blocks(); });
@@ -242,6 +244,7 @@ void mcp::block_processor::mt_process_blocks()
 			{
 				try
 				{
+					LOG(m_log.trace) << "[mt_process_blocks] in";
 					std::list<std::shared_ptr<std::promise<mcp::validate_status>>> results;
 					unsigned count = std::min((unsigned)m_mt_blocks_processing.size(), m_max_mt_count);
 					for (unsigned i = 0; i < count; i++)
@@ -515,6 +518,7 @@ void mcp::block_processor::do_process(std::deque<std::shared_ptr<mcp::block_proc
 
 void mcp::block_processor::do_process_one(std::shared_ptr<mcp::block_processor_item> item)
 {
+	LOG(m_log.trace) << "[do_process_one] in";
 	mcp::joint_message const & joint(item->joint);
 	std::shared_ptr<mcp::block> block(joint.block);
 	mcp::block_hash const & block_hash(block->hash());
@@ -570,7 +574,7 @@ void mcp::block_processor::do_process_one(std::shared_ptr<mcp::block_processor_i
 				{
 					assert_x(!item->is_local());
 				}
-				process_missing(item, result.missing_parents_and_previous, result.missing_links);
+				process_missing(item, result.missing_parents_and_previous, result.missing_links, result.missing_approves);
 			}
 
 			LOG(m_log.trace) << boost::str(boost::format("Missing parents and previous for: %1%") % block_hash.hex());
@@ -677,14 +681,25 @@ void mcp::block_processor::do_process_dag_item(mcp::timeout_db_transaction & tim
 		m_chain->save_transaction(timeout_tx, m_local_cache, t);
 	}
 
+	for (auto const & approve_hash : block->approves())
+	{
+		/// Unprocessed transactions cannot be discarded because the cache is full.  todo zhouyou
+		auto t = m_aq->get(approve_hash);
+		if (t == nullptr || m_local_cache->approve_exists(transaction, approve_hash)) /// transaction maybe processed yet
+		{
+			continue;
+		}
+		m_chain->save_approve(timeout_tx, m_local_cache, t);
+	}
+
 	/// save block and try advance 
 	m_chain->save_dag_block(timeout_tx, m_local_cache, block);
 	m_chain->try_advance(timeout_tx, m_local_cache);
 }
 
-void mcp::block_processor::process_missing(std::shared_ptr<mcp::block_processor_item> item_a, std::unordered_set<mcp::block_hash> const & missings, h256Hash const & transactions)
+void mcp::block_processor::process_missing(std::shared_ptr<mcp::block_processor_item> item_a, std::unordered_set<mcp::block_hash> const & missings, h256Hash const & transactions, h256Hash const & approves)
 {
-	unhandle_add_result r(unhandle->add(item_a->block_hash, missings, transactions, item_a));
+	unhandle_add_result r(unhandle->add(item_a->block_hash, missings, transactions, approves, item_a));
 	/// if the block links too much,request_catchup exec before this function, modify_syncing status, ensures that the block's missing transactions are requested.
 	if (m_sync->is_syncing())
 		return;
@@ -701,6 +716,11 @@ void mcp::block_processor::process_missing(std::shared_ptr<mcp::block_processor_
 		{
 			mcp::requesting_item request_item(item_a->remote_node_id(), *it, mcp::requesting_block_cause::new_unknown, now);
 			m_sync->request_new_missing_transactions(request_item);
+		}
+		for (auto it = approves.begin(); it != approves.end(); it++)
+		{
+			mcp::requesting_item request_item(item_a->remote_node_id(), *it, mcp::requesting_block_cause::new_unknown, now);
+			m_sync->request_new_missing_approves(request_item);
 		}
 	}
 	else if (r == unhandle_add_result::Exist)
@@ -724,7 +744,8 @@ void mcp::block_processor::process_existing_missing(mcp::p2p::node_id const & re
 		size_t missings_limit = 500;
 		std::vector<mcp::block_hash> missings;
 		std::vector<h256> light_missings;
-		unhandle->get_missings(missings_limit, missings, light_missings);
+		std::vector<h256> approve_missings;
+		unhandle->get_missings(missings_limit, missings, light_missings, approve_missings);
 
 		if (!missings.empty())
 		{
@@ -743,6 +764,16 @@ void mcp::block_processor::process_existing_missing(mcp::p2p::node_id const & re
 			{
 				mcp::requesting_item request_item(remote_node_id, *it, mcp::requesting_block_cause::existing_unknown, now);
 				m_sync->request_new_missing_transactions(request_item);
+			}
+		}
+
+		if (!approve_missings.empty())
+		{
+			uint64_t now = m_steady_clock.now_since_epoch();
+			for (auto it = approve_missings.begin(); it != approve_missings.end(); it++)
+			{
+				mcp::requesting_item request_item(remote_node_id, *it, mcp::requesting_block_cause::existing_unknown, now);
+				m_sync->request_new_missing_approves(request_item);
 			}
 		}
 	}
@@ -793,6 +824,18 @@ void mcp::block_processor::on_sync_completed(mcp::p2p::node_id const & remote_no
 void mcp::block_processor::onTransactionImported(h256Hash const& _t)
 {
 	std::unordered_set<std::shared_ptr<mcp::block_processor_item>> unhandle_items = unhandle->release_transaction_dependency(_t);
+	if (!unhandle_items.empty())
+	{
+		for (auto const & p : unhandle_items)
+		{
+			add_to_process(p);
+		}
+	}
+}
+
+void mcp::block_processor::onApproveImported(h256 const& _t)
+{
+	std::unordered_set<std::shared_ptr<mcp::block_processor_item>> unhandle_items = unhandle->release_approve_dependency(_t);
 	if (!unhandle_items.empty())
 	{
 		for (auto const & p : unhandle_items)

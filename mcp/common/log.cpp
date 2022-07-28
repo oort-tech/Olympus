@@ -39,6 +39,7 @@ BOOST_LOG_ATTRIBUTE_KEYWORD(channel, "Channel", std::string)
 BOOST_LOG_ATTRIBUTE_KEYWORD(timestamp, "TimeStamp", boost::posix_time::ptime)
 BOOST_LOG_ATTRIBUTE_KEYWORD(severity, "Severity", mcp::Verbosity)
 
+mcp::log mcp::g_log = { mcp::log("node") };
 
 mcp::logging::logging() :
 	log_to_console_value(false),

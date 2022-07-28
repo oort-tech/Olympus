@@ -147,6 +147,17 @@ public:
 	h256 hash;
 };
 
+class approve_request_message
+{
+public:
+	approve_request_message(mcp::sync_request_hash const& _request_id, h256 const & _hash):request_id(_request_id), hash(_hash){}
+	approve_request_message(bool &error_a, dev::RLP const &r) { error_a = r.itemCount() != 2; if (error_a) return; request_id = (mcp::sync_request_hash)r[0]; hash = (h256)r[1];}
+	void stream_RLP(dev::RLPStream &s) const { s.appendList(2); s << request_id << hash; }
+
+	mcp::sync_request_hash request_id;
+	h256 hash;
+};
+
 //syncing status
 enum sync_response_status
 {
@@ -221,13 +232,14 @@ class hash_tree_response_message
 		uint64_t level;
 		std::shared_ptr<mcp::block> block;
 		std::vector<std::shared_ptr<Transaction>> transactions;
+		std::vector<std::shared_ptr<approve>> approves;
 		uint64_t mci;
 		std::set<mcp::block_hash> skiplist_block;
 
 		summary_items(mcp::block_hash const & bh, mcp::summary_hash const & sh, mcp::summary_hash const & previous_summary_a,
 			std::list<mcp::summary_hash> const & p_summary, h256 receiptsRoot_a,
 			std::set<mcp::summary_hash> const & s_summary, mcp::block_status const & status_a, uint64_t const& stable_index_a, uint64_t const& mc_timestamp_a,
-			uint64_t level_a, std::shared_ptr<mcp::block> const & block_a, std::vector<std::shared_ptr<Transaction>> t_a, uint64_t mci_a, std::set<mcp::summary_hash> const & skiplist_block_a);
+			uint64_t level_a, std::shared_ptr<mcp::block> const & block_a, std::vector<std::shared_ptr<Transaction>> t_a, std::vector<std::shared_ptr<approve>> aq_a, uint64_t mci_a, std::set<mcp::summary_hash> const & skiplist_block_a);
 
 		summary_items(bool &error_a, dev::RLP const &r);
 		void stream_RLP(dev::RLPStream &s) const;
@@ -261,6 +273,7 @@ class peer_info_message
 	uint64_t min_retrievable_mci;
 	std::vector<mcp::block_hash> arr_tip_blocks;
 	std::vector<h256> arr_light_tip_blocks; /// account -> nonce
+	std::vector<h256> arr_light_approve_blocks;
 };
 
 class peer_info_request_message
@@ -304,6 +317,7 @@ public:
 	std::string err_msg;
 	std::unordered_set<mcp::block_hash> missing_parents_and_previous;
 	h256Hash missing_links;
+	h256Hash missing_approves;
 };
 
 /**

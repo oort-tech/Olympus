@@ -9,10 +9,11 @@
 namespace mcp
 {
 	class TransactionQueue;
+	class ApproveQueue;
 	class process_block_cache : public mcp::iblock_cache
 	{
 	public:
-		explicit process_block_cache(std::shared_ptr<mcp::block_cache> cache_a, mcp::block_store & store_a, std::shared_ptr<TransactionQueue> tq);
+		explicit process_block_cache(std::shared_ptr<mcp::block_cache> cache_a, mcp::block_store & store_a, std::shared_ptr<TransactionQueue> tq, std::shared_ptr<ApproveQueue> aq);
 
 		bool block_exists(mcp::db::db_transaction & transaction_a, mcp::block_hash const & block_hash_a);
 		std::shared_ptr<mcp::block> block_get(mcp::db::db_transaction & transaction_a, mcp::block_hash const & block_hash_a);
@@ -35,6 +36,11 @@ namespace mcp
 
 		void transaction_address_put(mcp::db::db_transaction & transaction_a, h256 const & hash, std::shared_ptr<mcp::TransactionAddress> const& td);
 
+		/// approve
+		bool approve_exists(mcp::db::db_transaction & transaction_a, h256 const& _hash);
+		std::shared_ptr<approve> approve_get(mcp::db::db_transaction & transaction_a, h256 const&_hash);
+		void approve_put(mcp::db::db_transaction & transaction_a, std::shared_ptr<approve> _t);
+
 		bool successor_get(mcp::db::db_transaction & transaction_a, mcp::block_hash const & root_a, mcp::block_hash & successor_a);
 		void successor_put(mcp::db::db_transaction & transaction_a, mcp::block_hash const & root_a, mcp::block_hash const & successor_a);
 		void successor_del(mcp::db::db_transaction & transaction_a, mcp::block_hash const & root_a);
@@ -48,6 +54,11 @@ namespace mcp
 		std::shared_ptr<dev::eth::TransactionReceipt> transaction_receipt_get(mcp::db::db_transaction & transaction_a, h256 const&_hash);
 		void transaction_receipt_put(mcp::db::db_transaction & transaction_a, h256 const& _hash, std::shared_ptr<dev::eth::TransactionReceipt> _t);
 
+		bool approve_receipt_exists(mcp::db::db_transaction & transaction_a, h256 const& _hash);
+		std::shared_ptr<dev::ApproveReceipt> approve_receipt_get(mcp::db::db_transaction & transaction_a, h256 const&_hash);
+		void approve_receipt_put(mcp::db::db_transaction & transaction_a, h256 const& _hash, std::shared_ptr<dev::ApproveReceipt> _t);
+
+
 		void mark_as_changing();
 		void commit_and_clear_changing();
 
@@ -55,6 +66,7 @@ namespace mcp
 		mcp::block_store & m_store;
 		std::shared_ptr<mcp::block_cache> m_cache;
 		std::shared_ptr<TransactionQueue> m_tq;
+		std::shared_ptr<ApproveQueue> m_aq;
 
 		template<class TKey, class TValue>
 		class put_item

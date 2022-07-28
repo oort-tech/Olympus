@@ -7,9 +7,11 @@
 #include <utility>
 #include <mcp/common/numbers.hpp>
 #include <libdevcore/Address.h>
+#include <libdevcore/Guards.h>
 
 namespace mcp
 {
+using namespace dev;
 // Network variants with different genesis blocks and network parameters
 enum class mcp_networks
 {
@@ -65,24 +67,47 @@ public:
 
 	static mcp::witness_param const & witness_param(uint64_t const & last_summary_mci_a)
 	{
-		mcp::witness_param const & w_param
-			= find_by_last_summary_mci<mcp::witness_param>(last_summary_mci_a, witness_param_map);
-		return w_param;
+		DEV_READ_GUARDED(m_mutex_witness){
+			mcp::witness_param const & w_param
+				= find_by_last_summary_mci<mcp::witness_param>(last_summary_mci_a, witness_param_map);
+			return w_param;
+		}
 	}
 
 	static bool is_witness(uint64_t const & last_summary_mci_a, dev::Address const & account_a)
 	{
-		mcp::witness_param const & w_param = witness_param(last_summary_mci_a);
-		if (w_param.witness_list.count(account_a))
-			return true;
-		return false;
+		DEV_READ_GUARDED(m_mutex_witness){
+			mcp::witness_param const & w_param = witness_param(last_summary_mci_a);
+			if (w_param.witness_list.count(account_a))
+				return true;
+			return false;
+		}
 	}
 
 	static mcp::witness_param const & curr_witness_param()
 	{
-		auto it(witness_param_map.rbegin());
-		assert_x(it != witness_param_map.rend());
-		return it->second;
+		DEV_READ_GUARDED(m_mutex_witness){
+			auto it(witness_param_map.rbegin());
+			assert_x(it != witness_param_map.rend());
+			return it->second;
+		}
+	}
+
+	static std::set<dev::Address> to_witness_list(std::vector<std::string> const & witness_strs)
+	{
+		std::set<dev::Address> witness_list;
+		for (std::string w_str : witness_strs)
+		{
+			dev::Address w_acc(w_str);
+			witness_list.insert(w_acc);
+		}
+		return witness_list;
+	}
+
+	static void add_witness_param(uint64_t const & last_summary_mci_a, mcp::witness_param &w_param){
+		DEV_WRITE_GUARDED(m_mutex_witness){
+			mcp::param::witness_param_map.insert({last_summary_mci_a, w_param });
+		}
 	}
 
 private:
@@ -227,17 +252,6 @@ private:
 		}
 	}
 
-	static std::set<dev::Address> to_witness_list(std::vector<std::string> const & witness_strs)
-	{
-		std::set<dev::Address> witness_list;
-		for (std::string w_str : witness_strs)
-		{
-			dev::Address w_acc(w_str);
-			witness_list.insert(w_acc);
-		}
-		return witness_list;
-	}
-
 	template<class T>
 	static T const & find_by_last_summary_mci(uint64_t const & last_summary_mci_a, std::map<uint64_t, T> const & maps_a)
 	{
@@ -258,6 +272,7 @@ private:
 
 	//min last summary mci -> witness param
 	static std::map<uint64_t, mcp::witness_param> witness_param_map;
+	static dev::SharedMutex m_mutex_witness;
 };
 
 }

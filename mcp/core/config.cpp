@@ -17,3 +17,4 @@ mcp::uint256_t mcp::chainID()
 
 std::map<uint64_t, mcp::block_param> mcp::param::block_param_map = {};
 std::map<uint64_t, mcp::witness_param> mcp::param::witness_param_map = {};
+dev::SharedMutex mcp::param::m_mutex_witness;

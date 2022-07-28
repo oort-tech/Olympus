@@ -15,7 +15,6 @@
 #include <mcp/p2p/dh_x25519.hpp>
 
 #include <cryptopp/hkdf.h>
-#include <secp256k1.h>
 
 #include <cryptopp/cryptlib.h>
 #include <cryptopp/keccak.h>

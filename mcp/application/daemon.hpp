@@ -25,6 +25,7 @@ namespace mcp_daemon
 		std::shared_ptr<mcp::block_processor> processor, std::shared_ptr<mcp::node_capability> capability,
 		std::shared_ptr<mcp::chain> chain, std::shared_ptr<mcp::alarm> alarm,
 		std::shared_ptr<mcp::TransactionQueue>,
+		std::shared_ptr<mcp::ApproveQueue>,
 		mcp::log& log
 	);
     std::string get_home_directory(std::string path);
