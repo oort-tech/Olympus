@@ -5,6 +5,7 @@
 #include <mcp/common/common.hpp>
 #include <mcp/common/log.hpp>
 #include "config.hpp"
+#include <vector>
 
 
 mcp::approve::approve(ApproveSkeleton const& ts, Secret const& s) :
@@ -202,5 +203,5 @@ void mcp::approve::show() const
     LOG(g_log.info) << "m_hashWith="<<m_hashWith.hex();
 	LOG(g_log.info) << "sha3(WithoutSignature) = " << sha3(WithoutSignature).hex();
 	secp256k1_pubkey rawPubkey = getPublicKey();
-	LOG(g_log.info) << "rawPubkey = " << chars_to_hex(rawPubkey.data, 64);
+	LOG(g_log.info) << "rawPubkey = " << toHex(std::vector<unsigned char>(rawPubkey.data, rawPubkey.data+sizeof(rawPubkey.data)));
 }
