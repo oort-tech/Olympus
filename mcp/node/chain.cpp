@@ -257,70 +257,47 @@ void mcp::chain::save_approve(mcp::timeout_db_transaction & timeout_tx_a, std::s
 
 void mcp::chain::switch_witness(mcp::db::db_transaction & transaction_a, uint64_t mc_last_summary_mci){
 	static uint64_t old_summary_mci = 0;
-	if(old_summary_mci == mc_last_summary_mci)
+	static uint64_t old_elected_epoch = 0;
+	uint64_t elected_epoch = mcp::approve::calc_elect_epoch(mc_last_summary_mci) - 1;
+	if(old_summary_mci == mc_last_summary_mci) return;
+	else old_summary_mci = mc_last_summary_mci;
+
+	if(old_elected_epoch == elected_epoch) return;
+	else old_elected_epoch = elected_epoch;
+
+	mcp::witness_param w_param = mcp::param::witness_param(m_last_epoch);
+	LOG(m_log.info) << "[switch_witness] in last_summary_mci = " << mc_last_summary_mci << " elected_epoch = " << elected_epoch;
+	m_last_epoch = mcp::approve::calc_curr_epoch(mc_last_summary_mci);
+
+	epoch_elected_list elected_list;
+	if(vrf_outputs.size() < 14)
+	{
+		LOG(m_log.info) << "Not switch witness_list because elector's number is too short: " << vrf_outputs.size();
+		vrf_outputs.clear();
 		return;
-	else
-		old_summary_mci = mc_last_summary_mci;
-
-	LOG(m_log.info) << "[switch_witness] in " << mc_last_summary_mci;
-	if(mc_last_summary_mci <= 2) return;
-
-	if (mcp::mcp_network == mcp::mcp_networks::mcp_mini_test_network)
-	{
-		if(mc_last_summary_mci%mcp::epoch_period == 0){
-
-			Address a = vrf_outputs.rbegin()->second.from();
-			uint32_t output = vrf_outputs.rbegin()->first;
-			LOG(m_log.info) << "switch to " << a.hex() << " output:" << output;
-			std::vector<std::string> mini_test_witness = {std::string("0x")+a.hex()};
-			mcp::witness_param w_param;
-			w_param.witness_count = 1;
-			w_param.majority_of_witnesses = w_param.witness_count * 2 / 3 + 1;
-			w_param.witness_list = mcp::param::to_witness_list(mini_test_witness);
-			assert_x(w_param.witness_list.size() == w_param.witness_count);
-			mcp::param::add_witness_param(mc_last_summary_mci + mcp::epoch_period, w_param);
-
-			vrf_outputs.clear();
-			LOG(m_log.info) << "switch to witness_list "<< a.hex() <<  "and clear vrf ";
-		}
 	}
-	else if (mcp::mcp_network == mcp::mcp_networks::mcp_test_network)
-	{
-		if(mc_last_summary_mci%mcp::epoch_period == 0){
-			LOG(m_log.info) << "[switch_witness] in testmode" << mc_last_summary_mci;
-			
-			epoch_elected_list elected_list;
-			if(vrf_outputs.size() < 14)
-			{
-				LOG(m_log.info) << "Not switch witness_list because elector's number is too short: " << vrf_outputs.size();
-				return;
-			}
-			std::vector<std::string> test_witness;
-			auto it = vrf_outputs.rbegin();
-			for(int i=0; i<14; i++){
-				//Address a=(vrf_outputs.rbegin()+i)->second;
-				//uint32_t output = (vrf_outputs.rbegin()+i)->first;
-				Address a = it->second.from();
-				uint32_t output = it->first;
-				it++;
-				LOG(m_log.info) << "switch to " << a.hex() << " output:" << output;
-				test_witness.emplace_back(std::string("0x")+a.hex());
-				elected_list.hashs.emplace_back(it->second.approve_hash());
-			}
-			mcp::witness_param w_param;
-			w_param.witness_count = 14;
-			w_param.majority_of_witnesses = w_param.witness_count * 2 / 3 + 1;
-			w_param.witness_list = mcp::param::to_witness_list(test_witness);
-			
-			assert_x(w_param.witness_list.size() == w_param.witness_count);
-
-			mcp::param::add_witness_param(mc_last_summary_mci + mcp::epoch_period, w_param);
-			m_last_epoch = mcp::approve::calc_curr_epoch(mc_last_summary_mci);
-			//The elected_list corresponds to next epoch.
-			m_store.epoch_elected_approve_receipts_put(transaction_a, m_last_epoch + 1, elected_list);
-			vrf_outputs.clear();
-		}
+	std::vector<std::string> test_witness;
+	auto it = vrf_outputs.rbegin();
+	for(int i=0; i<w_param.witness_count; i++){
+		//Address a=(vrf_outputs.rbegin()+i)->second;
+		//uint32_t output = (vrf_outputs.rbegin()+i)->first;
+		Address a = it->second.from();
+		uint32_t output = it->first;
+		it++;
+		LOG(m_log.info) << "elect " << a.hex() << " output:" << output;
+		test_witness.emplace_back(std::string("0x")+a.hex());
+		elected_list.hashs.emplace_back(it->second.approve_hash());
 	}
+	w_param.witness_list.clear();
+	w_param.witness_list = mcp::param::to_witness_list(test_witness);
+	
+	assert_x(w_param.witness_list.size() == w_param.witness_count);
+
+	mcp::param::add_witness_param(elected_epoch, w_param);
+	//The elected_list corresponds to next epoch.
+	m_store.epoch_elected_approve_receipts_put(transaction_a, elected_epoch, elected_list);
+	vrf_outputs.clear();
+	LOG(m_log.info) << "elect to epoch " << elected_epoch << " swith to epoch " << m_last_epoch;
 }
 
 void mcp::chain::init_vrf_outputs(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a)
@@ -455,7 +432,7 @@ void mcp::chain::write_dag_block(mcp::db::db_transaction & transaction_a, std::s
 		&& last_summary_block_state->is_on_main_chain
 		&& last_summary_block_state->main_chain_index);
 	uint64_t const & last_summary_mci(*last_summary_block_state->main_chain_index);
-	mcp::witness_param const & w_param(mcp::param::witness_param(last_summary_mci));
+	mcp::witness_param const & w_param(mcp::param::witness_param(mcp::approve::calc_curr_epoch(last_summary_mci)));
 
 	//best parent
 	mcp::block_hash best_pblock_hash(m_ledger.determine_best_parent(transaction_a, cache_a, block_a->parents()));

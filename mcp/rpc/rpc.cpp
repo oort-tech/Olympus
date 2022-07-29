@@ -1305,7 +1305,7 @@ void mcp::rpc_handler::nodes(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::witness_list(mcp::json &j_response, bool &)
 {
-	mcp::witness_param const &w_param(mcp::param::curr_witness_param());
+	mcp::witness_param const &w_param(mcp::param::witness_param(m_chain->last_epoch()));
 	mcp::json witness_list_l = mcp::json::array();
 	for (auto i : w_param.witness_list)
 	{

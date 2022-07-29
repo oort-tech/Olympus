@@ -319,7 +319,7 @@ void mcp::node_sync::request_remote_mc(mcp::db::db_transaction & transaction_a, 
 	req_mg.unstable_mc_joints_tail = unstable_tail_block;
 	req_mg.first_catchup_chain_summary = from_summary;
 
-	mcp::witness_param const & w_param(mcp::param::curr_witness_param());
+	mcp::witness_param const & w_param(mcp::param::witness_param(m_chain->last_epoch()));
 	req_mg.arr_witnesses = w_param.witness_list;
 	req_mg.distinct_witness_size = w_param.witness_count - w_param.majority_of_witnesses + 1; //there must be at least one honest witness
 

@@ -113,7 +113,7 @@ void mcp::composer::pick_parents_and_last_summary_and_wl_block(mcp::db::db_trans
 	assert_x(last_summary_block_state->main_chain_index);
 
 	uint64_t const & last_summary_mci(*last_summary_block_state->main_chain_index);
-	if (!mcp::param::is_witness(last_summary_mci, from_a))
+	if (!mcp::param::is_witness(mcp::approve::calc_curr_epoch(last_summary_mci), from_a))
 	{
 		BOOST_THROW_EXCEPTION(BadComposeBlock()
 			<< errinfo_comment("compose error:composer stopped"));
@@ -192,7 +192,7 @@ void mcp::composer::pick_parents_and_last_summary_and_wl_block(mcp::db::db_trans
 
 		assert_x(best_pblock_hash == m_ledger.determine_best_parent(transaction_a, m_cache, parents));
 
-		mcp::witness_param const & w_param(mcp::param::witness_param(last_summary_mci));
+		mcp::witness_param const & w_param(mcp::param::witness_param(mcp::approve::calc_curr_epoch(last_summary_mci)));
 
 		//check majority different of witnesses
 		bool is_diff_majority(m_ledger.check_majority_witness(transaction_a, m_cache, best_pblock_hash, from_a, w_param));
