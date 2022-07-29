@@ -405,7 +405,7 @@ bool mcp::node_capability::read_packet(std::shared_ptr<p2p::peer> peer_a, unsign
 		}
 		case mcp::sub_packet_type::approve:
 		{
-			LOG(m_log.error) << "[read_packet] approve";
+			LOG(m_log.info) << "[read_packet] approve";
 			bool error(r.itemCount() != 1);
 			//Transaction joint(error, r[0]);
 

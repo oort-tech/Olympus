@@ -275,6 +275,10 @@ mcp::rpc_handler::rpc_handler(mcp::rpc &rpc_a, std::string const &body_a, std::f
 	m_mcpRpcMethods["debug_trace_transaction"] = &mcp::rpc_handler::debug_trace_transaction;
 	m_mcpRpcMethods["debug_storage_range_at"] = &mcp::rpc_handler::debug_storage_range_at;
 
+	m_mcpRpcMethods["epoch_approves"] = &mcp::rpc_handler::epoch_approves;
+	m_mcpRpcMethods["epoch_approve_receipts"] = &mcp::rpc_handler::epoch_approve_receipts;
+	m_mcpRpcMethods["epoch_elected_approve_receipts"] = &mcp::rpc_handler::epoch_elected_approve_receipts;
+
 	m_ethRpcMethods["net_version"] = &mcp::rpc_handler::net_version;
 	m_ethRpcMethods["net_listening"] = &mcp::rpc_handler::net_listening;
 	m_ethRpcMethods["net_peerCount"] = &mcp::rpc_handler::net_peerCount;

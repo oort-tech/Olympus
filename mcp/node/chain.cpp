@@ -244,7 +244,7 @@ void mcp::chain::save_approve(mcp::timeout_db_transaction & timeout_tx_a, std::s
 
 			//m_new_blocks.push(block_a->block);
 
-			timeout_tx_a.commit_if_timeout();
+			//timeout_tx_a.commit_if_timeout();
 		}
 		catch (std::exception const & e)
 		{
@@ -278,39 +278,6 @@ void mcp::chain::switch_witness(mcp::db::db_transaction & transaction_a, uint64_
 			w_param.majority_of_witnesses = w_param.witness_count * 2 / 3 + 1;
 			w_param.witness_list = mcp::param::to_witness_list(mini_test_witness);
 			assert_x(w_param.witness_list.size() == w_param.witness_count);
-
-			#if 0
-			std::vector<std::string> mini_test_witness_str_list_v0 = {
-				"0x1144B522F45265C2DFDBAEE8E324719E63A1694C"
-			};
-			std::vector<std::string> mini_test_witness_str_list_v1 = {
-				"0xd11c69cf2a766bee0d7b5186687e70e0ca0530db"
-			};
-			std::vector<std::string> mini_test_witness_str_list_v2 = {
-				"0xc086b09411e4c16b90e1b4b32a7f5d34f0f8eee4"
-			};
-			std::vector<std::string> mini_test_witness_str_list_v3 = {
-				"0xdb06ba6181c94d4b30ad8f3d8c29737e4222d7e7"
-			};
-			mcp::witness_param w_param;
-			w_param.witness_count = 1;
-			w_param.majority_of_witnesses = w_param.witness_count * 2 / 3 + 1;
-
-			if(mc_last_summary_mci/mcp::epoch_period%4 == 0){
-				w_param.witness_list = mcp::param::to_witness_list(mini_test_witness_str_list_v0);
-			}
-			else if(mc_last_summary_mci/mcp::epoch_period%4 == 1){
-				w_param.witness_list = mcp::param::to_witness_list(mini_test_witness_str_list_v1);
-			}
-			else if(mc_last_summary_mci/mcp::epoch_period%4 == 2){
-				w_param.witness_list = mcp::param::to_witness_list(mini_test_witness_str_list_v2);
-			}
-			else if(mc_last_summary_mci/mcp::epoch_period%4 == 3){
-				w_param.witness_list = mcp::param::to_witness_list(mini_test_witness_str_list_v3);
-			}
-			assert_x(w_param.witness_list.size() == w_param.witness_count);
-			#endif
-
 			mcp::param::add_witness_param(mc_last_summary_mci + mcp::epoch_period, w_param);
 
 			vrf_outputs.clear();
@@ -322,7 +289,6 @@ void mcp::chain::switch_witness(mcp::db::db_transaction & transaction_a, uint64_
 		if(mc_last_summary_mci%mcp::epoch_period == 0){
 			LOG(m_log.info) << "[switch_witness] in testmode" << mc_last_summary_mci;
 			
-			#if 1
 			epoch_elected_list elected_list;
 			if(vrf_outputs.size() < 14)
 			{
@@ -347,52 +313,6 @@ void mcp::chain::switch_witness(mcp::db::db_transaction & transaction_a, uint64_
 			w_param.witness_list = mcp::param::to_witness_list(test_witness);
 			
 			assert_x(w_param.witness_list.size() == w_param.witness_count);
-
-			#else
-			std::vector<std::string> test_witness_str_list_v0 = {
-				"0x1144B522F45265C2DFDBAEE8E324719E63A1694C",
-				"0xd11c69cf2a766bee0d7b5186687e70e0ca0530db",
-				"0xc086b09411e4c16b90e1b4b32a7f5d34f0f8eee4",
-				"0xdb06ba6181c94d4b30ad8f3d8c29737e4222d7e7",
-				"0x5a1f0a142d687fefe59282698b78318c7fd7dcf3",
-				"0x15bcdfac7f421350ae41fa901bdb178ee7ea8e1a",
-				"0x140e5b65015a6a8c8df979ef528682d14a9855d1",
-				"0x777dbf4dff1dcb7165ebb4d8dc3590b6dba05868",
-				"0x6900e0e415284ee2d34bffdfa3800d25dda1f789",
-				"0x23936f76f1225fdd6147646fa9082dabadac469f",
-				"0xa55bb0fb21612faf9e182f4a8c90bd1bf941c164",
-				"0xb98e786e0e399842196bc9d3c7dab81dcceac2c2",
-				"0xc3f3e6c0696ffae1f7101c18b9b43bff4cb7f42f",
-				"0xc2499e9b66d7f4081bb5915dfddb386c53228fa4"
-			};
-			std::vector<std::string> test_witness_str_list_v1 = {
-				"0xe9c1b8c09a32ed572441024953c591ae28c87380",
-				"0xed1f63367fd7af0310c5b46aeca14680bb1d270b",
-				"0xf9197377df0e45094f6fa555325a085c0c9c0afe",
-				"0xfd708ba83a168077c9999d98e3b81c1cc975bdef",
-				"0x3ef22091fcf552b4e9371608e7066dcbbd5fec15",
-				"0x3fd605e394b6c61a2ec2538ac0f779e2968abd43",
-				"0x4deb824c0e6035f97654aa231a8bf2b6e988b7e5",
-				"0x9ac7ea2b68c7ebd821d0e6f1f73c8678ade7ea4d",
-				"0x15986059d08c85c7c8b66ec9bba06518e1982e25",
-				"0xae0bf9072b885722f3c2eae8edebed3b461ea19a",
-				"0xb3d132b42dc41de85aa13bcf3047cd04e85c435a",
-				"0xbb1f86e871852225163c3c0c15fcbe4357c2667e",
-				"0xdb61485d67b173efdcdcdb3e68be5b8c68e7adde",
-				"0xde4dd6efe9bd7ba5ad3525098946cc19571eba1c"
-			};
-			mcp::witness_param w_param;
-			w_param.witness_count = 14;
-			w_param.majority_of_witnesses = w_param.witness_count * 2 / 3 + 1;
-
-			if(mc_last_summary_mci/mcp::epoch_period%2 == 1){
-				w_param.witness_list = mcp::param::to_witness_list(test_witness_str_list_v1);
-			}
-			else{
-				w_param.witness_list = mcp::param::to_witness_list(test_witness_str_list_v0);
-			}
-			assert_x(w_param.witness_list.size() == w_param.witness_count);
-			#endif
 
 			mcp::param::add_witness_param(mc_last_summary_mci + mcp::epoch_period, w_param);
 			m_last_epoch = mcp::approve::calc_curr_epoch(mc_last_summary_mci);
