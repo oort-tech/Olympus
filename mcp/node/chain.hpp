@@ -94,6 +94,7 @@ namespace mcp
 		void search_already_stable_block(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a, mcp::block_hash const & block_hash, uint64_t const & mci, std::map<uint64_t, std::set<mcp::block_hash>>& stable_block_hashs);
 		void switch_witness(mcp::db::db_transaction & transaction_a, uint64_t mc_last_summary_mci);
 		void init_vrf_outputs(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a);
+		void init_witness(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a);
 		mcp::block_store m_store;
 		mcp::ledger m_ledger;
 		//std::list<std::function<void(std::shared_ptr<mcp::block>)> > m_new_block_observer;

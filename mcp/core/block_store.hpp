@@ -179,6 +179,9 @@ namespace mcp
 		void version_put(mcp::db::db_transaction &, int);
 		int version_get();
 
+		uint64_t last_epoch_get(mcp::db::db_transaction & transaction_a);
+		void last_epoch_put(mcp::db::db_transaction & transaction_a, uint64_t const & last_epoch_a);
+
 		mcp::db::db_transaction create_transaction(std::shared_ptr<rocksdb::WriteOptions> write_options_a = nullptr,
 			std::shared_ptr<rocksdb::TransactionOptions> txn_ops_a = nullptr)
 		{
@@ -280,5 +283,7 @@ namespace mcp
 		static dev::h256 const catchup_index;
 		//catch up max index key
 		static dev::h256 const catchup_max_index;
+		//
+		static dev::h256 const last_epoch_key;
 	};
 }

@@ -85,10 +85,13 @@ void mcp::chain::init(bool & error_a, mcp::timeout_db_transaction & timeout_tx_a
 	m_last_stable_index_internal = m_store.last_stable_index_get(transaction);
 
 	m_advance_info = m_store.advance_info_get(transaction);
+	m_last_epoch = m_store.last_epoch_get(transaction);
+	LOG(m_log.info) << "m_last_epoch: " << m_last_epoch;
 
 	update_cache();
 
-	init_vrf_outputs(transaction, cache_a);
+	//init_witness(transaction, cache_a);
+	//init_vrf_outputs(transaction, cache_a);
 }
 
 void mcp::chain::stop()
@@ -268,7 +271,7 @@ void mcp::chain::switch_witness(mcp::db::db_transaction & transaction_a, uint64_
 	mcp::witness_param w_param = mcp::param::witness_param(m_last_epoch);
 	LOG(m_log.info) << "[switch_witness] in last_summary_mci = " << mc_last_summary_mci << " elected_epoch = " << elected_epoch;
 	m_last_epoch = mcp::approve::calc_curr_epoch(mc_last_summary_mci);
-
+	m_store.last_epoch_put(transaction_a, m_last_epoch);
 	epoch_elected_list elected_list;
 	if(vrf_outputs.size() < 14)
 	{
@@ -344,6 +347,42 @@ void mcp::chain::init_vrf_outputs(mcp::db::db_transaction & transaction_a, std::
 		}
 	}
 	LOG(m_log.info) << "[init_vrf_outputs] size=" << vrf_outputs.size();
+}
+
+void mcp::chain::init_witness(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a)
+{
+	mcp::witness_param w_param = mcp::param::witness_param(m_last_epoch);
+	for(uint64_t i=1; i<=m_last_epoch + 2; i++){
+		LOG(m_log.info) << "[init_witness] epoch=" << i;
+		mcp::epoch_elected_list list;
+		if(m_store.epoch_elected_approve_receipts_get(transaction_a, i, list)){
+			LOG(m_log.info) << "[init_witness] out";
+			continue;;
+		}
+
+		std::vector<std::string> test_witness;
+		for(auto hash : list.hashs)
+		{
+			std::shared_ptr<dev::ApproveReceipt> receipt = cache_a->approve_receipt_get(transaction_a, hash);
+			if(!receipt){
+				LOG(m_log.info) << "[init_witness] receipt is empty";
+			}
+
+			test_witness.emplace_back(receipt->from().hexPrefixed());
+			LOG(m_log.info) << "[init_witness] from=" << receipt->from().hexPrefixed();
+		}
+		LOG(m_log.info) << "[init_witness] " << __LINE__;
+
+		w_param.witness_list.clear();
+		w_param.witness_list = mcp::param::to_witness_list(test_witness);
+		LOG(m_log.info) << "[init_witness] " << __LINE__;
+		
+		assert_x(w_param.witness_list.size() == w_param.witness_count);
+		LOG(m_log.info) << "[init_witness] " << __LINE__;
+
+		mcp::param::add_witness_param(i, w_param);
+		LOG(m_log.info) << "[init_witness] " << __LINE__;
+	}
 }
 
 void mcp::chain::try_advance(mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a)

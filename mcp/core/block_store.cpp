@@ -1187,6 +1187,22 @@ void mcp::block_store::epoch_elected_approve_receipts_put(mcp::db::db_transactio
 	transaction_a.put(epoch_elected_approve_receipts, mcp::h64_to_slice(h64(epoch)), s_value);
 }
 
+uint64_t mcp::block_store::last_epoch_get(mcp::db::db_transaction & transaction_a)
+{
+	std::string value;
+	bool exists(transaction_a.get(prop, mcp::h256_to_slice(last_epoch_key), value));
+	uint64_t result(0);
+	if (exists)
+		result = ((dev::h64::Arith) mcp::slice_to_h64(value)).convert_to<uint64_t>();
+	return result;
+}
+
+void mcp::block_store::last_epoch_put(mcp::db::db_transaction & transaction_a, uint64_t const & last_epoch_a)
+{
+	dev::h64 last_epoch(last_epoch_a);
+	transaction_a.put(prop, mcp::h256_to_slice(last_epoch_key), mcp::h64_to_slice(last_epoch));
+}
+
 dev::h256 const mcp::block_store::version_key(0);
 dev::h256 const mcp::block_store::genesis_hash_key(1);
 dev::h256 const mcp::block_store::genesis_transaction_hash_key(2);
@@ -1196,3 +1212,4 @@ dev::h256 const mcp::block_store::advance_info_key(5);
 dev::h256 const mcp::block_store::last_stable_index_key(6);
 dev::h256 const mcp::block_store::catchup_index(7);
 dev::h256 const mcp::block_store::catchup_max_index(8);
+dev::h256 const mcp::block_store::last_epoch_key(9);
