@@ -27,7 +27,7 @@ namespace mcp
 	public:
 		chain(mcp::block_store& store_a, mcp::ledger& ledger_a);
 		~chain();
-		void init(bool & error_a, mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a);
+		void init(bool & error_a, mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a, std::shared_ptr<mcp::block_cache> block_cache_a);
 		void stop();
 
 		std::pair<u256, bool> estimate_gas(mcp::db::db_transaction& transaction_a, std::shared_ptr<mcp::iblock_cache> cache_a,
@@ -83,6 +83,8 @@ namespace mcp
 		{
 			m_complete_store_notice = func_a;
 		}
+		uint64_t get_last_summary_mci(mcp::db::db_transaction& transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a, std::shared_ptr<mcp::block_cache> block_cache_a, uint64_t const & mci);
+		
 	private:
 		void write_dag_block(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a, std::shared_ptr<mcp::block> block_a);
 		void find_main_chain_changes(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a, std::shared_ptr<mcp::block> block_a, mcp::block_hash const & best_free_block_hash, bool & is_mci_retreat, uint64_t & retreat_mci, uint64_t &retreat_level, std::list<mcp::block_hash>& new_mc_block_hashs);

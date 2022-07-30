@@ -21,7 +21,7 @@ mcp::chain::~chain()
 {
 }
 
-void mcp::chain::init(bool & error_a, mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a)
+void mcp::chain::init(bool & error_a, mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a, std::shared_ptr<mcp::block_cache> block_cache_a)
 {
 	mcp::db::db_transaction & transaction(timeout_tx_a.get_transaction());
 
@@ -86,12 +86,12 @@ void mcp::chain::init(bool & error_a, mcp::timeout_db_transaction & timeout_tx_a
 
 	m_advance_info = m_store.advance_info_get(transaction);
 	m_last_epoch = m_store.last_epoch_get(transaction);
-	LOG(m_log.info) << "m_last_epoch: " << m_last_epoch;
+	m_last_summary_mci_internal = get_last_summary_mci(transaction, cache_a, block_cache_a, m_last_mci_internal);
+	LOG(m_log.info) << "m_last_epoch: " << m_last_epoch << "m_last_summary_mci_internal: " << m_last_summary_mci_internal;
 
 	update_cache();
-
-	//init_witness(transaction, cache_a);
-	//init_vrf_outputs(transaction, cache_a);
+	init_witness(transaction, cache_a);
+	init_vrf_outputs(transaction, cache_a);
 }
 
 void mcp::chain::stop()
@@ -286,10 +286,10 @@ void mcp::chain::switch_witness(mcp::db::db_transaction & transaction_a, uint64_
 		//uint32_t output = (vrf_outputs.rbegin()+i)->first;
 		Address a = it->second.from();
 		uint32_t output = it->first;
-		it++;
-		LOG(m_log.info) << "elect " << a.hex() << " output:" << output;
 		test_witness.emplace_back(std::string("0x")+a.hex());
 		elected_list.hashs.emplace_back(it->second.approve_hash());
+		LOG(m_log.info) << "elect " << a.hex() << " output:" << output << " hash:" << it->second.approve_hash().hexPrefixed();
+		it++;
 	}
 	w_param.witness_list.clear();
 	w_param.witness_list = mcp::param::to_witness_list(test_witness);
@@ -305,58 +305,24 @@ void mcp::chain::switch_witness(mcp::db::db_transaction & transaction_a, uint64_
 
 void mcp::chain::init_vrf_outputs(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a)
 {
-	if(m_last_stable_mci <= 18) return;
-	
-	std::map<uint64_t, std::set<mcp::block_hash>> dag_stable_block_hashs; //order by block level and hash
-	//to do: check the releationship between m_last_stable_mci and m_last_summary_mci
-	for(uint64_t mci=m_last_stable_mci -18 - (m_last_stable_mci-18) % mcp::epoch_period; mci <= m_last_stable_mci - 18; mci++){
-		mcp::block_hash hash;
-		bool exists(!m_store.stable_block_get(transaction_a, mci, hash));
-		assert_x(exists);
-
-		search_already_stable_block(transaction_a, cache_a, hash, mci, dag_stable_block_hashs);
-		LOG(m_log.info) << "[init_vrf_outputs] dag_stable_block_hashs size=" << dag_stable_block_hashs.size();
-		std::shared_ptr<mcp::block> mc_stable_block = cache_a->block_get(transaction_a, hash);
-		assert_x(mc_stable_block != nullptr);
-	}
-
-	for (auto iter_p(dag_stable_block_hashs.begin()); iter_p != dag_stable_block_hashs.end(); iter_p++)
+	std::list<h256> hashs;
+	auto elect_epoch = mcp::approve::calc_elect_epoch(m_last_summary_mci);
+	m_store.epoch_approve_receipts_get(transaction_a, elect_epoch, hashs);
+	for(auto hash : hashs)
 	{
-		std::set<mcp::block_hash> const & hashs(iter_p->second);
-		for (auto iter(hashs.begin()); iter != hashs.end(); iter++)
-		{
-			mcp::block_hash const & dag_stable_block_hash(*iter);
-			{
-				std::shared_ptr<mcp::block> dag_stable_block = cache_a->block_get(transaction_a, dag_stable_block_hash);
-				assert_x(dag_stable_block);
-
-				///handle approve stable block 
-				auto approves(dag_stable_block->approves());
-				LOG(m_log.trace) << "[advance_stable_mci] approves.size=" << approves.size();
-				for (auto i = 0; i < approves.size(); i++)
-				{
-					h256 const& approve_hash = approves[i];
-					
-					auto receipt = cache_a->approve_receipt_get(transaction_a, approve_hash);
-					if (receipt)
-					{
-						LOG(m_log.info) << "[init_vrf_outputs] insert from=" << receipt->from().hex() << " output=" << *(uint32_t*)receipt->output().data();
-					}
-				}
-			}
-		}
+		auto approve_receipt = cache_a->approve_receipt_get(transaction_a, hash);
+		assert_x(approve_receipt);
+		vrf_outputs.insert(std::make_pair(*(uint32_t*)approve_receipt->output().data(), *approve_receipt));
+		LOG(m_log.info) << "[init_vrf_outputs] add output: sender=" << approve_receipt->from().hexPrefixed() << " output="<<*(uint32_t*)approve_receipt->output().data() << " epoch="<<approve_receipt->epoch();
 	}
-	LOG(m_log.info) << "[init_vrf_outputs] size=" << vrf_outputs.size();
 }
 
 void mcp::chain::init_witness(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a)
 {
 	mcp::witness_param w_param = mcp::param::witness_param(m_last_epoch);
 	for(uint64_t i=1; i<=m_last_epoch + 2; i++){
-		LOG(m_log.info) << "[init_witness] epoch=" << i;
 		mcp::epoch_elected_list list;
 		if(m_store.epoch_elected_approve_receipts_get(transaction_a, i, list)){
-			LOG(m_log.info) << "[init_witness] out";
 			continue;;
 		}
 
@@ -364,24 +330,15 @@ void mcp::chain::init_witness(mcp::db::db_transaction & transaction_a, std::shar
 		for(auto hash : list.hashs)
 		{
 			std::shared_ptr<dev::ApproveReceipt> receipt = cache_a->approve_receipt_get(transaction_a, hash);
-			if(!receipt){
-				LOG(m_log.info) << "[init_witness] receipt is empty";
-			}
+			assert_x(receipt);
 
 			test_witness.emplace_back(receipt->from().hexPrefixed());
 			LOG(m_log.info) << "[init_witness] from=" << receipt->from().hexPrefixed();
 		}
-		LOG(m_log.info) << "[init_witness] " << __LINE__;
-
 		w_param.witness_list.clear();
-		w_param.witness_list = mcp::param::to_witness_list(test_witness);
-		LOG(m_log.info) << "[init_witness] " << __LINE__;
-		
+		w_param.witness_list = mcp::param::to_witness_list(test_witness);		
 		assert_x(w_param.witness_list.size() == w_param.witness_count);
-		LOG(m_log.info) << "[init_witness] " << __LINE__;
-
 		mcp::param::add_witness_param(i, w_param);
-		LOG(m_log.info) << "[init_witness] " << __LINE__;
 	}
 }
 
@@ -921,10 +878,10 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 
 						std::shared_ptr<dev::ApproveReceipt> preceipt = std::make_shared<dev::ApproveReceipt>(ap->sender(), ap->m_epoch, output, approve_hash);
 						cache_a->approve_receipt_put(transaction_a, approve_hash, preceipt);
-						m_store.epoch_approve_receipts_put(transaction_a, mcp::epoch_approves_key(ap->m_epoch, ap->sha3()));
+						m_store.epoch_approve_receipts_put(transaction_a, mcp::epoch_approves_key(ap->m_epoch, approve_hash));
 					
 						vrf_outputs.insert(std::make_pair(*(uint32_t*)output.data(), *preceipt));
-						LOG(m_log.info) << "add vrf output: sender=" << ap->sender().hex() << "output="<<*(uint32_t*)output.data() << " epoch="<<ap->m_epoch<<" proof="<<toHex(ap->m_proof);
+						LOG(m_log.info) << "add vrf output: sender=" << preceipt->from().hexPrefixed() << " output="<<*(uint32_t*)output.data() << " epoch="<<preceipt->epoch();
 						
 
 						RLPStream receiptRLP;
@@ -1403,4 +1360,29 @@ mcp::json mcp::chain::traceTransaction(Executive& _e, Transaction const& _t, mcp
 		_e.go(st.onOp());
 	_e.finalize();
 	return st.jsonValue();
+}
+
+uint64_t mcp::chain::get_last_summary_mci(mcp::db::db_transaction& transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a, std::shared_ptr<mcp::block_cache> block_cache_a, uint64_t const & mci)
+{
+	mcp::block_hash mc_block_hash;
+	bool exists(!m_store.main_chain_get(transaction_a, mci, mc_block_hash));
+	assert_x(exists)
+
+	uint64_t last_summary_mci(0);
+	if (mc_block_hash != mcp::genesis::block_hash)
+	{
+		std::shared_ptr<mcp::block> mc_block(cache_a->block_get(transaction_a, mc_block_hash));
+		std::shared_ptr<mcp::block_state> last_summary_block_state(cache_a->block_state_get(transaction_a, mc_block->last_summary_block()));
+		assert_x(last_summary_block_state
+			&& last_summary_block_state->is_stable
+			&& last_summary_block_state->is_on_main_chain
+			&& last_summary_block_state->main_chain_index);
+
+		last_summary_mci = *last_summary_block_state->main_chain_index;
+	}
+	else
+	{
+		last_summary_mci = 0;
+	}
+	return last_summary_mci;
 }

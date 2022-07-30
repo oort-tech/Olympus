@@ -564,11 +564,9 @@ void mcp::process_block_cache::commit_and_clear_changing()
 	m_cache->clear_block_state_changing();
 	m_cache->clear_latest_account_state_changing();
 	m_cache->clear_transaction_changing();
-	m_cache->clear_approve_changing();
 	m_cache->clear_account_nonce_changing();
 	m_cache->clear_successor_changing();
 	m_cache->clear_block_summary_changing();
 	m_cache->clear_transaction_receipt_changing();
-	m_cache->clear_approve_receipt_changing();
 }
 

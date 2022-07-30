@@ -86,7 +86,7 @@ mcp::block_processor::block_processor(bool & error_a,
 		std::bind(&block_processor::after_db_commit_event, this));
 	try
 	{
-		m_chain->init(error_a, timeout_tx, m_local_cache);
+		m_chain->init(error_a, timeout_tx, m_local_cache, m_cache);
 		timeout_tx.commit();
 	}
 	catch (std::exception const & e)
