@@ -65,5 +65,6 @@ namespace mcp
         mcp::log m_log = { mcp::log("node") };
         bool m_witness_get_current_chain;
         mcp::block_hash m_last_witness_block_hash;
+		bool m_restart_not_need_send_approve;
 	};
 }

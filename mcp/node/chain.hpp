@@ -84,7 +84,8 @@ namespace mcp
 			m_complete_store_notice = func_a;
 		}
 		uint64_t get_last_summary_mci(mcp::db::db_transaction& transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a, std::shared_ptr<mcp::block_cache> block_cache_a, uint64_t const & mci);
-		
+		bool restart_not_need_send_approve(mcp::db::db_transaction& transaction_a, std::shared_ptr<mcp::block_cache> cache_a, dev::Address account_a);
+
 	private:
 		void write_dag_block(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a, std::shared_ptr<mcp::block> block_a);
 		void find_main_chain_changes(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a, std::shared_ptr<mcp::block> block_a, mcp::block_hash const & best_free_block_hash, bool & is_mci_retreat, uint64_t & retreat_mci, uint64_t &retreat_level, std::list<mcp::block_hash>& new_mc_block_hashs);
@@ -127,6 +128,7 @@ namespace mcp
 		std::unordered_map<Address, dev::eth::PrecompiledContract> m_precompiled;
 
 		std::map<uint32_t, dev::ApproveReceipt> vrf_outputs;
+		bool m_restart_not_need_switch_witness = true;
 
         mcp::log m_log = { mcp::log("node") };
 	};

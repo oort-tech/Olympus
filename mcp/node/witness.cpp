@@ -54,15 +54,17 @@ mcp::witness::witness(mcp::error_message & error_msg,
 		return;
 	}
 
+    mcp::db::db_transaction transaction(m_store.create_transaction());
     if (m_last_witness_block_hash != mcp::block_hash(0))
     {
-        mcp::db::db_transaction transaction(m_store.create_transaction());
         if (!m_store.block_exists(transaction, m_last_witness_block_hash))
         {
             m_witness_get_current_chain = false;
             LOG(m_log.info) << "witness account cannot do witness cause: " << m_last_witness_block_hash.hex() << " not exsist.";
         }
     }
+
+	m_restart_not_need_send_approve = m_chain->restart_not_need_send_approve(transaction, m_cache, m_account);
 
     //std::cout << "Witness start success.\n" << std::flush;
     LOG(m_log.info) << "witness account:" << m_account.hexPrefixed();
@@ -212,6 +214,12 @@ bool mcp::witness::need_approve(uint64_t last_summary_mci){
 	}
 
 	uint64_t cur_epoch = mcp::approve::calc_elect_epoch(last_summary_mci);
+	if(m_restart_not_need_send_approve){
+		m_restart_not_need_send_approve = false;
+		last_epoch_num = cur_epoch;
+		LOG(m_log.info) << "[need_approve] restart and not need send approve in this epoch.";
+		return false;
+	}
 	if(cur_epoch != last_epoch_num){
 		last_epoch_num = cur_epoch;
 		return true;

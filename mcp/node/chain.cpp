@@ -87,7 +87,8 @@ void mcp::chain::init(bool & error_a, mcp::timeout_db_transaction & timeout_tx_a
 	m_advance_info = m_store.advance_info_get(transaction);
 	m_last_epoch = m_store.last_epoch_get(transaction);
 	m_last_summary_mci_internal = get_last_summary_mci(transaction, cache_a, block_cache_a, m_last_mci_internal);
-	LOG(m_log.info) << "m_last_epoch: " << m_last_epoch << "m_last_summary_mci_internal: " << m_last_summary_mci_internal;
+	LOG(m_log.info) << "m_last_mci_internal: " << m_last_mci_internal << " m_last_stable_mci_internal: " << m_last_stable_mci_internal;
+	LOG(m_log.info) << "m_last_epoch: " << m_last_epoch << " m_last_summary_mci_internal: " << m_last_summary_mci_internal;
 
 	update_cache();
 	init_witness(transaction, cache_a);
@@ -265,6 +266,11 @@ void mcp::chain::switch_witness(mcp::db::db_transaction & transaction_a, uint64_
 	if(old_summary_mci == mc_last_summary_mci) return;
 	else old_summary_mci = mc_last_summary_mci;
 
+	if(m_restart_not_need_switch_witness){
+		old_elected_epoch = elected_epoch;
+		m_restart_not_need_switch_witness = false;
+		return;
+	}
 	if(old_elected_epoch == elected_epoch) return;
 	else old_elected_epoch = elected_epoch;
 
@@ -333,7 +339,7 @@ void mcp::chain::init_witness(mcp::db::db_transaction & transaction_a, std::shar
 			assert_x(receipt);
 
 			test_witness.emplace_back(receipt->from().hexPrefixed());
-			LOG(m_log.info) << "[init_witness] from=" << receipt->from().hexPrefixed();
+			LOG(m_log.info) << "[init_witness] epoch" << i << "\'s receipts from=" << receipt->from().hexPrefixed();
 		}
 		w_param.witness_list.clear();
 		w_param.witness_list = mcp::param::to_witness_list(test_witness);		
@@ -538,7 +544,7 @@ void mcp::chain::update_mci(mcp::db::db_transaction & transaction_a, std::shared
 		cache_a->block_state_put(transaction_a, new_mc_block_hash, new_mc_block_state_copy);
 
 		m_store.main_chain_put(transaction_a, new_mci, new_mc_block_hash);
-		LOG(m_log.info) << "[update_mci] retreat_mci=" << retreat_mci << ", new mci=" << new_mci;
+		//LOG(m_log.info) << "[update_mci] retreat_mci=" << retreat_mci << ", new mci=" << new_mci;
 	}
 
 #pragma endregion
@@ -546,7 +552,7 @@ void mcp::chain::update_mci(mcp::db::db_transaction & transaction_a, std::shared
 	m_last_mci_internal = new_mci;
 	m_store.last_mci_put(transaction_a, m_last_mci_internal);
 
-	//LOG(m_log.debug) << "Retreat mci to " << retreat_mci << ", new mci is " << new_mci;
+	LOG(m_log.info) << "[update_mci] last_mci_put = " << m_last_mci_internal;
 }
 
 void mcp::chain::update_latest_included_mci(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a, std::shared_ptr<mcp::block> block_a, bool const &is_mci_retreat, uint64_t const &retreat_mci, uint64_t const &retreat_level)
@@ -1372,6 +1378,7 @@ uint64_t mcp::chain::get_last_summary_mci(mcp::db::db_transaction& transaction_a
 	if (mc_block_hash != mcp::genesis::block_hash)
 	{
 		std::shared_ptr<mcp::block> mc_block(cache_a->block_get(transaction_a, mc_block_hash));
+		LOG(m_log.info) << "[get_last_summary_mci] mci=" << mci << "mc_block_hash:" << mc_block_hash.hexPrefixed() << "last_summary_block: " << mc_block->last_summary_block().hexPrefixed();
 		std::shared_ptr<mcp::block_state> last_summary_block_state(cache_a->block_state_get(transaction_a, mc_block->last_summary_block()));
 		assert_x(last_summary_block_state
 			&& last_summary_block_state->is_stable
@@ -1385,4 +1392,21 @@ uint64_t mcp::chain::get_last_summary_mci(mcp::db::db_transaction& transaction_a
 		last_summary_mci = 0;
 	}
 	return last_summary_mci;
+}
+
+bool mcp::chain::restart_not_need_send_approve(mcp::db::db_transaction& transaction_a, std::shared_ptr<mcp::block_cache> block_cache_a, dev::Address account_a)
+{
+	bool ret = false;
+	std::list<h256> hashs;
+	m_store.epoch_approves_get(transaction_a, m_last_epoch, hashs);
+	for(auto hash : hashs)
+	{
+		std::shared_ptr<mcp::approve> ap = block_cache_a->approve_get(transaction_a, hash);
+		if(ap->sender() == account_a){
+			ret = true;
+			break;
+		}
+	}
+    LOG(m_log.info) << "[restart_not_need_send_approve] not need send = " << ret;
+	return ret;
 }
