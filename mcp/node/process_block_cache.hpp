@@ -57,6 +57,7 @@ namespace mcp
 		bool approve_receipt_exists(mcp::db::db_transaction & transaction_a, h256 const& _hash);
 		std::shared_ptr<dev::ApproveReceipt> approve_receipt_get(mcp::db::db_transaction & transaction_a, h256 const&_hash);
 		void approve_receipt_put(mcp::db::db_transaction & transaction_a, h256 const& _hash, std::shared_ptr<dev::ApproveReceipt> _t);
+		void approve_del_from_queue(h256 const& _hash);
 
 
 		void mark_as_changing();
@@ -163,6 +164,8 @@ namespace mcp
 			boost::multi_index::hashed_unique<boost::multi_index::member<put_item<h256, std::shared_ptr<dev::eth::TransactionReceipt>>, h256, &put_item<h256, std::shared_ptr<dev::eth::TransactionReceipt>>::key>>
 			>>
 			m_transaction_receipt_puts;
+
+		h256s m_approve_dels;///delete from approve queue
 	};
 
 } // namespace mcp

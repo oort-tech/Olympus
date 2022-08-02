@@ -127,7 +127,7 @@ namespace mcp
 
 		std::unordered_map<Address, dev::eth::PrecompiledContract> m_precompiled;
 
-		std::map<uint32_t, dev::ApproveReceipt> vrf_outputs;
+		std::map<uint64_t, std::map<uint32_t, dev::ApproveReceipt>> vrf_outputs;
 		bool m_restart_not_need_switch_witness = true;
 
         mcp::log m_log = { mcp::log("node") };

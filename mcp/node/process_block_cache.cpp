@@ -203,6 +203,11 @@ void mcp::process_block_cache::transaction_del_from_queue(h256 const& _hash)
 	m_transaction_dels.push_back(_hash);
 }
 
+void mcp::process_block_cache::approve_del_from_queue(h256 const& _hash)
+{
+	m_approve_dels.push_back(_hash);
+}
+
 
 bool mcp::process_block_cache::approve_exists(mcp::db::db_transaction & transaction_a, h256 const& _hash)
 {
@@ -535,6 +540,10 @@ void mcp::process_block_cache::commit_and_clear_changing()
 	m_transaction_puts.clear();
 	m_transaction_puts_flushed.clear();
 	m_transaction_dels.clear();
+
+	//modify approve cache
+	m_aq->drop(m_approve_dels);
+	m_approve_dels.clear();
 
 	//modify successor cache
 	m_cache->successor_earse(m_successor_puts_flushed);

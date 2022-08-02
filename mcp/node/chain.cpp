@@ -244,6 +244,7 @@ void mcp::chain::save_approve(mcp::timeout_db_transaction & timeout_tx_a, std::s
 				m_store.approve_unstable_count_add(transaction);
 				LOG(m_log.info) << "approve_unstable: add " << m_store.approve_unstable_count(transaction);
 				m_store.approve_count_add(transaction);
+				cache_a->approve_del_from_queue(hash);///mark as clear,It will be really cleaned up after commit event
 			}
 
 			//m_new_blocks.push(block_a->block);
@@ -279,17 +280,16 @@ void mcp::chain::switch_witness(mcp::db::db_transaction & transaction_a, uint64_
 	m_last_epoch = mcp::approve::calc_curr_epoch(mc_last_summary_mci);
 	m_store.last_epoch_put(transaction_a, m_last_epoch);
 	epoch_elected_list elected_list;
-	if(vrf_outputs.size() < 14)
+	if(vrf_outputs.find(elected_epoch) == vrf_outputs.end()) return;
+	if(vrf_outputs[elected_epoch].size() < 14)
 	{
 		LOG(m_log.info) << "Not switch witness_list because elector's number is too short: " << vrf_outputs.size();
-		vrf_outputs.clear();
+		vrf_outputs[elected_epoch].clear();
 		return;
 	}
 	std::vector<std::string> test_witness;
-	auto it = vrf_outputs.rbegin();
+	auto it = vrf_outputs[elected_epoch].rbegin();
 	for(int i=0; i<w_param.witness_count; i++){
-		//Address a=(vrf_outputs.rbegin()+i)->second;
-		//uint32_t output = (vrf_outputs.rbegin()+i)->first;
 		Address a = it->second.from();
 		uint32_t output = it->first;
 		test_witness.emplace_back(std::string("0x")+a.hex());
@@ -305,7 +305,7 @@ void mcp::chain::switch_witness(mcp::db::db_transaction & transaction_a, uint64_
 	mcp::param::add_witness_param(elected_epoch, w_param);
 	//The elected_list corresponds to next epoch.
 	m_store.epoch_elected_approve_receipts_put(transaction_a, elected_epoch, elected_list);
-	vrf_outputs.clear();
+	vrf_outputs[elected_epoch].clear();
 	LOG(m_log.info) << "elect to epoch " << elected_epoch << " swith to epoch " << m_last_epoch;
 }
 
@@ -318,7 +318,7 @@ void mcp::chain::init_vrf_outputs(mcp::db::db_transaction & transaction_a, std::
 	{
 		auto approve_receipt = cache_a->approve_receipt_get(transaction_a, hash);
 		assert_x(approve_receipt);
-		vrf_outputs.insert(std::make_pair(*(uint32_t*)approve_receipt->output().data(), *approve_receipt));
+		vrf_outputs[elect_epoch].insert(std::make_pair(*(uint32_t*)approve_receipt->output().data(), *approve_receipt));
 		LOG(m_log.info) << "[init_vrf_outputs] add output: sender=" << approve_receipt->from().hexPrefixed() << " output="<<*(uint32_t*)approve_receipt->output().data() << " epoch="<<approve_receipt->epoch();
 	}
 }
@@ -739,6 +739,7 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 	assert_x(last_summary_state->is_on_main_chain);
 	assert_x(last_summary_state->main_chain_index);
 	mc_last_summary_mci = *last_summary_state->main_chain_index;
+	LOG(m_log.info) << "[advance_stable_mci] mc_last_summary_mci=" << mc_last_summary_mci;
 
 	auto block_to_advance = cache_a->block_get(transaction_a, block_hash_a);
 	uint64_t const & stable_timestamp = block_to_advance->exec_timestamp();
@@ -886,8 +887,9 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 						cache_a->approve_receipt_put(transaction_a, approve_hash, preceipt);
 						m_store.epoch_approve_receipts_put(transaction_a, mcp::epoch_approves_key(ap->m_epoch, approve_hash));
 					
-						vrf_outputs.insert(std::make_pair(*(uint32_t*)output.data(), *preceipt));
-						LOG(m_log.info) << "add vrf output: sender=" << preceipt->from().hexPrefixed() << " output="<<*(uint32_t*)output.data() << " epoch="<<preceipt->epoch();
+						vrf_outputs[ap->m_epoch].insert(std::make_pair(*(uint32_t*)output.data(), *preceipt));
+						LOG(m_log.info) << "add vrf output: sender=" << preceipt->from().hexPrefixed() << " output="<<*(uint32_t*)output.data() << " epoch="<<preceipt->epoch()
+							<< " mc_last_summary_mci="<<mc_last_summary_mci;
 						
 
 						RLPStream receiptRLP;

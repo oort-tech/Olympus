@@ -23,7 +23,7 @@ mcp::node_capability::node_capability(
 {
 	m_request_timer = std::make_unique<ba::deadline_timer>(m_io_service);
 	m_tq->onImport([this](ImportResult _ir, h256 const& _h, p2p::node_id const& _nodeId) { onTransactionImported(_ir, _h, _nodeId); });
-	m_aq->onImport([this](ImportResult _ir, h256 const& _h, p2p::node_id const& _nodeId) { onApproveImported(_ir, _h, _nodeId); });
+	m_aq->onImport([this](ImportApproveResult _ir, h256 const& _h, p2p::node_id const& _nodeId) { onApproveImported(_ir, _h, _nodeId); });
 }
 
 void mcp::node_capability::stop()
@@ -994,7 +994,7 @@ void mcp::node_capability::onTransactionImported(ImportResult _ir, h256 const& _
 	/// todo different import result add or reduce rating for the peer
 }
 
-void mcp::node_capability::onApproveImported(ImportResult _ir, h256 const& _h, p2p::node_id const& _nodeId)
+void mcp::node_capability::onApproveImported(ImportApproveResult _ir, h256 const& _h, p2p::node_id const& _nodeId)
 {
 	///io service execute delay, maybe some approve through the filter
 	 if (_h != h256())

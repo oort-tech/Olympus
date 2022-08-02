@@ -194,7 +194,7 @@ namespace mcp
     private:
 		/// transaction processed callback
 		void onTransactionImported(ImportResult _ir, h256 const& _h, p2p::node_id const& _nodeId);
-		void onApproveImported(ImportResult _ir, h256 const& _h, p2p::node_id const& _nodeId);
+		void onApproveImported(ImportApproveResult _ir, h256 const& _h, p2p::node_id const& _nodeId);
 
 		std::unordered_map<p2p::node_id, mcp::peer_info> m_peers;
 		std::mutex m_peers_mutex;

@@ -35,19 +35,19 @@ namespace mcp
 			i.join();
 	}
 
-	ImportResult ApproveQueue::check_WITH_LOCK(h256 const& _h, IfDropped _ik)
+	ImportApproveResult ApproveQueue::check_WITH_LOCK(h256 const& _h, IfDropped _ik)
 	{
 		if (m_known.count(_h) )
-			return ImportResult::AlreadyKnown;
+			return ImportApproveResult::AlreadyKnown;
 
 		mcp::db::db_transaction t(m_store.create_transaction());
 		if (_ik == IfDropped::Ignore && (m_dropped.contains(_h) || m_cache->approve_exists(t, _h)))
-			return ImportResult::AlreadyInChain;
+			return ImportApproveResult::AlreadyInChain;
 
-		return ImportResult::Success;
+		return ImportApproveResult::Success;
 	}
 
-	ImportResult ApproveQueue::manageImport_WITH_LOCK(h256 const& _h, approve const& _approve, bool isLocal)
+	ImportApproveResult ApproveQueue::manageImport_WITH_LOCK(h256 const& _h, approve const& _approve, bool isLocal)
 	{
 		LOG(m_log.trace) << "[manageImport_WITH_LOCK] in";
 		try
@@ -60,15 +60,15 @@ namespace mcp
 		catch (Exception const& _e)
 		{
 			LOG(m_log.debug) << "Ignoring invalid approve: " << diagnostic_information(_e);
-			return ImportResult::Malformed;
+			return ImportApproveResult::Malformed;
 		}
 		catch (std::exception const& _e)
 		{
 			LOG(m_log.debug) << "Ignoring invalid approve: " << _e.what();
-			return ImportResult::Malformed;
+			return ImportApproveResult::Malformed;
 		}
 
-		return ImportResult::Success;
+		return ImportApproveResult::Success;
 	}
 
 	bool ApproveQueue::remove_WITH_LOCK(h256 const& _txHash)
@@ -85,19 +85,18 @@ namespace mcp
 	}
 
 
-	ImportResult ApproveQueue::import(approve const& _approve, bool isLoccal, IfDropped _ik)
+	ImportApproveResult ApproveQueue::import(approve const& _approve, bool isLoccal, IfDropped _ik)
 	{
 		LOG(m_log.trace) << "[import] in";
-		validateApprove(_approve);
 
 		// Check if we already know this approve.
 		h256 h = _approve.sha3();
 
-		ImportResult ret;
+		ImportApproveResult ret;
 		{
 			UpgradableGuard l(m_lock);
 			auto ir = check_WITH_LOCK(h, _ik);
-			if (ir != ImportResult::Success)
+			if (ir != ImportApproveResult::Success)
 				return ir;
 
 			{
@@ -106,7 +105,7 @@ namespace mcp
 			}
 		}
 
-		if (ImportResult::Success == ret)/// first import && successed,broadcast it
+		if (ImportApproveResult::Success == ret)/// first import && successed,broadcast it
 		{
 			m_onImportProcessed(h);
 		}
@@ -119,7 +118,7 @@ namespace mcp
 	{
 		LOG(m_log.trace) << "[importLocal] in";
 		auto ret = import(_approve,true);
-		assert_x(ret == ImportResult::Success);
+		assert_x(ret == ImportApproveResult::Success);
 		
 		m_async_task->sync_async([this, _approve]() {
 			m_capability->broadcast_approve(_approve);
@@ -137,6 +136,26 @@ namespace mcp
 		UpgradeGuard ul(l);
 		m_dropped.insert(_txHash, true /* placeholder value */);
 		remove_WITH_LOCK(_txHash);
+	}
+
+	void ApproveQueue::drop(h256s const& _txHashs)
+	{
+		UpgradableGuard l(m_lock);
+		h256s dels;
+		for (auto h : _txHashs)
+		{
+			if (m_known.count(h))
+			{
+				dels.push_back(h);
+			}
+		}
+
+		UpgradeGuard ul(l);
+		for (auto h : dels)
+		{
+			m_dropped.insert(h, true /* placeholder value */);
+			remove_WITH_LOCK(h);
+		}
 	}
 
 	std::shared_ptr<approve> ApproveQueue::get(h256 const& _txHash) const
@@ -213,10 +232,16 @@ namespace mcp
 			try
 			{
 				approve t(work.m_approve, CheckTransaction::Everything);
-				ImportResult ir = import(t,false);
+				ImportApproveResult vr = validateApprove(t);
+				if(ImportApproveResult::Success != vr){
+					m_onImport(vr, t.sha3(), work.nodeId);
+					return;
+				}
+
+				ImportApproveResult ir = import(t,false);
 				m_onImport(ir, t.sha3(), work.nodeId);
 
-				if (ImportResult::Success == ir)/// first import && successed,broadcast it
+				if (ImportApproveResult::Success == ir)/// first import && successed,broadcast it
 				{
 					m_async_task->sync_async([this, t]() {
 						m_capability->broadcast_approve(t);
@@ -225,17 +250,29 @@ namespace mcp
 			}
 			catch (...)
 			{
-				m_onImport(ImportResult::BadChain, h256(0), work.nodeId);///  Notify capability and P2P to process peer. diconnect peer if bad transaction  
+				m_onImport(ImportApproveResult::BadChain, h256(0), work.nodeId);///  Notify capability and P2P to process peer. diconnect peer if bad transaction  
 				// should not happen as exceptions are handled in import.
 				LOG(m_log.error) << "Bad approve:" << boost::current_exception_diagnostic_information();
 			}
 		}
 	}
 
-	bool ApproveQueue::validateApprove(approve const& _t){
+	ImportApproveResult ApproveQueue::validateApprove(approve const& _t){
 		_t.checkChainId(mcp::chain_id);
 		_t.checkLowS();
+
+		#if 0
 		//_t.checkEpoch(mcp::approve::calc_elect_epoch(m_chain->last_summary_mci()));
+		uint64_t elect_epoch = mcp::approve::calc_elect_epoch(m_chain->last_summary_mci() + 1);
+		if(elect_epoch < _t.m_epoch){
+			LOG(m_log.info) << "[validateApprove] epoch is too high";
+			return ImportApproveResult::EpochIsTooHigh;
+		}
+		else if(elect_epoch > _t.m_epoch){
+			LOG(m_log.info) << "[validateApprove] epoch is too low";
+			return ImportApproveResult::EpochIsTooLow;
+		}
+		#endif
 		
 		mcp::db::db_transaction transaction(m_store.create_transaction());
 		mcp::block_hash hash;
@@ -243,6 +280,7 @@ namespace mcp
 		assert_x(!ret);
 		std::vector<uint8_t> output;
 		_t.vrf_verify(output, hash.hex());
+		return ImportApproveResult::Success;
 	}
 
 	std::string ApproveQueue::getInfo()

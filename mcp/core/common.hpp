@@ -610,6 +610,19 @@ namespace mcp
 		BadChain/*,
 		ZeroSignature*/
 	};
+	
+	// approve queue import
+	enum class ImportApproveResult
+	{
+		Success = 0,
+		AlreadyInChain,
+		AlreadyKnown,
+		EpochIsTooLow,
+		EpochIsTooHigh,
+		Malformed,
+		BadChain/*,
+		ZeroSignature*/
+	};
 
 	/// Import transaction policy
 	enum class IfDropped

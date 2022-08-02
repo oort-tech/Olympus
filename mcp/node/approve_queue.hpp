@@ -36,7 +36,7 @@ namespace mcp
 		/// @param _tx Trasnaction data.
 		/// @param _ik Set to Retry to force re-addinga transaction that was previously dropped.
 		/// @returns Import result code.
-		ImportResult import(approve const& _tx, bool isLoccal, IfDropped _ik = IfDropped::Ignore);
+		ImportApproveResult import(approve const& _tx, bool isLoccal, IfDropped _ik = IfDropped::Ignore);
 
 		void importLocal(approve const& _tx);
 		
@@ -48,7 +48,7 @@ namespace mcp
 		h256Hash knownApproves() const;
 
 		/// Register a handler that will be called once asynchronous verification is comeplte an transaction has been imported
-		void onImport(std::function<void(ImportResult, h256 const&, p2p::node_id const&)> const& _t){ m_onImport.add(_t);}
+		void onImport(std::function<void(ImportApproveResult, h256 const&, p2p::node_id const&)> const& _t){ m_onImport.add(_t);}
 
 		/// Register a handler that will be called once asynchronous verification is comeplte an transaction has been imported
 		void onImportProcessed(std::function<void(h256 const&)> const& _t) { m_onImportProcessed.add(_t); }
@@ -60,6 +60,7 @@ namespace mcp
 		/// Remove approve from the queue
 		/// @param _txHash approve hash
 		void drop(h256 const& _txHash);
+		void drop(h256s const& _txHashs);
 
 		/// Get top approves from the queue. Returned approves are not removed from the queue automatically.
 		/// @param _limit Max number of approves to return.
@@ -105,13 +106,13 @@ namespace mcp
 			//h512 nodeId;        ///< Network Id of the peer approve comes from
 			p2p::node_id nodeId;
 		};
-		ImportResult check_WITH_LOCK(h256 const& _h, IfDropped _ik);
-		ImportResult manageImport_WITH_LOCK(h256 const& _h, approve const& _approve, bool isLocal);
+		ImportApproveResult check_WITH_LOCK(h256 const& _h, IfDropped _ik);
+		ImportApproveResult manageImport_WITH_LOCK(h256 const& _h, approve const& _approve, bool isLocal);
 		bool remove_WITH_LOCK(h256 const& _txHash);
 
 		void verifierBody();
 
-		bool validateApprove(approve const& _t);
+		ImportApproveResult validateApprove(approve const& _t);
 
 		mutable SharedMutex m_lock;  ///< General lock.
 		h256Hash m_known;            ///< Headers of transactions in both sets.
@@ -125,7 +126,7 @@ namespace mcp
 
 		/// verified broadcast incoming approve
 		std::condition_variable m_queueReady;
-		Signal<ImportResult, h256 const&, p2p::node_id const&> m_onImport;			///< Called for each import attempt. Arguments are result, transaction id an node id. Be nice and exit fast.
+		Signal<ImportApproveResult, h256 const&, p2p::node_id const&> m_onImport;			///< Called for each import attempt. Arguments are result, transaction id an node id. Be nice and exit fast.
 		Signal<h256 const&> m_onImportProcessed; ///< First import notification unhandle processing dependency.
 		std::vector<std::thread> m_verifiers;
 		std::deque<UnverifiedApprove> m_unverified;  ///< Pending verification queue

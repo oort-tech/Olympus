@@ -120,16 +120,6 @@ void mcp::witness::check_and_witness()
             m_witness_get_current_chain = true;
         }
     }
-
-	if (m_tq->size() == 0)
-	{
-		size_t transaction_unstable_count(m_store.transaction_unstable_count(transaction));
-		if (transaction_unstable_count == 0)
-		{
-			m_is_witnessing.clear();
-			return;
-		}
-	}
 	
 	mcp::block_hash mc_block_hash;
 	while (true)
@@ -140,31 +130,20 @@ void mcp::witness::check_and_witness()
 			break;
 	}
 
-	uint64_t last_summary_mci(0);
-	if (mc_block_hash != mcp::genesis::block_hash)
-	{
-		std::shared_ptr<mcp::block> mc_block(m_cache->block_get(transaction, mc_block_hash));
-		std::shared_ptr<mcp::block_state> last_summary_block_state(m_cache->block_state_get(transaction, mc_block->last_summary_block()));
-		assert_x(last_summary_block_state
-			&& last_summary_block_state->is_stable
-			&& last_summary_block_state->is_on_main_chain
-			&& last_summary_block_state->main_chain_index);
+	uint64_t new_last_summary_mci = m_composer->get_new_last_summary_mci(transaction);
 
-		last_summary_mci = *last_summary_block_state->main_chain_index;
-	}
-
-	if(need_approve(last_summary_mci)){
-		send_approve(last_summary_mci);
+	if(need_approve(new_last_summary_mci)){
+		send_approve(new_last_summary_mci);
 	}
 
 	mcp::witness_param const & w_param(mcp::param::witness_param(m_chain->last_epoch()));
 
-	// if (!mcp::param::is_witness(last_summary_mci + 1, m_account))
-	// {
-	// 	m_is_witnessing.clear();
-	// 	//LOG(m_log.trace) << "Not do witness, account:" << m_account.to_account() << " is not witness, last_summary_mci:" << last_summary_mci;
-	// 	return;
-	// }
+	if (!mcp::param::is_witness(mcp::approve::calc_curr_epoch(new_last_summary_mci), m_account))
+	{
+		m_is_witnessing.clear();
+		//LOG(m_log.trace) << "Not do witness, account:" << m_account.to_account() << " is not witness, last_summary_mci:" << last_summary_mci;
+		return;
+	}
 
     //can send witness
     if (!m_witness_get_current_chain)
@@ -206,7 +185,6 @@ void mcp::witness::check_and_witness()
 	do_witness();
 }
 
-//todo by jeremy: change and do not multi send after restart.
 bool mcp::witness::need_approve(uint64_t last_summary_mci){
 	static uint64_t last_epoch_num = UINT64_MAX;
 	if(last_summary_mci <= 2){
