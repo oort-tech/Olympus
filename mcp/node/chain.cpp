@@ -869,8 +869,14 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 					/// exec approves
 					try{
 						mcp::block_hash hash;
-						bool exists(!m_store.stable_block_get(transaction_a, (ap->m_epoch-1)*epoch_period, hash));
-						assert_x(exists);
+						if(ap->m_epoch <= 2){
+							hash = mcp::block_hash(0);
+						}
+						else{
+							bool exists(!m_store.stable_block_get(transaction_a, (ap->m_epoch-2)*epoch_period, hash));
+							assert_x(exists);
+						}
+						
 						std::vector<uint8_t> output;
 						if(ap->m_epoch != mcp::approve::calc_elect_epoch(mc_last_summary_mci))
 						{

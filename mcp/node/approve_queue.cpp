@@ -261,23 +261,27 @@ namespace mcp
 		_t.checkChainId(mcp::chain_id);
 		_t.checkLowS();
 
-		#if 0
 		//_t.checkEpoch(mcp::approve::calc_elect_epoch(m_chain->last_summary_mci()));
 		uint64_t elect_epoch = mcp::approve::calc_elect_epoch(m_chain->last_summary_mci() + 1);
-		if(elect_epoch < _t.m_epoch){
-			LOG(m_log.info) << "[validateApprove] epoch is too high";
-			return ImportApproveResult::EpochIsTooHigh;
-		}
-		else if(elect_epoch > _t.m_epoch){
+		if(elect_epoch > _t.m_epoch){
 			LOG(m_log.info) << "[validateApprove] epoch is too low";
 			return ImportApproveResult::EpochIsTooLow;
 		}
-		#endif
 		
 		mcp::db::db_transaction transaction(m_store.create_transaction());
 		mcp::block_hash hash;
-		bool ret = m_store.stable_block_get(transaction, (_t.m_epoch-1)*epoch_period, hash);
-		assert_x(!ret);
+		if(_t.m_epoch <= 2){
+			hash = mcp::block_hash(0);
+		}
+		else{
+			bool ret = m_store.stable_block_get(transaction, (_t.m_epoch-2)*epoch_period, hash);
+			if(ret)
+			{
+				LOG(m_log.info) << "[validateApprove] epoch is too high";
+				return ImportApproveResult::EpochIsTooHigh;
+			}
+		}
+		
 		std::vector<uint8_t> output;
 		_t.vrf_verify(output, hash.hex());
 		return ImportApproveResult::Success;

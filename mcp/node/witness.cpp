@@ -215,9 +215,16 @@ void mcp::witness::send_approve(uint64_t last_summary_mci)
 
 	mcp::db::db_transaction transaction(m_store.create_transaction());
 	mcp::block_hash hash;
-	bool exists(!m_store.stable_block_get(transaction, (as.epoch-1)*epoch_period, hash));
-	assert_x(exists);
-	auto msg = hash.hex();
+	std::string msg;
+	if(as.epoch <= 2){
+		msg = mcp::block_hash(0).hex();
+	}
+	else{
+		bool exists(!m_store.stable_block_get(transaction, (as.epoch-2)*epoch_period, hash));
+		assert_x(exists);
+		msg = hash.hex();
+	}
+	
 	//char msg[3]={0x31,0x32,0x33};
 	as.proof.resize(81);
 	auto* ctx = mcp::encry::get_secp256k1_ctx();
