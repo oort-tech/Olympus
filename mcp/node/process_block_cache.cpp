@@ -501,7 +501,6 @@ void mcp::process_block_cache::mark_as_changing()
 
 void mcp::process_block_cache::commit_and_clear_changing()
 {
-	LOG(g_log.trace) << "commit_and_clear_changing in";
 	//modify block cache
 	m_cache->block_earse(m_block_puts_flushed);
 	for (put_item<mcp::block_hash, std::shared_ptr<block>> const & item : m_block_puts)

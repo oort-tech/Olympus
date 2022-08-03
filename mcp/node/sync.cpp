@@ -1815,7 +1815,6 @@ void mcp::node_sync::send_transaction(p2p::node_id const & id, mcp::Transaction 
 
 void mcp::node_sync::send_approve(p2p::node_id const & id, mcp::approve const & message)
 {
-	LOG(log_sync.info) << "[send_approve] in";
 	std::lock_guard<std::mutex> lock(m_capability->m_peers_mutex);
 	if (m_capability->m_peers.count(id))
 	{
@@ -2048,14 +2047,12 @@ void mcp::node_sync::process_request_joints()
 			}
 			else if (item_a.m_type == mcp::sub_packet_type::approve_request) /// approve
 			{
-				LOG(log_sync.info) << "[process_request_joints] approve_request";
 				h256 h(item_a.m_request_hash);
 				if (!m_aq->exist(h))
 				{
 					mcp::db::db_transaction transaction(m_store.create_transaction());
 					if (!m_cache->approve_exists(transaction,h))
 					{
-						LOG(log_sync.info) << "[process_request_joints] send_approve_request";
 						mcp::approve_request_message message(item_a.m_request_id, h);
 						send_approve_request(item_a.m_node_id, message);
 						//LOG(log_sync.info) << "process_request_joints hash:" << h.hex();
@@ -2115,7 +2112,6 @@ void mcp::node_sync::request_new_missing_transactions(mcp::requesting_item& item
 
 void mcp::node_sync::request_new_missing_approves(mcp::requesting_item& item_a, bool const& is_timeout)
 {
-	LOG(log_sync.info) << "[request_new_missing_approves] in";
 	mcp::stopwatch_guard sw("sync:request_new_missing_approves");
 
 	if (m_stoped)
@@ -2136,12 +2132,10 @@ void mcp::node_sync::request_new_missing_approves(mcp::requesting_item& item_a, 
 		std::lock_guard<std::mutex> lock(m_capability->m_requesting_lock);
 		if (!m_capability->m_requesting.add(item_a, is_timeout))
 		{
-			LOG(log_sync.info) << "[request_new_missing_approves] "<<__LINE__;
 			//LOG(log_sync.info) << "block already requested:" << item_a.block_hash->to_string();
 			return;
 		}
 	}
-	LOG(log_sync.info) << "[request_new_missing_approves] "<<__LINE__;
 
 	std::lock_guard<std::mutex> lock(m_mutex_joint_request);
 	m_joint_request_pending.push_back(item_a);
@@ -2192,7 +2186,6 @@ void mcp::node_sync::send_transaction_request(p2p::node_id const & id, mcp::tran
 
 void mcp::node_sync::send_approve_request(p2p::node_id const & id, mcp::approve_request_message const & message)
 {
-	LOG(log_sync.info) <<"[send_approve_request] in";
 	std::lock_guard<std::mutex> lock(m_capability->m_peers_mutex);
 	if (m_capability->m_peers.count(id))
 	{

@@ -98,7 +98,6 @@ void mcp::node_capability::on_disconnect(std::shared_ptr<p2p::peer> peer_a)
 
 void mcp::node_capability::request_block_timeout()
 {
-    LOG(m_log.info) << "[request_block_timeout] in";
 	uint64_t now = m_steady_clock.now_since_epoch();
 
 	std::list<mcp::requesting_item> requests;
@@ -118,7 +117,7 @@ void mcp::node_capability::request_block_timeout()
 		}
 		else if (it.m_type == mcp::sub_packet_type::approve_request) /// approve
 		{
-    		LOG(m_log.info) << "[request_block_timeout] approve_request";
+    		//LOG(m_log.info) << "[request_block_timeout] approve_request";
 			h256 h(it.m_request_hash);
 			if (m_aq->exist(h) || m_cache->approve_exists(transaction, h))
 				exist = true;
@@ -269,7 +268,6 @@ bool mcp::node_capability::read_packet(std::shared_ptr<p2p::peer> peer_a, unsign
         {
             bool error(r.itemCount() != 1);
             mcp::joint_message joint(error, r[0]);
-            LOG(m_log.info) << "[read_packet] joint" << joint.block->hash().hex();
 
             mcp::CapMetricsRecieved.joint++;
             if (error)
@@ -407,7 +405,6 @@ bool mcp::node_capability::read_packet(std::shared_ptr<p2p::peer> peer_a, unsign
 		{
 			LOG(m_log.info) << "[read_packet] approve";
 			bool error(r.itemCount() != 1);
-			//Transaction joint(error, r[0]);
 
 			mcp::CapMetricsRecieved.approve++;
 			if (error)
@@ -416,40 +413,6 @@ bool mcp::node_capability::read_packet(std::shared_ptr<p2p::peer> peer_a, unsign
 				peer_a->disconnect(p2p::disconnect_reason::bad_protocol);
 				return true;
 			}
-			/*
-			bool is_missing = false;
-			bool need_add = true;
-			mcp::block_hash block_hash(joint.block->hash());
-			if (!joint.request_id.is_zero())
-			{
-				need_add = false;
-				std::lock_guard<std::mutex> lock(m_requesting_lock);
-				if (m_requesting.exist_erase(joint.request_id)) //ours request && broadcast not arrived
-				{
-					need_add = true;
-					joint.level = mcp::joint_processor_level::request; //if block processor full also need add this block
-				}
-				joint.request_id.clear(); //broadcast do not need id
-				is_missing = true;
-			}
-			else //broadcast try clear request hash
-			{
-				std::lock_guard<std::mutex> lock(m_requesting_lock);
-				m_requesting.erase(block_hash);
-			}
-
-			if (need_add)
-			{
-				std::shared_ptr<mcp::block_processor_item> block_item_l(std::make_shared<mcp::block_processor_item>(joint, peer_a->remote_node_id()));
-				if (is_missing)
-				{
-					block_item_l->set_missing();
-				}
-				m_block_processor->add_to_mt_process(block_item_l);
-			}
-
-			LOG(m_log.debug) << "Joint message, block hash: " << block_hash.to_string();
-			*/
 			m_aq->enqueue(r[0], peer_a->remote_node_id());
 
 			break;
@@ -466,7 +429,6 @@ bool mcp::node_capability::read_packet(std::shared_ptr<p2p::peer> peer_a, unsign
 				peer_a->disconnect(p2p::disconnect_reason::bad_protocol);
 				return true;
 			}
-			//LOG(m_log.trace) << "Recv joint request message, block hash " << request.block_hash.to_string();
 			mcp::CapMetricsRecieved.approve_request++;
 			m_async_task->sync_async([this, peer_a, request]() {
 				m_sync->approve_request_handler(peer_a->remote_node_id(), request);
@@ -783,7 +745,6 @@ bool mcp::node_capability::read_packet(std::shared_ptr<p2p::peer> peer_a, unsign
 
 void mcp::node_capability::broadcast_block(mcp::joint_message const & message)
 {
-	LOG(m_log.info) << "[broadcast_block] in " << message.block->hash().hex();
 	try
 	{
 		mcp::block_hash block_hash(message.block->hash());

@@ -244,7 +244,6 @@ void mcp::block_processor::mt_process_blocks()
 			{
 				try
 				{
-					LOG(m_log.trace) << "[mt_process_blocks] in";
 					std::list<std::shared_ptr<std::promise<mcp::validate_status>>> results;
 					unsigned count = std::min((unsigned)m_mt_blocks_processing.size(), m_max_mt_count);
 					for (unsigned i = 0; i < count; i++)
@@ -518,7 +517,6 @@ void mcp::block_processor::do_process(std::deque<std::shared_ptr<mcp::block_proc
 
 void mcp::block_processor::do_process_one(std::shared_ptr<mcp::block_processor_item> item)
 {
-	LOG(m_log.trace) << "[do_process_one] in";
 	mcp::joint_message const & joint(item->joint);
 	std::shared_ptr<mcp::block> block(joint.block);
 	mcp::block_hash const & block_hash(block->hash());

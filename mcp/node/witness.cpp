@@ -209,7 +209,6 @@ bool mcp::witness::need_approve(uint64_t last_summary_mci){
 
 void mcp::witness::send_approve(uint64_t last_summary_mci)
 {
-    LOG(m_log.debug) << "[send_approve] in";
 	ApproveSkeleton as;
 	as.epoch = mcp::approve::calc_elect_epoch(last_summary_mci);
 
@@ -259,8 +258,6 @@ void mcp::witness::send_approve(uint64_t last_summary_mci)
 	auto a = mcp::approve(as, m_secret);
 	a.show();
 	m_aq->importLocal(a);
-	
-    LOG(m_log.debug) << "[send_approve] out";
 	return;
 }
 
@@ -271,13 +268,6 @@ void mcp::witness::do_witness()
 	try
 	{
 		auto block = m_composer->compose_block(m_account, m_secret);
-		if(!block)
-		{
-			m_last_witness_time = std::chrono::steady_clock::now();
-			m_is_witnessing.clear();
-			LOG(m_log.info) << "compose_block fail.";
-			return;
-		}
 		std::shared_ptr<mcp::joint_message> joint(new mcp::joint_message(block));
 
 		std::shared_ptr<std::promise<mcp::validate_status>> p(std::make_shared<std::promise<mcp::validate_status>>());

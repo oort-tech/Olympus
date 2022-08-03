@@ -2728,8 +2728,6 @@ void mcp::rpc_handler::get_eth_signed_msg(dev::bytes &data, dev::h256 &hash)
 }
 void mcp::rpc_handler::epoch_approves(mcp::json &j_response, bool &)
 {
-	LOG(m_log.info) << "[epoch_approves] in";
-
 	if (!request.count("epoch") || (!request["epoch"].is_string()) || (uint64_t)jsToInt(request["epoch"]) > m_chain->last_epoch() + 2)
 	{
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidHash());
@@ -2739,12 +2737,9 @@ void mcp::rpc_handler::epoch_approves(mcp::json &j_response, bool &)
 	mcp::db::db_transaction transaction(m_store.create_transaction());
 	uint64_t epoch = jsToInt(request["epoch"]);
 	std::list<h256> hashs;
-	LOG(m_log.info) << "[epoch_approves] in2";
 	m_store.epoch_approves_get(transaction, epoch, hashs);
-	LOG(m_log.info) << "[epoch_approves] hashs.size = " << hashs.size();
 	for(auto hash : hashs)
 	{
-		LOG(m_log.info) << "[epoch_approves] in3";
 		auto approve = m_cache->approve_get(transaction, hash);
 		if(approve){
 			mcp::json approve_l;
@@ -2756,15 +2751,11 @@ void mcp::rpc_handler::epoch_approves(mcp::json &j_response, bool &)
 			//throw JsonRpcException(exceptionToErrorMessage());
 		}
 	}
-	LOG(m_log.info) << "[epoch_approves] in4";
 	j_response["epoch_approves"] = approves_l;
-	LOG(m_log.info) << "[epoch_approves] out";
 }
 
 void mcp::rpc_handler::epoch_approve_receipts(mcp::json &j_response, bool &)
 {
-	LOG(m_log.info) << "[epoch_approve_receipts] in";
-
 	if (!request.count("epoch") || (!request["epoch"].is_string()) || (uint64_t)jsToInt(request["epoch"]) > m_chain->last_epoch() + 2)
 	{
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidHash());
@@ -2774,7 +2765,6 @@ void mcp::rpc_handler::epoch_approve_receipts(mcp::json &j_response, bool &)
 	mcp::db::db_transaction transaction(m_store.create_transaction());
 	uint64_t epoch = jsToInt(request["epoch"]);
 	std::list<h256> hashs;
-	LOG(m_log.info) << "[epoch_approve_receipts] in2";
 	m_store.epoch_approve_receipts_get(transaction, epoch, hashs);
 	LOG(m_log.info) << "[epoch_approve_receipts] hashs.size = " << hashs.size();
 	for(auto hash : hashs)
@@ -2791,15 +2781,11 @@ void mcp::rpc_handler::epoch_approve_receipts(mcp::json &j_response, bool &)
 			//throw JsonRpcException(exceptionToErrorMessage());
 		}
 	}
-	LOG(m_log.info) << "[epoch_approve_receipts] in4";
 	j_response["epoch_approve_receipts"] = approve_receipts_l;
-	LOG(m_log.info) << "[epoch_approve_receipts] out";
 }
 
 void mcp::rpc_handler::epoch_elected_approve_receipts(mcp::json &j_response, bool &)
 {
-	LOG(m_log.info) << "[epoch_elected_approve_receipts] in";
-
 	if (!request.count("epoch") || (!request["epoch"].is_string()) || (uint64_t)jsToInt(request["epoch"]) > m_chain->last_epoch() + 1)
 	{
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidHash());
@@ -2823,7 +2809,6 @@ void mcp::rpc_handler::epoch_elected_approve_receipts(mcp::json &j_response, boo
 	{
 		epoch_elected_list list;
 		m_store.epoch_elected_approve_receipts_get(transaction, epoch, list);
-		LOG(m_log.info) << "[epoch_elected_approve_receipts_get] hashs.size = " << list.hashs.size();
 		for(auto hash : list.hashs)
 		{
 			mcp::json elected_l;
@@ -2847,5 +2832,4 @@ void mcp::rpc_handler::epoch_elected_approve_receipts(mcp::json &j_response, boo
 		}
 	}
 	j_response["epoch_elected_approve_receipts"] = electeds_l;
-	LOG(m_log.info) << "[epoch_elected_approve_receipts] out";
 }

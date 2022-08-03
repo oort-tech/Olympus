@@ -26,7 +26,6 @@ mcp::validation::~validation()
 
 mcp::base_validate_result mcp::validation::base_validate(mcp::db::db_transaction& transaction_a, std::shared_ptr<mcp::iblock_cache> cache_a, std::shared_ptr<mcp::block_processor_item> item_a)
 {
-    LOG(g_log.trace) << "[base_validate] in";
 	joint_message message(item_a->joint);
 	assert_x(message.block);
 
@@ -111,7 +110,6 @@ mcp::base_validate_result mcp::validation::base_validate(mcp::db::db_transaction
 
 mcp::validate_result mcp::validation::dag_validate(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::iblock_cache> cache_a, mcp::joint_message const &message)
 {
-    LOG(g_log.trace) << "[dag_validate] in";
 	mcp::validate_result result;
 
 	std::shared_ptr<mcp::block> block(message.block);

@@ -225,8 +225,6 @@ void mcp::chain::save_approve(mcp::timeout_db_transaction & timeout_tx_a, std::s
 		return;
 
 	{
-		//mcp::stopwatch_guard sw("process:save_block:not commit");
-
 		mcp::db::db_transaction & transaction(timeout_tx_a.get_transaction());
 		try
 		{
@@ -544,7 +542,6 @@ void mcp::chain::update_mci(mcp::db::db_transaction & transaction_a, std::shared
 		cache_a->block_state_put(transaction_a, new_mc_block_hash, new_mc_block_state_copy);
 
 		m_store.main_chain_put(transaction_a, new_mci, new_mc_block_hash);
-		//LOG(m_log.info) << "[update_mci] retreat_mci=" << retreat_mci << ", new mci=" << new_mci;
 	}
 
 #pragma endregion
@@ -552,7 +549,7 @@ void mcp::chain::update_mci(mcp::db::db_transaction & transaction_a, std::shared
 	m_last_mci_internal = new_mci;
 	m_store.last_mci_put(transaction_a, m_last_mci_internal);
 
-	LOG(m_log.info) << "[update_mci] last_mci_put = " << m_last_mci_internal;
+	//LOG(m_log.debug) << "Retreat mci to " << retreat_mci << ", new mci is " << new_mci;
 }
 
 void mcp::chain::update_latest_included_mci(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a, std::shared_ptr<mcp::block> block_a, bool const &is_mci_retreat, uint64_t const &retreat_mci, uint64_t const &retreat_level)
@@ -739,7 +736,6 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 	assert_x(last_summary_state->is_on_main_chain);
 	assert_x(last_summary_state->main_chain_index);
 	mc_last_summary_mci = *last_summary_state->main_chain_index;
-	LOG(m_log.info) << "[advance_stable_mci] mc_last_summary_mci=" << mc_last_summary_mci;
 
 	auto block_to_advance = cache_a->block_get(transaction_a, block_hash_a);
 	uint64_t const & stable_timestamp = block_to_advance->exec_timestamp();
@@ -848,7 +844,6 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 
 				///handle approve stable block 
 				auto approves(dag_stable_block->approves());
-				LOG(m_log.trace) << "[advance_stable_mci] approves.size=" << approves.size();
 				for (auto i = 0; i < approves.size(); i++)
 				{
 					h256 const& approve_hash = approves[i];
@@ -887,38 +882,26 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 
 						/// exec approve can reduce, if two or more block linked a approve,reduce once.
 						m_store.approve_unstable_count_reduce(transaction_a);
-						LOG(m_log.info) << "approve_unstable: reduce " << m_store.approve_unstable_count(transaction_a);
+						//LOG(m_log.info) << "approve_unstable: reduce " << m_store.approve_unstable_count(transaction_a);
 
 						std::shared_ptr<dev::ApproveReceipt> preceipt = std::make_shared<dev::ApproveReceipt>(ap->sender(), ap->m_epoch, output, approve_hash);
 						cache_a->approve_receipt_put(transaction_a, approve_hash, preceipt);
 						m_store.epoch_approve_receipts_put(transaction_a, mcp::epoch_approves_key(ap->m_epoch, approve_hash));
 					
 						vrf_outputs[ap->m_epoch].insert(std::make_pair(*(uint32_t*)output.data(), *preceipt));
-						LOG(m_log.info) << "add vrf output: sender=" << preceipt->from().hexPrefixed() << " output="<<*(uint32_t*)output.data() << " epoch="<<preceipt->epoch()
-							<< " mc_last_summary_mci="<<mc_last_summary_mci;
+						//LOG(m_log.info) << "add vrf output: sender=" << preceipt->from().hexPrefixed() << " output="<<*(uint32_t*)output.data() << " epoch="<<preceipt->epoch()
+						//	<< " mc_last_summary_mci="<<mc_last_summary_mci;
 						
 
 						RLPStream receiptRLP;
 						preceipt->streamRLP(receiptRLP);
 						receipts.push_back(receiptRLP.out());
 					}
-					catch (dev::eth::NotEnoughCash const& _e)
-					{
-						LOG(m_log.info) << "approve exec not enough cash,hash: " << ap->sha3().hex()
-							<< ", from: " << dev::toJS(ap->sender());
-					}
-					//catch (Exception const& _e)
-					//{
-					//	cerror << "Unexpected exception in VM. There may be a bug in this implementation. "
-					//		<< diagnostic_information(_e);
-					//	exit(1);
-					//}
 					catch (std::exception const& _e)
 					{
 						std::cerr << _e.what() << std::endl;
 						throw;
 					}
-					
 				}
 			}
 
@@ -1001,12 +984,6 @@ void mcp::chain::set_block_stable(mcp::timeout_db_transaction & timeout_tx_a, st
 		{
 			//mcp::stopwatch_guard sw("set_block_stable3");
 
-			if(stable_block_state_copy->main_chain_index.is_initialized()){
-				LOG(m_log.info) << "[set_block_stable] main_chain_index=" << stable_block_state_copy->main_chain_index << " mci="<<mci;
-			}
-			else{
-				LOG(m_log.info) << "[set_block_stable] main_chain_index is empty" << " mci="<<mci;
-			}
 			if (!stable_block_state_copy->main_chain_index || *stable_block_state_copy->main_chain_index != mci)
 				stable_block_state_copy->main_chain_index = mci;
 			stable_block_state_copy->mc_timestamp = mc_timestamp;

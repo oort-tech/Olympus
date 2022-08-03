@@ -54,7 +54,6 @@ namespace mcp
 
 	ImportResult TransactionQueue::import(Transaction const& _transaction, bool isLoccal, bool ignoreFuture, IfDropped _ik)
 	{
-		LOG(m_log.debug) << "import in ";
 		validateTx(_transaction);
 		//if (_transaction.hasZeroSignature())
 		//	return ImportResult::ZeroSignature;
