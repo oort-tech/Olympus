@@ -3,7 +3,6 @@
 #include <secp256k1-vrf.h>
 #include <secp256k1_ecdh.h>
 #include <secp256k1_recovery.h>
-#include "hash.h"
 
 #include <cryptopp/hkdf.h>
 #include <cryptopp/sha.h>

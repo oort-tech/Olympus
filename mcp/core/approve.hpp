@@ -6,7 +6,7 @@
 #include <libdevcrypto/Common.h>
 #include <boost/optional.hpp>
 #include "transaction.hpp"
-#include "secp256k1-vrf/include/secp256k1-vrf.h"
+#include <secp256k1-vrf.h>
 
 using namespace dev;
 namespace mcp
