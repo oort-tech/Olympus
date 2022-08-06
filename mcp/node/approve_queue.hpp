@@ -30,7 +30,7 @@ namespace mcp
 
 		void set_capability(std::shared_ptr<mcp::node_capability> capability_a) { m_capability = capability_a; }
 
-		size_t size() { return m_current.size(); }
+		size_t size() { return m_current[m_elec_epoch].size(); }
 
 		/// Verify and add approve to the queue synchronously.
 		/// @param _tx Trasnaction data.
@@ -70,6 +70,8 @@ namespace mcp
 
 		/// Get transaction queue information
 		std::string getInfo();
+
+		void setElectEpoch(uint64_t epoch);
 
 	private:
 		/// Verified and imported approve
@@ -122,7 +124,8 @@ namespace mcp
 		///< the number of approve hashes stored.
 		LruCache<h256, bool> m_dropped;
 
-		std::unordered_map<h256, approve> m_current;
+		std::map<uint64_t, std::unordered_map<h256, approve>> m_current;
+		uint64_t m_elec_epoch = 0;
 
 		/// verified broadcast incoming approve
 		std::condition_variable m_queueReady;

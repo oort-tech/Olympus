@@ -23,7 +23,7 @@ mcp::composer::~composer()
 
 std::shared_ptr<mcp::block> mcp::composer::compose_block(dev::Address const & from_a, dev::Secret const& s)
 {
-	LOG(m_log.trace) << "[compose_block] in";
+	LOG(m_log.info) << "[compose_block] in";
 	mcp::stopwatch_guard sw("compose:compose_block");
 
 	mcp::db::db_transaction transaction(m_store.create_transaction());
@@ -44,6 +44,7 @@ std::shared_ptr<mcp::block> mcp::composer::compose_block(dev::Address const & fr
 			<< errinfo_comment("compose error:block no links"));
 
 	uint64_t exec_timestamp(mcp::seconds_since_epoch());
+	LOG(m_log.info) << "[compose_block] out";
 
     return std::make_shared<mcp::block>(from_a, previous, parents, links, approves, 
 		m_last_summary, m_last_summary_block, last_stable_block, exec_timestamp,s);
@@ -51,6 +52,7 @@ std::shared_ptr<mcp::block> mcp::composer::compose_block(dev::Address const & fr
 
 void mcp::composer::pick_parents_and_last_summary_and_wl_block(mcp::db::db_transaction &  transaction_a, mcp::block_hash const & previous_a, dev::Address const & from_a, std::vector<mcp::block_hash>& parents, h256s& links, h256s& approves, mcp::block_hash & last_stable_block)
 {
+	LOG(m_log.info) << "[pick_parents_and_last_summary_and_wl_block] in";
 	mcp::stopwatch_guard sw("compose:pick_parents");
 
 	{

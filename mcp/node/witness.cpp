@@ -186,20 +186,22 @@ void mcp::witness::check_and_witness()
 }
 
 bool mcp::witness::need_approve(uint64_t last_summary_mci){
+	LOG(m_log.info) << "[need_approve] in.";
 	static uint64_t last_epoch_num = UINT64_MAX;
 	if(last_summary_mci <= 2){
 		return false;
 	}
 
-	uint64_t cur_epoch = mcp::approve::calc_elect_epoch(last_summary_mci);
+	uint64_t elect_epoch = mcp::approve::calc_elect_epoch(last_summary_mci);
 	if(m_restart_not_need_send_approve){
 		m_restart_not_need_send_approve = false;
-		last_epoch_num = cur_epoch;
+		last_epoch_num = elect_epoch;
 		LOG(m_log.info) << "[need_approve] restart and not need send approve in this epoch.";
 		return false;
 	}
-	if(cur_epoch != last_epoch_num){
-		last_epoch_num = cur_epoch;
+	if(elect_epoch != last_epoch_num){
+		last_epoch_num = elect_epoch;
+		m_aq->setElectEpoch(elect_epoch);
 		return true;
 	}
 	else{

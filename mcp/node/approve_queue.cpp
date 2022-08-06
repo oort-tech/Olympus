@@ -24,6 +24,7 @@ namespace mcp
 			setThreadName("approveCheck" + toString(i));
 			this->verifierBody();
 		});
+		setElectEpoch(mcp::approve::calc_elect_epoch(m_chain->last_summary_mci() + 1)); 
 	}
 
 	ApproveQueue::~ApproveQueue()
@@ -55,7 +56,9 @@ namespace mcp
 			assert(_h == _approve.sha3());
 			
 			m_known.insert(_h);
-			m_current.insert(std::make_pair(_h, _approve));
+			assert_x(m_current.find(_approve.m_epoch) != m_current.end());
+			m_current[_approve.m_epoch].insert(std::make_pair(_h, _approve));
+			//LOG(m_log.info) << "m_elec_epoch=" << m_elec_epoch << " _approve.m_epoch=" << _approve.m_epoch;
 		}
 		catch (Exception const& _e)
 		{
@@ -73,12 +76,12 @@ namespace mcp
 
 	bool ApproveQueue::remove_WITH_LOCK(h256 const& _txHash)
 	{
-		LOG(m_log.trace) << "[remove_WITH_LOCK] in hash:" << _txHash;
-		auto t = m_current.find(_txHash);
-		if (t == m_current.end())
+		assert_x(m_current.find(m_elec_epoch) != m_current.end());
+		auto t = m_current.at(m_elec_epoch).find(_txHash);
+		if (t == m_current.at(m_elec_epoch).end())
 			return false;
 
-		m_current.erase(t);
+		m_current.at(m_elec_epoch).erase(t);
 		m_known.erase(_txHash);
 		
 		return true;
@@ -161,9 +164,10 @@ namespace mcp
 	std::shared_ptr<approve> ApproveQueue::get(h256 const& _txHash) const
 	{
 		UpgradableGuard l(m_lock);
+		assert_x(m_current.find(m_elec_epoch) != m_current.end());
 
-		auto t = m_current.find(_txHash);
-		if (t == m_current.end())
+		auto t = m_current.at(m_elec_epoch).find(_txHash);
+		if (t == m_current.at(m_elec_epoch).end())
 			return nullptr;
 
 		return std::make_shared<approve>(t->second);
@@ -173,7 +177,8 @@ namespace mcp
 	{
 		ReadGuard l(m_lock);
 		h256s ret;
-		for (auto cs = m_current.begin(); cs != m_current.end(); ++cs)
+		assert_x(m_current.find(m_elec_epoch) != m_current.end());
+		for (auto cs = m_current.at(m_elec_epoch).begin(); cs != m_current.at(m_elec_epoch).end(); ++cs)
 		{
 			auto hash = cs->first;
 			if (!_avoid.count(hash))
@@ -188,7 +193,8 @@ namespace mcp
 	bool ApproveQueue::exist(h256 const& _hash)
 	{
 		ReadGuard l(m_lock);
-		return m_current.count(_hash);
+		assert_x(m_current.find(m_elec_epoch) != m_current.end());
+		return m_current.at(m_elec_epoch).count(_hash);
 	}
 
 	h256Hash ApproveQueue::knownApproves() const
@@ -261,11 +267,13 @@ namespace mcp
 		_t.checkChainId(mcp::chain_id);
 		_t.checkLowS();
 
-		//_t.checkEpoch(mcp::approve::calc_elect_epoch(m_chain->last_summary_mci()));
-		uint64_t elect_epoch = mcp::approve::calc_elect_epoch(m_chain->last_summary_mci() + 1);
-		if(elect_epoch > _t.m_epoch){
+		if(_t.m_epoch < m_elec_epoch){
 			LOG(m_log.info) << "[validateApprove] epoch is too low";
 			return ImportApproveResult::EpochIsTooLow;
+		}
+		else if(_t.m_epoch > m_elec_epoch + 1){
+			LOG(m_log.info) << "[validateApprove] epoch is too high";
+			return ImportApproveResult::EpochIsTooHigh;
 		}
 		
 		mcp::db::db_transaction transaction(m_store.create_transaction());
@@ -275,11 +283,7 @@ namespace mcp
 		}
 		else{
 			bool ret = m_store.stable_block_get(transaction, (_t.m_epoch-2)*epoch_period, hash);
-			if(ret)
-			{
-				LOG(m_log.info) << "[validateApprove] epoch is too high";
-				return ImportApproveResult::EpochIsTooHigh;
-			}
+			assert_x(!ret);
 		}
 		
 		std::vector<uint8_t> output;
@@ -295,5 +299,28 @@ namespace mcp
 			+ " ,m_dropped:" + std::to_string(m_dropped.size());
 
 		return str;
+	}
+
+	void ApproveQueue::setElectEpoch(uint64_t epoch)
+	{
+		if(epoch != m_elec_epoch){
+			if(m_elec_epoch == 0){
+				m_elec_epoch = epoch;
+				m_current[m_elec_epoch] = std::unordered_map<h256, approve>();
+				m_current[m_elec_epoch + 1] = std::unordered_map<h256, approve>();
+			}
+			else{
+				assert_x(m_current.find(m_elec_epoch) != m_current.end());
+				
+				auto am = m_current.at(m_elec_epoch);
+				for(auto ap : am ){
+					drop(ap.first);
+				}
+				m_current.erase(m_current.find(m_elec_epoch));
+				m_current[m_elec_epoch+2] = std::unordered_map<h256, approve>();
+				m_elec_epoch = epoch;
+			}
+			LOG(m_log.info) << "[setElectEpoch] " << m_elec_epoch;
+		}
 	}
 }

@@ -86,9 +86,9 @@ void mcp::chain::init(bool & error_a, mcp::timeout_db_transaction & timeout_tx_a
 
 	m_advance_info = m_store.advance_info_get(transaction);
 	m_last_epoch = m_store.last_epoch_get(transaction);
-	m_last_summary_mci_internal = get_last_summary_mci(transaction, cache_a, block_cache_a, m_last_mci_internal);
+	m_last_summary_mci = get_last_summary_mci(transaction, cache_a, block_cache_a, m_last_mci_internal);
 	LOG(m_log.info) << "m_last_mci_internal: " << m_last_mci_internal << " m_last_stable_mci_internal: " << m_last_stable_mci_internal;
-	LOG(m_log.info) << "m_last_epoch: " << m_last_epoch << " m_last_summary_mci_internal: " << m_last_summary_mci_internal;
+	LOG(m_log.info) << "m_last_epoch: " << m_last_epoch << " m_last_summary_mci: " << m_last_summary_mci;
 
 	update_cache();
 	init_witness(transaction, cache_a);
@@ -350,9 +350,10 @@ void mcp::chain::try_advance(mcp::timeout_db_transaction & timeout_tx_a, std::sh
 {
 	while (!m_stopped && ((dev::h64::Arith) m_advance_info.mci).convert_to<uint64_t>() > m_last_stable_mci_internal)
 	{
+		uint64_t last_summary_mci_stable;
 		m_last_stable_mci_internal++;
-		advance_stable_mci(timeout_tx_a, cache_a, m_last_stable_mci_internal, m_advance_info.witness_block, m_last_summary_mci_internal);
-		LOG(m_log.info) << "[try_advance] m_last_summary_mci_internal=" << m_last_summary_mci_internal;
+		advance_stable_mci(timeout_tx_a, cache_a, m_last_stable_mci_internal, m_advance_info.witness_block, last_summary_mci_stable);
+		LOG(m_log.info) << "[try_advance] last_summary_mci_stable=" << last_summary_mci_stable;
 
 		//update last stable mci
 		mcp::db::db_transaction & transaction(timeout_tx_a.get_transaction());
@@ -373,7 +374,7 @@ void mcp::chain::try_advance(mcp::timeout_db_transaction & timeout_tx_a, std::sh
 
 			//timeout_tx_a.commit_if_timeout();
 			
-			switch_witness(transaction, m_last_summary_mci_internal);
+			switch_witness(transaction, last_summary_mci_stable);
 		}
 		catch (std::exception const & e)
 		{
@@ -1147,7 +1148,6 @@ void mcp::chain::update_cache()
 {
 	m_last_mci = m_last_mci_internal;
 	m_last_stable_mci = m_last_stable_mci_internal;
-	m_last_summary_mci = m_last_summary_mci_internal;
 	m_min_retrievable_mci = m_min_retrievable_mci_internal;
 	m_last_stable_index = m_last_stable_index_internal;
 }
@@ -1180,6 +1180,11 @@ uint64_t mcp::chain::last_epoch()
 uint64_t mcp::chain::last_summary_mci()
 {
 	return m_last_summary_mci;
+}
+
+void mcp::chain::set_last_summary_mci(uint64_t const& mci)
+{
+	m_last_summary_mci = mci;
 }
 
 bool mcp::chain::get_mc_info_from_block_hash(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::iblock_cache> cache_a, mcp::block_hash hash_a, dev::eth::McInfo & mc_info_a)

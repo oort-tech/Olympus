@@ -47,6 +47,7 @@ namespace mcp
 		uint64_t last_stable_index();
 		uint64_t last_epoch();
 		uint64_t last_summary_mci();
+		void set_last_summary_mci(uint64_t const& mci);
 
 		bool get_mc_info_from_block_hash(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::iblock_cache> cache_a, mcp::block_hash hash_a, dev::eth::McInfo & mc_info_a);
 
@@ -116,7 +117,6 @@ namespace mcp
 		uint64_t m_last_stable_mci = 0;
 		uint64_t m_last_stable_mci_internal = 0;
 		uint64_t m_last_summary_mci = 0;
-		uint64_t m_last_summary_mci_internal = 0;
 		uint64_t m_min_retrievable_mci = 0;
 		uint64_t m_min_retrievable_mci_internal = 0;
 		uint64_t m_last_stable_index = 0;
