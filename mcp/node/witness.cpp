@@ -170,7 +170,7 @@ void mcp::witness::check_and_witness()
 			return;
 		}
 	}
-    LOG(m_log.info) << "m_tq:" << m_tq->size()<<" m_aq:"<<m_aq->size() <<" transaction_unstable_count:" <<m_store.transaction_unstable_count(transaction) << " approve_unstable_count:"<<m_store.approve_unstable_count(transaction);
+    LOG(m_log.debug) << "m_tq:" << m_tq->size()<<" m_aq:"<<m_aq->size() <<" transaction_unstable_count:" <<m_store.transaction_unstable_count(transaction) << " approve_unstable_count:"<<m_store.approve_unstable_count(transaction);
 	
 
 	//check majority different of witnesses
@@ -186,7 +186,7 @@ void mcp::witness::check_and_witness()
 }
 
 bool mcp::witness::need_approve(uint64_t last_summary_mci){
-	LOG(m_log.info) << "[need_approve] in.";
+	//LOG(m_log.info) << "[need_approve] in.";
 	static uint64_t last_epoch_num = UINT64_MAX;
 	if(last_summary_mci <= 2){
 		return false;

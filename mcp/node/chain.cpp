@@ -353,7 +353,7 @@ void mcp::chain::try_advance(mcp::timeout_db_transaction & timeout_tx_a, std::sh
 		uint64_t last_summary_mci_stable;
 		m_last_stable_mci_internal++;
 		advance_stable_mci(timeout_tx_a, cache_a, m_last_stable_mci_internal, m_advance_info.witness_block, last_summary_mci_stable);
-		LOG(m_log.info) << "[try_advance] last_summary_mci_stable=" << last_summary_mci_stable;
+		LOG(m_log.debug) << "[try_advance] last_summary_mci_stable=" << last_summary_mci_stable;
 
 		//update last stable mci
 		mcp::db::db_transaction & transaction(timeout_tx_a.get_transaction());
