@@ -45,9 +45,6 @@ namespace mcp
 		uint64_t last_stable_mci();
 		uint64_t min_retrievable_mci();
 		uint64_t last_stable_index();
-		uint64_t last_epoch();
-		uint64_t last_summary_mci();
-		void set_last_summary_mci(uint64_t const& mci);
 
 		bool get_mc_info_from_block_hash(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::iblock_cache> cache_a, mcp::block_hash hash_a, dev::eth::McInfo & mc_info_a);
 
@@ -84,6 +81,10 @@ namespace mcp
 		{
 			m_complete_store_notice = func_a;
 		}
+
+		uint64_t last_epoch();
+		uint64_t last_summary_mci();
+		void set_last_summary_mci(mcp::db::db_transaction & transaction_a, uint64_t const& mci);
 		uint64_t get_last_summary_mci(mcp::db::db_transaction& transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a, std::shared_ptr<mcp::block_cache> block_cache_a, uint64_t const & mci);
 		bool restart_not_need_send_approve(mcp::db::db_transaction& transaction_a, std::shared_ptr<mcp::block_cache> cache_a, dev::Address account_a);
 
@@ -96,7 +97,7 @@ namespace mcp
 		void set_block_stable(mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a, mcp::block_hash const & stable_block_hash, uint64_t const & mci, uint64_t const & mc_timestamp, uint64_t const & mc_last_summary_mci, uint64_t const & stable_timestamp, uint64_t const & stable_index, h256 receiptsRoot);
 		void search_stable_block(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a, mcp::block_hash const & block_hash, uint64_t const & mci, std::map<uint64_t, std::set<mcp::block_hash>>& stable_block_hashs);
 		void search_already_stable_block(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a, mcp::block_hash const & block_hash, uint64_t const & mci, std::map<uint64_t, std::set<mcp::block_hash>>& stable_block_hashs);
-		void switch_witness(mcp::db::db_transaction & transaction_a, uint64_t mc_last_summary_mci);
+		void add_new_witness_list(mcp::db::db_transaction & transaction_a, uint64_t mc_last_summary_mci);
 		void init_vrf_outputs(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a);
 		void init_witness(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a);
 		mcp::block_store m_store;

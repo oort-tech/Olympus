@@ -696,7 +696,7 @@ void mcp::block_processor::do_process_dag_item(mcp::timeout_db_transaction & tim
 
 	std::shared_ptr<mcp::block_state> last_summary_block = m_local_cache->block_state_get(transaction, block->last_summary_block());
 	assert_x(last_summary_block);
-	m_chain->set_last_summary_mci(*last_summary_block->main_chain_index);
+	m_chain->set_last_summary_mci(transaction, *last_summary_block->main_chain_index);
 	m_aq->setElectEpoch(mcp::approve::calc_elect_epoch(*last_summary_block->main_chain_index + 1));
 	LOG(m_log.info) << "[do_process_dag_item] m_last_summary_mci = " << last_summary_block->main_chain_index;
 }

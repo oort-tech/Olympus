@@ -258,7 +258,7 @@ void mcp::chain::save_approve(mcp::timeout_db_transaction & timeout_tx_a, std::s
 	}
 }
 
-void mcp::chain::switch_witness(mcp::db::db_transaction & transaction_a, uint64_t mc_last_summary_mci){
+void mcp::chain::add_new_witness_list(mcp::db::db_transaction & transaction_a, uint64_t mc_last_summary_mci){
 	static uint64_t old_summary_mci = 0;
 	static uint64_t old_elected_epoch = 0;
 	uint64_t elected_epoch = mcp::approve::calc_elect_epoch(mc_last_summary_mci) - 1;
@@ -274,9 +274,8 @@ void mcp::chain::switch_witness(mcp::db::db_transaction & transaction_a, uint64_
 	else old_elected_epoch = elected_epoch;
 
 	mcp::witness_param w_param = mcp::param::witness_param(m_last_epoch);
-	LOG(m_log.info) << "[switch_witness] in last_summary_mci = " << mc_last_summary_mci << " elected_epoch = " << elected_epoch;
-	m_last_epoch = mcp::approve::calc_curr_epoch(mc_last_summary_mci);
-	m_store.last_epoch_put(transaction_a, m_last_epoch);
+	LOG(m_log.info) << "[add_new_witness_list] in last_summary_mci = " << mc_last_summary_mci << " elected_epoch = " << elected_epoch;
+	
 	epoch_elected_list elected_list;
 	if(vrf_outputs.find(elected_epoch) == vrf_outputs.end()) return;
 	if(vrf_outputs[elected_epoch].size() < 14)
@@ -374,7 +373,7 @@ void mcp::chain::try_advance(mcp::timeout_db_transaction & timeout_tx_a, std::sh
 
 			//timeout_tx_a.commit_if_timeout();
 			
-			switch_witness(transaction, last_summary_mci_stable);
+			add_new_witness_list(transaction, last_summary_mci_stable);
 		}
 		catch (std::exception const & e)
 		{
@@ -1177,16 +1176,6 @@ uint64_t mcp::chain::last_epoch()
 	return m_last_epoch;
 }
 
-uint64_t mcp::chain::last_summary_mci()
-{
-	return m_last_summary_mci;
-}
-
-void mcp::chain::set_last_summary_mci(uint64_t const& mci)
-{
-	m_last_summary_mci = mci;
-}
-
 bool mcp::chain::get_mc_info_from_block_hash(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::iblock_cache> cache_a, mcp::block_hash hash_a, dev::eth::McInfo & mc_info_a)
 {
 	std::shared_ptr<mcp::block_state> block_state(cache_a->block_state_get(transaction_a, hash_a));
@@ -1399,4 +1388,19 @@ bool mcp::chain::restart_not_need_send_approve(mcp::db::db_transaction& transact
 	}
     LOG(m_log.info) << "[restart_not_need_send_approve] not need send = " << ret;
 	return ret;
+}
+
+uint64_t mcp::chain::last_summary_mci()
+{
+	return m_last_summary_mci;
+}
+
+void mcp::chain::set_last_summary_mci(mcp::db::db_transaction & transaction_a, uint64_t const& mci)
+{
+	m_last_summary_mci = mci;
+	uint64_t new_epoch = mcp::approve::calc_curr_epoch(m_last_summary_mci);
+	if(m_last_epoch < new_epoch){
+		m_last_epoch = new_epoch;
+		m_store.last_epoch_put(transaction_a, m_last_epoch);
+	}
 }
