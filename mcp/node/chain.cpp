@@ -242,7 +242,7 @@ void mcp::chain::save_approve(mcp::timeout_db_transaction & timeout_tx_a, std::s
 				m_store.approve_unstable_count_add(transaction);
 				LOG(m_log.info) << "approve_unstable: add " << m_store.approve_unstable_count(transaction);
 				m_store.approve_count_add(transaction);
-				cache_a->approve_del_from_queue(hash);///mark as clear,It will be really cleaned up after commit event
+				cache_a->approve_del_from_queue(hash, t_a->m_epoch);///mark as clear,It will be really cleaned up after commit event
 			}
 
 			//m_new_blocks.push(block_a->block);

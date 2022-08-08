@@ -30,7 +30,7 @@ namespace mcp
 
 		void set_capability(std::shared_ptr<mcp::node_capability> capability_a) { m_capability = capability_a; }
 
-		size_t size() { return m_current[m_elec_epoch].size(); }
+		size_t size(uint64_t _epoch);
 
 		/// Verify and add approve to the queue synchronously.
 		/// @param _tx Trasnaction data.
@@ -55,23 +55,22 @@ namespace mcp
 
 		/// get approve from the queue
 		/// @param _txHash approve hash
+		std::shared_ptr<approve> get(h256 const& _txHash, uint64_t _epoch) const;
 		std::shared_ptr<approve> get(h256 const& _txHash) const;
 
 		/// Remove approve from the queue
 		/// @param _txHash approve hash
-		void drop(h256 const& _txHash);
-		void drop(h256s const& _txHashs);
+		void drop(std::map<uint64_t, h256s> const& _txHashs);
 
 		/// Get top approves from the queue. Returned approves are not removed from the queue automatically.
 		/// @param _limit Max number of approves to return.
 		/// @param _avoid approves to avoid returning.
 		/// @returns up to _limit approves ordered
+		h256s topApproves(unsigned _limit, uint64_t _epoch, h256Hash const& _avoid = h256Hash()) const;
 		h256s topApproves(unsigned _limit, h256Hash const& _avoid = h256Hash()) const;
 
 		/// Get transaction queue information
 		std::string getInfo();
-
-		void setElectEpoch(uint64_t epoch);
 
 	private:
 		/// Verified and imported approve
@@ -110,7 +109,7 @@ namespace mcp
 		};
 		ImportApproveResult check_WITH_LOCK(h256 const& _h, IfDropped _ik);
 		ImportApproveResult manageImport_WITH_LOCK(h256 const& _h, approve const& _approve, bool isLocal);
-		bool remove_WITH_LOCK(h256 const& _txHash);
+		bool remove_WITH_LOCK(h256 const& _txHash, uint64_t _epoch);
 
 		void verifierBody();
 
@@ -125,8 +124,7 @@ namespace mcp
 		LruCache<h256, bool> m_dropped;
 
 		std::map<uint64_t, std::unordered_map<h256, approve>> m_current;
-		uint64_t m_elec_epoch = 0;
-
+		
 		/// verified broadcast incoming approve
 		std::condition_variable m_queueReady;
 		Signal<ImportApproveResult, h256 const&, p2p::node_id const&> m_onImport;			///< Called for each import attempt. Arguments are result, transaction id an node id. Be nice and exit fast.

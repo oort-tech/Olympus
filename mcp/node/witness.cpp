@@ -136,7 +136,7 @@ void mcp::witness::check_and_witness()
 		send_approve(new_last_summary_mci);
 	}
 
-	mcp::witness_param const & w_param(mcp::param::witness_param(m_chain->last_epoch()));
+	mcp::witness_param const & w_param(mcp::param::witness_param(mcp::approve::calc_curr_epoch(new_last_summary_mci)));
 
 	if (!mcp::param::is_witness(mcp::approve::calc_curr_epoch(new_last_summary_mci), m_account))
 	{
@@ -160,7 +160,7 @@ void mcp::witness::check_and_witness()
         }
     }
 
-	if ((m_tq->size() == 0)&&(m_aq->size() == 0))
+	if ((m_tq->size() == 0)&&(m_aq->size(mcp::approve::calc_elect_epoch(new_last_summary_mci)) == 0))
 	{
 		size_t transaction_unstable_count(m_store.transaction_unstable_count(transaction));
 		size_t approve_unstable_count(m_store.approve_unstable_count(transaction));
@@ -170,7 +170,7 @@ void mcp::witness::check_and_witness()
 			return;
 		}
 	}
-    LOG(m_log.info) << "m_tq:" << m_tq->size()<<" m_aq:"<<m_aq->size() <<" transaction_unstable_count:" <<m_store.transaction_unstable_count(transaction) << " approve_unstable_count:"<<m_store.approve_unstable_count(transaction);
+    LOG(m_log.info) << "m_tq:" << m_tq->size()<<" m_aq:"<<m_aq->size(mcp::approve::calc_elect_epoch(new_last_summary_mci)) <<" transaction_unstable_count:" <<m_store.transaction_unstable_count(transaction) << " approve_unstable_count:"<<m_store.approve_unstable_count(transaction);
 	
 
 	//check majority different of witnesses
@@ -200,7 +200,6 @@ bool mcp::witness::need_approve(uint64_t last_summary_mci){
 	}
 	if(elect_epoch != last_epoch_num){
 		last_epoch_num = elect_epoch;
-		m_aq->setElectEpoch(elect_epoch);
 		return true;
 	}
 	else{

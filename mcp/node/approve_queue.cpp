@@ -49,15 +49,16 @@ namespace mcp
 
 	ImportApproveResult ApproveQueue::manageImport_WITH_LOCK(h256 const& _h, approve const& _approve, bool isLocal)
 	{
-		LOG(m_log.trace) << "[manageImport_WITH_LOCK] in";
+		LOG(m_log.info) << "[manageImport_WITH_LOCK] in";
 		try
 		{
 			assert(_h == _approve.sha3());
 			
 			m_known.insert(_h);
-			assert_x(m_current.find(_approve.m_epoch) != m_current.end());
+			if(m_current.find(_approve.m_epoch) == m_current.end()){
+				m_current.insert(std::make_pair(_approve.m_epoch, std::unordered_map<h256, approve>()));
+			}
 			m_current[_approve.m_epoch].insert(std::make_pair(_h, _approve));
-			//LOG(m_log.info) << "m_elec_epoch=" << m_elec_epoch << " _approve.m_epoch=" << _approve.m_epoch;
 		}
 		catch (Exception const& _e)
 		{
@@ -73,14 +74,18 @@ namespace mcp
 		return ImportApproveResult::Success;
 	}
 
-	bool ApproveQueue::remove_WITH_LOCK(h256 const& _txHash)
+	bool ApproveQueue::remove_WITH_LOCK(h256 const& _txHash, uint64_t _epoch)
 	{
-		assert_x(m_current.find(m_elec_epoch) != m_current.end());
-		auto t = m_current.at(m_elec_epoch).find(_txHash);
-		if (t == m_current.at(m_elec_epoch).end())
+		LOG(m_log.info) << "[remove_WITH_LOCK] in";
+		if(m_current.find(_epoch) == m_current.end()){
+			return false;
+		}
+
+		auto t = m_current.at(_epoch).find(_txHash);
+		if (t == m_current.at(_epoch).end())
 			return false;
 
-		m_current.at(m_elec_epoch).erase(t);
+		m_current.at(_epoch).erase(t);
 		m_known.erase(_txHash);
 		
 		return true;
@@ -127,57 +132,95 @@ namespace mcp
 		});
 	}
 
-	void ApproveQueue::drop(h256 const& _txHash)
+	void ApproveQueue::drop(std::map<uint64_t, h256s> const& _mapHashs)
 	{
-		LOG(m_log.trace) << "[drop] in";
-		UpgradableGuard l(m_lock);
+		try
+		{
+				LOG(m_log.info) << "[drop] in";
+			UpgradableGuard l(m_lock);
+			for(auto hashs : _mapHashs){
+				h256s dels;
+				auto _txHashs = hashs.second;
+				auto epoch = hashs.first;
+				for (auto h : _txHashs)
+				{
+					if (m_known.count(h))
+					{
+						dels.push_back(h);
+					}
+				}
 
-		if (!m_known.count(_txHash))
-			return;
-
-		UpgradeGuard ul(l);
-		m_dropped.insert(_txHash, true /* placeholder value */);
-		remove_WITH_LOCK(_txHash);
+				UpgradeGuard ul(l);
+				for (auto h : dels)
+				{
+					m_dropped.insert(h, true /* placeholder value */);
+					remove_WITH_LOCK(h, epoch);
+				}
+				if(m_current[epoch].empty()){
+					m_current.erase(m_current.find(epoch));
+				}
+			}
+			LOG(m_log.info) << "[drop] out";
+		}
+		catch(const std::exception& e)
+		{
+			std::cerr << e.what() << '\n';
+		}
 	}
 
-	void ApproveQueue::drop(h256s const& _txHashs)
+	std::shared_ptr<approve> ApproveQueue::get(h256 const& _txHash, uint64_t _epoch) const
 	{
 		UpgradableGuard l(m_lock);
-		h256s dels;
-		for (auto h : _txHashs)
-		{
-			if (m_known.count(h))
-			{
-				dels.push_back(h);
-			}
+		if(m_current.find(_epoch) == m_current.end()){
+			return nullptr;
 		}
 
-		UpgradeGuard ul(l);
-		for (auto h : dels)
-		{
-			m_dropped.insert(h, true /* placeholder value */);
-			remove_WITH_LOCK(h);
-		}
+		auto t = m_current.at(_epoch).find(_txHash);
+		if (t == m_current.at(_epoch).end())
+			return nullptr;
+
+		return std::make_shared<approve>(t->second);
 	}
 
 	std::shared_ptr<approve> ApproveQueue::get(h256 const& _txHash) const
 	{
 		UpgradableGuard l(m_lock);
-		assert_x(m_current.find(m_elec_epoch) != m_current.end());
-
-		auto t = m_current.at(m_elec_epoch).find(_txHash);
-		if (t == m_current.at(m_elec_epoch).end())
+		if(m_current.empty()){
 			return nullptr;
+		}
 
-		return std::make_shared<approve>(t->second);
+		for(auto hashs : m_current){
+			auto t = hashs.second.find(_txHash);
+			if (t != hashs.second.end())
+				return std::make_shared<approve>(t->second);
+		}
+		return nullptr;
 	}
 
 	h256s ApproveQueue::topApproves(unsigned _limit, h256Hash const& _avoid) const
 	{
 		ReadGuard l(m_lock);
 		h256s ret;
-		assert_x(m_current.find(m_elec_epoch) != m_current.end());
-		for (auto cs = m_current.at(m_elec_epoch).begin(); cs != m_current.at(m_elec_epoch).end(); ++cs)
+		for(auto hashs : m_current)
+		{
+			for (auto cs = hashs.second.begin(); cs != hashs.second.end(); ++cs)
+			{
+				auto hash = cs->first;
+				if (!_avoid.count(hash))
+					ret.push_back(hash);
+					if (ret.size() == _limit)
+						return ret;
+			}
+		}
+		return ret;
+	}
+
+	h256s ApproveQueue::topApproves(unsigned _limit, uint64_t _epoch, h256Hash const& _avoid) const
+	{
+		ReadGuard l(m_lock);
+		h256s ret;
+		if(m_current.find(_epoch) == m_current.end()) return ret;
+		for (auto cs = m_current.at(_epoch).begin(); cs != m_current.at(_epoch).end(); ++cs)
 		{
 			auto hash = cs->first;
 			if (!_avoid.count(hash))
@@ -192,8 +235,14 @@ namespace mcp
 	bool ApproveQueue::exist(h256 const& _hash)
 	{
 		ReadGuard l(m_lock);
-		assert_x(m_current.find(m_elec_epoch) != m_current.end());
-		return m_current.at(m_elec_epoch).count(_hash);
+		if(m_current.empty()) return false;
+		for(auto hashs : m_current)
+		{
+			if(hashs.second.find(_hash) != hashs.second.end()){
+				return true;
+			}
+		}
+		return false;
 	}
 
 	h256Hash ApproveQueue::knownApproves() const
@@ -265,15 +314,6 @@ namespace mcp
 	ImportApproveResult ApproveQueue::validateApprove(approve const& _t){
 		_t.checkChainId(mcp::chain_id);
 		_t.checkLowS();
-
-		if(_t.m_epoch < m_elec_epoch){
-			LOG(m_log.info) << "[validateApprove] epoch is too low";
-			return ImportApproveResult::EpochIsTooLow;
-		}
-		else if(_t.m_epoch > m_elec_epoch + 1){
-			LOG(m_log.info) << "[validateApprove] epoch is too high";
-			return ImportApproveResult::EpochIsTooHigh;
-		}
 		
 		mcp::db::db_transaction transaction(m_store.create_transaction());
 		mcp::block_hash hash;
@@ -282,12 +322,24 @@ namespace mcp
 		}
 		else{
 			bool ret = m_store.stable_block_get(transaction, (_t.m_epoch-2)*epoch_period, hash);
-			assert_x(!ret);
+			if(ret){
+				LOG(m_log.info) << "[validateApprove] epoch is too high";
+				return ImportApproveResult::EpochIsTooHigh;
+			}
 		}
 		
 		std::vector<uint8_t> output;
 		_t.vrf_verify(output, hash.hex());
 		return ImportApproveResult::Success;
+	}
+
+	size_t ApproveQueue::size(uint64_t _epoch)
+	{
+		if(m_current.find(_epoch) == m_current.end())
+		{
+			return 0;
+		}
+		return m_current[_epoch].size();
 	}
 
 	std::string ApproveQueue::getInfo()
@@ -296,30 +348,12 @@ namespace mcp
 			+ " ,m_unverified:" + std::to_string(m_unverified.size())
 			+ " ,m_known:" + std::to_string(m_known.size())
 			+ " ,m_dropped:" + std::to_string(m_dropped.size());
+		str += "current[ ";
+		for(auto current : m_current){
+			str += "current[ epoch" + std::to_string(current.first) + " size=" + std::to_string(current.second.size()); 
+		}
+		str += " ]";
 
 		return str;
-	}
-
-	void ApproveQueue::setElectEpoch(uint64_t epoch)
-	{
-		if(epoch != m_elec_epoch){
-			if(m_elec_epoch == 0){
-				m_elec_epoch = epoch;
-				m_current[m_elec_epoch] = std::unordered_map<h256, approve>();
-				m_current[m_elec_epoch + 1] = std::unordered_map<h256, approve>();
-			}
-			else{
-				assert_x(m_current.find(m_elec_epoch) != m_current.end());
-				
-				auto am = m_current.at(m_elec_epoch);
-				for(auto ap : am ){
-					drop(ap.first);
-				}
-				m_current.erase(m_current.find(m_elec_epoch));
-				m_current[m_elec_epoch+2] = std::unordered_map<h256, approve>();
-				m_elec_epoch = epoch;
-			}
-			LOG(m_log.info) << "[setElectEpoch] " << m_elec_epoch;
-		}
 	}
 }

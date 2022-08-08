@@ -59,7 +59,7 @@ void mcp::composer::pick_parents_and_last_summary_and_wl_block(mcp::db::db_trans
 		mcp::stopwatch_guard sw("compose:pick_parents2");
 
 		links = m_tq->topTransactions(4096);
-		approves = m_aq->topApproves(4096);
+		approves = m_aq->topApproves(4096, mcp::approve::calc_elect_epoch(m_new_last_summary_mci));
 	}
 
 	mcp::block_param const & b_param(mcp::param::block_param(m_new_last_summary_mci));

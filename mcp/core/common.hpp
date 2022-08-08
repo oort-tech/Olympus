@@ -617,7 +617,6 @@ namespace mcp
 		Success = 0,
 		AlreadyInChain,
 		AlreadyKnown,
-		EpochIsTooLow,
 		EpochIsTooHigh,
 		Malformed,
 		BadChain/*,
