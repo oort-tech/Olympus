@@ -24,7 +24,6 @@ namespace mcp
 			setThreadName("approveCheck" + toString(i));
 			this->verifierBody();
 		});
-		setElectEpoch(mcp::approve::calc_elect_epoch(m_chain->last_summary_mci() + 1)); 
 	}
 
 	ApproveQueue::~ApproveQueue()

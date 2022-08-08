@@ -278,7 +278,7 @@ void mcp::chain::add_new_witness_list(mcp::db::db_transaction & transaction_a, u
 	
 	epoch_elected_list elected_list;
 	if(vrf_outputs.find(elected_epoch) == vrf_outputs.end()) return;
-	if(vrf_outputs[elected_epoch].size() < 14)
+	if(vrf_outputs[elected_epoch].size() < w_param.witness_count)
 	{
 		LOG(m_log.info) << "Not switch witness_list because elector's number is too short: " << vrf_outputs.size();
 		vrf_outputs[elected_epoch].clear();
@@ -291,7 +291,7 @@ void mcp::chain::add_new_witness_list(mcp::db::db_transaction & transaction_a, u
 		uint32_t output = it->first;
 		test_witness.emplace_back(std::string("0x")+a.hex());
 		elected_list.hashs.emplace_back(it->second.approve_hash());
-		LOG(m_log.info) << "elect " << a.hex() << " output:" << output << " hash:" << it->second.approve_hash().hexPrefixed();
+		LOG(m_log.info) << "elect " << a.hexPrefixed() << " output:" << output << " hash:" << it->second.approve_hash().hexPrefixed();
 		it++;
 	}
 	w_param.witness_list.clear();
@@ -303,7 +303,7 @@ void mcp::chain::add_new_witness_list(mcp::db::db_transaction & transaction_a, u
 	//The elected_list corresponds to next epoch.
 	m_store.epoch_elected_approve_receipts_put(transaction_a, elected_epoch, elected_list);
 	vrf_outputs[elected_epoch].clear();
-	LOG(m_log.info) << "elect to epoch " << elected_epoch << " swith to epoch " << m_last_epoch;
+	LOG(m_log.info) << "elect to epoch " << elected_epoch;
 }
 
 void mcp::chain::init_vrf_outputs(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a)

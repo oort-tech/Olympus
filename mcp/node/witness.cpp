@@ -186,7 +186,6 @@ void mcp::witness::check_and_witness()
 }
 
 bool mcp::witness::need_approve(uint64_t last_summary_mci){
-	LOG(m_log.info) << "[need_approve] in.";
 	static uint64_t last_epoch_num = UINT64_MAX;
 	if(last_summary_mci <= 2){
 		return false;
