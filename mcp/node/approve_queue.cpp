@@ -350,7 +350,7 @@ namespace mcp
 			+ " ,m_dropped:" + std::to_string(m_dropped.size());
 		str += "current[ ";
 		for(auto current : m_current){
-			str += "current[ epoch" + std::to_string(current.first) + " size=" + std::to_string(current.second.size()); 
+			str += " epoch" + std::to_string(current.first) + " size=" + std::to_string(current.second.size()); 
 		}
 		str += " ]";
 

@@ -860,7 +860,7 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 					}
 
 					auto ap = cache_a->approve_get(transaction_a, approve_hash);
-
+					assert_x(ap);
 					/// exec approves
 					try{
 						mcp::block_hash hash;
