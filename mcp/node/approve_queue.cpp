@@ -125,7 +125,7 @@ namespace mcp
 	{
 		LOG(m_log.trace) << "[importLocal] in";
 		auto ret = import(_approve,true);
-		assert_x(ret == ImportApproveResult::Success);
+		assert_x_msg(ret == ImportApproveResult::Success, "ret="+std::to_string((uint32_t)ret));
 		
 		m_async_task->sync_async([this, _approve]() {
 			m_capability->broadcast_approve(_approve);

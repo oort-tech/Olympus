@@ -1377,7 +1377,7 @@ bool mcp::chain::restart_not_need_send_approve(mcp::db::db_transaction& transact
 {
 	bool ret = false;
 	std::list<h256> hashs;
-	m_store.epoch_approves_get(transaction_a, m_last_epoch, hashs);
+	m_store.epoch_approves_get(transaction_a, mcp::approve::calc_elect_epoch(m_last_summary_mci), hashs);
 	for(auto hash : hashs)
 	{
 		std::shared_ptr<mcp::approve> ap = block_cache_a->approve_get(transaction_a, hash);
