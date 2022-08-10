@@ -82,7 +82,8 @@ class Test_rpc(unittest.TestCase):
 	@classmethod
 	def setUpClass(cls):
 		Test_rpc.genesis_account = "0x1144B522F45265C2DFDBAEE8E324719E63A1694C"
-		Test_rpc.import_account = "0xaa98fd8298939186440dd9c32f716a0b0cec376b"
+		# Test_rpc.import_account = "0xaa98fd8298939186440dd9c32f716a0b0cec376b"
+		Test_rpc.import_account = "0xc165dc907fc7cb3a3748f9f2b66ef8b4cd64a70e"
 		Test_rpc.import_password = "12345678"
 		Test_rpc.import_public_key = "F16C3C1E3775B13C139038740F976E5E549A41D94E502E3DF4BE118CD81D5310459E5FA7F5A95B7DBC935E30BB55D624DF8F767280D1BAF329EC7E5EF96BF137"
 		Test_rpc.to_account = "0xC63BE4C25041F761C5E8D9AA73FEFC57E4AA655B"
@@ -636,6 +637,19 @@ class Test_rpc(unittest.TestCase):
 		json_data = json.loads(response.text)
 		self.assertEqual(json_data['code'], 0, json_data['msg'])
 
+	def test_account_state_list(self):
+		data = {
+			"action": "account_state_list",
+			"account": Test_rpc.genesis_account,
+			"limit": "100",
+		}
+		response = requests.post(url=URL, data=json.dumps(data))
+		self.assertEqual(response.status_code, 200)
+		is_json, json_data = try_load_json(response.text)
+		self.assertTrue(is_json, response.text)
+		json_data = json.loads(response.text)
+		self.assertEqual(json_data['code'], 0, json_data['msg'])
+
 	def test_account_block_list(self):
 		data = {
 			"action": "account_block_list",
@@ -661,6 +675,31 @@ class Test_rpc(unittest.TestCase):
 	def test_block(self):
 		data = {
 			"action": "block",
+			"hash": Test_rpc.block_hash
+		}
+		bad_data = {
+			"action": "block",
+		}
+		response = requests.post(url=URL, data=json.dumps(data))
+		self.assertEqual(response.status_code, 200)
+		is_json, json_data = try_load_json(response.text)
+		self.assertTrue(is_json, response.text)
+		json_data = json.loads(response.text)
+		self.assertEqual(json_data['code'], 0, json_data['msg'])
+		block_result = json_data['result']
+		self.assertTrue(is_hex(block_result['number']))
+		self.assertEqual(Test_rpc.block_hash, block_result['hash'])
+
+		response = requests.post(url=URL, data=json.dumps(bad_data))
+		self.assertEqual(response.status_code, 200)
+		is_json, json_data = try_load_json(response.text)
+		self.assertTrue(is_json, response.text)
+		json_data = json.loads(response.text)
+		self.assertEqual(json_data['code'], 36, json_data['msg'])
+
+	def test_block_summary(self):
+		data = {
+			"action": "block_summary",
 			"hash": Test_rpc.block_hash
 		}
 		bad_data = {
@@ -860,6 +899,51 @@ class Test_rpc(unittest.TestCase):
 		json_store_version = json_data['store_version']
 		self.assertTrue(is_str(json_store_version), json_store_version)
 
+	def test_peers(self):
+		data = {
+			"action": "peers"
+		}
+		response = requests.post(url=URL, data=json.dumps(data))
+		self.assertEqual(response.status_code, 200)
+		is_json, json_data = try_load_json(response.text)
+		self.assertTrue(is_json, response.text)
+		json_data = json.loads(response.text)
+		self.assertEqual(json_data['code'], 0, json_data['msg'])
+
+	def test_nodes(self):
+		data = {
+			"action": "nodes"
+		}
+		response = requests.post(url=URL, data=json.dumps(data))
+		self.assertEqual(response.status_code, 200)
+		is_json, json_data = try_load_json(response.text)
+		self.assertTrue(is_json, response.text)
+		json_data = json.loads(response.text)
+		self.assertEqual(json_data['code'], 0, json_data['msg'])
+
+	def test_logs(self):
+		data = {
+			"action": "logs",
+			"account": "0xd2b53c6dcf4eb754de108ec0420ee7ecfc1223b3"
+		}
+		response = requests.post(url=URL, data=json.dumps(data))
+		self.assertEqual(response.status_code, 200)
+		is_json, json_data = try_load_json(response.text)
+		self.assertTrue(is_json, response.text)
+		json_data = json.loads(response.text)
+		self.assertEqual(json_data['code'], 0, json_data['msg'])
+		self.assertTrue(len(json_data['logs']) > 0)
+
+	def test_debug_storage_range_at(self):
+		data = {
+			"action": "debug_storage_range_at",
+		}
+		response = requests.post(url=URL, data=json.dumps(data))
+		self.assertEqual(response.status_code, 200)
+		is_json, json_data = try_load_json(response.text)
+		self.assertTrue(is_json, response.text)
+		json_data = json.loads(response.text)
+		self.assertEqual(json_data['code'], 0, json_data['msg'])
 
 	def test_eth_blockNumber(self):
 		data = {
@@ -1696,6 +1780,151 @@ class Test_rpc(unittest.TestCase):
 		print(json_data)
 		print("\n")
 
+	def test_personal_lockAccount(self):
+		data = {
+			"method": "personal_lockAccount",
+			"params": [Test_rpc.genesis_account],
+			"id": 1,
+			"jsonrpc": "2.0",
+		}
+
+		response = requests.post(url=URL, data=json.dumps(data))
+		is_json, json_data = try_load_json(response.text)
+		self.assertTrue(json_data['result'])
+		print(json_data)
+		print("\n")
+
+		bad_data = {
+			"method": "personal_lockAccount",
+			"params": [Test_rpc.import_account],
+			"id": 1,
+			"jsonrpc": "2.0",
+		}
+
+		response = requests.post(url=URL, data=json.dumps(bad_data))
+		is_json, json_data = try_load_json(response.text)
+		self.assertFalse(json_data['result'])
+		print(json_data)
+		print("\n")
+
+	def test_personal_newAccount(self):
+		data = {
+			"method": "personal_newAccount",
+			"params": [Test_rpc.import_password],
+			"id": 1,
+			"jsonrpc": "2.0",
+		}
+
+		response = requests.post(url=URL, data=json.dumps(data))
+		is_json, json_data = try_load_json(response.text)
+		self.assertTrue(is_account(json_data['result']))
+		print(json_data)
+		print("\n")
+
+		bad_data = {
+			"method": "personal_newAccount",
+			"params": [""],
+			"id": 1,
+			"jsonrpc": "2.0",
+		}
+
+		response = requests.post(url=URL, data=json.dumps(bad_data))
+		is_json, json_data = try_load_json(response.text)
+		self.assertTrue(json_data['result'] is None)
+		self.assertEqual(json_data['error']['code'], -32602, json_data['error']['message'])
+		print(json_data)
+		print("\n")
+
+	def test_personal_sendTransaction(self):
+		data = {
+			"method": "personal_sendTransaction",
+			"params": [{
+				"from": Test_rpc.genesis_account,
+				"to": Test_rpc.import_account,
+				"gas": "0x76c0",
+				"gasPrice": "0x9184e72a000",
+				"value": "0x9184e72a",
+				"data": ""
+			}, Test_rpc.import_password],
+			"id": 1,
+			"jsonrpc": "2.0",
+		}
+
+		# Should be failed before unlock
+		response = requests.post(url=URL, data=json.dumps(data))
+		is_json, json_data = try_load_json(response.text)
+		self.assertTrue(is_hex(json_data['result']))
+		print(json_data)
+		print("\n")
+
+	def test_personal_unlockAccount(self):
+		unlock_data = {
+			"method": "personal_unlockAccount",
+			"params": [
+				Test_rpc.genesis_account,
+				Test_rpc.import_password,
+				],
+			"id": 1,
+			"jsonrpc": "2.0",
+		}
+		response = requests.post(url=URL, data=json.dumps(unlock_data))
+		self.assertEqual(response.status_code, 200)
+		is_json, json_data = try_load_json(response.text)
+		self.assertTrue(is_json, response.text)
+		json_data = json.loads(response.text)
+		self.assertTrue(json_data['result'])
+
+	def test_personal_sign(self):
+		data = {
+			"method": "personal_sign",
+			"params": [
+				"0xdeadbeaf",
+				Test_rpc.import_account,
+				Test_rpc.import_password,
+			],
+			"id": 1,
+			"jsonrpc": "2.0",
+		}
+		response = requests.post(url=URL, data=json.dumps(data))
+		self.assertEqual(response.status_code, 200)
+		is_json, json_data = try_load_json(response.text)
+		self.assertTrue(is_json, response.text)
+		json_data = json.loads(response.text)
+		self.assertTrue(is_hex(json_data['result']))
+
+	def test_personal_ecRecover(self):
+		data = {
+			"method": "personal_sign",
+			"params": [
+				"0xdeadbeaf",
+				Test_rpc.import_account,
+				Test_rpc.import_password,
+			],
+			"id": 1,
+			"jsonrpc": "2.0",
+		}
+		response = requests.post(url=URL, data=json.dumps(data))
+		self.assertEqual(response.status_code, 200)
+		is_json, json_data = try_load_json(response.text)
+		self.assertTrue(is_json, response.text)
+		json_data = json.loads(response.text)
+
+		cover_data = {
+			"method": "personal_ecRecover",
+			"params": [
+				"0xdeadbeaf",
+				json_data['result'],
+			],
+			"id": 1,
+			"jsonrpc": "2.0",
+		}
+		response = requests.post(url=URL, data=json.dumps(cover_data))
+		self.assertEqual(response.status_code, 200)
+		is_json, json_data = try_load_json(response.text)
+		self.assertTrue(is_json, response.text)
+		json_data = json.loads(response.text)
+		self.assertEqual(json_data['result'], Test_rpc.import_account)
+
 if __name__ == "__main__":
 	suite = unittest.TestSuite()
 	# suite.addTest(Test_rpc("test_account_import")) # need to check bad_data
@@ -1711,9 +1940,11 @@ if __name__ == "__main__":
 	# suite.addTest(Test_rpc("test_account_validate"))
 	# suite.addTest(Test_rpc("test_account_password_change"))
 	# suite.addTest(Test_rpc("test_account_list"))
+	# suite.addTest(Test_rpc("test_account_state_list"))
 	# suite.addTest(Test_rpc("test_account_block_list"))
 
 	# suite.addTest(Test_rpc("test_block"))
+	# suite.addTest(Test_rpc("test_block_summary"))  #summary has issue
 	# suite.addTest(Test_rpc("test_block_state"))
 	# suite.addTest(Test_rpc("test_block_states"))
 	# suite.addTest(Test_rpc("test_block_traces"))
@@ -1721,6 +1952,10 @@ if __name__ == "__main__":
 	# suite.addTest(Test_rpc("test_status"))
 	# suite.addTest(Test_rpc("test_witness_list"))
 	# suite.addTest(Test_rpc("test_version"))
+	# suite.addTest(Test_rpc("test_peers"))
+	# suite.addTest(Test_rpc("test_nodes"))
+	# suite.addTest(Test_rpc("test_logs"))
+	suite.addTest(Test_rpc("test_debug_storage_range_at"))
 	# suite.addTest(Test_rpc("test_account_remove"))
 
 	# suite.addTest(Test_rpc("test_eth_blockNumber"))
@@ -1748,7 +1983,14 @@ if __name__ == "__main__":
 	# suite.addTest(Test_rpc("test_eth_getBlockByHash"))
 	# suite.addTest(Test_rpc("test_eth_accounts"))
 	# suite.addTest(Test_rpc("test_eth_sendTransaction"))
-	suite.addTest(Test_rpc("personal_listAccounts"))
+	# suite.addTest(Test_rpc("test_personal_listAccounts"))
+	# suite.addTest(Test_rpc("test_personal_lockAccount"))
+	# suite.addTest(Test_rpc("test_personal_newAccount"))
+	# suite.addTest(Test_rpc("test_personal_unlockAccount"))
+	# suite.addTest(Test_rpc("test_personal_sendTransaction"))
+	# suite.addTest(Test_rpc("test_personal_sign"))
+	# suite.addTest(Test_rpc("test_personal_ecRecover"))
+
 
 	result = unittest.TextTestRunner(verbosity=3).run(suite)
 	if result.wasSuccessful():
