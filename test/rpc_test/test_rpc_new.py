@@ -5,6 +5,8 @@ import json
 import requests
 import re
 import string
+import types
+
 URL = "http://192.168.109.194:8765"
 #0xC98A676DE3E0C539742E3023F7755C57E331E42F
 #Judge account number, mcp_start, remove I, O, l, 0, length equal to 42	
@@ -73,6 +75,8 @@ def is_existed(json_value, key):
 		return True
 	else:
 		return False
+def is_boolean(value):
+	return type(value) == bool
 
 class Test_rpc(unittest.TestCase):
 	@classmethod
@@ -83,6 +87,8 @@ class Test_rpc(unittest.TestCase):
 		Test_rpc.import_public_key = "F16C3C1E3775B13C139038740F976E5E549A41D94E502E3DF4BE118CD81D5310459E5FA7F5A95B7DBC935E30BB55D624DF8F767280D1BAF329EC7E5EF96BF137"
 		Test_rpc.to_account = "0xC63BE4C25041F761C5E8D9AA73FEFC57E4AA655B"
 		Test_rpc.block_hash = "0xd6f6021567d7b8e4a71df28ec3408a05a95ebb21b11b7ab194f5ce1ad19e35e0"
+		Test_rpc.transaction_hash = "0x3dc115c4855e7f8b9caa566794aaf260b22fd080ae8fad8ae4ddf27560215cad"
+		Test_rpc.block_number = "0x19"
 	'''
 	{
 	"code": 0,
@@ -1091,7 +1097,602 @@ class Test_rpc(unittest.TestCase):
 
 		response = requests.post(url=URL, data=json.dumps(data))
 		is_json, json_data = try_load_json(response.text)
-		self.assertTrue(is_hex(json_data['result']['startingBlock']))
+		print(json_data)
+		print("\n")
+
+	'''
+	{
+		"jsonrpc": "2.0",
+		"id": 1,
+		"result": "0x60606040..."
+	}
+	'''
+	def test_eth_getCode(self):
+		data = {
+			"method": "eth_getCode",
+			"params": ["0xdd2b08c181d4077e2530a3e41b7271c5d4936ebd","latest"],
+			"id": 1,
+			"jsonrpc": "2.0",
+		}
+
+		response = requests.post(url=URL, data=json.dumps(data))
+		is_json, json_data = try_load_json(response.text)
+		self.assertTrue(is_hex(json_data['result']))
+		print(json_data)
+		print("\n")
+
+	'''
+	{
+		"jsonrpc": "2.0",
+		"id": 1,
+		"result": "0x0000000000000000000000000000000000000000000000000000000000000000"
+	}
+	'''
+	def test_eth_getStorageAt(self):
+		data = {
+			"method": "eth_getStorageAt",
+			"params": ["0xdd2b08c181d4077e2530a3e41b7271c5d4936ebd", "latest"],
+			"id": 1,
+			"jsonrpc": "2.0",
+		}
+
+		response = requests.post(url=URL, data=json.dumps(data))
+		is_json, json_data = try_load_json(response.text)
+		self.assertTrue(is_hex(json_data['result']))
+		print(json_data)
+		print("\n")
+
+	'''
+	{
+	  "jsonrpc": "2.0",
+	  "id": 1,
+	  "result": "1"
+	}
+	'''
+	def test_net_version(self):
+		data = {
+			"method": "net_version",
+			"params": [],
+			"id": 1,
+			"jsonrpc": "2.0",
+		}
+
+		response = requests.post(url=URL, data=json.dumps(data))
+		is_json, json_data = try_load_json(response.text)
+		self.assertTrue(is_hex(json_data['result']))
+		print(json_data)
+		print("\n")
+
+	'''
+	{
+	  "jsonrpc": "2.0",
+	  "id": 1,
+	  "result": true
+	}
+	'''
+	def test_net_listening(self):
+		data = {
+			"method": "net_listening",
+			"params": [],
+			"id": 1,
+			"jsonrpc": "2.0",
+		}
+
+		response = requests.post(url=URL, data=json.dumps(data))
+		is_json, json_data = try_load_json(response.text)
+		self.assertTrue(is_boolean(json_data['result']))
+		print(json_data)
+		print("\n")
+
+	'''
+	{
+	  "jsonrpc": "2.0",
+	  "id": 1,
+	  "result": "0x64"
+	}
+	'''
+	def test_net_peerCount(self):
+		data = {
+			"method": "net_peerCount",
+			"params": [],
+			"id": 1,
+			"jsonrpc": "2.0",
+		}
+
+		response = requests.post(url=URL, data=json.dumps(data))
+		is_json, json_data = try_load_json(response.text)
+		self.assertTrue(is_hex(json_data['result']))
+		print(json_data)
+		print("\n")
+
+	'''
+	{
+		"jsonrpc": "2.0",
+		"id": 1,
+		"result": "Geth/v1.8.15-omnibus-255989da/linux-amd64/go1.10.1"
+	}
+	'''
+	def test_web3_clientVersion(self):
+		data = {
+			"method": "web3_clientVersion",
+			"params": [],
+			"id": 1,
+			"jsonrpc": "2.0",
+		}
+
+		response = requests.post(url=URL, data=json.dumps(data))
+		is_json, json_data = try_load_json(response.text)
+		self.assertTrue(is_str(json_data['result']))
+		print(json_data)
+		print("\n")
+
+	'''
+	{
+	  "jsonrpc": "2.0",
+	  "id": 1,
+	  "result": {
+		"blockHash": "0xb3b20624f8f0f86eb50dd04688409e5cea4bd02d700bf6e79e9384d47d6a5a35",
+		"blockNumber": "0x5bad55",
+		"from": "0x398137383b3d25c92898c656696e41950e47316b",
+		"gas": "0x1d45e",
+		"gasPrice": "0xfa56ea00",
+		"hash": "0xbb3a336e3f823ec18197f1e13ee875700f08f03e2cab75f0d0b118dabb44cba0",
+		"input": "0xf7d8c88300000000000000000000000000000000000000000000000000000000000cee6100000000000000000000000000000000000000000000000000000000000ac3e1",
+		"nonce": "0x18",
+		"r": "0x2a378831cf81d99a3f06a18ae1b6ca366817ab4d88a70053c41d7a8f0368e031",
+		"s": "0x450d831a05b6e418724436c05c155e0a1b7b921015d0fbc2f667aed709ac4fb5",
+		"to": "0x06012c8cf97bead5deae237070f9587f8e7a266d",
+		"transactionIndex": "0x11",
+		"type": "0x0",
+		"v": "0x25",
+		"value": "0x1c6bf526340000"
+	  }
+	}
+	'''
+	def test_eth_getTransactionByHash(self):
+		data = {
+			"method": "eth_getTransactionByHash",
+			"params": [Test_rpc.transaction_hash],
+			"id": 1,
+			"jsonrpc": "2.0",
+		}
+
+		response = requests.post(url=URL, data=json.dumps(data))
+		is_json, json_data = try_load_json(response.text)
+		self.assertEqual(json_data['result']['hash'], Test_rpc.transaction_hash)
+		print(json_data)
+		print("\n")
+
+		bad_data = {
+			"method": "eth_getTransactionByHash",
+			"params": ["dkfiuweirksdf"],
+			"id": 1,
+			"jsonrpc": "2.0",
+		}
+
+		response = requests.post(url=URL, data=json.dumps(bad_data))
+		is_json, json_data = try_load_json(response.text)
+		self.assertEqual(json_data['result'], None)
+		print(json_data)
+		print("\n")
+
+	'''
+	{
+	  "jsonrpc": "2.0",
+	  "id": 1,
+	  "result": {
+		"blockHash": "0xb3b20624f8f0f86eb50dd04688409e5cea4bd02d700bf6e79e9384d47d6a5a35",
+		"blockNumber": "0x5bad55",
+		"from": "0xfbb1b73c4f0bda4f67dca266ce6ef42f520fbb98",
+		"gas": "0x249f0",
+		"gasPrice": "0x174876e800",
+		"hash": "0x8784d99762bccd03b2086eabccee0d77f14d05463281e121a62abfebcf0d2d5f",
+		"input": "0x6ea056a9000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000bd8d7fa6f8cc00",
+		"nonce": "0x5e4724",
+		"r": "0xd1556332df97e3bd911068651cfad6f975a30381f4ff3a55df7ab3512c78b9ec",
+		"s": "0x66b51cbb10cd1b2a09aaff137d9f6d4255bf73cb7702b666ebd5af502ffa4410",
+		"to": "0x4b9c25ca0224aef6a7522cabdbc3b2e125b7ca50",
+		"transactionIndex": "0x0",
+		"type": "0x0",
+		"v": "0x25",
+		"value": "0x0"
+	  }
+	}
+	'''
+	def test_eth_getTransactionByBlockHashAndIndex(self):
+		data = {
+			"method": "eth_getTransactionByBlockHashAndIndex",
+			"params": [Test_rpc.block_hash, "0x0"],
+			"id": 1,
+			"jsonrpc": "2.0",
+		}
+
+		response = requests.post(url=URL, data=json.dumps(data))
+		is_json, json_data = try_load_json(response.text)
+		self.assertEqual(json_data['result']['blockHash'], Test_rpc.block_hash)
+		print(json_data)
+		print("\n")
+
+		bad_data = {
+			"method": "eth_getTransactionByBlockHashAndIndex",
+			"params": [Test_rpc.transaction_hash, "0x0"],
+			"id": 1,
+			"jsonrpc": "2.0",
+		}
+
+		response = requests.post(url=URL, data=json.dumps(bad_data))
+		is_json, json_data = try_load_json(response.text)
+		self.assertEqual(json_data['result'], None)
+		print(json_data)
+		print("\n")
+
+	'''
+	{
+	  "jsonrpc": "2.0",
+	  "id": 1,
+	  "result": {
+		"blockHash": "0xb3b20624f8f0f86eb50dd04688409e5cea4bd02d700bf6e79e9384d47d6a5a35",
+		"blockNumber": "0x5bad55",
+		"from": "0xfbb1b73c4f0bda4f67dca266ce6ef42f520fbb98",
+		"gas": "0x249f0",
+		"gasPrice": "0x174876e800",
+		"hash": "0x8784d99762bccd03b2086eabccee0d77f14d05463281e121a62abfebcf0d2d5f",
+		"input": "0x6ea056a9000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000bd8d7fa6f8cc00",
+		"nonce": "0x5e4724",
+		"r": "0xd1556332df97e3bd911068651cfad6f975a30381f4ff3a55df7ab3512c78b9ec",
+		"s": "0x66b51cbb10cd1b2a09aaff137d9f6d4255bf73cb7702b666ebd5af502ffa4410",
+		"to": "0x4b9c25ca0224aef6a7522cabdbc3b2e125b7ca50",
+		"transactionIndex": "0x0",
+		"type": "0x0",
+		"v": "0x25",
+		"value": "0x0"
+	  }
+	}
+	'''
+	def test_eth_getTransactionByBlockNumberAndIndex(self):
+		data = {
+			"method": "eth_getTransactionByBlockNumberAndIndex",
+			"params": [Test_rpc.block_number, "0x0"],
+			"id": 1,
+			"jsonrpc": "2.0",
+		}
+
+		response = requests.post(url=URL, data=json.dumps(data))
+		is_json, json_data = try_load_json(response.text)
+		self.assertEqual(json_data['result']['blockNumber'], Test_rpc.block_number)
+		print(json_data)
+		print("\n")
+
+		bad_data = {
+			"method": "eth_getTransactionByBlockNumberAndIndex",
+			"params": ["0x5BAD55", "0x0"],
+			"id": 1,
+			"jsonrpc": "2.0",
+		}
+
+		response = requests.post(url=URL, data=json.dumps(bad_data))
+		is_json, json_data = try_load_json(response.text)
+		self.assertEqual(json_data['result'], None)
+		print(json_data)
+		print("\n")
+
+	'''
+	{
+	  "jsonrpc": "2.0",
+	  "id": 1,
+	  "result": {
+		"blockHash": "0xb3b20624f8f0f86eb50dd04688409e5cea4bd02d700bf6e79e9384d47d6a5a35",
+		"blockNumber": "0x5bad55",
+		"contractAddress": null,
+		"cumulativeGasUsed": "0xb90b0",
+		"effectiveGasPrice":"0x746a528800",
+		"from": "0x398137383b3d25c92898c656696e41950e47316b",
+		"gasUsed": "0x1383f",
+		"logs": [
+		  {
+			"address": "0x06012c8cf97bead5deae237070f9587f8e7a266d",
+			"blockHash": "0xb3b20624f8f0f86eb50dd04688409e5cea4bd02d700bf6e79e9384d47d6a5a35",
+			"blockNumber": "0x5bad55",
+			"data": "0x000000000000000000000000398137383b3d25c92898c656696e41950e47316b00000000000000000000000000000000000000000000000000000000000cee6100000000000000000000000000000000000000000000000000000000000ac3e100000000000000000000000000000000000000000000000000000000005baf35",
+			"logIndex": "0x6",
+			"removed": false,
+			"topics": [
+			  "0x241ea03ca20251805084d27d4440371c34a0b85ff108f6bb5611248f73818b80"
+			],
+			"transactionHash": "0xbb3a336e3f823ec18197f1e13ee875700f08f03e2cab75f0d0b118dabb44cba0",
+			"transactionIndex": "0x11"
+		  }
+		],
+		"logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000080000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000080000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000800000200000000000000000000000000000",
+		"status": "0x1",
+		"to": "0x06012c8cf97bead5deae237070f9587f8e7a266d",
+		"transactionHash": "0xbb3a336e3f823ec18197f1e13ee875700f08f03e2cab75f0d0b118dabb44cba0",
+		"transactionIndex": "0x11",
+		"type": "0x0"
+	  }
+	}
+	'''
+	def test_eth_getTransactionReceipt(self):
+		data = {
+			"method": "eth_getTransactionReceipt",
+			"params": [Test_rpc.transaction_hash],
+			"id": 1,
+			"jsonrpc": "2.0",
+		}
+
+		response = requests.post(url=URL, data=json.dumps(data))
+		is_json, json_data = try_load_json(response.text)
+		self.assertEqual(json_data['result']['transactionHash'], Test_rpc.transaction_hash)
+		print(json_data)
+		print("\n")
+
+		bad_data = {
+			"method": "eth_getTransactionReceipt",
+			"params": [Test_rpc.block_hash],
+			"id": 1,
+			"jsonrpc": "2.0",
+		}
+
+		response = requests.post(url=URL, data=json.dumps(bad_data))
+		is_json, json_data = try_load_json(response.text)
+		self.assertEqual(json_data['result'], None)
+		print(json_data)
+		print("\n")
+
+	'''
+	{
+		"jsonrpc": "2.0",
+		"id": 1,
+		"result": "0x2fe84e3113d7b"
+	}
+	'''
+	def test_eth_getBalance(self):
+		data = {
+			"method": "eth_getBalance",
+			"params": [Test_rpc.genesis_account],
+			"id": 1,
+			"jsonrpc": "2.0",
+		}
+
+		response = requests.post(url=URL, data=json.dumps(data))
+		is_json, json_data = try_load_json(response.text)
+		self.assertTrue(is_hex(json_data['result']))
+		print(json_data)
+		print("\n")
+
+		bad_data = {
+			"method": "eth_getBalance",
+			"params": ["qwekqjwkejk"],
+			"id": 1,
+			"jsonrpc": "2.0",
+		}
+
+		response = requests.post(url=URL, data=json.dumps(bad_data))
+		is_json, json_data = try_load_json(response.text)
+		self.assertTrue(is_hex(json_data['result']))
+		print(json_data)
+		print("\n")
+
+	'''
+	{
+		"jsonrpc": "2.0",
+		"id": 1,
+		"result": {
+			"difficulty": "0xbfabcdbd93dda",
+			"extraData": "0x737061726b706f6f6c2d636e2d6e6f64652d3132",
+			"gasLimit": "0x79f39e",
+			"gasUsed": "0x79ccd3",
+			"hash": "0xb3b20624f8f0f86eb50dd04688409e5cea4bd02d700bf6e79e9384d47d6a5a35",
+			"logsBloom": "0x4848112002a2020aaa0812180045840210020005281600c80104264300080008000491220144461026015300100000128005018401002090a824a4150015410020140400d808440106689b29d0280b1005200007480ca950b15b010908814e01911000054202a020b05880b914642a0000300003010044044082075290283516be82504082003008c4d8d14462a8800c2990c88002a030140180036c220205201860402001014040180002006860810ec0a1100a14144148408118608200060461821802c081000042d0810104a8004510020211c088200420822a082040e10104c00d010064004c122692020c408a1aa2348020445403814002c800888208b1",
+			"miner": "0x5a0b54d5dc17e0aadc383d2db43b0a0d3e029c4c",
+			"mixHash": "0x3d1fdd16f15aeab72e7db1013b9f034ee33641d92f71c0736beab4e67d34c7a7",
+			"nonce": "0x4db7a1c01d8a8072",
+			"number": "0x5bad55",
+			"parentHash": "0x61a8ad530a8a43e3583f8ec163f773ad370329b2375d66433eb82f005e1d6202",
+			"receiptsRoot": "0x5eced534b3d84d3d732ddbc714f5fd51d98a941b28182b6efe6df3a0fe90004b",
+			"sha3Uncles": "0x8a562e7634774d3e3a36698ac4915e37fc84a2cd0044cb84fa5d80263d2af4f6",
+			"size": "0x41c7",
+			"stateRoot": "0xf5208fffa2ba5a3f3a2f64ebd5ca3d098978bedd75f335f56b705d8715ee2305",
+			"timestamp": "0x5b541449",
+			"totalDifficulty": "0x12ac11391a2f3872fcd",
+			"transactions": [
+				"0x8784d99762bccd03b2086eabccee0d77f14d05463281e121a62abfebcf0d2d5f",
+				"0x311be6a9b58748717ac0f70eb801d29973661aaf1365960d159e4ec4f4aa2d7f",
+				"0xe42b0256058b7cad8a14b136a0364acda0b4c36f5b02dea7e69bfd82cef252a2",
+				"0x4eb05376055c6456ed883fc843bc43df1dcf739c321ba431d518aecd7f98ca11",
+				"0x994dd9e72b212b7dc5fd0466ab75adf7d391cf4f206a65b7ad2a1fd032bb06d7",
+				"0xf6feecbb9ab0ac58591a4bc287059b1133089c499517e91a274e6a1f5e7dce53",
+				"0x7e537d687a5525259480440c6ea2e1a8469cd98906eaff8597f3d2a44422ff97",
+				"0xa762220e92bed6d77a2c19ffc60dad77d71bd5028c5230c896ab4b9552a39b50",
+				"0xf1fa677edda7e5add8e794732c7554cd5459a5c12781dc71de73c7937dfb2775",
+				"0x3220af8e317fde6dac80b1199f9ceeafe60ada4974a7e04a75fbce1ac4cb46c3",
+				"0x5566528978250828168f0d30bcc8a3689d129c75d820d604f7eb84c25b34ec81",
+				"0x646c98e323a05862778f0c9063a989b6aefd94f28842a3a09d2edb37a050717d",
+				"0xe951ea55764f7e8e0720f7042dd1db67525965302ed974a0c8e3b769bc1818e3",
+				"0x7ecf2528b7df3831712501f5c60ef156bf5fcac9912199e0a64afcb963ea91ca",
+				"0xc43b89783f68b2844918ea515cc146c006e5f162c9be9aedf5e7a6ae1f32e164",
+				"0xd74503ede63d6fd41367796433aa14439902e8f57293a0583e19aa6ebf3f128e",
+				"0x021e5b7d3ddac97b4c6cb9c3f333766a533c1ed9fbcfb8b2515c38ecd0c53f89",
+				"0xbb3a336e3f823ec18197f1e13ee875700f08f03e2cab75f0d0b118dabb44cba0",
+				"0x25f65866dba34783200c25fb1c120b36326c9ad3a47e8bc34c3edbc9208f1378",
+				"0x5336f5c4132ef00e8b469ecfd4ee0d6800f6bd60aefb1c62232cbce81c085ae2",
+				"0xb87410cfe0a75c004f7637736b3de1e8f4e08e9e2b05ab963622a40a5505664d",
+				"0x990857a27ec7cfd6dfd88015173adf81959b5abaff6eefbe8e9df6b0f40f2711",
+				"0x3563ccb5734b7b5015122a20b558723afe992ff1109a04b57e02f26edd5a6a38",
+				"0xd7885d9412cc494fbe680b016bf7402b633c34c66833b35cad59af2a4aff4f0b",
+				"0x48e60927d6fb9ae76f69a6400490b5ffcb2f9da3105fad6c61f21256ef0c217c",
+				"0x9e30af26ff3836c4b55af62ba134bc55db662cf1d396cca437d12a8195bfcbe4",
+				"0x2476eeede4764c6871f50f3235ebeb9a56d33b41bc3bb1ce3c18c5d710a0609c",
+				"0x1cd3520fbb1eb6f2f6f257ab7c3cba957806b0b87182baedb4f81c62868064c1",
+				"0x78ae3aee0ff16d8ea4f394b7b80021804e1d9f35cdbb9c6189bb6cbf58bc52c4",
+				"0xfcc75bad728b8d302ba0674ebe3122fc50e3b78fe4948ddfc0d37ee987e666ca",
+				"0xd2175464d72bcc61b2e07aa3aac742b4184480d7a9f6ae5c2ba24d9c9bb9f304",
+				"0x42b56b504e59e42a3dc94e740bb4231e6326daaac7a73ef93ee8db7b96ac5d71",
+				"0xd42681091641cd2a71f18299e8e206d5659c3076b1c63adc26f5b7740e230d2b",
+				"0x1202c354f0a00b31adf9e3d895e0c8f3896182bb3ab9fc69d6c21d31a1bf279c",
+				"0xa5cea1f6957431caf589a8dbb58c102fb191b39967fbe8d26cecf6f28bb835da",
+				"0x2045efeb2f5ea9176690ece680d3fd7ca9e945d0d572d17786810d323628f98c",
+				"0xbf55d13976616a23114b724b14049eaaf91db3f1950320b5306006a6b648b24f",
+				"0x9e5c5ea885eb1d6b1b3ffcf703e3381b7681f7420f35408d30ba93ec0cdf0792",
+				"0x6f1a61dc4306ca5e976a1706afe1f32279548df98e0373c5fee0ea189ddb77a0",
+				"0xc5c16b30c22ee4f90c3a2de70554f7975eb476592ff13c61986d760da6cf7f9d",
+				"0xb09de28497227c0537df0a78797fa00407dcd04a4f90d9de602484b61f7bf169",
+				"0x1bfea966fa7772a26b4b2c8add15ceedcb70a903618f5d4603d69f52b9954025",
+				"0xe58be9c0e3cedd4444c76d1adc098ba40cbe21ef886b2bfc2edb6ed96ba8d966",
+				"0x3a29096f712ccdafd56e9a3c635d4fe2e6224ac3666d466c21da66c8829bbfd6",
+				"0x31feab77d7c1c87eb79af54193400c8edad16645e1ea5fcc10f2eaec51fe3992",
+				"0x4e0278fce62dca8e23cfae6a020fcd3b2facc03244d54b964bbde424f902ffe1",
+				"0x300239a64a50ad0e646c232f85cfa4f3d3ed30090cd574329c782d95c2b42532",
+				"0x41755f354b06b4b8a452db1cc9b5c810c75b1bbe236603cbc0950c3c81b80c51",
+				"0x1e3fbeffc326f1ffd8559c6024c12557e6014bc02c12d65dbc1baa4e1aed94b7",
+				"0x4a459a32cf68e9b7697a3a656432b340d6d27c3d4a513e6cce770d63df99839a",
+				"0x3ef484913d185de728c787a1053ec1444ec1c7a5827eecba521d3b406b088a89",
+				"0x43afa584c21f27a2747a8397b00d3ec4b460d929b61b510d017f01037a3ded3f",
+				"0x44e6a37a6c1d8696fa0537385b9d1bb535b2b3309b5482209e95b5b6c58fc8da",
+				"0x2a8bca48147955efcfd697f1a97304ae4cc467a7778741c2c47e516610f0a876",
+				"0x4c6bd64c8974f8b949cfe265da1c1bb997e3c886f024b38c99d170acc70b83df",
+				"0x103f0cca1ae13600c5be5b217e92430a72b0471d05e283c105f5d0df36438b2a",
+				"0x00a06bf6fbd07b3a89ef9031a2108c8fa31b467b33a6edcd6eb3687c158743cf",
+				"0x0175496d8265dedd693cf88884626c33b699ebcf4f2110e4c7fb7603c53215b2",
+				"0x11fb433ab551b33f30d00a34396835fab72e316e81d1e0afcbc92e79801f30c4",
+				"0x060dc4541fd534d107f6e49b96d84f5ec6dbe4eb714890e800bd02399a6bfb7f",
+				"0x01956de9f96f9a268c6524fffb9919d7fa3de7a4c25d53c2ccc43d0cb022a7ff",
+				"0x15057378f2d223829269ec0f31ba4bb03146134220d34eb8eb7c403aa4a2e569",
+				"0x16ea0218d72b5e3f69d0ae4daa8085150f5f7e69ee22a3b054744e35e2082879",
+				"0x0baf4e8ff92058c1cac3b95c237edb4d2c12ad41d210356c209f1e0bf0d2d12a",
+				"0x1a8ac77aff614caeca16a5a3a0931375a5a4fbe0ef1e15d6d15bf6f8e3c60f4f",
+				"0xdb899136f41a3d4710907345b09d241490776383271e6b9887499fd05b80fcd4",
+				"0x1007e17b1120d37fb930f953d8a3440ca11b8fd84470eb107c8b4a402a9813fd",
+				"0x0910324706ffeebf8aa25ca0784636518bf67e5d173c22438a64dd43d5f4aa2a",
+				"0x028f2bee56aee7005abcb2258d6d9f0f078a85a65c3d669aca40564ef4bd7f94",
+				"0x14adac9bc94cde3166f4b7d42e8862a745483c708e51afbe89ecd6532acc532e",
+				"0x54bed12ccad43523ba8527d1b99f5fa04a55b3a7724cfff2e0a21ec90b08590e",
+				"0xcdf05df923f6e418505750069d6486276b15fcc3cd2f42a7044c642d19a86d51",
+				"0x0c66977ed87db75074cb2bea66b254af3b20bb3315e8095290ceb1260b1b7449",
+				"0x22626e2678da34b505b233ef08fc91ea79c5006dff00e33a442fa51a11e34c25",
+				"0xe2989560000a1fc7c434c5e9c4bba82e1501bf435292ac25acc3cb182c1c2cd0",
+				"0x348cfc85c58b7f3b2e8bdaa517dc8e3c5f8fb41e3ba235f28892b46bc3484756",
+				"0x4ac009cebc1f2416b9e39bcc5b41cd53b1a9239e8f6c0ab043b8830ef1ffc563",
+				"0xf2a96682362b9ffe9a77190bcbc47937743b6e1da2c56257f9b562f15bbd3cfa",
+				"0xf1cd627c97746bc75727c2f0efa2d0dc66cca1b36d8e45d897e18a9b19af2f60",
+				"0x241d89f7888fbcfadfd415ee967882fec6fdd67c07ca8a00f2ca4c910a84c7dd"
+			],
+			"transactionsRoot": "0xf98631e290e88f58a46b7032f025969039aa9b5696498efc76baf436fa69b262",
+			"uncles": [
+				"0x824cce7c7c2ec6874b9fa9a9a898eb5f27cbaf3991dfa81084c3af60d1db618c"
+			]
+		}
+	}
+	'''
+	def test_eth_getBlockByHash(self):
+		data = {
+			"method": "eth_getBlockByHash",
+			"params": [Test_rpc.block_hash],
+			"id": 1,
+			"jsonrpc": "2.0",
+		}
+
+		response = requests.post(url=URL, data=json.dumps(data))
+		is_json, json_data = try_load_json(response.text)
+		self.assertEqual(json_data['result']['hash'], Test_rpc.block_hash)
+		print(json_data)
+		print("\n")
+
+		bad_data = {
+			"method": "eth_getBlockByHash",
+			"params": [Test_rpc.transaction_hash],
+			"id": 1,
+			"jsonrpc": "2.0",
+		}
+
+		response = requests.post(url=URL, data=json.dumps(bad_data))
+		is_json, json_data = try_load_json(response.text)
+		self.assertEqual(json_data['result'], None)
+		print(json_data)
+		print("\n")
+
+	'''
+	{
+	  "jsonrpc": "2.0",
+	  "id": 1,
+	  "result": []
+	}
+	'''
+	def test_eth_accounts(self):
+		data = {
+			"method": "eth_accounts",
+			"params": [],
+			"id": 1,
+			"jsonrpc": "2.0",
+		}
+
+		response = requests.post(url=URL, data=json.dumps(data))
+		is_json, json_data = try_load_json(response.text)
+		self.assertTrue(json_data['result'] is not None)
+		print(json_data)
+		print("\n")
+
+	'''
+	{
+	  "id": 1,
+	  "jsonrpc": "2.0",
+	  "result": "0xe670ec64341771606e55d6b4ca35a1a6b75ee3d5145a99d05921026d1527331"
+	}
+	'''
+	def test_eth_sendTransaction(self):
+		data = {
+			"method": "eth_sendTransaction",
+			"params": [{
+				"from": Test_rpc.genesis_account,
+				"to": Test_rpc.import_account,
+				"gas": "0x76c0",
+				"gasPrice": "0x9184e72a000",
+				"value": "0x9184e72a",
+				"data": ""
+			}],
+			"id": 1,
+			"jsonrpc": "2.0",
+		}
+
+		# Should be failed before unlock
+		response = requests.post(url=URL, data=json.dumps(data))
+		is_json, json_data = try_load_json(response.text)
+		self.assertTrue(json_data['result'] is None)
+		self.assertEqual(json_data['error']['code'], -32602, json_data['error']['message'])
+		print(json_data)
+		print("\n")
+
+		# unlock account before send
+		unlock_data = {
+			"action": "account_unlock",
+			"account": Test_rpc.genesis_account,
+			"password": Test_rpc.import_password
+		}
+		response = requests.post(url=URL, data=json.dumps(unlock_data))
+		self.assertEqual(response.status_code, 200)
+		is_json, json_data = try_load_json(response.text)
+		self.assertTrue(is_json, response.text)
+		json_data = json.loads(response.text)
+		self.assertEqual(json_data['code'], 0, json_data['msg'])
+
+		# resend after unlock
+		response = requests.post(url=URL, data=json.dumps(data))
+		is_json, json_data = try_load_json(response.text)
+		self.assertTrue(is_hex(json_data['result']))
+		print(json_data)
+		print("\n")
+
+	def test_personal_listAccounts(self):
+		data = {
+			"method": "personal_listAccounts",
+			"params": [],
+			"id": 1,
+			"jsonrpc": "2.0",
+		}
+
+		response = requests.post(url=URL, data=json.dumps(data))
+		is_json, json_data = try_load_json(response.text)
+		self.assertTrue(json_data['result'] is not None)
 		print(json_data)
 		print("\n")
 
@@ -1132,8 +1733,22 @@ if __name__ == "__main__":
 	# suite.addTest(Test_rpc("test_eth_getBlockTransactionCountByNumber"))
 	# suite.addTest(Test_rpc("test_eth_protocolVersion"))
 	# suite.addTest(Test_rpc("test_eth_syncing"))
-	suite.addTest(Test_rpc("test_eth_getLogs"))
-
+	# suite.addTest(Test_rpc("test_eth_getLogs"))  #needed to check again when full data
+	# suite.addTest(Test_rpc("test_eth_getCode"))
+	# suite.addTest(Test_rpc("test_eth_getStorageAt"))  #needed to check on the MCP
+	# suite.addTest(Test_rpc("test_net_version"))
+	# suite.addTest(Test_rpc("test_net_listening"))
+	# suite.addTest(Test_rpc("test_net_peerCount"))
+	# suite.addTest(Test_rpc("test_web3_clientVersion"))
+	# suite.addTest(Test_rpc("test_eth_getTransactionByHash"))
+	# suite.addTest(Test_rpc("test_eth_getTransactionByBlockHashAndIndex"))
+	# suite.addTest(Test_rpc("test_eth_getTransactionByBlockNumberAndIndex"))
+	# suite.addTest(Test_rpc("test_eth_getTransactionReceipt"))
+	# suite.addTest(Test_rpc("test_eth_getBalance"))
+	# suite.addTest(Test_rpc("test_eth_getBlockByHash"))
+	# suite.addTest(Test_rpc("test_eth_accounts"))
+	# suite.addTest(Test_rpc("test_eth_sendTransaction"))
+	suite.addTest(Test_rpc("personal_listAccounts"))
 
 	result = unittest.TextTestRunner(verbosity=3).run(suite)
 	if result.wasSuccessful():

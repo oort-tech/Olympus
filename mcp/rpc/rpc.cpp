@@ -1938,7 +1938,7 @@ void mcp::rpc_handler::net_listening(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::net_peerCount(mcp::json &j_response, bool &)
 {
-	j_response["result"] = m_host->get_peers_count();
+	j_response["result"] = toJS(m_host->get_peers_count());
 }
 
 void mcp::rpc_handler::web3_clientVersion(mcp::json &j_response, bool &)
