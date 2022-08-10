@@ -669,7 +669,7 @@ void mcp::block_processor::do_process_dag_item(mcp::timeout_db_transaction & tim
 
 	std::shared_ptr<mcp::block_state> last_summary_block = m_local_cache->block_state_get(transaction, block->last_summary_block());
 	assert_x(last_summary_block);
-	uint64_t elect_epoch = *last_summary_block->main_chain_index;
+	uint64_t elect_epoch = mcp::approve::calc_elect_epoch(*last_summary_block->main_chain_index);
 	m_chain->set_last_summary_mci(transaction, *last_summary_block->main_chain_index);
 	LOG(m_log.info) << "[do_process_dag_item] m_last_summary_mci = " << last_summary_block->main_chain_index;
 
@@ -687,25 +687,18 @@ void mcp::block_processor::do_process_dag_item(mcp::timeout_db_transaction & tim
 
 	for (auto const & approve_hash : block->approves())
 	{
-		LOG(m_log.info) << "[do_process_dag_item] " << __LINE__;
 		/// Unprocessed transactions cannot be discarded because the cache is full.  todo zhouyou
 		auto t = m_aq->get(approve_hash, elect_epoch);
-		LOG(m_log.info) << "[do_process_dag_item] " << __LINE__;
 		if (t == nullptr || m_local_cache->approve_exists(transaction, approve_hash)) /// transaction maybe processed yet
 		{
 			continue;
 		}
-		LOG(m_log.info) << "[do_process_dag_item] " << __LINE__;
 		m_chain->save_approve(timeout_tx, m_local_cache, t);
-		LOG(m_log.info) << "[do_process_dag_item] " << __LINE__;
 	}
-		LOG(m_log.info) << "[do_process_dag_item] " << __LINE__;
 
 	/// save block and try advance 
 	m_chain->save_dag_block(timeout_tx, m_local_cache, block);
-		LOG(m_log.info) << "[do_process_dag_item] " << __LINE__;
 	m_chain->try_advance(timeout_tx, m_local_cache);
-	LOG(m_log.info) << "[do_process_dag_item] out";
 }
 
 void mcp::block_processor::process_missing(std::shared_ptr<mcp::block_processor_item> item_a, std::unordered_set<mcp::block_hash> const & missings, h256Hash const & transactions, h256Hash const & approves)

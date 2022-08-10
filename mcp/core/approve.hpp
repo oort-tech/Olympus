@@ -83,6 +83,7 @@ namespace mcp
 		static uint64_t calc_elect_epoch(uint64_t last_summary_mci);
 		
 		void show() const;
+		uint64_t epoch() { return m_epoch; }
 
 		uint64_t m_epoch;
 		std::vector<uint8_t> m_proof;
