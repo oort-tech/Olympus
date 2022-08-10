@@ -840,7 +840,7 @@ void mcp::rpc_handler::block(mcp::json &j_response, bool &)
 		throw "";
 	}
 
-	mcp::json j_block = toJson(*block, true);
+	mcp::json j_block = toJson(*block, false);
 	if (!m_cache->block_number_get(transaction, block_hash, block_number))
 	{
 		j_block["number"] = toJS(block_number);

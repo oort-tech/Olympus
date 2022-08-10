@@ -125,6 +125,8 @@ namespace mcp
 			}
 		}
 
+		LOG(m_log.info) << "importLocal transaction,hash: " << _transaction.sha3().hexPrefixed() << " ,nonce:" << _transaction.nonce();
+
 		///Notify unHandle to handle dependencies,block process block missing links,but before add to unhandle transaction come in.
 		if (ImportResult::Success == ret.first)/// first import && successed,broadcast it
 		{
@@ -139,7 +141,6 @@ namespace mcp
 	{
 		checkTx(_transaction); ///check balance and nonce
 		auto ret = import(_transaction,true);
-		LOG(m_log.info) << "importLocal transaction,hash: " << _transaction.sha3().hex() << " ,nonce:" << _transaction.nonce();
 		if (ImportResult::Success == ret)/// first import && successed,broadcast it
 		{
 			m_async_task->sync_async([this, _transaction]() {
@@ -547,6 +548,8 @@ namespace mcp
 		h256s dels;
 		for (auto h : _txHashs)
 		{
+			LOG(m_log.info) << "drop transaction,hash: " << h.hexPrefixed();
+
 			if (m_known.count(h))
 			{
 				dels.push_back(h);

@@ -747,6 +747,9 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 		for (auto iter(hashs.begin()); iter != hashs.end(); iter++)
 		{
 			mcp::block_hash const & dag_stable_block_hash(*iter);
+
+			LOG(m_log.info) << "[advance_stable_mci]" << dag_stable_block_hash.hexPrefixed();
+
 			m_last_stable_index_internal++;
 			std::vector<bytes> receipts;
 			{
@@ -809,7 +812,7 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 					}
 					catch (dev::eth::InvalidNonce const& _e)
 					{
-						LOG(m_log.info) << "transaction exec not expect nonce,hash: " << _t->sha3().hex()
+						LOG(m_log.info) << "transaction exec not expect nonce,hash: " << _t->sha3().hexPrefixed()
 							<< ", from: " << dev::toJS(_t->sender())
 							<< ", to: " << dev::toJS(_t->to())
 							<< ", value: " << _t->value();
@@ -828,7 +831,7 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 						throw;
 					}
 
-					LOG(m_log.info) << "exec transaction,hash: " << link_hash.hex() << " ,nonce:" << _t->nonce();
+					LOG(m_log.info) << "exec transaction,hash: " << link_hash.hexPrefixed() << " ,nonce:" << _t->nonce();
 
 					if (invalid)
 					{
