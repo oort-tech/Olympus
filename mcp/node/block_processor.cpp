@@ -696,6 +696,12 @@ void mcp::block_processor::do_process_dag_item(mcp::timeout_db_transaction & tim
 		}
 		m_chain->save_approve(timeout_tx, m_local_cache, t);
 	}
+	///test
+	for (auto const & p : block->parents())
+	{
+		LOG(m_log.info) << "[do_process_dag_item] blockhash: " << block_hash.hexPrefixed() << " ,parent:" << p.hexPrefixed();
+	}
+
 
 	/// save block and try advance 
 	m_chain->save_dag_block(timeout_tx, m_local_cache, block);
