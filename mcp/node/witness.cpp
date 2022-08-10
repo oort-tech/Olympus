@@ -256,7 +256,7 @@ void mcp::witness::send_approve(uint64_t last_summary_mci)
     // }
 
 	auto a = mcp::approve(as, m_secret);
-	a.show();
+	//a.show();
 	m_aq->importLocal(a);
 	return;
 }

@@ -49,7 +49,7 @@ namespace mcp
 
 	ImportApproveResult ApproveQueue::manageImport_WITH_LOCK(h256 const& _h, approve const& _approve, bool isLocal)
 	{
-		LOG(m_log.info) << "[manageImport_WITH_LOCK] in";
+		LOG(m_log.debug) << "[manageImport_WITH_LOCK] in";
 		try
 		{
 			assert(_h == _approve.sha3());
@@ -76,7 +76,7 @@ namespace mcp
 
 	bool ApproveQueue::remove_WITH_LOCK(h256 const& _txHash, uint64_t _epoch)
 	{
-		LOG(m_log.info) << "[remove_WITH_LOCK] in";
+		LOG(m_log.debug) << "[remove_WITH_LOCK] in";
 		if(m_current.find(_epoch) == m_current.end()){
 			return false;
 		}
@@ -94,7 +94,7 @@ namespace mcp
 
 	ImportApproveResult ApproveQueue::import(approve const& _approve, bool isLoccal, IfDropped _ik)
 	{
-		LOG(m_log.trace) << "[import] in";
+		LOG(m_log.debug) << "[import] in";
 
 		// Check if we already know this approve.
 		h256 h = _approve.sha3();
@@ -117,13 +117,13 @@ namespace mcp
 			m_onImportProcessed(h);
 		}
 
-		LOG(m_log.trace) << "[import] out";
+		LOG(m_log.debug) << "[import] out";
 		return ret;
 	}
 
 	void ApproveQueue::importLocal(approve const& _approve)
 	{
-		LOG(m_log.trace) << "[importLocal] in";
+		LOG(m_log.debug) << "[importLocal] in";
 		auto ret = import(_approve,true);
 		assert_x_msg(ret == ImportApproveResult::Success, "ret="+std::to_string((uint32_t)ret));
 		
@@ -258,7 +258,7 @@ namespace mcp
 			Guard l(x_queue);
 			if (m_unverified.size() >= c_maxVerificationQueueSizeApprove)
 			{
-				LOG(m_log.info) << "Approve verification queue is full. Dropping approve";
+				LOG(m_log.debug) << "Approve verification queue is full. Dropping approve";
 				return;
 			}
 			m_unverified.emplace_back(UnverifiedApprove(_data.data(), _nodeId));
@@ -323,7 +323,7 @@ namespace mcp
 		else{
 			bool ret = m_store.stable_block_get(transaction, (_t.m_epoch-2)*epoch_period, hash);
 			if(ret){
-				LOG(m_log.info) << "[validateApprove] epoch is too high";
+				LOG(m_log.debug) << "[validateApprove] epoch is too high";
 				return ImportApproveResult::EpochIsTooHigh;
 			}
 		}

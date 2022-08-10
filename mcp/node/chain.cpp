@@ -814,7 +814,7 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 							<< ", to: " << dev::toJS(_t->to())
 							<< ", value: " << _t->value();
 						invalid = true;
-						assert(false);
+						assert_x(false);
 					}
 					//catch (Exception const& _e)
 					//{
