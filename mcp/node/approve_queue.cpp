@@ -136,7 +136,7 @@ namespace mcp
 	{
 		try
 		{
-				LOG(m_log.info) << "[drop] in";
+				LOG(m_log.debug) << "[drop] in";
 			UpgradableGuard l(m_lock);
 			for(auto hashs : _mapHashs){
 				h256s dels;
@@ -160,7 +160,7 @@ namespace mcp
 					m_current.erase(m_current.find(epoch));
 				}
 			}
-			LOG(m_log.info) << "[drop] out";
+			LOG(m_log.debug) << "[drop] out";
 		}
 		catch(const std::exception& e)
 		{
