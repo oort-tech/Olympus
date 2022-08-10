@@ -139,6 +139,7 @@ namespace mcp
 	{
 		checkTx(_transaction); ///check balance and nonce
 		auto ret = import(_transaction,true);
+		LOG(m_log.info) << "importLocal transaction,hash: " << _transaction.sha3().hex() << " ,nonce:" << _transaction.nonce();
 		if (ImportResult::Success == ret)/// first import && successed,broadcast it
 		{
 			m_async_task->sync_async([this, _transaction]() {

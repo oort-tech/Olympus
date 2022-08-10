@@ -814,6 +814,7 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 							<< ", to: " << dev::toJS(_t->to())
 							<< ", value: " << _t->value();
 						invalid = true;
+						assert(false);
 					}
 					//catch (Exception const& _e)
 					//{
@@ -826,6 +827,8 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 						std::cerr << _e.what() << std::endl;
 						throw;
 					}
+
+					LOG(m_log.info) << "exec transaction,hash: " << link_hash.hex() << " ,nonce:" << _t->nonce();
 
 					if (invalid)
 					{
