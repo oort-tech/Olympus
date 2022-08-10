@@ -40,7 +40,10 @@ def is_hex(str, is_lens=None):
 	# 		return True
 	# 	else:
 	# 		return False
-	return all(c in string.hexdigits for c in str) and (len(str) == is_lens or is_lens is None)
+	if str.lower()[:2] == '0x':
+		return all(c in string.hexdigits for c in str[2:]) and (len(str) == is_lens or is_lens is None)
+	else:
+		return all(c in string.hexdigits for c in str) and (len(str) == is_lens or is_lens is None)
 		
 #judge signature		
 def is_signature(str):
@@ -79,7 +82,7 @@ class Test_rpc(unittest.TestCase):
 		Test_rpc.import_password = "12345678"
 		Test_rpc.import_public_key = "F16C3C1E3775B13C139038740F976E5E549A41D94E502E3DF4BE118CD81D5310459E5FA7F5A95B7DBC935E30BB55D624DF8F767280D1BAF329EC7E5EF96BF137"
 		Test_rpc.to_account = "0xC63BE4C25041F761C5E8D9AA73FEFC57E4AA655B"
-	
+		Test_rpc.block_hash = "0xd6f6021567d7b8e4a71df28ec3408a05a95ebb21b11b7ab194f5ce1ad19e35e0"
 	'''
 	{
 	"code": 0,
@@ -652,7 +655,10 @@ class Test_rpc(unittest.TestCase):
 	def test_block(self):
 		data = {
 			"action": "block",
-			"hash": "412254AB895FD2E6ADE6F9076CA8297516F2845C989A13AC008CD5D70157AFFB"
+			"hash": Test_rpc.block_hash
+		}
+		bad_data = {
+			"action": "block",
 		}
 		response = requests.post(url=URL, data=json.dumps(data))
 		self.assertEqual(response.status_code, 200)
@@ -660,26 +666,81 @@ class Test_rpc(unittest.TestCase):
 		self.assertTrue(is_json, response.text)
 		json_data = json.loads(response.text)
 		self.assertEqual(json_data['code'], 0, json_data['msg'])
+		block_result = json_data['result']
+		self.assertTrue(is_hex(block_result['number']))
+		self.assertEqual(Test_rpc.block_hash, block_result['hash'])
+
+		response = requests.post(url=URL, data=json.dumps(bad_data))
+		self.assertEqual(response.status_code, 200)
+		is_json, json_data = try_load_json(response.text)
+		self.assertTrue(is_json, response.text)
+		json_data = json.loads(response.text)
+		self.assertEqual(json_data['code'], 36, json_data['msg'])
+
 
 	def test_block_state(self):
 		data = {
 			"action": "block_state",
-			"hash": "412254AB895FD2E6ADE6F9076CA8297516F2845C989A13AC008CD5D70157AFFB"
+			"hash": Test_rpc.block_hash
+		}
+		bad_data = {
+			"action": "block_state",
+			"hash": ""
 		}
 		response = requests.post(url=URL, data=json.dumps(data))
 		self.assertEqual(response.status_code, 200)
-		is_json,json_data = try_load_json(response.text)
-		self.assertTrue(is_json,response.text)
+		is_json, json_data = try_load_json(response.text)
+		self.assertTrue(is_json, response.text)
 		json_data = json.loads(response.text)
 		self.assertEqual(json_data['code'], 0, json_data['msg'])
+		self.assertTrue("content" in json_data["block_state"])
+
+		response = requests.post(url=URL, data=json.dumps(bad_data))
+		self.assertEqual(response.status_code, 200)
+		is_json, json_data = try_load_json(response.text)
+		self.assertTrue(is_json, response.text)
+		json_data = json.loads(response.text)
+		self.assertEqual(json_data['code'], 0, json_data['msg'])
+		self.assertEqual(None, json_data["block_state"])
 
 	def test_block_states(self):
 		data = {
 			"action": "block_states",
 			"hashes": [
-				"412254AB895FD2E6ADE6F9076CA8297516F2845C989A13AC008CD5D70157AFFB",
+				Test_rpc.block_hash,
+				Test_rpc.block_hash,
+			]
+		}
+		bad_data = {
+			"action": "block_states",
+			"hashes": [
+				Test_rpc.block_hash,
 				"B222C88AB9729B4DEF3F5E12962DB12A2FA80C9B50A4003CD67CE024428DAC61"
 			]
+		}
+		response = requests.post(url=URL, data=json.dumps(data))
+		self.assertEqual(response.status_code, 200)
+		is_json, json_data = try_load_json(response.text)
+		self.assertTrue(is_json,response.text)
+		json_data = json.loads(response.text)
+		self.assertEqual(json_data['code'], 0, json_data['msg'])
+		self.assertEqual(len(data['hashes']), len(json_data['block_states']))
+
+		response = requests.post(url=URL, data=json.dumps(bad_data))
+		self.assertEqual(response.status_code, 200)
+		is_json, json_data = try_load_json(response.text)
+		self.assertTrue(is_json, response.text)
+		json_data = json.loads(response.text)
+		self.assertEqual(json_data['code'], 37, json_data['msg'])
+
+	def test_block_traces(self):
+		data = {
+			"action": "block_traces",
+			"hash": Test_rpc.block_hash
+		}
+		bad_data = {
+			"action": "block_traces",
+			"hash": "sdfksdfjlskdjf"
 		}
 		response = requests.post(url=URL, data=json.dumps(data))
 		self.assertEqual(response.status_code, 200)
@@ -688,23 +749,18 @@ class Test_rpc(unittest.TestCase):
 		json_data = json.loads(response.text)
 		self.assertEqual(json_data['code'], 0, json_data['msg'])
 
-	def test_block_traces(self):
-		data = {
-			"action": "block_traces",
-			"hash": "412254AB895FD2E6ADE6F9076CA8297516F2845C989A13AC008CD5D70157AFFB"
-		}
-		response = requests.post(url=URL, data=json.dumps(data))
+		response = requests.post(url=URL, data=json.dumps(bad_data))
 		self.assertEqual(response.status_code, 200)
-		is_json,json_data = try_load_json(response.text)
-		self.assertTrue(is_json,response.text)
+		is_json, json_data = try_load_json(response.text)
+		self.assertTrue(is_json, response.text)
 		json_data = json.loads(response.text)
 		self.assertEqual(json_data['code'], 0, json_data['msg'])
 
 	def test_stable_blocks(self):
 		data = {
 			"action": "stable_blocks",
-			"limit": 100,
-			"index": 15577
+			"limit": "100",
+			"index": "0"
 		}
 		response = requests.post(url=URL, data=json.dumps(data))
 		self.assertEqual(response.status_code, 200)
@@ -719,8 +775,8 @@ class Test_rpc(unittest.TestCase):
 		}
 		response = requests.post(url=URL, data=json.dumps(data))
 		self.assertEqual(response.status_code, 200)
-		is_json,json_data = try_load_json(response.text)
-		self.assertTrue(is_json,response.text)
+		is_json, json_data = try_load_json(response.text)
+		self.assertTrue(is_json, response.text)
 		json_data = json.loads(response.text)
 		self.assertEqual(json_data['code'], 0, json_data['msg'])
 	
@@ -729,20 +785,7 @@ class Test_rpc(unittest.TestCase):
     "code": 0,
     "msg": "OK",
     "witness_list": [
-        "mcp_321JDA7Brgbnm64iY2Xh8yHMEqEgBDutnoTKVLcxW2DJvJLUsS",
-        "mcp_32RmC9FsxjgLkgRQ58j3CdLg79cQE3KaY2wAT1QthBTU25vpd3",
-        "mcp_3MnXfV9hbmxVPdgfrPqgUiH6N7VbkSEhn5VqBCzBcxzTzkEUxU",
-        "mcp_3SrfL6LnPbtyf6sanrgtKs1BTYDN8taacGBVG37LfZVqXvRHbf",
-        "mcp_3igvJpdDiV4v5HxEzCifFcUpKvWsk3qWYNrTrbEVQztKbpyW1z",
-        "mcp_3tiy2jgoUENkszPjrHjQGfmopqwV5m9BcEh2Grb1zDYgSGnBF7",
-        "mcp_47E2jJ9rXVk5GRBcTLQMLQHXqsrnVcV5Kv2CWQJ6dnUaugnvii",
-        "mcp_49BvoaSgGnyfPdaHfrSdac74fcxV4cUdysskHSQPQ8XisShN3P",
-        "mcp_4HhYojuHanxQ57thkSxwy5necRtDFwiQP7zqngBDZHMjqdPiMS",
-        "mcp_4MYTD6Xctkb6fEL8xUZxUwY6eqYB7ReEfB61YFrMHaZxsqLCKd",
-        "mcp_4URkteqck9rM8Vo6VzWmvKtMWoSH8vo4A1rADNAFrQHxAR23Tb",
-        "mcp_4ZJ8hBdR6dLv4hb1RPCmajdZf7ozkH1sHU18kT7xnXj4mjxxKE",
-        "mcp_4aBXjWXyN7WVGqMKH7FgnSoN9oePeEPiZsrtc2AMYyuTRJoNpb",
-        "mcp_4iig3fTcXQmz7bT2ztJPrpH8usrqGTN5zmygFqsCJQ4HgiuNvP"
+        "0x1144B522F45265C2DFDBAEE8E324719E63A1694C",
     ]
 	}
 	'''
@@ -752,14 +795,14 @@ class Test_rpc(unittest.TestCase):
 		}
 		response = requests.post(url=URL, data=json.dumps(data))
 		self.assertEqual(response.status_code, 200)
-		is_json,json_data = try_load_json(response.text)
+		is_json, json_data = try_load_json(response.text)
 		self.assertTrue(is_json,response.text)
 		json_data = json.loads(response.text)
 		self.assertEqual(json_data['code'], 0, json_data['msg'])
 		json_witness_list = json_data['witness_list']
-		self.assertTrue(len(json_witness_list)>0,json_witness_list)
+		self.assertTrue(len(json_witness_list) > 0, json_witness_list)
 		for i in json_data['witness_list']:
-			self.assertTrue(is_account(i),json_witness_list)
+			self.assertTrue(is_account(i), json_witness_list)
 		
 	
 	'''
@@ -776,7 +819,7 @@ class Test_rpc(unittest.TestCase):
 		}
 		response = requests.post(url=URL, data=json.dumps(data))
 		self.assertEqual(response.status_code, 200)
-		is_json,json_data = try_load_json(response.text)
+		is_json, json_data = try_load_json(response.text)
 		self.assertTrue(is_json,response.text)
 		json_data = json.loads(response.text)
 		self.assertEqual(json_data['code'], 0, json_data['msg'])
@@ -796,20 +839,20 @@ class Test_rpc(unittest.TestCase):
 		}
 		response = requests.post(url=URL, data=json.dumps(data))
 		self.assertEqual(response.status_code, 200)
-		is_json,json_data = try_load_json(response.text)
+		is_json, json_data = try_load_json(response.text)
 		self.assertTrue(is_json,response.text)
 		json_data = json.loads(response.text)
 		self.assertEqual(json_data['code'], 0, json_data['msg'])
 		
 		json_version = json_data['version']
 		print(type(json_version))
-		self.assertTrue(is_str(json_version),json_version)
+		self.assertTrue(is_str(json_version), json_version)
 		
 		json_rpc_version = json_data['rpc_version']
-		self.assertTrue(is_str(json_rpc_version),json_rpc_version)
+		self.assertTrue(is_str(json_rpc_version), json_rpc_version)
 		
 		json_store_version = json_data['store_version']
-		self.assertTrue(is_str(json_store_version),json_store_version)
+		self.assertTrue(is_str(json_store_version), json_store_version)
 
 
 	def test_eth_blockNumber(self):
@@ -820,21 +863,21 @@ class Test_rpc(unittest.TestCase):
 			"jsonrpc": "2.0",
 		}
 		response = requests.post(url=URL, data=json.dumps(data))
-		is_json,json_data = try_load_json(response.text)
-
+		is_json, json_data = try_load_json(response.text)
+		self.assertTrue(is_hex(json_data['result']))
 		print(json_data)
 		print("\n")
 
 	def test_eth_getTransactionCount(self):
 		data = {
 			"method": "eth_getTransactionCount",
-			"params": [Test_rpc.import_account],
+			"params": [Test_rpc.genesis_account],
 			"id": 1,
 			"jsonrpc": "2.0",
 		}
 		response = requests.post(url=URL, data=json.dumps(data))
-		is_json,json_data = try_load_json(response.text)
-
+		is_json, json_data = try_load_json(response.text)
+		self.assertTrue(is_hex(json_data['result']))
 		print(json_data)
 		print("\n")
 
@@ -846,8 +889,8 @@ class Test_rpc(unittest.TestCase):
 			"jsonrpc": "2.0",
 		}
 		response = requests.post(url=URL, data=json.dumps(data))
-		is_json,json_data = try_load_json(response.text)
-
+		is_json, json_data = try_load_json(response.text)
+		self.assertEqual('0x3cb', json_data['result'])  #Testnet ID
 		print(json_data)
 		print("\n")
 
@@ -859,8 +902,8 @@ class Test_rpc(unittest.TestCase):
 			"jsonrpc": "2.0",
 		}
 		response = requests.post(url=URL, data=json.dumps(data))
-		is_json,json_data = try_load_json(response.text)
-
+		is_json, json_data = try_load_json(response.text)
+		self.assertTrue(is_hex(json_data['result']))
 		print(json_data)
 		print("\n")
 
@@ -875,9 +918,25 @@ class Test_rpc(unittest.TestCase):
 			"id": 1,
 			"jsonrpc": "2.0",
 		}
+		bad_data = {
+			"method": "eth_estimateGas",
+			"params": [[{
+				"from": Test_rpc.import_account,
+				"gasPrice": "0x10000",
+				"data": "0x608060405234801561001057600080fd5b50336000806101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff16021790555061019c806100606000396000f3fe608060405234801561001057600080fd5b50600436106100415760003560e01c8063445df0ac146100465780638da5cb5b14610064578063fdacd576146100ae575b600080fd5b61004e6100dc565b6040518082815260200191505060405180910390f35b61006c6100e2565b604051808273ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200191505060405180910390f35b6100da600480360360208110156100c457600080fd5b8101908080359060200190929190505050610107565b005b60015481565b6000809054906101000a900473ffffffffffffffffffffffffffffffffffffffff1681565b6000809054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff163373ffffffffffffffffffffffffffffffffffffffff16141561016457806001819055505b5056fea265627a7a72315820640b8f7dab5237b9f182a064e48817bd2919b73dd07871a4fb27fef8b2092b0264736f6c63430005100032"
+			}]],
+			"id": 1,
+			"jsonrpc": "2.0",
+		}
 		response = requests.post(url=URL, data=json.dumps(data))
-		is_json,json_data = try_load_json(response.text)
+		is_json, json_data = try_load_json(response.text)
+		self.assertTrue(is_hex(json_data['result']))
+		print(json_data)
+		print("\n")
 
+		response = requests.post(url=URL, data=json.dumps(bad_data))
+		is_json, json_data = try_load_json(response.text)
+		self.assertEqual(json_data['error']['code'],  -32602, json_data['error']['message'])
 		print(json_data)
 		print("\n")
 	
@@ -888,9 +947,151 @@ class Test_rpc(unittest.TestCase):
 			"id": 1,
 			"jsonrpc": "2.0",
 		}
+		data_trans = {
+			"method": "eth_getBlockByNumber",
+			"params": ["5", True],
+			"id": 1,
+			"jsonrpc": "2.0",
+		}
 		response = requests.post(url=URL, data=json.dumps(data))
-		is_json,json_data = try_load_json(response.text)
+		is_json, json_data = try_load_json(response.text)
+		self.assertTrue(is_hex(json_data['result']['number']))
+		print(json_data)
+		print("\n")
 
+		response = requests.post(url=URL, data=json.dumps(data_trans))
+		is_json, json_data = try_load_json(response.text)
+		self.assertTrue('0x5', json_data['result']['number'])
+		self.assertTrue(is_hex(json_data['result']['parentHash']))
+		print(json_data)
+		print("\n")
+
+	def test_eth_getBlockTransactionCountByHash(self):
+		data = {
+			"method": "eth_getBlockTransactionCountByHash",
+			"params": [Test_rpc.block_hash],
+			"id": 1,
+			"jsonrpc": "2.0",
+		}
+		bad_data = {
+			"method": "eth_getBlockTransactionCountByHash",
+			"params": ["0x3sfjkwejr"],
+			"id": 1,
+			"jsonrpc": "2.0",
+		}
+		response = requests.post(url=URL, data=json.dumps(data))
+		is_json, json_data = try_load_json(response.text)
+		self.assertTrue(is_hex(json_data['result']))
+		print(json_data)
+		print("\n")
+
+		response = requests.post(url=URL, data=json.dumps(bad_data))
+		is_json, json_data = try_load_json(response.text)
+		self.assertEqual(json_data['result'], None)
+		print(json_data)
+		print("\n")
+
+	def test_eth_getBlockTransactionCountByNumber(self):
+		data_1 = {
+			"method": "eth_getBlockTransactionCountByNumber",
+			"params": ["latest"],
+			"id": 1,
+			"jsonrpc": "2.0",
+		}
+		data_2 = {
+			"method": "eth_getBlockTransactionCountByNumber",
+			"params": ["earliest"],
+			"id": 1,
+			"jsonrpc": "2.0",
+		}
+		data_3 = {
+			"method": "eth_getBlockTransactionCountByNumber",
+			"params": ["1"],
+			"id": 1,
+			"jsonrpc": "2.0",
+		}
+
+		bad_data = {
+			"method": "eth_getBlockTransactionCountByNumber",
+			"params": ["dfsdf"],
+			"id": 1,
+			"jsonrpc": "2.0",
+		}
+
+		response = requests.post(url=URL, data=json.dumps(data_1))
+		is_json, json_data = try_load_json(response.text)
+		self.assertTrue(is_hex(json_data['result']))
+		print(json_data)
+		print("\n")
+
+		response = requests.post(url=URL, data=json.dumps(data_2))
+		is_json, json_data = try_load_json(response.text)
+		self.assertTrue(is_hex(json_data['result']))
+		print(json_data)
+		print("\n")
+
+		response = requests.post(url=URL, data=json.dumps(data_3))
+		is_json, json_data = try_load_json(response.text)
+		self.assertTrue(is_hex(json_data['result']))
+		print(json_data)
+		print("\n")
+
+		response = requests.post(url=URL, data=json.dumps(bad_data))
+		is_json, json_data = try_load_json(response.text)
+		self.assertTrue(is_hex(json_data['result']))
+		print(json_data)
+		print("\n")
+
+	'''
+	{
+	  "jsonrpc": "2.0",
+	  "id": 1,
+	  "result": "0x3f"
+	}
+	'''
+	def test_eth_protocolVersion(self):
+		data = {
+			"method": "eth_protocolVersion",
+			"params": [],
+			"id": 1,
+			"jsonrpc": "2.0",
+		}
+
+		response = requests.post(url=URL, data=json.dumps(data))
+		is_json, json_data = try_load_json(response.text)
+		self.assertTrue(is_str(json_data['result']))
+		print(json_data)
+		print("\n")
+
+	'''
+		{'id': 1, 'jsonrpc': '2.0', 'result': {'startingBlock': '0x19', 'currentBlock': '0x1a', 'highestBlock': '0x19'}}
+	'''
+
+	def test_eth_syncing(self):
+		data = {
+			"method": "eth_syncing",
+			"params": [],
+			"id": 1,
+			"jsonrpc": "2.0",
+		}
+
+		response = requests.post(url=URL, data=json.dumps(data))
+		is_json, json_data = try_load_json(response.text)
+		self.assertTrue(is_hex(json_data['result']['startingBlock']))
+		print(json_data)
+		print("\n")
+
+	def test_eth_getLogs(self):
+		data = {
+			"method": "eth_getLogs",
+			"params": [{}],
+			"id": 1,
+			"jsonrpc": "2.0",
+		}
+
+		response = requests.post(url=URL, data=json.dumps(data))
+		is_json, json_data = try_load_json(response.text)
+		self.assertTrue(is_hex(json_data['result']['startingBlock']))
 		print(json_data)
 		print("\n")
 
@@ -927,6 +1128,12 @@ if __name__ == "__main__":
 	# suite.addTest(Test_rpc("test_eth_gasPrice"))
 	# suite.addTest(Test_rpc("test_eth_estimateGas"))
 	# suite.addTest(Test_rpc("test_eth_getBlockByNumber"))
+	# suite.addTest(Test_rpc("test_eth_getBlockTransactionCountByHash"))
+	# suite.addTest(Test_rpc("test_eth_getBlockTransactionCountByNumber"))
+	# suite.addTest(Test_rpc("test_eth_protocolVersion"))
+	# suite.addTest(Test_rpc("test_eth_syncing"))
+	suite.addTest(Test_rpc("test_eth_getLogs"))
+
 
 	result = unittest.TextTestRunner(verbosity=3).run(suite)
 	if result.wasSuccessful():

@@ -925,7 +925,7 @@ void mcp::rpc_handler::block_states(mcp::json &j_response, bool &)
 		auto block = m_cache->block_get(transaction, block_hash);
 		if (block == nullptr)
 		{
-			throw "";
+			BOOST_THROW_EXCEPTION(RPC_Error_BlockNotExsist());
 		}
 		std::shared_ptr<mcp::block_state> state(m_store.block_state_get(transaction, block_hash));
 		state->serialize_json(state_l);
@@ -2197,7 +2197,7 @@ void mcp::rpc_handler::eth_getBlockTransactionCountByHash(mcp::json &j_response,
 	}
 	catch (...)
 	{
-		j_response["result"] = 0;
+		j_response["result"] = nullptr;
 	}
 }
 
@@ -2378,7 +2378,7 @@ void mcp::rpc_handler::eth_getLogs(mcp::json &j_response, bool &)
 
 	try
 	{
-		uint64_t fromBlock = 0;
+		uint64_t fromBlock = m_chain->last_stable_index();
 		if (params.count("fromBlock"))
 		{
 			std::string blockText = params["fromBlock"];
@@ -2396,7 +2396,7 @@ void mcp::rpc_handler::eth_getLogs(mcp::json &j_response, bool &)
 			}
 		}
 
-		uint64_t toBlock = 0;
+		uint64_t toBlock = m_chain->last_stable_index();
 		if (params.count("toBlock"))
 		{
 			std::string blockText = params["toBlock"];
