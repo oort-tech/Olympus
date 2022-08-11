@@ -293,7 +293,7 @@ void mcp::chain::add_new_witness_list(mcp::db::db_transaction & transaction_a, u
 		uint32_t output = it->first;
 		test_witness.emplace_back(std::string("0x")+a.hex());
 		elected_list.hashs.emplace_back(it->second.approve_hash());
-		LOG(m_log.info) << "elect " << a.hexPrefixed() << " output:" << output << " hash:" << it->second.approve_hash().hexPrefixed();
+		LOG(m_log.debug) << "elect " << a.hexPrefixed() << " output:" << output << " hash:" << it->second.approve_hash().hexPrefixed();
 		it++;
 	}
 	w_param.witness_list.clear();
@@ -305,7 +305,6 @@ void mcp::chain::add_new_witness_list(mcp::db::db_transaction & transaction_a, u
 	//The elected_list corresponds to next epoch.
 	m_store.epoch_elected_approve_receipts_put(transaction_a, elected_epoch, elected_list);
 	vrf_outputs[elected_epoch].clear();
-	LOG(m_log.info) << "elect to epoch " << elected_epoch;
 }
 
 void mcp::chain::init_vrf_outputs(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a)
@@ -318,7 +317,7 @@ void mcp::chain::init_vrf_outputs(mcp::db::db_transaction & transaction_a, std::
 		auto approve_receipt = cache_a->approve_receipt_get(transaction_a, hash);
 		assert_x(approve_receipt);
 		vrf_outputs[elect_epoch].insert(std::make_pair(*(uint32_t*)approve_receipt->output().data(), *approve_receipt));
-		LOG(m_log.info) << "[init_vrf_outputs] add output: sender=" << approve_receipt->from().hexPrefixed() << " output="<<*(uint32_t*)approve_receipt->output().data() << " epoch="<<approve_receipt->epoch();
+		LOG(m_log.debug) << "[init_vrf_outputs] add output: sender=" << approve_receipt->from().hexPrefixed() << " output="<<*(uint32_t*)approve_receipt->output().data() << " epoch="<<approve_receipt->epoch();
 	}
 }
 
@@ -338,7 +337,7 @@ void mcp::chain::init_witness(mcp::db::db_transaction & transaction_a, std::shar
 			assert_x(receipt);
 
 			test_witness.emplace_back(receipt->from().hexPrefixed());
-			LOG(m_log.info) << "[init_witness] epoch" << i << "\'s receipts from=" << receipt->from().hexPrefixed();
+			LOG(m_log.debug) << "[init_witness] epoch" << i << "\'s receipts from=" << receipt->from().hexPrefixed();
 		}
 		w_param.witness_list.clear();
 		w_param.witness_list = mcp::param::to_witness_list(test_witness);		
