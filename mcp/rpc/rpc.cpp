@@ -1266,6 +1266,7 @@ void mcp::rpc_handler::status(mcp::json &j_response, bool &)
 	j_response["last_mci"] = last_mci;
 	j_response["last_stable_block_index"] = last_stable_index;
 	j_response["epoch"] = m_chain->last_epoch();
+	j_response["epoch_period"] = mcp::epoch_period;
 }
 
 void mcp::rpc_handler::peers(mcp::json &j_response, bool &)

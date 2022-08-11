@@ -924,6 +924,7 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 			}
 			witness->start();
 		}
+		chain->set_witness(witness);
 
 		std::shared_ptr<mcp::rpc> rpc = get_rpc(
 			chain_store, chain, cache, key_manager, wallet, host, background, composer,
