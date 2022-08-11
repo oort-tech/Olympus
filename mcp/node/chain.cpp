@@ -749,7 +749,7 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 		{
 			mcp::block_hash const & dag_stable_block_hash(*iter);
 
-			LOG(m_log.info) << "[advance_stable_mci]" << dag_stable_block_hash.hexPrefixed();
+			//LOG(m_log.info) << "[advance_stable_mci]" << dag_stable_block_hash.hexPrefixed();
 
 			m_last_stable_index_internal++;
 			std::vector<bytes> receipts;
@@ -818,7 +818,7 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 							<< ", to: " << dev::toJS(_t->to())
 							<< ", value: " << _t->value();
 						invalid = true;
-						assert_x(false);
+						//assert_x(false);
 					}
 					//catch (Exception const& _e)
 					//{
@@ -832,7 +832,7 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 						throw;
 					}
 
-					LOG(m_log.info) << "exec transaction,hash: " << link_hash.hexPrefixed() << " ,nonce:" << _t->nonce();
+					//LOG(m_log.info) << "exec transaction,hash: " << link_hash.hexPrefixed() << " ,nonce:" << _t->nonce();
 
 					if (invalid)
 					{
