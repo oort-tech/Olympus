@@ -49,7 +49,6 @@ namespace mcp
 
 	ImportApproveResult ApproveQueue::manageImport_WITH_LOCK(h256 const& _h, approve const& _approve, bool isLocal)
 	{
-		LOG(m_log.info) << "[manageImport_WITH_LOCK] in";
 		try
 		{
 			assert(_h == _approve.sha3());
@@ -76,7 +75,6 @@ namespace mcp
 
 	bool ApproveQueue::remove_WITH_LOCK(h256 const& _txHash, uint64_t _epoch)
 	{
-		LOG(m_log.info) << "[remove_WITH_LOCK] in";
 		if(m_current.find(_epoch) == m_current.end()){
 			return false;
 		}
@@ -136,7 +134,6 @@ namespace mcp
 	{
 		try
 		{
-				LOG(m_log.info) << "[drop] in";
 			UpgradableGuard l(m_lock);
 			for(auto hashs : _mapHashs){
 				h256s dels;
@@ -160,7 +157,6 @@ namespace mcp
 					m_current.erase(m_current.find(epoch));
 				}
 			}
-			LOG(m_log.info) << "[drop] out";
 		}
 		catch(const std::exception& e)
 		{

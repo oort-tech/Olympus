@@ -64,7 +64,7 @@ mcp::witness::witness(mcp::error_message & error_msg,
         }
     }
 
-	m_restart_not_need_send_approve = m_chain->restart_not_need_send_approve(transaction, m_cache, m_account);
+	m_chain->check_need_send_approve(transaction, m_cache, m_account);
 
     //std::cout << "Witness start success.\n" << std::flush;
     LOG(m_log.info) << "witness account:" << m_account.hexPrefixed();
@@ -132,10 +132,6 @@ void mcp::witness::check_and_witness()
 
 	uint64_t new_last_summary_mci = m_composer->get_new_last_summary_mci(transaction);
 
-	if(need_approve(new_last_summary_mci)){
-		send_approve(new_last_summary_mci);
-	}
-
 	mcp::witness_param const & w_param(mcp::param::witness_param(mcp::approve::calc_curr_epoch(new_last_summary_mci)));
 
 	if (!mcp::param::is_witness(mcp::approve::calc_curr_epoch(new_last_summary_mci), m_account))
@@ -183,82 +179,6 @@ void mcp::witness::check_and_witness()
 	}
 
 	do_witness();
-}
-
-bool mcp::witness::need_approve(uint64_t last_summary_mci){
-	static uint64_t last_epoch_num = UINT64_MAX;
-	if(last_summary_mci <= 2){
-		return false;
-	}
-
-	uint64_t elect_epoch = mcp::approve::calc_elect_epoch(last_summary_mci);
-	if(m_restart_not_need_send_approve){
-		m_restart_not_need_send_approve = false;
-		last_epoch_num = elect_epoch;
-		LOG(m_log.info) << "[need_approve] restart and not need send approve in this epoch.";
-		return false;
-	}
-	if(elect_epoch != last_epoch_num){
-		last_epoch_num = elect_epoch;
-		return true;
-	}
-	else{
-		return false;
-	}
-}
-
-void mcp::witness::send_approve(uint64_t last_summary_mci)
-{
-	ApproveSkeleton as;
-	as.epoch = mcp::approve::calc_elect_epoch(last_summary_mci);
-
-	mcp::db::db_transaction transaction(m_store.create_transaction());
-	mcp::block_hash hash;
-	std::string msg;
-	if(as.epoch <= 2){
-		msg = mcp::block_hash(0).hex();
-	}
-	else{
-		bool exists(!m_store.stable_block_get(transaction, (as.epoch-2)*epoch_period, hash));
-		assert_x(exists);
-		msg = hash.hex();
-	}
-	
-	//char msg[3]={0x31,0x32,0x33};
-	as.proof.resize(81);
-	auto* ctx = mcp::encry::get_secp256k1_ctx();
-	secp256k1_pubkey rawPubkey;
-	if (!secp256k1_ec_pubkey_create(ctx, &rawPubkey, m_secret.data()))
-        return;
-	
-	std::array<byte, 65> serializedPubkey;
-    unsigned char output[32]={0};
-    auto serializedPubkeySize = serializedPubkey.size();
-    secp256k1_ec_pubkey_serialize(
-        ctx,
-		serializedPubkey.data(),
-		&serializedPubkeySize,
-		&rawPubkey,
-		SECP256K1_EC_COMPRESSED
-	);
-    if(secp256k1_vrf_prove(as.proof.data(),m_secret.data(),&rawPubkey,msg.data(),msg.size()) == 1){
-        LOG(m_log.debug) << "[send_approve] secp256k1_vrf_prove ok";
-    }
-    else{
-        LOG(m_log.debug) << "[send_approve] secp256k1_vrf_prove fail";
-    }
-	
-    // if(secp256k1_vrf_verify(output, as.proof.data(), serializedPubkey.data(),msg.data(),msg.size()) == 1){
-    //     LOG(m_log.debug) << "[send_approve] secp256k1_vrf_verify ok" << msg;
-    // }
-    // else{
-    //     LOG(m_log.debug) << "[send_approve] secp256k1_vrf_verify fail";
-    // }
-
-	auto a = mcp::approve(as, m_secret);
-	a.show();
-	m_aq->importLocal(a);
-	return;
 }
 
 void mcp::witness::do_witness()
