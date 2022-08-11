@@ -85,11 +85,10 @@ class Test_rpc(unittest.TestCase):
         # Test_rpc.import_account = "0xaa98fd8298939186440dd9c32f716a0b0cec376b"
         Test_rpc.import_account = "0xc165dc907fc7cb3a3748f9f2b66ef8b4cd64a70e"
         Test_rpc.import_password = "12345678"
-        Test_rpc.import_public_key = "F16C3C1E3775B13C139038740F976E5E549A41D94E502E3DF4BE118CD81D5310459E5FA7F5A95B7DBC935E30BB55D624DF8F767280D1BAF329EC7E5EF96BF137"
         Test_rpc.to_account = "0xC63BE4C25041F761C5E8D9AA73FEFC57E4AA655B"
-        Test_rpc.block_hash = "0xd6f6021567d7b8e4a71df28ec3408a05a95ebb21b11b7ab194f5ce1ad19e35e0"
-        Test_rpc.transaction_hash = "0x3dc115c4855e7f8b9caa566794aaf260b22fd080ae8fad8ae4ddf27560215cad"
-        Test_rpc.block_number = "0x19"
+        Test_rpc.block_hash = "0xb56a5621e7c6c16d7a950afb2d578af2c660b0e04140f04a5cdad6a4cb0b172d"
+        Test_rpc.transaction_hash = "0xd2df4672d8957825b2b8e832fba14498d449a4e4d5a42c409f6e9c7ab9764446"
+        Test_rpc.block_number = "0x9"
     '''
     {
     "code": 0,
@@ -723,9 +722,7 @@ class Test_rpc(unittest.TestCase):
         self.assertTrue(is_json, response.text)
         json_data = json.loads(response.text)
         self.assertEqual(json_data['code'], 0, json_data['msg'])
-        block_result = json_data['result']
-        self.assertTrue(is_hex(block_result['number']))
-        self.assertEqual(Test_rpc.block_hash, block_result['hash'])
+        self.assertTrue(is_hex(json_data['summary']))
 
         response = requests.post(url=URL, data=json.dumps(bad_data))
         self.assertEqual(response.status_code, 200)
@@ -936,7 +933,6 @@ class Test_rpc(unittest.TestCase):
     def test_logs(self):
         data = {
             "action": "logs",
-            "account": "0xd2b53c6dcf4eb754de108ec0420ee7ecfc1223b3"
         }
         response = requests.post(url=URL, data=json.dumps(data))
         self.assertEqual(response.status_code, 200)
@@ -944,11 +940,22 @@ class Test_rpc(unittest.TestCase):
         self.assertTrue(is_json, response.text)
         json_data = json.loads(response.text)
         self.assertEqual(json_data['code'], 0, json_data['msg'])
-        self.assertTrue(len(json_data['logs']) > 0)
 
     def test_debug_storage_range_at(self):
         data = {
             "action": "debug_storage_range_at",
+            "hash": Test_rpc.block_hash,
+            "account": Test_rpc.genesis_account,
+            "begin": "0000000000000000000000000000000000000000000000000000000000000000",
+            "max_results": "100"
+        }
+
+        bad_data = {
+            "action": "debug_storage_range_at",
+            "hash": "9E11690B3B1CB015646ECC549A746B25E08D791E32D38363A905F2A3315C2CC1",
+            "account": "mcp4AMgTgyCdzjJCayjyELXgiSqQHiyCXjmCKN174Tiku5jUdGxp5",
+            "begin": "0000000000000000000000000000000000000000000000000000000000000000",
+            "max_results": 100
         }
         response = requests.post(url=URL, data=json.dumps(data))
         self.assertEqual(response.status_code, 200)
@@ -956,6 +963,13 @@ class Test_rpc(unittest.TestCase):
         self.assertTrue(is_json, response.text)
         json_data = json.loads(response.text)
         self.assertEqual(json_data['code'], 0, json_data['msg'])
+
+        response = requests.post(url=URL, data=json.dumps(bad_data))
+        self.assertEqual(response.status_code, 200)
+        is_json, json_data = try_load_json(response.text)
+        self.assertTrue(is_json, response.text)
+        json_data = json.loads(response.text)
+        self.assertEqual(json_data['code'], 1, json_data['msg'])
 
     def test_eth_blockNumber(self):
         data = {
@@ -2196,9 +2210,8 @@ if __name__ == "__main__":
     suite.addTest(Test_rpc("test_account_list"))
     suite.addTest(Test_rpc("test_account_state_list"))
     suite.addTest(Test_rpc("test_account_block_list"))
-
     suite.addTest(Test_rpc("test_block"))
-    # suite.addTest(Test_rpc("test_block_summary"))  #summary has issue
+    suite.addTest(Test_rpc("test_block_summary"))  #summary has issue
     suite.addTest(Test_rpc("test_block_state"))
     suite.addTest(Test_rpc("test_block_states"))
     suite.addTest(Test_rpc("test_block_traces"))
@@ -2209,9 +2222,8 @@ if __name__ == "__main__":
     suite.addTest(Test_rpc("test_peers"))
     suite.addTest(Test_rpc("test_nodes"))
     suite.addTest(Test_rpc("test_logs"))
-    # suite.addTest(Test_rpc("test_debug_storage_range_at"))
+    suite.addTest(Test_rpc("test_debug_storage_range_at"))
     suite.addTest(Test_rpc("test_account_remove"))
-
     suite.addTest(Test_rpc("test_eth_blockNumber"))
     suite.addTest(Test_rpc("test_eth_getTransactionCount"))
     suite.addTest(Test_rpc("test_eth_chainId"))
@@ -2224,7 +2236,7 @@ if __name__ == "__main__":
     suite.addTest(Test_rpc("test_eth_syncing"))
     suite.addTest(Test_rpc("test_eth_getLogs"))  #needed to check again when full data
     suite.addTest(Test_rpc("test_eth_getCode"))
-    # suite.addTest(Test_rpc("test_eth_getStorageAt"))  #needed to check on the MCP
+    suite.addTest(Test_rpc("test_eth_getStorageAt"))  #needed to check on the MCP
     suite.addTest(Test_rpc("test_net_version"))
     suite.addTest(Test_rpc("test_net_listening"))
     suite.addTest(Test_rpc("test_net_peerCount"))

@@ -1367,6 +1367,13 @@ void mcp::rpc_handler::debug_trace_transaction(mcp::json &j_response, bool &)
 		std::list<std::shared_ptr<mcp::trace>> traces;
 		mcp::Executive e(c_state, env, traces);
 		e.setResultRecipient(er);
+
+		//	mcp::json trace = m_chain->traceTransaction(e, options);
+		//	//response_l["gas"] = block->hashables->gas.str();
+		//	response_l["return_value"] = er.output.hexPrefixed();
+		//	response_l["struct_logs"] = trace;
+		//	error_code_l = mcp::rpc_debug_trace_transaction_error_code::ok;
+		//	rpc_response(response, (int)error_code_l, err.msg(error_code_l), response_l);
 	}
 	catch (Exception const &_e)
 	{
