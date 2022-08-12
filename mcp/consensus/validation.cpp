@@ -227,16 +227,16 @@ mcp::validate_result mcp::validation::dag_validate(mcp::db::db_transaction & tra
 		{
 			u256 pNonce = 0;
 			auto exist = cache_a->account_nonce_get(transaction_a, t->sender(), pNonce);
-			if (exist && t->nonce() > pNonce)
+			if (exist && t->nonce() > pNonce+1)
 			{
-				result.code = mcp::validate_result_codes::parents_and_previous_include_invalid_block;
+				result.code = mcp::validate_result_codes::invalid_block;
 				result.err_msg = boost::str(boost::format("Invalid missing link, hash: %1% ,nonce req: %2%, got: %3%") % link.hex() % t->nonce() % pNonce);
 				return result;
 			}
 		}
 		else if(t->nonce() != accNonce + 1)/// must sort and sequential growth.
 		{
-			result.code = mcp::validate_result_codes::parents_and_previous_include_invalid_block;
+			result.code = mcp::validate_result_codes::invalid_block;
 			result.err_msg = boost::str(boost::format("Invalid missing link, hash: %1% ,nonce req: %2%, got: %3%") % link.hex() % t->nonce());
 			return result;
 		}
