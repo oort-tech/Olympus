@@ -125,6 +125,8 @@ namespace mcp
 			}
 		}
 
+		//LOG(m_log.info) << "importLocal transaction,hash: " << _transaction.sha3().hexPrefixed() << " ,nonce:" << _transaction.nonce();
+
 		///Notify unHandle to handle dependencies,block process block missing links,but before add to unhandle transaction come in.
 		if (ImportResult::Success == ret.first)/// first import && successed,broadcast it
 		{
@@ -546,6 +548,8 @@ namespace mcp
 		h256s dels;
 		for (auto h : _txHashs)
 		{
+			//LOG(m_log.info) << "drop transaction,hash: " << h.hexPrefixed();
+
 			if (m_known.count(h))
 			{
 				dels.push_back(h);

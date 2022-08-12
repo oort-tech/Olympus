@@ -115,13 +115,13 @@ namespace mcp
 			m_onImportProcessed(h);
 		}
 
-		LOG(m_log.trace) << "[import] out";
+		LOG(m_log.debug) << "[import] out";
 		return ret;
 	}
 
 	void ApproveQueue::importLocal(approve const& _approve)
 	{
-		LOG(m_log.trace) << "[importLocal] in";
+		LOG(m_log.debug) << "[importLocal] in";
 		auto ret = import(_approve,true);
 		assert_x_msg(ret == ImportApproveResult::Success, "ret="+std::to_string((uint32_t)ret));
 		
@@ -254,7 +254,7 @@ namespace mcp
 			Guard l(x_queue);
 			if (m_unverified.size() >= c_maxVerificationQueueSizeApprove)
 			{
-				LOG(m_log.info) << "Approve verification queue is full. Dropping approve";
+				LOG(m_log.debug) << "Approve verification queue is full. Dropping approve";
 				return;
 			}
 			m_unverified.emplace_back(UnverifiedApprove(_data.data(), _nodeId));
