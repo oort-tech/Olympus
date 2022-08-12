@@ -237,7 +237,7 @@ mcp::validate_result mcp::validation::dag_validate(mcp::db::db_transaction & tra
 		else if(t->nonce() != accNonce + 1)/// must sort and sequential growth.
 		{
 			result.code = mcp::validate_result_codes::invalid_block;
-			result.err_msg = boost::str(boost::format("Invalid missing link, hash: %1% ,nonce req: %2%, got: %3%") % link.hex() % t->nonce());
+			result.err_msg = boost::str(boost::format("Invalid missing link, hash: %1% ,nonce req: %2%") % link.hex() % t->nonce());
 			return result;
 		}
 		previousFrom = t->sender();
