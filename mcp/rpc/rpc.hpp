@@ -109,6 +109,7 @@ public:
 	void accounts_balances(mcp::json & j_response, bool & async);
 	void account_block_list(mcp::json & j_response, bool & async);
 	void account_state_list(mcp::json & j_response, bool & async);
+	void account_last_block(mcp::json & j_response, bool & async);
 
 	void block(mcp::json & j_response, bool & async);
 	void block_state(mcp::json & j_response, bool & async);
