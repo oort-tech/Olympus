@@ -223,17 +223,17 @@ mcp::validate_result mcp::validation::dag_validate(mcp::db::db_transaction & tra
 				continue;
 			}
 		}
-		std::shared_ptr<mcp::account_state> as(cache_a->latest_account_state_get(transaction_a, t->sender()));
-		if (as && as->nonce() > t->nonce()) /// must bigger than last account state nonce
-		{
-			result.code = mcp::validate_result_codes::parents_and_previous_include_invalid_block;
-			result.err_msg = boost::str(boost::format("Invalid missing link, hash: %1% ,nonce req: %2%, got: %3%") % link.hex() % t->nonce() % as->nonce());
-			return result;
-		}
+		//std::shared_ptr<mcp::account_state> as(cache_a->latest_account_state_get(transaction_a, t->sender()));
+		//if (as && as->nonce() > t->nonce()) /// must bigger than last account state nonce
+		//{
+		//	result.code = mcp::validate_result_codes::parents_and_previous_include_invalid_block;
+		//	result.err_msg = boost::str(boost::format("Invalid missing link, hash: %1% ,nonce req: %2%, got: %3%") % link.hex() % t->nonce() % as->nonce());
+		//	return result;
+		//}
 		if (previousFrom == t->sender() && t->nonce() != accNonce+1) /// must sort and sequential growth.
 		{
 			result.code = mcp::validate_result_codes::parents_and_previous_include_invalid_block;
-			result.err_msg = boost::str(boost::format("Invalid missing link, hash: %1% ,nonce req: %2%, got: %3%") % link.hex() % t->nonce() % as->nonce());
+			result.err_msg = boost::str(boost::format("Invalid missing link, hash: %1% ,nonce req: %2%, got: %3%") % link.hex() % t->nonce());
 			return result;
 		}
 		previousFrom = t->sender();

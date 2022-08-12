@@ -276,7 +276,7 @@ void mcp::block_processor::mt_process_blocks()
 									{
 										ok = false;
 										err_msg = boost::str(boost::format("Exec timestamp too late, block: %1%, exec_timestamp: %2%, sys_timestamp: %3%") % block_hash.hex() % block->exec_timestamp() % mcp::seconds_since_epoch());
-										LOG(m_log.info) << err_msg;
+										LOG(m_log.info) << err_msg << " ,from:" << block->from().hexPrefixed();
 										//cache late message
 										if (block->exec_timestamp() < mcp::seconds_since_epoch() + 300) //5 minutes
 										{
@@ -288,6 +288,7 @@ void mcp::block_processor::mt_process_blocks()
 								}
 								case base_validate_result_codes::old:
 								{
+									LOG(m_log.info) <<"base validate old from:" << block->from().hexPrefixed();
 									base_validate_old_size++;
 									break;
 								}
@@ -303,7 +304,7 @@ void mcp::block_processor::mt_process_blocks()
 								{
 									ok = false;
 									err_msg = boost::str(boost::format("Invalid block: %1%, error message: %2%") % block->hash().hex() % result.err_msg);
-									LOG(m_log.info) << err_msg;
+									LOG(m_log.info) << err_msg << " ,from:" << block->from().hexPrefixed();
 
 									//cache invalid block
 									m_invalid_block_cache.add(block_hash);
@@ -313,7 +314,7 @@ void mcp::block_processor::mt_process_blocks()
 								{
 									ok = false;
 									err_msg = boost::str(boost::format("Know invalid block: %1%") % block->hash().hex());
-									LOG(m_log.info) << err_msg;
+									LOG(m_log.info) << err_msg << " ,from:" << block->from().hexPrefixed();
 
 									break;
 								}
@@ -575,13 +576,13 @@ void mcp::block_processor::do_process_one(std::shared_ptr<mcp::block_processor_i
 				process_missing(item, result.missing_parents_and_previous, result.missing_links, result.missing_approves);
 			}
 
-			LOG(m_log.info) << boost::str(boost::format("Missing parents and previous for: %1%") % block_hash.hex());
+			LOG(m_log.info) << boost::str(boost::format("Missing parents and previous for: %1%") % block_hash.hex()) << " ,from:" << block->from().hexPrefixed();
 
 			break;
 		}
 		case mcp::validate_result_codes::invalid_block:
 		{
-			LOG(m_log.info) << boost::str(boost::format("Invalid block: %1%, error message: %2%") % block_hash.hex() % result.err_msg);
+			LOG(m_log.info) << boost::str(boost::format("Invalid block: %1%, error message: %2%") % block_hash.hex() % result.err_msg) << " ,from:" << block->from().hexPrefixed();
 			assert_x(!item->is_local());
 			//cache invalid block
 			m_invalid_block_cache.add(block_hash);
@@ -589,7 +590,7 @@ void mcp::block_processor::do_process_one(std::shared_ptr<mcp::block_processor_i
 		}
 		case mcp::validate_result_codes::parents_and_previous_include_invalid_block:
 		{
-			LOG(m_log.info) << boost::str(boost::format("Invalid block: %1%, error message: %2%") % block_hash.hex() % result.err_msg);
+			LOG(m_log.info) << boost::str(boost::format("Invalid block: %1%, error message: %2%") % block_hash.hex() % result.err_msg) << " ,from:" << block->from().hexPrefixed();
 			assert_x(!item->is_local());
 			//cache invalid block
 			m_invalid_block_cache.add(block_hash);
@@ -597,7 +598,7 @@ void mcp::block_processor::do_process_one(std::shared_ptr<mcp::block_processor_i
 		}
 		case mcp::validate_result_codes::known_invalid_block:
 		{
-			LOG(m_log.info) << boost::str(boost::format("Known invalid block: %1%") % block_hash.hex());
+			LOG(m_log.info) << boost::str(boost::format("Known invalid block: %1%") % block_hash.hex()) << " ,from:" << block->from().hexPrefixed();
 			assert_x(!item->is_local());
 			break;
 		}
