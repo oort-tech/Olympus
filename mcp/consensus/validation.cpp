@@ -203,6 +203,7 @@ mcp::validate_result mcp::validation::dag_validate(mcp::db::db_transaction & tra
 	auto links(block->links());
 	Address previousFrom(0);
 	u256 accNonce = 0;
+	mcp::log m_log = { mcp::log("node") };
 	for (auto link : links)
 	{
 		auto t = m_tq->get(link);
@@ -236,14 +237,14 @@ mcp::validate_result mcp::validation::dag_validate(mcp::db::db_transaction & tra
 		}
 		else if(t->nonce() != accNonce + 1)/// must sort and sequential growth.
 		{
+			LOG(m_log.info) << "[validation return] blockhash: " << block_hash.hexPrefixed() << " ,tshash:" << link.hexPrefixed() << " ,nonce:" << accNonce;
 			result.code = mcp::validate_result_codes::invalid_block;
-			result.err_msg = boost::str(boost::format("Invalid link nonce, hash: %1% ,nonce req: %2%") % link.hexPrefixed() % t->nonce());
+			result.err_msg = boost::str(boost::format("Invalid link nonce sorted, hash: %1% ,nonce req: %2%, got: %3%") % link.hexPrefixed() % t->nonce() % accNonce);
 			return result;
 		}
 		previousFrom = t->sender();
 		accNonce = t->nonce();
-		mcp::log m_log = { mcp::log("node") };
-		LOG(m_log.info) << "[validation] blockhash: " << block_hash.hexPrefixed() << " ,tshash:" << link.hexPrefixed() << " ,nonce:" << t->nonce();
+		LOG(m_log.info) << "[validation] blockhash: " << block_hash.hexPrefixed() << " ,tshash:" << link.hexPrefixed() << " ,nonce:" << accNonce;
 	}
 
 	/// check approves
