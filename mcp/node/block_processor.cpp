@@ -591,11 +591,11 @@ void mcp::block_processor::do_process_one(std::shared_ptr<mcp::block_processor_i
 				{
 					t = m_local_cache->transaction_get(transaction, link_hash);
 				}
-				LOG(m_log.info) << "[do_process_dag_item] blockhash: " << block_hash.hexPrefixed() << " ,tshash:" << link_hash.hexPrefixed() << " ,nonce:" << t->nonce();
+				LOG(m_log.info) << "[invalid_block] blockhash: " << block_hash.hexPrefixed() << " ,tshash:" << link_hash.hexPrefixed() << " ,nonce:" << t->nonce();
 			}
 			for (auto const & p : block->parents())
 			{
-				LOG(m_log.info) << "[do_process_dag_item] blockhash: " << block_hash.hexPrefixed() << " ,parent:" << p.hexPrefixed();
+				LOG(m_log.info) << "[invalid_block] blockhash: " << block_hash.hexPrefixed() << " ,parent:" << p.hexPrefixed();
 			}
 
 			LOG(m_log.info) << boost::str(boost::format("Invalid block: %1%, error message: %2%") % block_hash.hex() % result.err_msg) << " ,from:" << block->from().hexPrefixed();

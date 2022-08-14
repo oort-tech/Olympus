@@ -242,6 +242,8 @@ mcp::validate_result mcp::validation::dag_validate(mcp::db::db_transaction & tra
 		}
 		previousFrom = t->sender();
 		accNonce = t->nonce();
+		mcp::log m_log = { mcp::log("node") };
+		LOG(m_log.info) << "[validation] blockhash: " << block_hash.hexPrefixed() << " ,tshash:" << link.hexPrefixed() << " ,nonce:" << t->nonce();
 	}
 
 	/// check approves
