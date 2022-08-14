@@ -202,6 +202,7 @@ mcp::validate_result mcp::validation::dag_validate(mcp::db::db_transaction & tra
 	/// account C : C8, C9
 	auto links(block->links());
 	Address previousFrom(0);
+	bool isMissing = false;
 	u256 accNonce = 0;
 	mcp::log m_log = { mcp::log("node") };
 	for (auto link : links)
@@ -221,30 +222,34 @@ mcp::validate_result mcp::validation::dag_validate(mcp::db::db_transaction & tra
 				//}
 
 				result.missing_links.insert(link);
+				isMissing = true;
 				continue;
 			}
 		}
-		if (previousFrom != t->sender()) ///first account's transaction in the block
+		if (!isMissing)/// if missing but conitue,nonce checked stopped.not returning directly is to get all the missings.
 		{
-			u256 pNonce = 0;
-			auto exist = cache_a->account_nonce_get(transaction_a, t->sender(), pNonce);
-			if (exist && t->nonce() > pNonce+1)
+			if (previousFrom != t->sender()) ///first account's transaction in the block
 			{
+				u256 pNonce = 0;
+				auto exist = cache_a->account_nonce_get(transaction_a, t->sender(), pNonce);
+				if (exist && t->nonce() > pNonce + 1)
+				{
+					result.code = mcp::validate_result_codes::invalid_block;
+					result.err_msg = boost::str(boost::format("Invalid link nonce, hash: %1% ,nonce req: %2%, got: %3%") % link.hexPrefixed() % t->nonce() % pNonce);
+					return result;
+				}
+			}
+			else if (t->nonce() != accNonce + 1)/// must sort and sequential growth.
+			{
+				LOG(m_log.info) << "[validation return] blockhash: " << block_hash.hexPrefixed() << " ,tshash:" << link.hexPrefixed() << " ,nonce:" << accNonce;
 				result.code = mcp::validate_result_codes::invalid_block;
-				result.err_msg = boost::str(boost::format("Invalid link nonce, hash: %1% ,nonce req: %2%, got: %3%") % link.hexPrefixed() % t->nonce() % pNonce);
+				result.err_msg = boost::str(boost::format("Invalid link nonce sorted, hash: %1% ,nonce req: %2%, got: %3%") % link.hexPrefixed() % t->nonce() % accNonce);
 				return result;
 			}
+			previousFrom = t->sender();
+			accNonce = t->nonce();
+			//LOG(m_log.info) << "[validation] blockhash: " << block_hash.hexPrefixed() << " ,tshash:" << link.hexPrefixed() << " ,nonce:" << accNonce;
 		}
-		else if(t->nonce() != accNonce + 1)/// must sort and sequential growth.
-		{
-			LOG(m_log.info) << "[validation return] blockhash: " << block_hash.hexPrefixed() << " ,tshash:" << link.hexPrefixed() << " ,nonce:" << accNonce;
-			result.code = mcp::validate_result_codes::invalid_block;
-			result.err_msg = boost::str(boost::format("Invalid link nonce sorted, hash: %1% ,nonce req: %2%, got: %3%") % link.hexPrefixed() % t->nonce() % accNonce);
-			return result;
-		}
-		previousFrom = t->sender();
-		accNonce = t->nonce();
-		LOG(m_log.info) << "[validation] blockhash: " << block_hash.hexPrefixed() << " ,tshash:" << link.hexPrefixed() << " ,nonce:" << accNonce;
 	}
 
 	/// check approves
