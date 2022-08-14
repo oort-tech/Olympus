@@ -582,6 +582,22 @@ void mcp::block_processor::do_process_one(std::shared_ptr<mcp::block_processor_i
 		}
 		case mcp::validate_result_codes::invalid_block:
 		{
+			///test
+			for (auto const & link_hash : block->links())
+			{
+				/// Unprocessed transactions cannot be discarded because the cache is full.  todo zhouyou
+				auto t = m_tq->get(link_hash);
+				if (t == nullptr) /// transaction maybe processed yet
+				{
+					t = m_local_cache->transaction_get(transaction, link_hash);
+				}
+				LOG(m_log.info) << "[do_process_dag_item] blockhash: " << block_hash.hexPrefixed() << " ,tshash:" << link_hash.hexPrefixed() << " ,nonce:" << t->nonce();
+			}
+			for (auto const & p : block->parents())
+			{
+				LOG(m_log.info) << "[do_process_dag_item] blockhash: " << block_hash.hexPrefixed() << " ,parent:" << p.hexPrefixed();
+			}
+
 			LOG(m_log.info) << boost::str(boost::format("Invalid block: %1%, error message: %2%") % block_hash.hex() % result.err_msg) << " ,from:" << block->from().hexPrefixed();
 			assert_x(!item->is_local());
 			//cache invalid block
