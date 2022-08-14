@@ -602,6 +602,7 @@ void mcp::block_processor::do_process_one(std::shared_ptr<mcp::block_processor_i
 			assert_x(!item->is_local());
 			//cache invalid block
 			m_invalid_block_cache.add(block_hash);
+			assert_x(false);
 			break;
 		}
 		case mcp::validate_result_codes::parents_and_previous_include_invalid_block:
