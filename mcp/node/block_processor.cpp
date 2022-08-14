@@ -677,13 +677,13 @@ void mcp::block_processor::do_process_dag_item(mcp::timeout_db_transaction & tim
 	mcp::block_hash const & block_hash(block->hash());
 	for (auto const & link_hash : block->links())
 	{
-		//LOG(m_log.info) << "[do_process_dag_item] blockhash: " << block_hash.hexPrefixed() << " ,tshash:" << link_hash.hexPrefixed();
 		/// Unprocessed transactions cannot be discarded because the cache is full.  todo zhouyou
 		auto t = m_tq->get(link_hash);
 		if (t == nullptr || m_local_cache->transaction_exists(transaction, link_hash)) /// transaction maybe processed yet
 		{
 			continue;
 		}
+		LOG(m_log.info) << "[do_process_dag_item] blockhash: " << block_hash.hexPrefixed() << " ,tshash:" << link_hash.hexPrefixed() << " ,nonce:" << t->nonce();
 		m_chain->save_transaction(timeout_tx, m_local_cache, t);
 	}
 
@@ -697,11 +697,11 @@ void mcp::block_processor::do_process_dag_item(mcp::timeout_db_transaction & tim
 		}
 		m_chain->save_approve(timeout_tx, m_local_cache, t);
 	}
-	/////test
-	//for (auto const & p : block->parents())
-	//{
-	//	LOG(m_log.info) << "[do_process_dag_item] blockhash: " << block_hash.hexPrefixed() << " ,parent:" << p.hexPrefixed();
-	//}
+	///test
+	for (auto const & p : block->parents())
+	{
+		LOG(m_log.info) << "[do_process_dag_item] blockhash: " << block_hash.hexPrefixed() << " ,parent:" << p.hexPrefixed();
+	}
 
 
 	/// save block and try advance 

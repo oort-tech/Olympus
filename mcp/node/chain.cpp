@@ -201,7 +201,11 @@ void mcp::chain::save_transaction(mcp::timeout_db_transaction & timeout_tx_a, st
 				cache_a->transaction_put(transaction, t_a);
 				u256 _n = 0;
 				if (!(cache_a->account_nonce_get(transaction, t_a->sender(), _n) && t_a->nonce() < _n))
+				{
 					cache_a->account_nonce_put(transaction, t_a->sender(), t_a->nonce());
+					LOG(m_log.info) << "[save_transaction],hash:" << hash.hexPrefixed() << " ,nonce:" << t_a->nonce();
+				}
+					
 				m_store.transaction_unstable_count_add(transaction);
 				m_store.transaction_count_add(transaction);
 				cache_a->transaction_del_from_queue(hash);///mark as clear,It will be really cleaned up after commit event
