@@ -260,7 +260,6 @@ mcp::rpc_handler::rpc_handler(mcp::rpc &rpc_a, std::string const &body_a, std::f
 	m_mcpRpcMethods["accounts_balances"] = &mcp::rpc_handler::accounts_balances;
 	m_mcpRpcMethods["account_block_list"] = &mcp::rpc_handler::account_block_list;
 	m_mcpRpcMethods["account_state_list"] = &mcp::rpc_handler::account_state_list;
-	m_mcpRpcMethods["account_last_block"] = &mcp::rpc_handler::account_last_block;
 	m_mcpRpcMethods["block"] = &mcp::rpc_handler::block;
 	m_mcpRpcMethods["block_state"] = &mcp::rpc_handler::block_state;
 	m_mcpRpcMethods["block_states"] = &mcp::rpc_handler::block_states;
@@ -813,29 +812,6 @@ void mcp::rpc_handler::account_state_list(mcp::json &j_response, bool &)
 		j_response["next_index"] = search_hash.hexPrefixed();
 	else
 		j_response["next_index"] = nullptr;
-}
-
-void mcp::rpc_handler::account_last_block(mcp::json &j_response, bool &)
-{
-	if (!request.count("account") || !request["account"].is_string())
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccount());
-	}
-
-	dev::Address account(0);
-	try
-	{
-		account = jsToAddress(request["account"]);
-	}
-	catch (...)
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccount());
-	}
-
-	mcp::db::db_transaction transaction(m_store.create_transaction());
-
-	auto h = m_composer->get_latest_block(transaction, account);
-	j_response["result"] = h.hexPrefixed();
 }
 
 void mcp::rpc_handler::block(mcp::json &j_response, bool &)

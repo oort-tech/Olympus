@@ -171,7 +171,7 @@ void mcp::witness::check_and_witness()
 	if (!is_diff_majority)
 	{
 		m_is_witnessing.clear();
-		LOG(m_log.debug) << "Not do witness because check majority different of witnesses";
+		LOG(m_log.trace) << "Not do witness because check majority different of witnesses";
 		return;
 	}
 

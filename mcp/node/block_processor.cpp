@@ -558,7 +558,7 @@ void mcp::block_processor::do_process_one(std::shared_ptr<mcp::block_processor_i
 		case mcp::validate_result_codes::old:
 		{
 			dag_old_size++;
-			LOG(m_log.debug) << boost::str(boost::format("Old block: %1%") % block_hash.hex());
+			LOG(m_log.trace) << boost::str(boost::format("Old block: %1%") % block_hash.hex());
 			break;
 		}
 		case mcp::validate_result_codes::missing_parents_and_previous:
@@ -575,13 +575,13 @@ void mcp::block_processor::do_process_one(std::shared_ptr<mcp::block_processor_i
 				process_missing(item, result.missing_parents_and_previous, result.missing_links, result.missing_approves);
 			}
 
-			LOG(m_log.debug) << boost::str(boost::format("Missing parents and previous for: %1%") % block_hash.hex()) << " ,from:" << block->from().hexPrefixed();
+			LOG(m_log.trace) << boost::str(boost::format("Missing parents and previous for: %1%") % block_hash.hex());
 
 			break;
 		}
 		case mcp::validate_result_codes::invalid_block:
 		{
-			LOG(m_log.debug) << boost::str(boost::format("Invalid block: %1%, error message: %2%") % block_hash.hex() % result.err_msg) << " ,from:" << block->from().hexPrefixed();
+			LOG(m_log.info) << boost::str(boost::format("Invalid block: %1%, error message: %2%") % block_hash.hex() % result.err_msg);
 			assert_x(!item->is_local());
 			//cache invalid block
 			m_invalid_block_cache.add(block_hash);
@@ -589,7 +589,7 @@ void mcp::block_processor::do_process_one(std::shared_ptr<mcp::block_processor_i
 		}
 		case mcp::validate_result_codes::parents_and_previous_include_invalid_block:
 		{
-			LOG(m_log.debug) << boost::str(boost::format("Invalid block: %1%, error message: %2%") % block_hash.hex() % result.err_msg) << " ,from:" << block->from().hexPrefixed();
+			LOG(m_log.info) << boost::str(boost::format("Invalid block: %1%, error message: %2%") % block_hash.hex() % result.err_msg);
 			assert_x(!item->is_local());
 			//cache invalid block
 			m_invalid_block_cache.add(block_hash);
@@ -597,7 +597,7 @@ void mcp::block_processor::do_process_one(std::shared_ptr<mcp::block_processor_i
 		}
 		case mcp::validate_result_codes::known_invalid_block:
 		{
-			LOG(m_log.debug) << boost::str(boost::format("Known invalid block: %1%") % block_hash.hex()) << " ,from:" << block->from().hexPrefixed();
+			LOG(m_log.trace) << boost::str(boost::format("Known invalid block: %1%") % block_hash.hex());
 			assert_x(!item->is_local());
 			break;
 		}

@@ -18,9 +18,8 @@ namespace mcp
 		~composer();
 		std::shared_ptr<mcp::block> compose_block(dev::Address const & from_a, dev::Secret const& s);
 
-		mcp::block_hash get_latest_block(mcp::db::db_transaction &  transaction_a, dev::Address const & account_a);
 	private:
-		
+		mcp::block_hash get_latest_block(mcp::db::db_transaction &  transaction_a, dev::Address const & account_a);
 		void pick_parents_and_last_summary_and_wl_block(mcp::db::db_transaction &  transaction_a, mcp::block_hash const & previous_a, dev::Address const & from_a, std::vector<mcp::block_hash>& parents, h256s& links,  h256s& approves, mcp::block_hash & last_summary_block, mcp::block_hash & last_summary, mcp::block_hash & last_stable_block);
 
 		mcp::ledger & m_ledger;
