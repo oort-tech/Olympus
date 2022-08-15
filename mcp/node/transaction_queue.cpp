@@ -8,7 +8,7 @@ namespace mcp
 	using namespace std;
 	using namespace dev;
 
-	constexpr size_t c_maxVerificationQueueSize = 8192;
+	constexpr size_t c_maxVerificationQueueSize = 81920;
 	constexpr size_t c_maxDroppedTransactionCount = 1024;
 
 	TransactionQueue::TransactionQueue(
@@ -21,7 +21,7 @@ namespace mcp
 		m_async_task(async_task_a),
 		m_current{ PriorityCompare{ *this } },
 		m_dropped(100000),
-		m_futureLimit(50000)
+		m_futureLimit(100000)
 	{
 		unsigned verifierThreads = std::max(thread::hardware_concurrency(), 3U) - 2U;
 		for (unsigned i = 0; i < verifierThreads; ++i)

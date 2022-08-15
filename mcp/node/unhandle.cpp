@@ -412,7 +412,7 @@ void mcp::unhandle_cache::get_missings(size_t const & missing_limit_a, std::vect
 		}
 	}
 
-	size_t approve_missing_limit = missing_limit_a - missings_a.size() - light_missings_a.size();
+	size_t approve_missing_limit = missing_limit_a / 4;
 
 	if (m_approve_missings.size() <= approve_missing_limit)
 	{
