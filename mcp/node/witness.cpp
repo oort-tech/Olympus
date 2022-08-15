@@ -162,7 +162,7 @@ void mcp::witness::check_and_witness()
 	if (!mcp::param::is_witness(mcp::approve::calc_curr_epoch(last_summary_mci), m_account))
 	{
 		m_is_witnessing.clear();
-		//LOG(m_log.trace) << "Not do witness, account:" << m_account.to_account() << " is not witness, last_summary_mci:" << last_summary_mci;
+		LOG(m_log.trace) << "Not do witness, account:" << m_account.hexPrefixed() << " is not witness, last_summary_mci:" << last_summary_mci;
 		return;
 	}	
 
@@ -207,6 +207,7 @@ void mcp::witness::do_witness()
 	catch (Exception& _e)
 	{
 		LOG(m_log.error) << "witness error," << _e.what();
+		m_is_witnessing.clear();
 	}
 }
 
