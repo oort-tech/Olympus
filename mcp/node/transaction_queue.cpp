@@ -583,7 +583,7 @@ namespace mcp
 			Guard l(x_queue);
 			if (m_unverified.size() >= c_maxVerificationQueueSize)
 			{
-				LOG(m_log.info) << "Transaction verification queue is full. Dropping transactions";
+				LOG(m_log.debug) << "Transaction verification queue is full. Dropping transactions";
 				return;
 			}
 			m_unverified.emplace_back(UnverifiedTransaction(_data.data(), _nodeId));
