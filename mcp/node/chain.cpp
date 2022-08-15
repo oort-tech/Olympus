@@ -1446,7 +1446,7 @@ void mcp::chain::send_approve(std::shared_ptr<ApproveQueue> aq_a)
 {
 	ApproveSkeleton as;
 	as.epoch = mcp::approve::calc_elect_epoch(m_last_summary_mci);
-    LOG(m_log.debug) << "[send_approve] m_last_summary_mci=" << m_last_summary_mci << " epoch=" << as.epoch;
+    LOG(m_log.info) << "[send_approve] m_last_summary_mci=" << m_last_summary_mci << " epoch=" << as.epoch;
 
 	mcp::db::db_transaction transaction(m_store.create_transaction());
 	mcp::block_hash hash;
@@ -1493,7 +1493,7 @@ void mcp::chain::send_approve(std::shared_ptr<ApproveQueue> aq_a)
     // }
 
 	auto a = mcp::approve(as, w_secret);
-	//a.show();
+	a.show();
 	aq_a->importLocal(a);
 	return;
 }
