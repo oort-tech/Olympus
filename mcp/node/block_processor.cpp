@@ -591,7 +591,10 @@ void mcp::block_processor::do_process_one(std::shared_ptr<mcp::block_processor_i
 				{
 					t = m_local_cache->transaction_get(transaction, link_hash);
 				}
-				LOG(m_log.info) << "[invalid_block] blockhash: " << block_hash.hexPrefixed() << " ,tshash:" << link_hash.hexPrefixed() << " ,nonce:" << t->nonce();
+				if (t)
+					LOG(m_log.info) << "[invalid_block] blockhash: " << block_hash.hexPrefixed() << " ,tshash:" << link_hash.hexPrefixed() << " ,nonce:" << t->nonce();
+				else
+					LOG(m_log.info) << "[invalid_block] blockhash: " << block_hash.hexPrefixed() << " ,tshash:" << link_hash.hexPrefixed() << " ,nonce missing";
 			}
 			for (auto const & p : block->parents())
 			{
