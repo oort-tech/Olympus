@@ -192,6 +192,11 @@ mcp::validate_result mcp::validation::dag_validate(mcp::db::db_transaction & tra
 		}
 	}
 
+	/// check missings of previous,parents,links, do not check links nonce if have missings.
+	bool haveMissing = false;
+	if (result.missing_parents_and_previous.size() > 0)
+		haveMissing = true;
+
 	/// check links
 	/// links must in cache or processed. if not, the block lack the necessary conditions for processing.
 	/// ands nonce must bigger than last account state nocne.but it is not necessarily bigger than the last unprocessed transaction.and must smaller t
@@ -202,7 +207,6 @@ mcp::validate_result mcp::validation::dag_validate(mcp::db::db_transaction & tra
 	/// account C : C8, C9
 	auto links(block->links());
 	Address previousFrom(0);
-	bool isMissing = false;
 	u256 accNonce = 0;
 	mcp::log m_log = { mcp::log("node") };
 	for (auto link : links)
@@ -222,11 +226,11 @@ mcp::validate_result mcp::validation::dag_validate(mcp::db::db_transaction & tra
 				//}
 
 				result.missing_links.insert(link);
-				isMissing = true;
+				haveMissing = true;
 				continue;
 			}
 		}
-		if (!isMissing)/// if missing but conitue,nonce checked stopped.not returning directly is to get all the missings.
+		if (!haveMissing)/// if missing but conitue,nonce checked stopped.not returning directly is to get all the missings.
 		{
 			if (previousFrom != t->sender()) ///first account's transaction in the block
 			{
