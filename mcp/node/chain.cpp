@@ -282,7 +282,7 @@ void mcp::chain::add_new_witness_list(mcp::db::db_transaction & transaction_a, u
 	if(vrf_outputs.find(elected_epoch) == vrf_outputs.end()) return;
 	if(vrf_outputs[elected_epoch].size() < w_param.witness_count)
 	{
-		LOG(m_log.info) << "Not switch witness_list because elector's number is too short: " << vrf_outputs.size();
+		LOG(m_log.info) << "Not switch witness_list because elector's number is too short: " << vrf_outputs[elected_epoch].size();
 		vrf_outputs[elected_epoch].clear();
 		return;
 	}
@@ -1434,7 +1434,7 @@ bool mcp::chain::need_approve(){
 	}
 	
 	if(elect_epoch != last_epoch_num){
-		if(m_last_summary_mci%mcp::epoch_period > *(uint64_t *)m_witness->witness_account().data()%mcp::epoch_period/2){
+		if(m_last_summary_mci%mcp::epoch_period > *(uint64_t *)m_witness->witness_account().data()%mcp::epoch_period/10){
 			LOG(m_log.debug) << "[need_approve] send in m_last_summary_mci=" << m_last_summary_mci << " epoch" << elect_epoch;
 			last_epoch_num = elect_epoch;
 			return true;
