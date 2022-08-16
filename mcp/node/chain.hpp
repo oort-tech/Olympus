@@ -22,6 +22,7 @@ namespace mcp
 	};
 	using GasEstimationCallback = std::function<void(GasEstimationProgress const&)>;
 
+	class witness;
 	class chain : public std::enable_shared_from_this<mcp::chain>
 	{
 	public:
@@ -86,7 +87,12 @@ namespace mcp
 		uint64_t last_summary_mci();
 		void set_last_summary_mci(mcp::db::db_transaction & transaction_a, uint64_t const& mci);
 		uint64_t get_last_summary_mci(mcp::db::db_transaction& transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a, std::shared_ptr<mcp::block_cache> block_cache_a, uint64_t const & mci);
-		bool restart_not_need_send_approve(mcp::db::db_transaction& transaction_a, std::shared_ptr<mcp::block_cache> cache_a, dev::Address account_a);
+		void check_need_send_approve(mcp::db::db_transaction& transaction_a, std::shared_ptr<mcp::block_cache> cache_a, dev::Address account_a);
+		void check_and_send_approve(std::shared_ptr<ApproveQueue> aq_a);
+		bool need_approve();
+		void send_approve(std::shared_ptr<ApproveQueue> aq_a);
+		
+		void set_witness(std::shared_ptr<mcp::witness>& witness_a) { m_witness = witness_a; }
 
 	private:
 		void write_dag_block(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a, std::shared_ptr<mcp::block> block_a);
@@ -129,7 +135,8 @@ namespace mcp
 		std::unordered_map<Address, dev::eth::PrecompiledContract> m_precompiled;
 
 		std::map<uint64_t, std::map<uint32_t, dev::ApproveReceipt>> vrf_outputs;
-		bool m_restart_not_need_switch_witness = true;
+		bool m_need_send_approve = true;
+		std::shared_ptr<mcp::witness> m_witness;
 
         mcp::log m_log = { mcp::log("node") };
 	};

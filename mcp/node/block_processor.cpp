@@ -589,7 +589,7 @@ void mcp::block_processor::do_process_one(std::shared_ptr<mcp::block_processor_i
 		}
 		case mcp::validate_result_codes::parents_and_previous_include_invalid_block:
 		{
-			LOG(m_log.trace) << boost::str(boost::format("Invalid block: %1%, error message: %2%") % block_hash.hex() % result.err_msg);
+			LOG(m_log.info) << boost::str(boost::format("Invalid block: %1%, error message: %2%") % block_hash.hex() % result.err_msg);
 			assert_x(!item->is_local());
 			//cache invalid block
 			m_invalid_block_cache.add(block_hash);
@@ -671,11 +671,12 @@ void mcp::block_processor::do_process_dag_item(mcp::timeout_db_transaction & tim
 	assert_x(last_summary_block);
 	uint64_t elect_epoch = mcp::approve::calc_elect_epoch(*last_summary_block->main_chain_index);
 	m_chain->set_last_summary_mci(transaction, *last_summary_block->main_chain_index);
-	LOG(m_log.info) << "[do_process_dag_item] m_last_summary_mci = " << last_summary_block->main_chain_index;
+	LOG(m_log.debug) << "[do_process_dag_item] m_last_summary_mci = " << last_summary_block->main_chain_index;
 
 	mcp::block_hash const & block_hash(block->hash());
 	for (auto const & link_hash : block->links())
 	{
+		//LOG(m_log.info) << "[do_process_dag_item] blockhash: " << block_hash.hexPrefixed() << " ,tshash:" << link_hash.hexPrefixed() << " ,nonce:" << t->nonce();
 		/// Unprocessed transactions cannot be discarded because the cache is full.  todo zhouyou
 		auto t = m_tq->get(link_hash);
 		if (t == nullptr || m_local_cache->transaction_exists(transaction, link_hash)) /// transaction maybe processed yet
@@ -695,10 +696,17 @@ void mcp::block_processor::do_process_dag_item(mcp::timeout_db_transaction & tim
 		}
 		m_chain->save_approve(timeout_tx, m_local_cache, t);
 	}
+	/////test
+	//for (auto const & p : block->parents())
+	//{
+	//	LOG(m_log.info) << "[do_process_dag_item] blockhash: " << block_hash.hexPrefixed() << " ,parent:" << p.hexPrefixed();
+	//}
+
 
 	/// save block and try advance 
 	m_chain->save_dag_block(timeout_tx, m_local_cache, block);
 	m_chain->try_advance(timeout_tx, m_local_cache);
+	m_chain->check_and_send_approve(m_aq);
 }
 
 void mcp::block_processor::process_missing(std::shared_ptr<mcp::block_processor_item> item_a, std::unordered_set<mcp::block_hash> const & missings, h256Hash const & transactions, h256Hash const & approves)

@@ -36,8 +36,8 @@ namespace mcp
 		);
 		void start();
 		void check_and_witness();
-		bool need_approve(uint64_t last_summary_mci);
-		void send_approve(uint64_t last_summary_mci);
+		dev::Secret witness_secret() { return m_secret; } 
+		dev::Address witness_account() { return m_account; }
 
 	private:
 		void do_witness();
@@ -65,6 +65,5 @@ namespace mcp
         mcp::log m_log = { mcp::log("node") };
         bool m_witness_get_current_chain;
         mcp::block_hash m_last_witness_block_hash;
-		bool m_restart_not_need_send_approve;
 	};
 }

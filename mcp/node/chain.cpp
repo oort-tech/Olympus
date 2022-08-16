@@ -7,6 +7,7 @@
 #include <libdevcore/TrieHash.h>
 #include <libdevcore/CommonJS.h>
 #include <mcp/core/config.hpp>
+#include <mcp/node/witness.hpp>
 
 #include <queue>
 
@@ -240,7 +241,7 @@ void mcp::chain::save_approve(mcp::timeout_db_transaction & timeout_tx_a, std::s
 				cache_a->approve_put(transaction, t_a);
 				m_store.epoch_approves_put(transaction, mcp::epoch_approves_key(t_a->m_epoch, t_a->sha3()));
 				m_store.approve_unstable_count_add(transaction);
-				LOG(m_log.info) << "approve_unstable: add " << m_store.approve_unstable_count(transaction);
+				LOG(m_log.debug) << "approve_unstable: add " << m_store.approve_unstable_count(transaction);
 				m_store.approve_count_add(transaction);
 				cache_a->approve_del_from_queue(hash, t_a->m_epoch);///mark as clear,It will be really cleaned up after commit event
 			}
@@ -265,9 +266,10 @@ void mcp::chain::add_new_witness_list(mcp::db::db_transaction & transaction_a, u
 	if(old_summary_mci == mc_last_summary_mci) return;
 	else old_summary_mci = mc_last_summary_mci;
 
-	if(m_restart_not_need_switch_witness){
+	static bool restart_not_need_add_witness = true;
+	if(restart_not_need_add_witness){
 		old_elected_epoch = elected_epoch;
-		m_restart_not_need_switch_witness = false;
+		restart_not_need_add_witness = false;
 		return;
 	}
 	if(old_elected_epoch == elected_epoch) return;
@@ -280,7 +282,7 @@ void mcp::chain::add_new_witness_list(mcp::db::db_transaction & transaction_a, u
 	if(vrf_outputs.find(elected_epoch) == vrf_outputs.end()) return;
 	if(vrf_outputs[elected_epoch].size() < w_param.witness_count)
 	{
-		LOG(m_log.info) << "Not switch witness_list because elector's number is too short: " << vrf_outputs.size();
+		LOG(m_log.info) << "Not switch witness_list because elector's number is too short: " << vrf_outputs[elected_epoch].size();
 		vrf_outputs[elected_epoch].clear();
 		return;
 	}
@@ -291,7 +293,7 @@ void mcp::chain::add_new_witness_list(mcp::db::db_transaction & transaction_a, u
 		uint32_t output = it->first;
 		test_witness.emplace_back(std::string("0x")+a.hex());
 		elected_list.hashs.emplace_back(it->second.approve_hash());
-		LOG(m_log.info) << "elect " << a.hexPrefixed() << " output:" << output << " hash:" << it->second.approve_hash().hexPrefixed();
+		LOG(m_log.debug) << "elect " << a.hexPrefixed() << " output:" << output << " hash:" << it->second.approve_hash().hexPrefixed();
 		it++;
 	}
 	w_param.witness_list.clear();
@@ -303,7 +305,6 @@ void mcp::chain::add_new_witness_list(mcp::db::db_transaction & transaction_a, u
 	//The elected_list corresponds to next epoch.
 	m_store.epoch_elected_approve_receipts_put(transaction_a, elected_epoch, elected_list);
 	vrf_outputs[elected_epoch].clear();
-	LOG(m_log.info) << "elect to epoch " << elected_epoch;
 }
 
 void mcp::chain::init_vrf_outputs(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a)
@@ -316,7 +317,7 @@ void mcp::chain::init_vrf_outputs(mcp::db::db_transaction & transaction_a, std::
 		auto approve_receipt = cache_a->approve_receipt_get(transaction_a, hash);
 		assert_x(approve_receipt);
 		vrf_outputs[elect_epoch].insert(std::make_pair(*(uint32_t*)approve_receipt->output().data(), *approve_receipt));
-		LOG(m_log.info) << "[init_vrf_outputs] add output: sender=" << approve_receipt->from().hexPrefixed() << " output="<<*(uint32_t*)approve_receipt->output().data() << " epoch="<<approve_receipt->epoch();
+		LOG(m_log.debug) << "[init_vrf_outputs] add output: sender=" << approve_receipt->from().hexPrefixed() << " output="<<*(uint32_t*)approve_receipt->output().data() << " epoch="<<approve_receipt->epoch();
 	}
 }
 
@@ -336,7 +337,7 @@ void mcp::chain::init_witness(mcp::db::db_transaction & transaction_a, std::shar
 			assert_x(receipt);
 
 			test_witness.emplace_back(receipt->from().hexPrefixed());
-			LOG(m_log.info) << "[init_witness] epoch" << i << "\'s receipts from=" << receipt->from().hexPrefixed();
+			LOG(m_log.debug) << "[init_witness] epoch" << i << "\'s receipts from=" << receipt->from().hexPrefixed();
 		}
 		w_param.witness_list.clear();
 		w_param.witness_list = mcp::param::to_witness_list(test_witness);		
@@ -747,6 +748,9 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 		for (auto iter(hashs.begin()); iter != hashs.end(); iter++)
 		{
 			mcp::block_hash const & dag_stable_block_hash(*iter);
+
+			//LOG(m_log.info) << "[advance_stable_mci]" << dag_stable_block_hash.hexPrefixed();
+
 			m_last_stable_index_internal++;
 			std::vector<bytes> receipts;
 			{
@@ -809,11 +813,12 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 					}
 					catch (dev::eth::InvalidNonce const& _e)
 					{
-						LOG(m_log.info) << "transaction exec not expect nonce,hash: " << _t->sha3().hex()
+						LOG(m_log.info) << "transaction exec not expect nonce,hash: " << _t->sha3().hexPrefixed()
 							<< ", from: " << dev::toJS(_t->sender())
 							<< ", to: " << dev::toJS(_t->to())
 							<< ", value: " << _t->value();
 						invalid = true;
+						//assert_x(false);
 					}
 					//catch (Exception const& _e)
 					//{
@@ -826,6 +831,8 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 						std::cerr << _e.what() << std::endl;
 						throw;
 					}
+
+					//LOG(m_log.info) << "exec transaction,hash: " << link_hash.hexPrefixed() << " ,nonce:" << _t->nonce();
 
 					if (invalid)
 					{
@@ -882,7 +889,7 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 
 						/// exec approve can reduce, if two or more block linked a approve,reduce once.
 						m_store.approve_unstable_count_reduce(transaction_a);
-						//LOG(m_log.info) << "approve_unstable: reduce " << m_store.approve_unstable_count(transaction_a);
+						LOG(m_log.debug) << "approve_unstable: reduce " << m_store.approve_unstable_count(transaction_a);
 
 						std::shared_ptr<dev::ApproveReceipt> preceipt = std::make_shared<dev::ApproveReceipt>(ap->sender(), ap->m_epoch, output, approve_hash);
 						cache_a->approve_receipt_put(transaction_a, approve_hash, preceipt);
@@ -1373,21 +1380,20 @@ uint64_t mcp::chain::get_last_summary_mci(mcp::db::db_transaction& transaction_a
 	return last_summary_mci;
 }
 
-bool mcp::chain::restart_not_need_send_approve(mcp::db::db_transaction& transaction_a, std::shared_ptr<mcp::block_cache> block_cache_a, dev::Address account_a)
+void mcp::chain::check_need_send_approve(mcp::db::db_transaction& transaction_a, std::shared_ptr<mcp::block_cache> block_cache_a, dev::Address account_a)
 {
-	bool ret = false;
 	std::list<h256> hashs;
-	m_store.epoch_approves_get(transaction_a, m_last_epoch, hashs);
+	m_store.epoch_approves_get(transaction_a, mcp::approve::calc_elect_epoch(m_last_summary_mci), hashs);
 	for(auto hash : hashs)
 	{
 		std::shared_ptr<mcp::approve> ap = block_cache_a->approve_get(transaction_a, hash);
 		if(ap->sender() == account_a){
-			ret = true;
-			break;
+    		LOG(m_log.info) << "[check_need_send_approve] not need send approve";
+			m_need_send_approve = false;
+			return;
 		}
 	}
-    LOG(m_log.info) << "[restart_not_need_send_approve] not need send = " << ret;
-	return ret;
+    LOG(m_log.info) << "[check_need_send_approve] need send approve";
 }
 
 uint64_t mcp::chain::last_summary_mci()
@@ -1397,10 +1403,109 @@ uint64_t mcp::chain::last_summary_mci()
 
 void mcp::chain::set_last_summary_mci(mcp::db::db_transaction & transaction_a, uint64_t const& mci)
 {
-	m_last_summary_mci = mci;
-	uint64_t new_epoch = mcp::approve::calc_curr_epoch(m_last_summary_mci);
-	if(m_last_epoch < new_epoch){
-		m_last_epoch = new_epoch;
-		m_store.last_epoch_put(transaction_a, m_last_epoch);
+	if(m_last_summary_mci < mci)
+	{
+		m_last_summary_mci = mci;
+		uint64_t new_epoch = mcp::approve::calc_curr_epoch(m_last_summary_mci);
+		if(m_last_epoch < new_epoch){
+			m_last_epoch = new_epoch;
+			m_store.last_epoch_put(transaction_a, m_last_epoch);
+		}
+	}
+}
+bool mcp::chain::need_approve(){
+	static uint64_t last_epoch_num = UINT64_MAX;
+	if(m_last_summary_mci <= 2){
+		return false;
+	}
+
+	if (mcp::node_sync::is_syncing())
+	{
+        LOG(m_log.debug) << "[need_approve] Needn't send approve when syncing";
+		return false;
+	}
+
+	uint64_t elect_epoch = mcp::approve::calc_elect_epoch(m_last_summary_mci);
+	if(!m_need_send_approve){
+		m_need_send_approve = true;
+		last_epoch_num = elect_epoch;
+		LOG(m_log.info) << "[need_approve] restart and not need send approve in this epoch.";
+		return false;
+	}
+	
+	if(elect_epoch != last_epoch_num){
+		if(m_last_summary_mci%mcp::epoch_period > *(uint64_t *)m_witness->witness_account().data()%mcp::epoch_period/10){
+			LOG(m_log.debug) << "[need_approve] send in m_last_summary_mci=" << m_last_summary_mci << " epoch" << elect_epoch;
+			last_epoch_num = elect_epoch;
+			return true;
+		}
+		else{
+			return false;
+		}
+	}
+	else{
+		return false;
+	}
+}
+
+void mcp::chain::send_approve(std::shared_ptr<ApproveQueue> aq_a)
+{
+	ApproveSkeleton as;
+	as.epoch = mcp::approve::calc_elect_epoch(m_last_summary_mci);
+    LOG(m_log.info) << "[send_approve] m_last_summary_mci=" << m_last_summary_mci << " epoch=" << as.epoch;
+
+	mcp::db::db_transaction transaction(m_store.create_transaction());
+	mcp::block_hash hash;
+	std::string msg;
+	if(as.epoch <= 2){
+		msg = mcp::block_hash(0).hex();
+	}
+	else{
+		bool exists(!m_store.stable_block_get(transaction, (as.epoch-2)*epoch_period, hash));
+		assert_x(exists);
+		msg = hash.hex();
+	}
+	
+	//char msg[3]={0x31,0x32,0x33};
+	as.proof.resize(81);
+	auto* ctx = mcp::encry::get_secp256k1_ctx();
+	secp256k1_pubkey rawPubkey;
+	auto w_secret = m_witness->witness_secret();
+	if (!secp256k1_ec_pubkey_create(ctx, &rawPubkey, w_secret.data()))
+        return;
+	
+	std::array<byte, 65> serializedPubkey;
+    unsigned char output[32]={0};
+    auto serializedPubkeySize = serializedPubkey.size();
+    secp256k1_ec_pubkey_serialize(
+        ctx,
+		serializedPubkey.data(),
+		&serializedPubkeySize,
+		&rawPubkey,
+		SECP256K1_EC_COMPRESSED
+	);
+    if(secp256k1_vrf_prove(as.proof.data(),w_secret.data(),&rawPubkey,msg.data(),msg.size()) == 1){
+        LOG(m_log.debug) << "[send_approve] secp256k1_vrf_prove ok";
+    }
+    else{
+        LOG(m_log.debug) << "[send_approve] secp256k1_vrf_prove fail";
+    }
+	
+    // if(secp256k1_vrf_verify(output, as.proof.data(), serializedPubkey.data(),msg.data(),msg.size()) == 1){
+    //     LOG(m_log.debug) << "[send_approve] secp256k1_vrf_verify ok" << msg;
+    // }
+    // else{
+    //     LOG(m_log.debug) << "[send_approve] secp256k1_vrf_verify fail";
+    // }
+
+	auto a = mcp::approve(as, w_secret);
+	a.show();
+	aq_a->importLocal(a);
+	return;
+}
+void mcp::chain::check_and_send_approve(std::shared_ptr<ApproveQueue> aq_a)
+{
+	if(need_approve()){
+		send_approve(aq_a);
 	}
 }

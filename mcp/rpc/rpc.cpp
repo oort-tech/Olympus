@@ -840,7 +840,7 @@ void mcp::rpc_handler::block(mcp::json &j_response, bool &)
 		throw "";
 	}
 
-	mcp::json j_block = toJson(*block, true);
+	mcp::json j_block = toJson(*block, false);
 	if (!m_cache->block_number_get(transaction, block_hash, block_number))
 	{
 		j_block["number"] = toJS(block_number);
@@ -1266,6 +1266,7 @@ void mcp::rpc_handler::status(mcp::json &j_response, bool &)
 	j_response["last_mci"] = last_mci;
 	j_response["last_stable_block_index"] = last_stable_index;
 	j_response["epoch"] = m_chain->last_epoch();
+	j_response["epoch_period"] = mcp::epoch_period;
 }
 
 void mcp::rpc_handler::peers(mcp::json &j_response, bool &)
@@ -2743,8 +2744,8 @@ void mcp::rpc_handler::epoch_approves(mcp::json &j_response, bool &)
 		auto approve = m_cache->approve_get(transaction, hash);
 		if(approve){
 			mcp::json approve_l;
-			approve_l["from"] = approve->sender().hex();
-			approve_l["proof"] = toHex(approve->m_proof);
+			approve_l["from"] = approve->sender().hexPrefixed();
+			approve_l["proof"] = toHexPrefixed(approve->m_proof);
 			approves_l.push_back(approve_l);
 		}
 		else{
@@ -2773,8 +2774,8 @@ void mcp::rpc_handler::epoch_approve_receipts(mcp::json &j_response, bool &)
 		auto approve_receipt = m_cache->approve_receipt_get(transaction, hash);
 		if(approve_receipt){
 			mcp::json approve_receipt_l;
-			approve_receipt_l["from"] = approve_receipt->from().hex();
-			approve_receipt_l["output"] = toHex(approve_receipt->output());
+			approve_receipt_l["from"] = approve_receipt->from().hexPrefixed();
+			approve_receipt_l["output"] = toHexPrefixed(approve_receipt->output());
 			approve_receipts_l.push_back(approve_receipt_l);
 		}
 		else{
@@ -2800,7 +2801,7 @@ void mcp::rpc_handler::epoch_elected_approve_receipts(mcp::json &j_response, boo
 		for(auto witness : mcp::param::witness_param(0).witness_list)
 		{
 			mcp::json elected_l;
-			elected_l["from"] = witness.hex();
+			elected_l["from"] = witness.hexPrefixed();
 			electeds_l.push_back(elected_l);
 		}
 		
@@ -2814,8 +2815,8 @@ void mcp::rpc_handler::epoch_elected_approve_receipts(mcp::json &j_response, boo
 			mcp::json elected_l;
 			auto approve = m_cache->approve_get(transaction, hash);
 			if(approve){
-				elected_l["from"] = approve->sender().hex();
-				elected_l["proof"] = toHex(approve->m_proof);
+				elected_l["from"] = approve->sender().hexPrefixed();
+				elected_l["proof"] = toHexPrefixed(approve->m_proof);
 			}
 			else{
 				//throw JsonRpcException(exceptionToErrorMessage());
@@ -2823,7 +2824,7 @@ void mcp::rpc_handler::epoch_elected_approve_receipts(mcp::json &j_response, boo
 
 			auto approve_receipt = m_cache->approve_receipt_get(transaction, hash);
 			if(approve_receipt){
-				elected_l["output"] = toHex(approve_receipt->output());
+				elected_l["output"] = toHexPrefixed(approve_receipt->output());
 			}
 			else{
 				//throw JsonRpcException(exceptionToErrorMessage());

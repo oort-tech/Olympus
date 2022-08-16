@@ -166,7 +166,6 @@ void mcp::node_sync::transaction_request_handler(p2p::node_id const &id, mcp::tr
 
 void mcp::node_sync::approve_request_handler(p2p::node_id const &id, mcp::approve_request_message const &request)
 {
-	LOG(log_sync.info) << "[approve_request_handler] in";
 	try
 	{
 		mcp::stopwatch_guard sw("sync:approve_request_handler");

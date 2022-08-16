@@ -49,7 +49,6 @@ namespace mcp
 
 	ImportApproveResult ApproveQueue::manageImport_WITH_LOCK(h256 const& _h, approve const& _approve, bool isLocal)
 	{
-		LOG(m_log.info) << "[manageImport_WITH_LOCK] in";
 		try
 		{
 			assert(_h == _approve.sha3());
@@ -76,7 +75,6 @@ namespace mcp
 
 	bool ApproveQueue::remove_WITH_LOCK(h256 const& _txHash, uint64_t _epoch)
 	{
-		LOG(m_log.info) << "[remove_WITH_LOCK] in";
 		if(m_current.find(_epoch) == m_current.end()){
 			return false;
 		}
@@ -117,15 +115,19 @@ namespace mcp
 			m_onImportProcessed(h);
 		}
 
-		LOG(m_log.trace) << "[import] out";
+		LOG(m_log.debug) << "[import] out";
 		return ret;
 	}
 
 	void ApproveQueue::importLocal(approve const& _approve)
 	{
-		LOG(m_log.trace) << "[importLocal] in";
+		LOG(m_log.debug) << "[importLocal] in";
 		auto ret = import(_approve,true);
-		assert_x(ret == ImportApproveResult::Success);
+		if(ret != ImportApproveResult::Success)
+		{
+			LOG(m_log.info) << "[importLocal] fail with ret = " << (uint32_t)ret;
+			return;
+		}
 		
 		m_async_task->sync_async([this, _approve]() {
 			m_capability->broadcast_approve(_approve);
@@ -136,7 +138,6 @@ namespace mcp
 	{
 		try
 		{
-				LOG(m_log.info) << "[drop] in";
 			UpgradableGuard l(m_lock);
 			for(auto hashs : _mapHashs){
 				h256s dels;
@@ -160,7 +161,6 @@ namespace mcp
 					m_current.erase(m_current.find(epoch));
 				}
 			}
-			LOG(m_log.info) << "[drop] out";
 		}
 		catch(const std::exception& e)
 		{
@@ -258,7 +258,7 @@ namespace mcp
 			Guard l(x_queue);
 			if (m_unverified.size() >= c_maxVerificationQueueSizeApprove)
 			{
-				LOG(m_log.info) << "Approve verification queue is full. Dropping approve";
+				LOG(m_log.debug) << "Approve verification queue is full. Dropping approve";
 				return;
 			}
 			m_unverified.emplace_back(UnverifiedApprove(_data.data(), _nodeId));
