@@ -1776,7 +1776,6 @@ void mcp::rpc_handler::eth_getBlockByNumber(mcp::json &j_response, bool &)
 	}
 	j_block["gasUsed"] = toJS(gasUsed);
 	j_block["minGasPrice"] = toJS(minGasPrice);
-
 	j_response["result"] = j_block;
 }
 
