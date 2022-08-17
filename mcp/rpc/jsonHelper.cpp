@@ -197,6 +197,7 @@ namespace mcp
 			res["gasLimit"] = toJS(mcp::block_max_gas);
 			res["timestamp"] = toJS(_b.exec_timestamp());
 			res["transactions"] = mcp::json::array();
+			res["miner"] = _b.from().hexPrefixed();
 		}
 		else {
 			res["hash"] = _b.hash().hexPrefixed();
