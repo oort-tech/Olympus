@@ -671,7 +671,7 @@ void mcp::block_processor::do_process_dag_item(mcp::timeout_db_transaction & tim
 	assert_x(last_summary_block);
 	uint64_t elect_epoch = mcp::approve::calc_elect_epoch(*last_summary_block->main_chain_index);
 	m_chain->set_last_summary_mci(transaction, *last_summary_block->main_chain_index);
-	//LOG(m_log.info) << "[do_process_dag_item] m_last_summary_mci = " << last_summary_block->main_chain_index;
+	LOG(m_log.debug) << "[do_process_dag_item] m_last_summary_mci = " << last_summary_block->main_chain_index;
 
 	mcp::block_hash const & block_hash(block->hash());
 	for (auto const & link_hash : block->links())
