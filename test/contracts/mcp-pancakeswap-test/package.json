@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "init": "npx hardhat run scripts/test/0_init_hash.ts --network ccnbeta",
     "test": "npx hardhat run scripts/test/test.ts --network ccnbeta"
   },
   "author": "",
