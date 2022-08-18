@@ -925,7 +925,7 @@ void mcp::rpc_handler::block_states(mcp::json &j_response, bool &)
 		auto block = m_cache->block_get(transaction, block_hash);
 		if (block == nullptr)
 		{
-			throw "";
+			BOOST_THROW_EXCEPTION(RPC_Error_BlockNotExsist());
 		}
 		std::shared_ptr<mcp::block_state> state(m_store.block_state_get(transaction, block_hash));
 		state->serialize_json(state_l);
@@ -1367,6 +1367,13 @@ void mcp::rpc_handler::debug_trace_transaction(mcp::json &j_response, bool &)
 		std::list<std::shared_ptr<mcp::trace>> traces;
 		mcp::Executive e(c_state, env, traces);
 		e.setResultRecipient(er);
+
+		//	mcp::json trace = m_chain->traceTransaction(e, options);
+		//	//response_l["gas"] = block->hashables->gas.str();
+		//	response_l["return_value"] = er.output.hexPrefixed();
+		//	response_l["struct_logs"] = trace;
+		//	error_code_l = mcp::rpc_debug_trace_transaction_error_code::ok;
+		//	rpc_response(response, (int)error_code_l, err.msg(error_code_l), response_l);
 	}
 	catch (Exception const &_e)
 	{
@@ -1769,7 +1776,6 @@ void mcp::rpc_handler::eth_getBlockByNumber(mcp::json &j_response, bool &)
 	}
 	j_block["gasUsed"] = toJS(gasUsed);
 	j_block["minGasPrice"] = toJS(minGasPrice);
-
 	j_response["result"] = j_block;
 }
 
@@ -1938,7 +1944,7 @@ void mcp::rpc_handler::net_listening(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::net_peerCount(mcp::json &j_response, bool &)
 {
-	j_response["result"] = m_host->get_peers_count();
+	j_response["result"] = toJS(m_host->get_peers_count());
 }
 
 void mcp::rpc_handler::web3_clientVersion(mcp::json &j_response, bool &)
@@ -2197,7 +2203,7 @@ void mcp::rpc_handler::eth_getBlockTransactionCountByHash(mcp::json &j_response,
 	}
 	catch (...)
 	{
-		j_response["result"] = 0;
+		j_response["result"] = nullptr;
 	}
 }
 
@@ -2378,7 +2384,7 @@ void mcp::rpc_handler::eth_getLogs(mcp::json &j_response, bool &)
 
 	try
 	{
-		uint64_t fromBlock = 0;
+		uint64_t fromBlock = m_chain->last_stable_index();
 		if (params.count("fromBlock"))
 		{
 			std::string blockText = params["fromBlock"];
@@ -2396,7 +2402,7 @@ void mcp::rpc_handler::eth_getLogs(mcp::json &j_response, bool &)
 			}
 		}
 
-		uint64_t toBlock = 0;
+		uint64_t toBlock = m_chain->last_stable_index();
 		if (params.count("toBlock"))
 		{
 			std::string blockText = params["toBlock"];
