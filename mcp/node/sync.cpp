@@ -2132,11 +2132,11 @@ void mcp::node_sync::request_new_missing_approves(mcp::requesting_item& item_a, 
 		std::lock_guard<std::mutex> lock(m_capability->m_requesting_lock);
 		if (!m_capability->m_requesting.add(item_a, is_timeout))
 		{
-			LOG(log_sync.info) << "block already requested:" << item_a.m_request_hash.hex();
+			//LOG(log_sync.info) << "block already requested:" << item_a.m_request_hash.hex();
 			return;
 		}
 	}
-    LOG(log_sync.trace) << "[request_new_missing_approves] in";
+    //LOG(log_sync.trace) << "[request_new_missing_approves] in";
 
 	std::lock_guard<std::mutex> lock(m_mutex_joint_request);
 	m_joint_request_pending.push_back(item_a);
