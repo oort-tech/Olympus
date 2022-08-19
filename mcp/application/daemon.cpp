@@ -912,7 +912,7 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 		{
 			mcp::error_message error_msg;
 			witness = std::make_shared<mcp::witness>(error_msg,
-				ledger, key_manager, chain_store, alarm, composer, chain, processor, cache, TQ, AQ,
+				ledger, key_manager, chain_store, alarm, composer, chain, processor, cache, TQ,
 				config.witness.account_or_file, config.witness.password,
 				last_witness_block_hash_l
 				);
