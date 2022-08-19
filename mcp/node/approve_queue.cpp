@@ -121,7 +121,7 @@ namespace mcp
 
 	void ApproveQueue::importLocal(approve const& _approve)
 	{
-		LOG(m_log.debug) << "[importLocal] in";
+		LOG(m_log.trace) << "[importLocal] in";
 		auto ret = import(_approve,true);
 		if(ret != ImportApproveResult::Success)
 		{
@@ -289,7 +289,7 @@ namespace mcp
 				ImportApproveResult vr = validateApprove(t);
 				if(ImportApproveResult::Success != vr){
 					m_onImport(vr, t.sha3(), work.nodeId);
-					return;
+					continue;
 				}
 
 				ImportApproveResult ir = import(t,false);
