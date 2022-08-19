@@ -30,7 +30,7 @@ namespace mcp
 			mcp::block_store& store_a, std::shared_ptr<mcp::alarm> alarm_a,
 			std::shared_ptr<mcp::composer> composer_a, std::shared_ptr<mcp::chain> chain_a,
 			std::shared_ptr<mcp::block_processor> block_processor_a,
-			std::shared_ptr<mcp::block_cache> cache_a, std::shared_ptr<TransactionQueue> tq, std::shared_ptr<ApproveQueue> aq,
+			std::shared_ptr<mcp::block_cache> cache_a, std::shared_ptr<TransactionQueue> tq,
 			std::string const & account_text, std::string const & password_a, 
 			mcp::block_hash const& last_witness_block_hash_a = mcp::block_hash(0)
 		);
@@ -50,7 +50,6 @@ namespace mcp
 		std::shared_ptr<mcp::composer> m_composer;
 		std::shared_ptr<mcp::block_processor> m_block_processor;
 		std::shared_ptr<TransactionQueue> m_tq;
-		std::shared_ptr<ApproveQueue> m_aq;
 		dev::Address m_account;
 		dev::Secret m_secret;
 

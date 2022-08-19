@@ -6,7 +6,7 @@ mcp::witness::witness(mcp::error_message & error_msg,
 	mcp::block_store& store_a, std::shared_ptr<mcp::alarm> alarm_a,
 	std::shared_ptr<mcp::composer> composer_a, std::shared_ptr<mcp::chain> chain_a,
 	std::shared_ptr<mcp::block_processor> block_processor_a,
-	std::shared_ptr<mcp::block_cache> cache_a, std::shared_ptr<TransactionQueue> tq, std::shared_ptr<ApproveQueue> aq,
+	std::shared_ptr<mcp::block_cache> cache_a, std::shared_ptr<TransactionQueue> tq,
 	std::string const & account_or_file_text, std::string const & password_a,
 	mcp::block_hash const & last_witness_block_hash_a
 ) :
@@ -18,7 +18,6 @@ mcp::witness::witness(mcp::error_message & error_msg,
 	m_block_processor(block_processor_a),
 	m_cache(cache_a),
 	m_tq(tq),
-	m_aq(aq),
 	m_last_witness_time(std::chrono::steady_clock::now()),
 	m_witness_interval(std::chrono::milliseconds(m_max_witness_interval)),
     m_witness_get_current_chain(true),
@@ -116,6 +115,16 @@ void mcp::witness::check_and_witness()
             m_witness_get_current_chain = true;
         }
     }
+
+	if (m_tq->size() == 0)
+	{
+		size_t transaction_unstable_count(m_store.transaction_unstable_count(transaction));
+		if (transaction_unstable_count == 0)
+		{
+			m_is_witnessing.clear();
+			return;
+		}
+	}
 	
 	mcp::block_hash mc_block_hash;
 	while (true)
@@ -138,24 +147,6 @@ void mcp::witness::check_and_witness()
 
 		last_summary_mci = *last_summary_block_state->main_chain_index;
 	}
-
-	if ((m_tq->size() == 0) && (m_aq->size(mcp::approve::calc_elect_epoch(last_summary_mci)) == 0))
-	{
-		size_t transaction_unstable_count(m_store.transaction_unstable_count(transaction));
-		if (transaction_unstable_count == 0)
-		{
-			size_t approve_unstable_count(m_store.approve_unstable_count(transaction));
-			if (approve_unstable_count == 0)
-			{
-				m_is_witnessing.clear();
-				return;
-			}
-		}
-	}
-	LOG(m_log.debug) << "m_tq:" << m_tq->size() << " m_aq:" << m_aq->size(mcp::approve::calc_elect_epoch(last_summary_mci)) << " transaction_unstable_count:" << m_store.transaction_unstable_count(transaction) << " approve_unstable_count:" << m_store.approve_unstable_count(transaction);
-
-
-	//uint64_t new_last_summary_mci = m_composer->get_new_last_summary_mci(transaction);
 
 	mcp::witness_param const & w_param(mcp::param::witness_param(mcp::approve::calc_curr_epoch(last_summary_mci)));
 
