@@ -840,7 +840,7 @@ void mcp::rpc_handler::block(mcp::json &j_response, bool &)
 		throw "";
 	}
 
-	mcp::json j_block = toJson(*block, false);
+	mcp::json j_block = toJson(*block, true);
 	if (!m_cache->block_number_get(transaction, block_hash, block_number))
 	{
 		j_block["number"] = toJS(block_number);
@@ -925,7 +925,7 @@ void mcp::rpc_handler::block_states(mcp::json &j_response, bool &)
 		auto block = m_cache->block_get(transaction, block_hash);
 		if (block == nullptr)
 		{
-			throw "";
+			BOOST_THROW_EXCEPTION(RPC_Error_BlockNotExsist());
 		}
 		std::shared_ptr<mcp::block_state> state(m_store.block_state_get(transaction, block_hash));
 		state->serialize_json(state_l);
@@ -1266,7 +1266,6 @@ void mcp::rpc_handler::status(mcp::json &j_response, bool &)
 	j_response["last_mci"] = last_mci;
 	j_response["last_stable_block_index"] = last_stable_index;
 	j_response["epoch"] = m_chain->last_epoch();
-	j_response["epoch_period"] = mcp::epoch_period;
 }
 
 void mcp::rpc_handler::peers(mcp::json &j_response, bool &)
@@ -1368,6 +1367,13 @@ void mcp::rpc_handler::debug_trace_transaction(mcp::json &j_response, bool &)
 		std::list<std::shared_ptr<mcp::trace>> traces;
 		mcp::Executive e(c_state, env, traces);
 		e.setResultRecipient(er);
+
+		//	mcp::json trace = m_chain->traceTransaction(e, options);
+		//	//response_l["gas"] = block->hashables->gas.str();
+		//	response_l["return_value"] = er.output.hexPrefixed();
+		//	response_l["struct_logs"] = trace;
+		//	error_code_l = mcp::rpc_debug_trace_transaction_error_code::ok;
+		//	rpc_response(response, (int)error_code_l, err.msg(error_code_l), response_l);
 	}
 	catch (Exception const &_e)
 	{
@@ -1770,7 +1776,6 @@ void mcp::rpc_handler::eth_getBlockByNumber(mcp::json &j_response, bool &)
 	}
 	j_block["gasUsed"] = toJS(gasUsed);
 	j_block["minGasPrice"] = toJS(minGasPrice);
-
 	j_response["result"] = j_block;
 }
 
@@ -1939,7 +1944,7 @@ void mcp::rpc_handler::net_listening(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::net_peerCount(mcp::json &j_response, bool &)
 {
-	j_response["result"] = m_host->get_peers_count();
+	j_response["result"] = toJS(m_host->get_peers_count());
 }
 
 void mcp::rpc_handler::web3_clientVersion(mcp::json &j_response, bool &)
@@ -2198,7 +2203,7 @@ void mcp::rpc_handler::eth_getBlockTransactionCountByHash(mcp::json &j_response,
 	}
 	catch (...)
 	{
-		j_response["result"] = 0;
+		j_response["result"] = nullptr;
 	}
 }
 
@@ -2379,7 +2384,7 @@ void mcp::rpc_handler::eth_getLogs(mcp::json &j_response, bool &)
 
 	try
 	{
-		uint64_t fromBlock = 0;
+		uint64_t fromBlock = m_chain->last_stable_index();
 		if (params.count("fromBlock"))
 		{
 			std::string blockText = params["fromBlock"];
@@ -2397,7 +2402,7 @@ void mcp::rpc_handler::eth_getLogs(mcp::json &j_response, bool &)
 			}
 		}
 
-		uint64_t toBlock = 0;
+		uint64_t toBlock = m_chain->last_stable_index();
 		if (params.count("toBlock"))
 		{
 			std::string blockText = params["toBlock"];
@@ -2744,8 +2749,8 @@ void mcp::rpc_handler::epoch_approves(mcp::json &j_response, bool &)
 		auto approve = m_cache->approve_get(transaction, hash);
 		if(approve){
 			mcp::json approve_l;
-			approve_l["from"] = approve->sender().hexPrefixed();
-			approve_l["proof"] = toHexPrefixed(approve->m_proof);
+			approve_l["from"] = approve->sender().hex();
+			approve_l["proof"] = toHex(approve->m_proof);
 			approves_l.push_back(approve_l);
 		}
 		else{
@@ -2774,8 +2779,8 @@ void mcp::rpc_handler::epoch_approve_receipts(mcp::json &j_response, bool &)
 		auto approve_receipt = m_cache->approve_receipt_get(transaction, hash);
 		if(approve_receipt){
 			mcp::json approve_receipt_l;
-			approve_receipt_l["from"] = approve_receipt->from().hexPrefixed();
-			approve_receipt_l["output"] = toHexPrefixed(approve_receipt->output());
+			approve_receipt_l["from"] = approve_receipt->from().hex();
+			approve_receipt_l["output"] = toHex(approve_receipt->output());
 			approve_receipts_l.push_back(approve_receipt_l);
 		}
 		else{
@@ -2801,7 +2806,7 @@ void mcp::rpc_handler::epoch_elected_approve_receipts(mcp::json &j_response, boo
 		for(auto witness : mcp::param::witness_param(0).witness_list)
 		{
 			mcp::json elected_l;
-			elected_l["from"] = witness.hexPrefixed();
+			elected_l["from"] = witness.hex();
 			electeds_l.push_back(elected_l);
 		}
 		
@@ -2815,8 +2820,8 @@ void mcp::rpc_handler::epoch_elected_approve_receipts(mcp::json &j_response, boo
 			mcp::json elected_l;
 			auto approve = m_cache->approve_get(transaction, hash);
 			if(approve){
-				elected_l["from"] = approve->sender().hexPrefixed();
-				elected_l["proof"] = toHexPrefixed(approve->m_proof);
+				elected_l["from"] = approve->sender().hex();
+				elected_l["proof"] = toHex(approve->m_proof);
 			}
 			else{
 				//throw JsonRpcException(exceptionToErrorMessage());
@@ -2824,7 +2829,7 @@ void mcp::rpc_handler::epoch_elected_approve_receipts(mcp::json &j_response, boo
 
 			auto approve_receipt = m_cache->approve_receipt_get(transaction, hash);
 			if(approve_receipt){
-				elected_l["output"] = toHexPrefixed(approve_receipt->output());
+				elected_l["output"] = toHex(approve_receipt->output());
 			}
 			else{
 				//throw JsonRpcException(exceptionToErrorMessage());
