@@ -1513,7 +1513,7 @@ void mcp::node_sync::process_hash_tree(p2p::node_id const &id, mcp::hash_tree_re
                 if (m_request_info.index <= 1)//last
                 {
                     clear_catchup_info(false);
-                    LOG(log_sync.info) << "sync success";
+                    LOG(log_sync.info) << "sync success1";
                     return;
                 }
 
@@ -1665,7 +1665,7 @@ void mcp::node_sync::del_catchup_index(std::map<uint64_t, uint64_t> const& map_a
 			if (index <= 1)//last
 			{
 				clear_catchup_info(false);
-				LOG(log_sync.info) << "sync success";
+				LOG(log_sync.info) << "sync success2";
 				return;
 			}
 
@@ -2053,6 +2053,7 @@ void mcp::node_sync::process_request_joints()
 					if (!m_cache->approve_exists(transaction,h))
 					{
 						mcp::approve_request_message message(item_a.m_request_id, h);
+						LOG(log_sync.trace) << "[process_request_joints] send_approve_request";
 						send_approve_request(item_a.m_node_id, message);
 						//LOG(log_sync.info) << "process_request_joints hash:" << h.hex();
 					}
@@ -2131,10 +2132,11 @@ void mcp::node_sync::request_new_missing_approves(mcp::requesting_item& item_a, 
 		std::lock_guard<std::mutex> lock(m_capability->m_requesting_lock);
 		if (!m_capability->m_requesting.add(item_a, is_timeout))
 		{
-			//LOG(log_sync.info) << "block already requested:" << item_a.block_hash->to_string();
+			LOG(log_sync.info) << "block already requested:" << item_a.m_request_hash.hex();
 			return;
 		}
 	}
+    LOG(log_sync.trace) << "[request_new_missing_approves] in";
 
 	std::lock_guard<std::mutex> lock(m_mutex_joint_request);
 	m_joint_request_pending.push_back(item_a);

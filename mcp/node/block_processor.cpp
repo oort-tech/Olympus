@@ -367,7 +367,7 @@ void mcp::block_processor::add_to_process(std::shared_ptr<mcp::block_processor_i
 	if (!item_a->is_sync() && item_a->joint.summary_hash != mcp::summary_hash(0))
 	{
 		assert_x(!item_a->is_local());
-		//LOG(m_log.debug) << "Start sync:" << item_a->joint.block->hash().to_string();
+		LOG(m_log.debug) << "[add_to_process]Start sync:" << item_a->joint.block->hash().hexPrefixed();
 
 		//start sync;
 		mcp::p2p::node_id id(item_a->remote_node_id());
@@ -563,10 +563,9 @@ void mcp::block_processor::do_process_one(std::shared_ptr<mcp::block_processor_i
 		}
 		case mcp::validate_result_codes::missing_parents_and_previous:
 		{
-			if (item->is_local() && result.missing_links.size() > 0)
-				break;
+			assert_x(!(item->is_local() && result.missing_links.size() > 0));
 
-			if (result.missing_parents_and_previous.size() > 0 || result.missing_links.size() > 0)
+			if (result.missing_parents_and_previous.size() > 0 || result.missing_links.size() > 0 || result.missing_approves.size() > 0)
 			{
 				if (result.missing_parents_and_previous.size() > 0)
 				{
@@ -781,6 +780,7 @@ void mcp::block_processor::process_existing_missing(mcp::p2p::node_id const & re
 
 		if (!approve_missings.empty())
 		{
+    		LOG(m_log.trace) << "[process_existing_missing] approve_missings.size="<<approve_missings.size();
 			uint64_t now = m_steady_clock.now_since_epoch();
 			for (auto it = approve_missings.begin(); it != approve_missings.end(); it++)
 			{
