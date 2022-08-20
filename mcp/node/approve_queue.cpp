@@ -323,7 +323,7 @@ namespace mcp
 		else{
 			bool ret = m_store.stable_block_get(transaction, (_t.m_epoch-2)*epoch_period, hash);
 			if(ret){
-				LOG(m_log.info) << "[validateApprove] epoch is too high";
+				LOG(m_log.debug) << "[validateApprove] epoch is too high";
 				return ImportApproveResult::EpochIsTooHigh;
 			}
 		}
