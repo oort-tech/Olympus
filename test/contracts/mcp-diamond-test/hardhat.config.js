@@ -26,37 +26,6 @@ module.exports = {
       // },
       // chainId: 1337,
     },
-    ropsten: {
-      chainId: 3,
-      url: process.env.API_URL,
-      accounts: {
-        mnemonic: process.env.MNEMONIC,
-      },
-      gas: 2100000,
-      gasPrice: 8000000000,
-    },
-
-    kovan: {
-      accounts: {
-        mnemonic: process.env.MNEMONIC,
-      },
-      url: "https://kovan.infura.io/v3/99b8947af7e14278ae235bb21eb81f53",
-      chainId: 42,
-      timeout: 200000,
-      gas: 2100000,
-      gasPrice: 8000000000,
-      nonce: 150,
-    },
-    bsctestnet: {
-      accounts: {
-        mnemonic: process.env.MNEMONIC,
-      },
-      url: 'https://data-seed-prebsc-1-s1.binance.org:8545',
-      chainId: 97,
-      timeout: 2000000,
-      gas: 2100000,
-      gasLimit: 5000000,
-    },
     ccnbeta: {
       chainid: 971,
       url: process.env.CCNBETA_END_POINT,
