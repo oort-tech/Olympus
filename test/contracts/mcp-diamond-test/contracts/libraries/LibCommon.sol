@@ -4,7 +4,7 @@ pragma solidity 0.8.1;
 import "./AppStorageOpen.sol";
 
 library LibCommon {
-    address internal constant PANCAKESWAP_ROUTER_ADDRESS = 0xa513E6E4b8f2a923D98304ec87F64353C4D5C853; // pancakeswap router address
+    address internal constant PANCAKESWAP_ROUTER_ADDRESS = 0x7437491D9348b7a12996464cE9cC716bA5A13f4A; // pancakeswap router address
 
     function upgradeAdmin() internal view returns (address upgradeAdmin_) {
         upgradeAdmin_ = diamondStorage().upgradeAdmin;
