@@ -7,7 +7,7 @@ import re
 import string
 import types
 
-URL = "http://192.168.109.194:8765"
+URL = "http://192.168.109.191:8765"
 #0xC98A676DE3E0C539742E3023F7755C57E331E42F
 #Judge account number, mcp_start, remove I, O, l, 0, length equal to 42	
 def is_account(str):
@@ -2197,17 +2197,17 @@ class Test_rpc(unittest.TestCase):
 if __name__ == "__main__":
     suite = unittest.TestSuite()
     suite.addTest(Test_rpc("test_account_import")) # need to check bad_data
-    suite.addTest(Test_rpc("test_account_create"))
+    # suite.addTest(Test_rpc("test_account_create"))
     suite.addTest(Test_rpc("test_accounts_balances"))
-    suite.addTest(Test_rpc("test_account_balance"))
+    # suite.addTest(Test_rpc("test_account_balance"))
     suite.addTest(Test_rpc("test_eth_call"))
-    suite.addTest(Test_rpc("test_account_code"))
-    suite.addTest(Test_rpc("test_account_lock"))
-    suite.addTest(Test_rpc("test_account_unlock"))
+    # suite.addTest(Test_rpc("test_account_code"))
+    # suite.addTest(Test_rpc("test_account_lock"))
+    # suite.addTest(Test_rpc("test_account_unlock"))
     suite.addTest(Test_rpc("test_account_export"))
     suite.addTest(Test_rpc("test_account_validate"))
     suite.addTest(Test_rpc("test_account_password_change"))
-    suite.addTest(Test_rpc("test_account_list"))
+    # suite.addTest(Test_rpc("test_account_list"))
     suite.addTest(Test_rpc("test_account_state_list"))
     suite.addTest(Test_rpc("test_account_block_list"))
     suite.addTest(Test_rpc("test_block"))
@@ -2221,7 +2221,7 @@ if __name__ == "__main__":
     suite.addTest(Test_rpc("test_version"))
     suite.addTest(Test_rpc("test_peers"))
     suite.addTest(Test_rpc("test_nodes"))
-    suite.addTest(Test_rpc("test_logs"))
+    # suite.addTest(Test_rpc("test_logs"))
     suite.addTest(Test_rpc("test_debug_storage_range_at"))
     suite.addTest(Test_rpc("test_account_remove"))
     suite.addTest(Test_rpc("test_eth_blockNumber"))
