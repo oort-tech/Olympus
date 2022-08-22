@@ -61,8 +61,7 @@ mcp::unhandle_add_result mcp::unhandle_cache::add(mcp::block_hash const &hash_a,
     }
 
 	/// only accept unknown dependencies when size reach at half of capacity
-	if (m_unhandles.size() >= m_capacity / 2 
-		&& !m_missings.count(hash_a))
+	if (m_unhandles.size() >= m_capacity / 2)
 	{
 		unhandle_full_count++;
         return unhandle_add_result::Exist;
@@ -72,9 +71,6 @@ mcp::unhandle_add_result mcp::unhandle_cache::add(mcp::block_hash const &hash_a,
 
 	mcp::unhandle_item u_item(hash_a, item_a, dependency_hashs_a, trs, aps);
 	m_unhandles[hash_a] = u_item;
-	/// delete unknown dependency
-	if (m_missings.count(hash_a))
-		m_missings.erase(hash_a);
 
 	/// add tip
 	if (!m_dependencies.count(hash_a))
@@ -382,11 +378,16 @@ void mcp::unhandle_cache::get_missings(size_t const & missing_limit_a, std::vect
 
 	size_t light_missing_limit = missing_limit_a - missings_a.size();
 
+	h256Hash knowns;
+	{
+		/// will locked transaction queue
+		knowns = m_tq->knownTransactions();
+	}
 	if (m_light_missings.size() <= light_missing_limit)
 	{
 		for (auto const &d : m_light_missings)
 		{
-			//if (!m_unhandles.count(d))
+			if (!knowns.count(d))
 				light_missings_a.push_back(d);
 		}
 	}
@@ -402,7 +403,7 @@ void mcp::unhandle_cache::get_missings(size_t const & missing_limit_a, std::vect
 		h256 start(0);
 		while (light_missings_a.size() < light_missing_limit && start != *it)
 		{
-			//if (!m_unhandles.count(*it))
+			if (!knowns.count(*it))
 				light_missings_a.push_back(*it);
 			if (start == h256(0))
 				start = *it;
