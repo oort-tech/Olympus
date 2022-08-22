@@ -8,6 +8,7 @@
 #include <libdevcore/CommonJS.h>
 #include <mcp/core/config.hpp>
 #include <mcp/node/witness.hpp>
+#include <mcp/node/approve_queue.hpp>
 
 #include <queue>
 
@@ -305,6 +306,8 @@ void mcp::chain::add_new_witness_list(mcp::db::db_transaction & transaction_a, u
 	//The elected_list corresponds to next epoch.
 	m_store.epoch_elected_approve_receipts_put(transaction_a, elected_epoch, elected_list);
 	vrf_outputs[elected_epoch].clear();
+
+	m_aq->dropObsolete(m_last_epoch);
 }
 
 void mcp::chain::init_vrf_outputs(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a)

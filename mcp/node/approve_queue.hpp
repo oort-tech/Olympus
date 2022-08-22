@@ -62,6 +62,10 @@ namespace mcp
 		/// @param _txHash approve hash
 		void drop(std::map<uint64_t, h256s> const& _txHashs);
 
+		/// Remove approves from the queue 
+		/// @param _epoch Remove approves less than _cur_epoch
+		void dropObsolete(uint64_t _cur_epoch);
+
 		/// Get top approves from the queue. Returned approves are not removed from the queue automatically.
 		/// @param _limit Max number of approves to return.
 		/// @param _avoid approves to avoid returning.

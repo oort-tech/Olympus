@@ -84,6 +84,9 @@ namespace mcp
 			return false;
 
 		m_current.at(_epoch).erase(t);
+		if(m_current[_epoch].empty()){
+			m_current.erase(m_current.find(_epoch));
+		}
 		m_known.erase(_txHash);
 		
 		return true;
@@ -157,14 +160,53 @@ namespace mcp
 					m_dropped.insert(h, true /* placeholder value */);
 					remove_WITH_LOCK(h, epoch);
 				}
-				if(m_current[epoch].empty()){
-					m_current.erase(m_current.find(epoch));
-				}
 			}
 		}
 		catch(const std::exception& e)
 		{
-			std::cerr << e.what() << '\n';
+			LOG(m_log.error) << "[drop] error: " << e.what();
+			assert_x(false);
+		}
+	}
+
+	void ApproveQueue::dropObsolete(uint64_t _cur_epoch)
+	{
+		try
+		{
+			UpgradableGuard l(m_lock);
+			for(auto it=m_current.begin(); it!=m_current.end();){
+				auto epoch = it->first;
+				if(it->first >= _cur_epoch)
+				{
+					return;
+				}
+				LOG(m_log.debug) << "[dropObsolete] drop epoch" << epoch << " size="<<it->second.size();
+				h256s dels;
+				for(auto ap : it->second)
+				{
+					h256 h = ap.first;
+					if (m_known.count(h))
+					{
+						dels.push_back(h);
+					}
+				}
+
+				UpgradeGuard ul(l);
+				for (auto h : dels)
+				{
+					m_dropped.insert(h, true /* placeholder value */);
+					remove_WITH_LOCK(h, epoch);
+				}
+				if(m_current.find(epoch) != m_current.end()){
+					m_current.erase(epoch);
+				}
+				it = m_current.begin();
+			}
+		}
+		catch(const std::exception& e)
+		{
+			LOG(m_log.error) << "[dropObsolete] fail in epoch " << _cur_epoch << " error: " << e.what();
+			assert_x(false);
 		}
 	}
 
@@ -344,15 +386,19 @@ namespace mcp
 
 	std::string ApproveQueue::getInfo()
 	{
+		UpgradableGuard l(m_lock);
 		std::string str = "ApproveQueue current:" + std::to_string(m_current.size())
 			+ " ,m_unverified:" + std::to_string(m_unverified.size())
 			+ " ,m_known:" + std::to_string(m_known.size())
 			+ " ,m_dropped:" + std::to_string(m_dropped.size());
-		str += "current[ ";
-		for(auto current : m_current){
-			str += " epoch" + std::to_string(current.first) + " size=" + std::to_string(current.second.size()); 
+		if(m_current.size() > 0){
+			str += " current[";
+			for(auto current : m_current){
+				str += " epoch" + std::to_string(current.first) + " size=" + std::to_string(current.second.size()); 
+			}
+			str += " ]";
 		}
-		str += " ]";
+		
 
 		return str;
 	}
