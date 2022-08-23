@@ -1329,10 +1329,13 @@ void mcp::rpc_handler::process_request()
 			if (pointer != m_ethRpcMethods.end())
 			{
 				if (!request.count("id") ||
-					!request.count("jsonrpc") ||
-					!request.count("params") ||
-					!request["params"].is_array())
+					!request.count("jsonrpc"))
 				{
+					/*
+					||
+					!request.count("params") ||
+					!request["params"].is_array() was removed
+					*/
 					BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidRequest());
 				}
 
