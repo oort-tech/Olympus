@@ -697,8 +697,7 @@ class Test_rpc(unittest.TestCase):
         self.assertTrue(is_json, response.text)
         json_data = json.loads(response.text)
         self.assertEqual(json_data['code'], 0, json_data['msg'])
-        block_result = json_data['result']
-        self.assertTrue(is_hex(block_result['number']))
+        block_result = json_data['block']
         self.assertEqual(Test_rpc.block_hash, block_result['hash'])
 
         response = requests.post(url=URL, data=json.dumps(bad_data))

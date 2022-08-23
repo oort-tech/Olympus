@@ -481,6 +481,8 @@ void mcp::rpc_handler::account_import(mcp::json &j_response, bool &)
 	{
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidJson());
 	}
+
+	j_response["account"] = kc.account.hexPrefixed();
 }
 
 void mcp::rpc_handler::accounts_balances(mcp::json &j_response, bool &)
@@ -503,7 +505,9 @@ void mcp::rpc_handler::accounts_balances(mcp::json &j_response, bool &)
 		mcp::db::db_transaction transaction(m_store.create_transaction());
 		chain_state c_state(transaction, 0, m_store, m_chain, m_cache);
 		auto balance(c_state.balance(account));
-		j_balances.push_back(balance.convert_to<std::string>());
+		mcp::json acc_balance;
+		acc_balance[account_text] = balance;
+		j_balances.push_back(acc_balance);
 	}
 
 	j_response["balances"] = j_balances;
@@ -661,11 +665,6 @@ void mcp::rpc_handler::account_state_list(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::block(mcp::json &j_response, bool &)
 {
-	if (!request.count("hash") || !request["hash"].is_string())
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidHash());
-	}
-
 	mcp::block_hash block_hash(0);
 	try
 	{
@@ -676,37 +675,21 @@ void mcp::rpc_handler::block(mcp::json &j_response, bool &)
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidHash());
 	}
 
-	mcp::db::db_transaction transaction(m_store.create_transaction());
-	auto block(m_cache->block_get(transaction, block_hash));
-	uint64_t block_number;
-
-	if (block == nullptr)
+	try
 	{
-		throw "";
-	}
+		mcp::db::db_transaction transaction(m_store.create_transaction());
+		auto block(m_cache->block_get(transaction, block_hash));
+		if (block == nullptr)
+		{
+			throw "";
+		}
 
-	mcp::json j_block = toJson(*block, false);
-	if (!m_cache->block_number_get(transaction, block_hash, block_number))
+		j_response["block"] = toJson(*block, false);
+	}
+	catch (...)
 	{
-		j_block["number"] = toJS(block_number);
+		j_response["block"] = nullptr;
 	}
-
-	u256 gasUsed = 0;
-	u256 minGasPrice = 0;
-	for (auto &th : block->links())
-	{
-		auto t = m_cache->transaction_get(transaction, th);
-		gasUsed += t->gas();
-		minGasPrice = minGasPrice == 0 ? t->gasPrice() : std::min(minGasPrice, t->gasPrice());
-
-		auto td = m_store.transaction_address_get(transaction, th);
-		j_block["transactions"].push_back(
-			toJson(LocalisedTransaction(*t, block_hash, td->index, block_number)));
-	}
-	j_block["gasUsed"] = toJS(gasUsed);
-	j_block["minGasPrice"] = toJS(minGasPrice);
-
-	j_response["result"] = j_block;
 }
 
 void mcp::rpc_handler::block_state(mcp::json &j_response, bool &)
