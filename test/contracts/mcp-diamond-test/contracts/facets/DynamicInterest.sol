@@ -29,7 +29,7 @@ contract DynamicInterest is Pausable, IDynamicInterest {
     event InterestsUpdated(address indexed admin, uint256 indexed timestamp);
 
     function random() internal view returns (uint256) {
-        return uint256(keccak256(abi.encodePacked(block.timestamp, block.difficulty, msg.sender)));
+        return uint256(keccak256(abi.encodePacked(block.timestamp, block.timestamp, msg.sender)));
     }
 
     // getter Methods

@@ -10,16 +10,17 @@ const {main: reserves} = require('./reserves.test');
 const {main: tokenList} = require('./tokenList.test');
 
 async function main() {
-  await comptroller();
-  await deposit();
-  await diamond();
-  await dynamicInterest();
-  await faucet();
+  
   await loan();
   await liquidation();
   await oracleOpen();
   await reserves();
   await tokenList();
+  await comptroller();
+  await deposit();
+  await diamond();
+  await dynamicInterest();
+  await faucet();
 }
 
 main().catch((error) => {

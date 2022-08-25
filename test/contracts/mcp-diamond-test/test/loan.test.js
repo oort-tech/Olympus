@@ -459,18 +459,18 @@ async function main() {
   await USDT_Add_Collateral();
   await USDT_Withdraw_Loan();
   await Swap_Loan();
-  await Swap_to_Loan();
-  await USDT_Withdraw_Loan_1();
+  // await Swap_to_Loan();
+  // await USDT_Withdraw_Loan_1();
   await BTC_New_Loan_1_4_CDR();
   await Btc_New_Loan_Same_Market();
   await Btc_New_Loan_Retry();
   await Btc_Add_Collateral();
-  await BTC_Swap_Loan();
-  await Btc_Swap_Loan_2nd_Attempt();
-  await BTC_Swap_to_Loan();
-  await Btc_Swap_to_Loan_2nd_Attempt();
-  await Btc_Withdraw_Loan();
-  await Btc_Repay_Loan();
+  // await BTC_Swap_Loan();
+  // await Btc_Swap_Loan_2nd_Attempt();
+  // await BTC_Swap_to_Loan();
+  // await Btc_Swap_to_Loan_2nd_Attempt();
+  // await Btc_Withdraw_Loan();
+  // await Btc_Repay_Loan();
 }
 
 // main()
