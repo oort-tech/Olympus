@@ -95,17 +95,11 @@ public:
     rpc_handler(mcp::rpc &, std::string const &, std::function<void(mcp::json const &)>const & ,int m_cap);
     void process_request();
 
-	void account_list(mcp::json & j_response, bool & async);
 	void account_validate(mcp::json & j_response, bool & async);
-	void account_create(mcp::json & j_response, bool & async);
 	void account_remove(mcp::json & j_response, bool & async);
-	void account_unlock(mcp::json & j_response, bool & async);
-	void account_lock(mcp::json & j_response, bool & async);
 	void account_export(mcp::json & j_response, bool & async);
 	void account_import(mcp::json & j_response, bool & async);
 	void account_password_change(mcp::json & j_response, bool & async);
-	void account_code(mcp::json & j_response, bool & async);
-	void account_balance(mcp::json & j_response, bool & async);
 	void accounts_balances(mcp::json & j_response, bool & async);
 	void account_block_list(mcp::json & j_response, bool & async);
 	void account_state_list(mcp::json & j_response, bool & async);
@@ -126,8 +120,6 @@ public:
 
 	void debug_trace_transaction(mcp::json & j_response, bool & async);
 	void debug_storage_range_at(mcp::json & j_response, bool & async);
-
-	void logs(mcp::json & j_response, bool & async);
 
 	void get_eth_signed_msg(dev::bytes & data, dev::h256 & hash);
 	bool try_get_mc_info(dev::eth::McInfo &mc_info_a, uint64_t &block_number);

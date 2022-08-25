@@ -10,7 +10,6 @@
 #include <queue>
 #include <mcp/node/chain_state.hpp>
 #include <mcp/node/sync.hpp>
-#include <mcp/node/approve_queue.hpp>
 #include <mcp/core/approve_receipt.hpp>
 
 namespace mcp
@@ -23,6 +22,7 @@ namespace mcp
 	using GasEstimationCallback = std::function<void(GasEstimationProgress const&)>;
 
 	class witness;
+	class ApproveQueue;
 	class chain : public std::enable_shared_from_this<mcp::chain>
 	{
 	public:
@@ -93,6 +93,7 @@ namespace mcp
 		void send_approve(std::shared_ptr<ApproveQueue> aq_a);
 		
 		void set_witness(std::shared_ptr<mcp::witness>& witness_a) { m_witness = witness_a; }
+		void set_approve_queue(std::shared_ptr<mcp::ApproveQueue> aq_a) { m_aq = aq_a; }
 
 	private:
 		void write_dag_block(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a, std::shared_ptr<mcp::block> block_a);
@@ -137,6 +138,7 @@ namespace mcp
 		std::map<uint64_t, std::map<uint32_t, dev::ApproveReceipt>> vrf_outputs;
 		bool m_need_send_approve = true;
 		std::shared_ptr<mcp::witness> m_witness;
+		std::shared_ptr<mcp::ApproveQueue> m_aq;
 
         mcp::log m_log = { mcp::log("node") };
 	};

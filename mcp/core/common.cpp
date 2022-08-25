@@ -405,7 +405,7 @@ void mcp::block_state::serialize_json(mcp::json & json_a)
 	mcp::json content_l = mcp::json::object();
 	content_l["level"] = level;
 	content_l["witnessed_level"] = witnessed_level;
-	content_l["best_parent"] = best_parent.hex();
+	content_l["best_parent"] = best_parent.hexPrefixed();
 	json_a["content"] = content_l;
 
 	json_a["is_stable"] = is_stable ? 1 : 0;

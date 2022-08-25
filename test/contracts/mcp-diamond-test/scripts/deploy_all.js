@@ -5,7 +5,7 @@ const { minAmount } = require("./minimumAmount.js");
 const utils = require("ethers").utils;
 const { getSelectors, FacetCutAction } = require("./libraries/diamond.js");
 const { mkdirSync, existsSync, readFileSync, writeFileSync } = require("fs");
-const fs = require("fs");
+const fs = require("fs/promises");
 
 const TOKENS_DECIMAL = 8;
 
@@ -181,59 +181,91 @@ async function addMarkets(array) {
 
   /// SET COMMITMENT PERIOD
   console.log("setCommitment begin");
-  await comptroller.connect(upgradeAdmin).setDepositCommitment(comit_NONE, 0);
-  await comptroller.connect(upgradeAdmin).setDepositCommitment(comit_TWOWEEKS, 14);
-  await comptroller.connect(upgradeAdmin).setDepositCommitment(comit_ONEMONTH, 30);
-  await comptroller.connect(upgradeAdmin).setDepositCommitment(comit_THREEMONTHS, 90);
+  tx = await comptroller.connect(upgradeAdmin).setDepositCommitment(comit_NONE, 0);
+  await tx.wait();
+  tx = await comptroller.connect(upgradeAdmin).setDepositCommitment(comit_TWOWEEKS, 14);
+  await tx.wait();
+  tx = await comptroller.connect(upgradeAdmin).setDepositCommitment(comit_ONEMONTH, 30);
+  await tx.wait();
+  tx = await comptroller.connect(upgradeAdmin).setDepositCommitment(comit_THREEMONTHS, 90);
+  await tx.wait();
 
-  await comptroller.connect(upgradeAdmin).setBorrowCommitment(comit_NONE, 0);
-  await comptroller.connect(upgradeAdmin).setBorrowCommitment(comit_ONEMONTH, 30);
+  tx = await comptroller.connect(upgradeAdmin).setBorrowCommitment(comit_NONE, 0);
+  await tx.wait();
+  tx = await comptroller.connect(upgradeAdmin).setBorrowCommitment(comit_ONEMONTH, 30);
+  await tx.wait();
   console.log("setCommitment complete");
 
   /// UPDATE APY
   console.log("updateAPY begin");
-  await comptroller.connect(upgradeAdmin).updateAPY(symbolBtc, comit_NONE, 780);
-  await comptroller.connect(upgradeAdmin).updateAPY(symbolBtc, comit_TWOWEEKS, 1000);
-  await comptroller.connect(upgradeAdmin).updateAPY(symbolBtc, comit_ONEMONTH, 1500);
-  await comptroller.connect(upgradeAdmin).updateAPY(symbolBtc, comit_THREEMONTHS, 1800);
+  tx = await comptroller.connect(upgradeAdmin).updateAPY(symbolBtc, comit_NONE, 780);
+  await tx.wait();
+  tx = await comptroller.connect(upgradeAdmin).updateAPY(symbolBtc, comit_TWOWEEKS, 1000);
+  await tx.wait();
+  tx = await comptroller.connect(upgradeAdmin).updateAPY(symbolBtc, comit_ONEMONTH, 1500);
+  await tx.wait();
+  tx = await comptroller.connect(upgradeAdmin).updateAPY(symbolBtc, comit_THREEMONTHS, 1800);
 
-  await comptroller.connect(upgradeAdmin).updateAPY(symbolUsdc, comit_NONE, 780);
-  await comptroller.connect(upgradeAdmin).updateAPY(symbolUsdc, comit_TWOWEEKS, 1000);
-  await comptroller.connect(upgradeAdmin).updateAPY(symbolUsdc, comit_ONEMONTH, 1500);
-  await comptroller.connect(upgradeAdmin).updateAPY(symbolUsdc, comit_THREEMONTHS, 1800);
+  tx = await comptroller.connect(upgradeAdmin).updateAPY(symbolUsdc, comit_NONE, 780);
+  await tx.wait();
+  tx = await comptroller.connect(upgradeAdmin).updateAPY(symbolUsdc, comit_TWOWEEKS, 1000);
+  await tx.wait();
+  tx = await comptroller.connect(upgradeAdmin).updateAPY(symbolUsdc, comit_ONEMONTH, 1500);
+  await tx.wait();
+  tx = await comptroller.connect(upgradeAdmin).updateAPY(symbolUsdc, comit_THREEMONTHS, 1800);
+  await tx.wait();
 
-  await comptroller.connect(upgradeAdmin).updateAPY(symbolUsdt, comit_NONE, 780);
-  await comptroller.connect(upgradeAdmin).updateAPY(symbolUsdt, comit_TWOWEEKS, 1000);
-  await comptroller.connect(upgradeAdmin).updateAPY(symbolUsdt, comit_ONEMONTH, 1500);
-  await comptroller.connect(upgradeAdmin).updateAPY(symbolUsdt, comit_THREEMONTHS, 1800);
+  tx = await comptroller.connect(upgradeAdmin).updateAPY(symbolUsdt, comit_NONE, 780);
+  await tx.wait();
+  tx = await comptroller.connect(upgradeAdmin).updateAPY(symbolUsdt, comit_TWOWEEKS, 1000);
+  await tx.wait();
+  tx = await comptroller.connect(upgradeAdmin).updateAPY(symbolUsdt, comit_ONEMONTH, 1500);
+  await tx.wait();
+  tx = await comptroller.connect(upgradeAdmin).updateAPY(symbolUsdt, comit_THREEMONTHS, 1800);
+  await tx.wait();
 
-  await comptroller.connect(upgradeAdmin).updateAPY(symbolWBNB, comit_NONE, 780);
-  await comptroller.connect(upgradeAdmin).updateAPY(symbolWBNB, comit_TWOWEEKS, 1000);
-  await comptroller.connect(upgradeAdmin).updateAPY(symbolWBNB, comit_ONEMONTH, 1500);
-  await comptroller.connect(upgradeAdmin).updateAPY(symbolWBNB, comit_THREEMONTHS, 1800);
+  tx = await comptroller.connect(upgradeAdmin).updateAPY(symbolWBNB, comit_NONE, 780);
+  await tx.wait();
+  tx = await comptroller.connect(upgradeAdmin).updateAPY(symbolWBNB, comit_TWOWEEKS, 1000);
+  await tx.wait();
+  tx = await comptroller.connect(upgradeAdmin).updateAPY(symbolWBNB, comit_ONEMONTH, 1500);
+  await tx.wait();
+  tx = await comptroller.connect(upgradeAdmin).updateAPY(symbolWBNB, comit_THREEMONTHS, 1800);
+  await tx.wait();
   console.log("updateAPY complete");
 
   /// UPDATE APR
   console.log("updateAPR begin");
-  await comptroller.connect(upgradeAdmin).updateAPR(symbolBtc, comit_NONE, 1800);
-  await comptroller.connect(upgradeAdmin).updateAPR(symbolBtc, comit_ONEMONTH, 1500);
+  tx = await comptroller.connect(upgradeAdmin).updateAPR(symbolBtc, comit_NONE, 1800);
+  await tx.wait();
+  tx = await comptroller.connect(upgradeAdmin).updateAPR(symbolBtc, comit_ONEMONTH, 1500);
+  await tx.wait();
 
-  await comptroller.connect(upgradeAdmin).updateAPR(symbolUsdc, comit_NONE, 1800);
-  await comptroller.connect(upgradeAdmin).updateAPR(symbolUsdc, comit_ONEMONTH, 1500);
+  tx = await comptroller.connect(upgradeAdmin).updateAPR(symbolUsdc, comit_NONE, 1800);
+  await tx.wait();
+  tx = await comptroller.connect(upgradeAdmin).updateAPR(symbolUsdc, comit_ONEMONTH, 1500);
+  await tx.wait();
 
-  await comptroller.connect(upgradeAdmin).updateAPR(symbolUsdt, comit_NONE, 1800);
-  await comptroller.connect(upgradeAdmin).updateAPR(symbolUsdt, comit_ONEMONTH, 1500);
+  tx = await comptroller.connect(upgradeAdmin).updateAPR(symbolUsdt, comit_NONE, 1800);
+  await tx.wait();
+  tx = await comptroller.connect(upgradeAdmin).updateAPR(symbolUsdt, comit_ONEMONTH, 1500);
+  await tx.wait();
 
-  await comptroller.connect(upgradeAdmin).updateAPR(symbolWBNB, comit_NONE, 1800);
-  await comptroller.connect(upgradeAdmin).updateAPR(symbolWBNB, comit_ONEMONTH, 1500);
+  tx = await comptroller.connect(upgradeAdmin).updateAPR(symbolWBNB, comit_NONE, 1800);
+  await tx.wait();
+  tx = await comptroller.connect(upgradeAdmin).updateAPR(symbolWBNB, comit_ONEMONTH, 1500);
+  await tx.wait();
   console.log("updateAPR complete");
 
   /// SETTING MIN-MAX VALUES OF DEPOSIT & BORROW INTEREST
   /// SETTING OFFSET AND CORRELATION FACTORS
   console.log("Setting min-max interests, offset, correlation-factor");
-  await dynamicInterest.setBorrowInterests(500, 2000);
-  await dynamicInterest.setDepositInterests(200, 1000);
-  await dynamicInterest.setInterestFactors(2, 12);
+  tx = await dynamicInterest.setBorrowInterests(500, 2000);
+  await tx.wait();
+  tx = await dynamicInterest.setDepositInterests(200, 1000);
+  await tx.wait();
+  tx = await dynamicInterest.setInterestFactors(2, 12);
+  await tx.wait();
   console.log("Setting min-max interests, offset, correlation-factor done");
 
   /// DEPLOYING TEST TOKENS
@@ -287,12 +319,18 @@ async function addMarkets(array) {
 
   /// APPROVING TOKENS FOR DIAMOND
   console.log("Approval diamond");
-  await tbtc.approve(diamondAddress, ethers.utils.parseUnits("5000000", TOKENS_DECIMAL));
-  await tusdc.approve(diamondAddress, ethers.utils.parseUnits("5000000", TOKENS_DECIMAL));
-  await tusdt.approve(diamondAddress, ethers.utils.parseUnits("5000000", TOKENS_DECIMAL));
-  await tsxp.approve(diamondAddress, ethers.utils.parseUnits("5000000", TOKENS_DECIMAL));
-  await tcake.approve(diamondAddress, ethers.utils.parseUnits("5000000", TOKENS_DECIMAL));
-  await twbnb.approve(diamondAddress, ethers.utils.parseUnits("5000000", TOKENS_DECIMAL));
+  tx = await tbtc.approve(diamondAddress, ethers.utils.parseUnits("5000000", TOKENS_DECIMAL));
+  await tx.wait();
+  tx = await tusdc.approve(diamondAddress, ethers.utils.parseUnits("5000000", TOKENS_DECIMAL));
+  await tx.wait();
+  tx = await tusdt.approve(diamondAddress, ethers.utils.parseUnits("5000000", TOKENS_DECIMAL));
+  await tx.wait();
+  tx = await tsxp.approve(diamondAddress, ethers.utils.parseUnits("5000000", TOKENS_DECIMAL));
+  await tx.wait();
+  tx = await tcake.approve(diamondAddress, ethers.utils.parseUnits("5000000", TOKENS_DECIMAL));
+  await tx.wait();
+  tx = await twbnb.approve(diamondAddress, ethers.utils.parseUnits("5000000", TOKENS_DECIMAL));
+  await tx.wait();
 
   /// ADD PRIMARY MARKETS & MINAMOUNT()
   // console.log("addMarket & minAmount");
@@ -305,37 +343,44 @@ async function addMarkets(array) {
   console.log("Min Amount Implemented");
 
   // 100 USDT [minAmount]
-  await tokenList.connect(upgradeAdmin).addMarketSupport(symbolUsdt, TOKENS_DECIMAL, tUsdtAddress, minUSDT, {
+  tx = await tokenList.connect(upgradeAdmin).addMarketSupport(symbolUsdt, TOKENS_DECIMAL, tUsdtAddress, minUSDT, {
     gasLimit: 800000,
   });
+  await tx.wait();
   console.log(`tUSDT added ${minUSDT}`);
 
   // 100 USDC [minAmount]
-  await tokenList.connect(upgradeAdmin).addMarketSupport(symbolUsdc, TOKENS_DECIMAL, tUsdcAddress, minUSDC, {
+  tx = await tokenList.connect(upgradeAdmin).addMarketSupport(symbolUsdc, TOKENS_DECIMAL, tUsdcAddress, minUSDC, {
     gasLimit: 800000,
   });
+  await tx.wait();
   console.log(`tUSDC added ${minUSDC}`);
 
   // 0.1 BTC [minAmount]
-  await tokenList
+  tx = await tokenList
     .connect(upgradeAdmin)
     .addMarketSupport(symbolBtc, TOKENS_DECIMAL, tBtcAddress, minBTC, { gasLimit: 800000 });
+  await tx.wait();
   console.log(`tBTC added ${minBTC}`);
 
   // 0.25 BNB [minAmount]
-  await tokenList.connect(upgradeAdmin).addMarketSupport(symbolWBNB, TOKENS_DECIMAL, tWBNBAddress, minBNB, {
+  tx = await tokenList.connect(upgradeAdmin).addMarketSupport(symbolWBNB, TOKENS_DECIMAL, tWBNBAddress, minBNB, {
     gasLimit: 800000,
   });
+  await tx.wait();
+
   console.log(`twBNB added ${minBNB}`);
 
   console.log("primary markets added");
 
   /// ADD SECONDARY MARKETS
   console.log("adding secondary markets");
-  await tokenList.connect(upgradeAdmin).addMarket2Support(symbolSxp, TOKENS_DECIMAL, tSxpAddress, { gasLimit: 800000 });
-  await tokenList
+  tx = await tokenList.connect(upgradeAdmin).addMarket2Support(symbolSxp, TOKENS_DECIMAL, tSxpAddress, { gasLimit: 800000 });
+  await tx.wait();
+  tx = await tokenList
     .connect(upgradeAdmin)
     .addMarket2Support(symbolCAKE, TOKENS_DECIMAL, tCakeAddress, { gasLimit: 800000 });
+    await tx.wait();
 
   console.log(`Secondary markets
         SXP: ${symbolSxp}: ${tSxpAddress}
@@ -344,25 +389,32 @@ async function addMarkets(array) {
   // console.log(`admin balance is , ${await tbtc.balanceOf(admin_)}`);
 
   /// TRANSFERRING TOKENS TO DIAMOND(RESERVES)
-  await tusdt.transfer(diamondAddress, ethers.utils.parseUnits("2000000000", TOKENS_DECIMAL));
-  await tusdc.transfer(diamondAddress, ethers.utils.parseUnits("2000000000", TOKENS_DECIMAL));
-  await tbtc.transfer(diamondAddress, ethers.utils.parseUnits("4200000", TOKENS_DECIMAL));
-  await twbnb.transfer(diamondAddress, ethers.utils.parseUnits("18000000", TOKENS_DECIMAL));
+  tx = await tusdt.transfer(diamondAddress, ethers.utils.parseUnits("2000000000", TOKENS_DECIMAL));
+  await tx.wait();
+  tx = await tusdc.transfer(diamondAddress, ethers.utils.parseUnits("2000000000", TOKENS_DECIMAL));
+  await tx.wait();
+  tx = await tbtc.transfer(diamondAddress, ethers.utils.parseUnits("4200000", TOKENS_DECIMAL));
+  await tx.wait();
+  tx = await twbnb.transfer(diamondAddress, ethers.utils.parseUnits("18000000", TOKENS_DECIMAL));
+  await tx.wait();
 
   // UPDATE AVAILABLE RESERVES
-  await comptroller
+  tx = await comptroller
     .connect(upgradeAdmin)
     .updateReservesDeposit(symbolUsdt, ethers.utils.parseUnits("2000000000", TOKENS_DECIMAL));
-  await comptroller
+  await tx.wait();
+  tx = await comptroller
     .connect(upgradeAdmin)
     .updateReservesDeposit(symbolUsdc, ethers.utils.parseUnits("2000000000", TOKENS_DECIMAL));
-  await comptroller
+  await tx.wait();
+  tx = await comptroller
     .connect(upgradeAdmin)
     .updateReservesDeposit(symbolBtc, ethers.utils.parseUnits("4200000", TOKENS_DECIMAL));
-  await comptroller
+  await tx.wait();
+  tx = await comptroller
     .connect(upgradeAdmin)
     .updateReservesDeposit(symbolWBNB, ethers.utils.parseUnits("18000000", TOKENS_DECIMAL));
-
+  await tx.wait();
   /// DEPLOY FAUCET
   const Faucet = await ethers.getContractFactory("Faucet");
   const faucet = await Faucet.deploy();
@@ -371,66 +423,82 @@ async function addMarkets(array) {
 
   const faucetAddress = faucet.address;
   /// TRANSFERRING TOKENS TO FAUCET
-  await tusdt.transfer(faucet.address, ethers.utils.parseUnits("6000000000", TOKENS_DECIMAL)); // 6 billion USDT
+  tx = await tusdt.transfer(faucet.address, ethers.utils.parseUnits("6000000000", TOKENS_DECIMAL)); // 6 billion USDT
+  await tx.wait();
   console.log("6000000000 tusdt transfered to faucet. Token being :", tUsdtAddress);
   console.log(await tusdt.balanceOf(faucet.address));
 
-  await tusdc.transfer(faucet.address, ethers.utils.parseUnits("6000000000", TOKENS_DECIMAL)); // 6 billion USDC
+  tx = await tusdc.transfer(faucet.address, ethers.utils.parseUnits("6000000000", TOKENS_DECIMAL)); // 6 billion USDC
+  await tx.wait();
   console.log("6000000000 tusdc transfered to faucet. Token being :", tUsdcAddress);
   console.log(await tusdc.balanceOf(faucet.address));
 
-  await tbtc.transfer(faucet.address, ethers.utils.parseUnits("12600000", TOKENS_DECIMAL));
+  tx = await tbtc.transfer(faucet.address, ethers.utils.parseUnits("12600000", TOKENS_DECIMAL));
+  await tx.wait();
   console.log("12600000 tbtc transfered to faucet. Token being :", tBtcAddress); // 12.6 million BTC
   console.log(await tbtc.balanceOf(faucet.address));
 
-  await twbnb.transfer(faucet.address, ethers.utils.parseUnits("54000000", TOKENS_DECIMAL)); // 54 million BNB
+  tx = await twbnb.transfer(faucet.address, ethers.utils.parseUnits("54000000", TOKENS_DECIMAL)); // 54 million BNB
+  await tx.wait();
   console.log("54000000 twbnb transfered to faucet. Token being :", tWBNBAddress);
   console.log(await twbnb.balanceOf(faucet.address));
 
   /// UPADTING FAUCET BALANCE & FUNDS_LEAK
-  await faucet.connect(upgradeAdmin)._updateTokens(
+  tx = await faucet.connect(upgradeAdmin)._updateTokens(
     tUsdtAddress,
     ethers.utils.parseUnits("6000000000", TOKENS_DECIMAL), // 6 billion USDT
     ethers.utils.parseUnits("10000", TOKENS_DECIMAL), // 10000 USDT
   );
-  await faucet.connect(upgradeAdmin)._updateTokens(
+  await tx.wait();
+  tx = await faucet.connect(upgradeAdmin)._updateTokens(
     tUsdcAddress,
     ethers.utils.parseUnits("6000000000", TOKENS_DECIMAL), // 6 billion USDC
     ethers.utils.parseUnits("10000", TOKENS_DECIMAL), // 10000 USDC
   );
-  await faucet.connect(upgradeAdmin)._updateTokens(
+  await tx.wait();
+  tx = await faucet.connect(upgradeAdmin)._updateTokens(
     tBtcAddress,
     ethers.utils.parseUnits("12600000", TOKENS_DECIMAL), // 12.6 million BTC
     ethers.utils.parseUnits("5", TOKENS_DECIMAL), // 5 BTC
   );
-  await faucet.connect(upgradeAdmin)._updateTokens(
+  await tx.wait();
+  tx = await faucet.connect(upgradeAdmin)._updateTokens(
     tWBNBAddress,
     ethers.utils.parseUnits("54000000", TOKENS_DECIMAL), // 54 million BNB
     ethers.utils.parseUnits("100", TOKENS_DECIMAL), // 100 BNB
   );
+  await tx.wait();
 
   /// SET FEES IN COMPTROLLER
   console.log("Implementing fees in Comptroller");
-  await comptroller.updateLoanIssuanceFees("10"); // Set fee to 0.1%
+  tx = await comptroller.updateLoanIssuanceFees("10"); // Set fee to 0.1%
+  await tx.wait();
   console.log("updateWithdrawalFees is set");
-  await comptroller.updateLoanClosureFees("5"); // set fee to 0.05%
+  tx = await comptroller.updateLoanClosureFees("5"); // set fee to 0.05%
+  await tx.wait();
   console.log("updateWithdrawalFees is set");
-  await comptroller.updateDepositPreclosureFees("36"); // Set fee to 0.36%
+  tx = await comptroller.updateDepositPreclosureFees("36"); // Set fee to 0.36%
+  await tx.wait();
   console.log("updateDepositPreclosureFees is set");
-  await comptroller.updateCollateralPreclosureFees("36"); // Set fee to 0.36%
+  tx = await comptroller.updateCollateralPreclosureFees("36"); // Set fee to 0.36%
+  await tx.wait();
   console.log("updateCollateralPreclosureFees is set");
-  await comptroller.updateWithdrawalFees("10"); // Set fee to 0.1%
+  tx = await comptroller.updateWithdrawalFees("10"); // Set fee to 0.1%
+  await tx.wait();
   console.log("updateWithdrawalFees is set");
-  await comptroller.updateCollateralReleaseFees("10"); // set fee to 0.1%
+  tx = await comptroller.updateCollateralReleaseFees("10"); // set fee to 0.1%
+  await tx.wait();
   console.log("updateCollateralReleaseFees is set");
-  await comptroller.updateMarketSwapFees("5"); // Set fee to 0.05%
+  tx = await comptroller.updateMarketSwapFees("5"); // Set fee to 0.05%
+  await tx.wait();
   console.log("updateMarketSwapFees is set");
   // await comptroller.updateReserveFactor();
   // console.log("updateReserveFactor is set");
   console.log("Fees implemented in Comptroller");
   
   /// SETTING UP Timelock
-  await comptroller.setTimelockValidityDeposit("259200"); // Set time to 86400
+  tx = await comptroller.setTimelockValidityDeposit("259200"); // Set time to 86400
+  await tx.wait();
   console.log("TimelockValidityDeposit is set");
   console.log("Time which has been set : ",await comptroller.getTimelockValidityDeposit()); 
   
@@ -444,36 +512,38 @@ async function addMarkets(array) {
   console.log("REACT_APP_T_SXP_ADDRESS = ", tSxpAddress);
   console.log("REACT_APP_T_CAKE_ADDRESS = ", tCakeAddress);
   console.log("REACT_APP_T_WBNB_ADDRESS = ", tWBNBAddress);
-  fs.writeFile(
-    "addr.js",
-    "REACT_APP_DIAMOND_ADDRESS = " +
-      diamond.address +
-      "\r\n" +
-      "REACT_APP_FAUCET_ADDRESS = " +
-      faucet.address +
-      "\r\n" +
-      "REACT_APP_T_USDC_ADDRESS = " +
-      tUsdcAddress +
-      "\r\n" +
-      "REACT_APP_T_USDT_ADDRESS = " +
-      tUsdtAddress +
-      "\r\n" +
-      "REACT_APP_T_SXP_ADDRESS = " +
-      tSxpAddress +
-      "\r\n" +
-      "REACT_APP_T_CAKE_ADDRESS = " +
-      tCakeAddress +
-      "\r\n" +
-      "REACT_APP_T_WBNB_ADDRESS = " +
-      tWBNBAddress,
-    function (err) {
-      if (err) {
-        return console.log(err);
-      }
+  // fs.writeFile(
+  //   "addr.js",
+  //   "REACT_APP_DIAMOND_ADDRESS = " +
+  //     diamond.address +
+  //     "\r\n" +
+  //     "REACT_APP_FAUCET_ADDRESS = " +
+  //     faucet.address +
+  //     "\r\n" +
+  //     "REACT_APP_T_USDC_ADDRESS = " +
+  //     tUsdcAddress +
+  //     "\r\n" +
+  //     "REACT_APP_T_USDT_ADDRESS = " +
+  //     tUsdtAddress +
+  //     "\r\n" +
+  //     "REACT_APP_T_SXP_ADDRESS = " +
+  //     tSxpAddress +
+  //     "\r\n" +
+  //     "REACT_APP_T_CAKE_ADDRESS = " +
+  //     tCakeAddress +
+  //     "\r\n" +
+  //     "REACT_APP_T_WBNB_ADDRESS = " +
+  //     tWBNBAddress
+  // ).then (() => {
+  //   // ,
+  //   // function (err) {
+  //   //   if (err) {
+  //   //     return console.log(err);
+  //   //   }
 
-      console.log("The addresses are saved!");
-    },
-  );
+  //     console.log("The addresses are saved!");
+  //   // },
+  // });
 
   return {
     tBtcAddress,
