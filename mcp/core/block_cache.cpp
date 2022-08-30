@@ -12,7 +12,9 @@ mcp::block_cache::block_cache(mcp::block_store &store_a) :
 	m_block_summarys(1000),
 	m_block_numbers(1000),
 	m_number_blocks(1000),
-	m_transaction_receipts(50000)
+	m_transaction_receipts(50000),
+	m_approves(1000),
+	m_approve_receipts(1000)
 {
 }
 

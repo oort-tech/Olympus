@@ -1437,7 +1437,7 @@ bool mcp::chain::need_approve(){
 	}
 	
 	if(elect_epoch != last_epoch_num){
-		if(m_last_summary_mci%mcp::epoch_period > *(uint64_t *)m_witness->witness_account().data()%mcp::epoch_period/10){
+		if(m_witness != nullptr && m_last_summary_mci%mcp::epoch_period > *(uint64_t *)m_witness->witness_account().data()%mcp::epoch_period/10){
 			LOG(m_log.debug) << "[need_approve] send in m_last_summary_mci=" << m_last_summary_mci << " epoch" << elect_epoch;
 			last_epoch_num = elect_epoch;
 			return true;
