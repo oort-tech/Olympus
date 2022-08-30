@@ -273,11 +273,17 @@ async function testFeeToOn() {
 }
 
 export async function main() {
+  console.log('1. testMint...')
   await testMint()
+  // console.log('2. testSwap...')
   // await testSwap()
+  console.log('3. testSwapToken0...')
   await testSwapToken0()
+  console.log('4. testBurn...')
   await testBurn()
+  console.log('5. testFeeToOff...')
   await testFeeToOff()
+  console.log('6. testFeeToOn...')
   await testFeeToOn()
 }
 

@@ -6,9 +6,13 @@ import { main as testMasterchef } from './5_masterchef'
 import { main as testBnbstaking } from './6_bnbstaking'
 
 async function main() {
+  console.log('-----------------testErc20--------------------')
   await testErc20()
+  console.log('-----------------testFactory--------------------')
   await testFactory()
+  console.log('-----------------testPair--------------------')
   await testPair()
+  console.log('-----------------testRouter--------------------')
   await testRouter()
   // await testMasterchef()
   // await testBnbstaking()
