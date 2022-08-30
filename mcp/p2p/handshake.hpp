@@ -25,7 +25,7 @@ namespace mcp
 		};
 
 		class host;
-		//class frame_coder;
+		class RLPXFrameCoder;
 		class hankshake : public std::enable_shared_from_this<hankshake>
 		{
 			friend class RLPXFrameCoder;

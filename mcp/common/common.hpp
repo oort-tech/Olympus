@@ -3,7 +3,6 @@
 #include <libdevcore/Common.h>
 #include <libdevcore/CommonData.h>
 #include <mcp/common/numbers.hpp>
-// #include <sodium.h>
 
 #include <functional>
 #include <mutex>
