@@ -144,63 +144,8 @@ namespace mcp
 		std::thread thread;
 	};
 
-	class key_pair
-	{
-	public:
-		key_pair() = default;
-		key_pair(dev::Secret const & seed);
-		~key_pair();
-
-		static key_pair create();
-
-		// get the secret key.
-		dev::Secret const& secret() const { return m_secret; }
-
-		// get the public key.
-		dev::Public const& pub() const { return m_public; }
-
-		// get the public key compressed
-		dev::PublicCompressed const& pub_comp() const { return m_public_comp; }
-
-		// get the account's address
-		dev::Address const& account() const { return m_account; }
-		
-		bool operator==(key_pair const& _c) const { return m_public == _c.m_public; }
-		bool operator!=(key_pair const& _c) const { return m_public != _c.m_public; }
-		bool flag = false;
-
-	private:
-		dev::Secret m_secret;
-		dev::Public m_public;
-		dev::PublicCompressed m_public_comp;
-		dev::Address m_account;
-	};
-
-	class nonce
-	{
-	public:
-		static nonce get()
-		{
-			static nonce s;
-			random_pool.GenerateBlock(s.data.data(), s.data.size());
-			return s;
-		}
-
-		nonce() { resize(); };
-		nonce(dev::bytes bytes_a) { resize(); dev::bytesConstRef(&bytes_a).copyTo(dev::bytesRef(&data)); };
-		dev::bytesConstRef ref() const { return dev::bytesConstRef(&data); }
-		dev::bytesRef ref() { return dev::bytesRef(&data); }
-		std::string to_string() const { return dev::toHex(ref()); };
-		enum { size = 24 };
-	private:
-		dev::bytes data;
-		void resize() { data.resize(size); }
-	};
-
 	namespace encry
 	{
-		int get_encryption_key(dev::Secret &key, const unsigned char* pk, const size_t pkLen, const dev::Secret &sk);
-
 		int encryption(unsigned char *c, const unsigned char *m,
 			unsigned long long mlen, const unsigned char *n,
 			const unsigned char *ek);
@@ -209,7 +154,6 @@ namespace mcp
 			unsigned long long clen, const unsigned char *n,
 			const unsigned char *ek);
 
-		bool verify(dev::h256 const &pkSlice, dev::Signature const &sig, dev::h256 const &hash);
 		secp256k1_context const* get_secp256k1_ctx();
 	}
 }

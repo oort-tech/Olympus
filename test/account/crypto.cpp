@@ -12,8 +12,6 @@
 
 #include <libdevcore/SHA3.h>
 
-#include <mcp/p2p/dh_x25519.hpp>
-
 #include <cryptopp/hkdf.h>
 
 #include <cryptopp/cryptlib.h>
@@ -413,7 +411,7 @@ void test_signature()
 
 void test_encrypt_decrypt()
 {
-	mcp::key_pair senderKey = mcp::key_pair::create();
+	/*mcp::key_pair senderKey = mcp::key_pair::create();
 	mcp::key_pair receiverKey = mcp::key_pair::create();
 
 	dev::Secret encKey;
@@ -440,7 +438,7 @@ void test_encrypt_decrypt()
 	mcp::encry::dencryption(decrypttext.data(), ciphertext.data(), ciphertext.size, iv.data(), decKey.data());
 
 	std::cout << "Plain Text:" << plaintext.hex() << std::endl;
-	std::cout << "Decrypted Text:" << decrypttext.hex() << std::endl;
+	std::cout << "Decrypted Text:" << decrypttext.hex() << std::endl;*/
 }
 
 void test_eth_sign()

@@ -2,9 +2,9 @@
 
 using namespace mcp::p2p;
 
-node_table::node_table(mcp::p2p::peer_store& store_a, mcp::key_pair const & alias_a, node_endpoint const & endpoint_a) :
+node_table::node_table(mcp::p2p::peer_store& store_a, KeyPair const & alias_a, node_endpoint const & endpoint_a) :
 	m_store(store_a),
-	my_node_info((node_id) alias_a.pub_comp(), endpoint_a),
+	my_node_info((node_id) alias_a.pub(), endpoint_a),
 	secret(alias_a.secret()),
 	socket(std::make_unique<bi::udp::socket>(io_service)),
 	my_endpoint(endpoint_a),
@@ -314,44 +314,31 @@ std::unique_ptr<discover_packet> node_table::interpret_packet(bi::udp::endpoint 
 {
 	std::unique_ptr<discover_packet> packet = std::unique_ptr<discover_packet>();
 	// hash + node id + sig + network + packet type + packet (smallest possible packet is ping packet which is 5 bytes)
-	if (data.size() < hash256::size + node_id::size + dev::Signature::size + 1 + 1 + 5)
+	if (data.size() < h256::size + dev::Signature::size + 1 + 1 + 5)
 	{
         LOG(m_log.debug) << "Invalid packet (too small) from " << from.address().to_string() << ":" << from.port();
 		return packet;
 	}
-	dev::bytesConstRef hash(data.cropped(0, hash256::size));
-	dev::bytesConstRef bytes_to_hash_cref(data.cropped(hash256::size, data.size() - hash256::size));
-	dev::bytesConstRef node_id_cref(bytes_to_hash_cref.cropped(0, node_id::size));
-	dev::bytesConstRef rlp_sig_cref(bytes_to_hash_cref.cropped(node_id::size, dev::Signature::size));
-	dev::bytesConstRef rlp_cref(bytes_to_hash_cref.cropped(node_id::size + dev::Signature::size));
+	dev::bytesConstRef hash(data.cropped(0, h256::size));
+	dev::bytesConstRef bytes_to_hash_cref(data.cropped(h256::size, data.size() - h256::size));
+	//dev::bytesConstRef node_id_cref(bytes_to_hash_cref.cropped(0, node_id::size));
+	dev::bytesConstRef rlp_sig_cref(bytes_to_hash_cref.cropped(0, dev::Signature::size));
+	dev::bytesConstRef rlp_cref(bytes_to_hash_cref.cropped(dev::Signature::size));
 
-	hash256 echo(mcp::blake2b_hash(bytes_to_hash_cref));
-	dev::bytes echo_bytes = echo.asBytes();
-	if (!hash.contentsEqual(echo_bytes))
+	h256 echo(dev::sha3(bytes_to_hash_cref));
+	if (!hash.contentsEqual(echo.asBytes()))
 	{
         LOG(m_log.debug) << "Invalid packet (bad hash) from " << from.address().to_string() << ":" << from.port();
 		return packet;
 	}
 
-	node_id from_node_id;
-	dev::bytesRef from_node_id_ref(from_node_id.data(), from_node_id.size);
-	node_id_cref.copyTo(from_node_id_ref);
-
-	dev::Signature rlp_sig;
-	rlp_sig_cref.copyTo(rlp_sig.ref());
-
-	hash256 rlp_hash(mcp::blake2b_hash(rlp_cref));
-
-	//LOG(m_log.debug) << boost::str(boost::format("receive packet sig, node id:%1%, hash:%2%, sig:%3%") % from_node_id.to_string() % rlp_hash.to_string() % rlp_sig.to_string());
-
-	///
-	bool is_bad_sig(!mcp::encry::verify(from_node_id, rlp_sig, dev::h256(rlp_hash.ref())));
-
-	if (is_bad_sig)
+	Public sourceid(dev::recover(*(Signature const*)rlp_sig_cref.data(), sha3(rlp_cref)));
+	if (!sourceid)
 	{
-        LOG(m_log.debug) << "Invalid packet (bad signature) from " << from.address().to_string() << ":" << from.port();
+		LOG(m_log.debug) << "Invalid packet (bad signature) from " << from.address().to_string() << ":" << from.port();
 		return packet;
 	}
+	//LOG(m_log.debug) << boost::str(boost::format("receive packet sig, node id:%1%, hash:%2%, sig:%3%") % from_node_id.to_string() % rlp_hash.to_string() % rlp_sig.to_string());
 
 	mcp::mcp_networks network_type((mcp::mcp_networks)rlp_cref[0]);
 	if(network_type != mcp::mcp_network)
@@ -368,22 +355,22 @@ std::unique_ptr<discover_packet> node_table::interpret_packet(bi::udp::endpoint 
 		{
 		case discover_packet_type::ping:
 		{
-			packet = std::make_unique<ping_packet>(from_node_id);
+			packet = std::make_unique<ping_packet>(sourceid);
 			break;
 		}
 		case  discover_packet_type::pong:
 		{
-			packet = std::make_unique<pong_packet>(from_node_id);
+			packet = std::make_unique<pong_packet>(sourceid);
 			break;
 		}
 		case discover_packet_type::find_node:
 		{
-			packet = std::make_unique<find_node_packet>(from_node_id);
+			packet = std::make_unique<find_node_packet>(sourceid);
 			break;
 		}
 		case  discover_packet_type::neighbours:
 		{
-			packet = std::make_unique<neighbours_packet>(from_node_id);
+			packet = std::make_unique<neighbours_packet>(sourceid);
 			break;
 		}
 		default:
@@ -568,7 +555,7 @@ std::list<node_info>  node_table::nodes() const
 	return result;
 }
 
-void node_table::add_node(node_info const & node_a, node_relation relation_a)
+void node_table::add_node(node_info const & node_a)
 {
 	if (!node_a.endpoint || node_a.id == my_node_info.id)
 		return;

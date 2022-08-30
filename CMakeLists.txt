@@ -353,9 +353,7 @@ add_library (p2p
 	mcp/p2p/discover_packet.hpp
 	mcp/p2p/discover_packet.cpp
 	mcp/p2p/upnp.hpp
-	mcp/p2p/upnp.cpp
-	mcp/p2p/dh_x25519.hpp
-	mcp/p2p/dh_x25519.cpp)
+	mcp/p2p/upnp.cpp)
 	
 add_library (rpc
 	mcp/rpc/rpc.cpp

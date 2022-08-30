@@ -29,7 +29,7 @@ namespace mcp
 			{
 			}
 
-			hash256 add_packet_and_sign(dev::Secret const & prv_a, discover_packet const & packet_a)
+			h256 add_packet_and_sign(dev::Secret const & prv_a, discover_packet const & packet_a)
 			{
 				assert_x((byte)packet_a.packet_type());
 				//rlp: network type || packet type || packet
@@ -47,33 +47,30 @@ namespace mcp
 				dev::bytesConstRef rlp_cref(&rlp);
 
 				//rlp hash : H(packet type || packet)
-				hash256 rlp_hash(mcp::blake2b_hash(rlp_cref));
+				h256 rlp_hash(dev::sha3(rlp_cref));
 
 				//rlp sig : S(H(packet type || packet))
-				dev::Signature rlp_sig = dev::sign(prv_a, dev::h256(rlp_hash.ref()));
+				dev::Signature rlp_sig = dev::sign(prv_a, rlp_hash);
 
 				//BOOST_LOG_TRIVIAL(debug) << boost::str(boost::format("send packet sig, node id:%1%, hash:%2%, sig:%3%") 
 				//	% packet_a.source_id.to_string() % rlp_hash.to_string() % rlp_sig.to_string());
 
-				//data:  H( node id || rlp sig || rlp ) || node id || rlp sig || rlp 
-				data.resize(hash256::size + node_id::size + dev::Signature::size + rlp.size());
-				dev::bytesRef data_hash_ref(&data[0], hash256::size);
-				dev::bytesRef data_node_id_ref(&data[hash256::size], node_id::size);
-				dev::bytesRef data_sig_ref(&data[hash256::size + node_id::size], dev::Signature::size);
-				dev::bytesRef data_rlp_ref(&data[hash256::size + node_id::size + dev::Signature::size], rlp_cref.size());
+				//data:  H( rlp sig || rlp ) || rlp sig || rlp 
+				data.resize(h256::size + dev::Signature::size + rlp.size());
+				dev::bytesRef data_hash_ref(&data[0], h256::size);
+				//dev::bytesRef data_node_id_ref(&data[h256::size], node_id::size);
+				dev::bytesRef data_sig_ref(&data[h256::size], dev::Signature::size);
+				dev::bytesRef data_rlp_ref(&data[h256::size + dev::Signature::size], rlp_cref.size());
 
-				dev::bytesConstRef node_id_cref(packet_a.source_id.data(), packet_a.source_id.size);
-				node_id_cref.copyTo(data_node_id_ref);
+				//dev::bytesConstRef node_id_cref(packet_a.source_id.data(), packet_a.source_id.size);
+				//node_id_cref.copyTo(data_node_id_ref);
 
 				rlp_sig.ref().copyTo(data_sig_ref);
-
 				rlp_cref.copyTo(data_rlp_ref);
 
-				dev::bytesConstRef bytes_to_hash(&data[hash256::size], data.size() - hash256::size);
-				hash256 hash(mcp::blake2b_hash(bytes_to_hash));
-
-				dev::bytesConstRef hash_cref(hash.data(), hash.size);
-				hash_cref.copyTo(data_hash_ref);
+				dev::bytesConstRef bytes_to_hash(&data[h256::size], data.size() - h256::size);
+				h256 hash(dev::sha3(bytes_to_hash));
+				hash.ref().copyTo(data_hash_ref);
 
 				return rlp_hash;
 			}
@@ -86,12 +83,6 @@ namespace mcp
 		{
 			node_id new_node_id;
 			std::chrono::steady_clock::time_point evicted_time;
-		};
-
-		enum class node_relation
-		{
-			unknown = 0,
-			known = 1
 		};
 
 		enum class node_table_event_type
@@ -140,11 +131,11 @@ namespace mcp
 		class node_table : public std::enable_shared_from_this<node_table>
 		{
 		public:
-			node_table(mcp::p2p::peer_store& store_a, mcp::key_pair const & alias_a, node_endpoint const & endpoint_a);
+			node_table(mcp::p2p::peer_store& store_a, KeyPair const & alias_a, node_endpoint const & endpoint_a);
 			~node_table();
 
 			void start();
-			void add_node(node_info const & node_indo_a, node_relation relation_a = node_relation::unknown);
+			void add_node(node_info const & node_indo_a);
 			std::shared_ptr<node_entry> get_node(node_id node_id_a);
 			std::list<std::shared_ptr<node_info>> get_random_nodes(size_t const & max_size) const;
 			std::list<std::shared_ptr<node_info>> snapshot(unsigned& index) const;
@@ -156,7 +147,7 @@ namespace mcp
 
 		private:
 			// Constants for Kademlia, derived from address space.
-			static unsigned const s_address_byte_size = 32;							//< Size of address type in bytes.
+			static unsigned const s_address_byte_size = node_id::size;							//< Size of address type in bytes.
 			static unsigned const s_bits = 8 * s_address_byte_size;					//< Denoted by n in [Kademlia].
 			static unsigned const s_bins = s_bits - 1;								//< Size of buckets (excludes root, which is us).
 

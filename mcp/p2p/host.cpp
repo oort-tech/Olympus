@@ -32,20 +32,22 @@ host::host(bool & error_a, p2p_config const & config_a, boost::asio::io_service 
 			std::vector<std::string> node_id_and_addr;
 			boost::split(node_id_and_addr, node_str, boost::is_any_of("@"));
 			if (node_id_and_addr.size() != 2)
+			{
 				LOG(m_log.warning) << "Invald boostrap node :" << bn;
+				continue;
+			}
 
-			node_id node_id(node_id_and_addr[0]);
-
+			node_id nid(node_id_and_addr[0]);
 			std::string addr(node_id_and_addr[1]);
 			bi::tcp::endpoint ep;
-			if (resolve_host(addr, ep))
+			if (resolve_host(addr, ep) || nid == node_id())
 			{
 				LOG(m_log.warning) << "Invald boostrap node :" << bn;
 				continue;
 			}
 
 			node_endpoint node_ep(ep.address(), ep.port(), ep.port());
-			bootstrap_nodes.push_back(std::make_shared<node_info>(node_id, node_ep));
+			bootstrap_nodes.push_back(std::make_shared<node_info>(nid, node_ep));
 		}
 		catch (...) {
 			LOG(m_log.warning) << "Invald boostrap node :" << bn;
@@ -116,7 +118,7 @@ void host::start()
 	m_node_table->set_event_handler(new host_node_table_event_handler(*this));
 	m_node_table->start();
 
-    LOG(m_log.info) << "P2P started, mcpnode://" << toNodeId(alias.pub_comp()).hex() << "@" << listen_ip << ":" << port;
+    LOG(m_log.info) << "P2P started, mcpnode://" << id().hex() << "@" << listen_ip << ":" << port;
 
 	run_timer = std::make_unique<ba::deadline_timer>(io_service);
 	run();
@@ -316,7 +318,7 @@ void host::connect(std::shared_ptr<node_info> const & ne)
 		}
 	}
 
-	if (ne->id == toNodeId(alias.pub_comp()))
+	if (ne->id == id())//self
 	{
 		return;
 	}
@@ -418,7 +420,7 @@ void host::try_connect_nodes()
 			if (!m_peers.count(info->id))
 			{
 				connect(info);
-				m_node_table->add_node(*info, node_relation::known);
+				m_node_table->add_node(*info);
 			}
 		}
 
@@ -431,7 +433,7 @@ void host::try_connect_nodes()
 			if (!m_peers.count(info->id))
 			{
 				connect(info);
-				m_node_table->add_node(*info, node_relation::known);
+				m_node_table->add_node(*info);
 			}
 		}
 
@@ -455,11 +457,10 @@ void host::try_connect_nodes()
 }
 
 // called after successful handshake
-void host::start_peer(mcp::p2p::node_id const& _id, dev::RLP const& _rlp, std::unique_ptr<mcp::p2p::frame_coder>&& _io, std::shared_ptr<bi::tcp::socket> const & socket)
+void host::start_peer(mcp::p2p::node_id const& _id, dev::RLP const& _rlp, std::unique_ptr<mcp::p2p::RLPXFrameCoder>&& _io, std::shared_ptr<bi::tcp::socket> const & socket)
 {
 	if (!is_run)
 		return;
-
 
 	hankshake_msg handmsg(_rlp);
 	
@@ -508,7 +509,7 @@ void host::start_peer(mcp::p2p::node_id const& _id, dev::RLP const& _rlp, std::u
 
 		std::shared_ptr<peer> new_peer(std::make_shared<peer>(socket, remote_node_id, m_peer_manager, move(_io)));
 		//check self connect
-		if (remote_node_id == (node_id) alias.pub_comp())
+		if (remote_node_id == id())
 		{
 			new_peer->disconnect(disconnect_reason::self_connect);
 			return;

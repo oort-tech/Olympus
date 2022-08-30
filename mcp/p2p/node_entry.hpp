@@ -20,9 +20,10 @@ namespace mcp
 
 			static unsigned calc_distance(node_id const & a, node_id const & b)
 			{
-				uint256_t d = (a ^ b);
-				unsigned ret;
-				for (ret = 0; d >>= 1; ++ret) {};
+				u512 d = (a ^ b);
+				unsigned ret = 0;
+				while (d >>= 1)
+					++ret;
 				return ret;
 			}
 		};

@@ -37,11 +37,6 @@ namespace mcp
 
 			bool is_expired() const
 			{
-				//if (seconds_since_epoch() > timestamp)
-				//{
-				//	BOOST_LOG_TRIVIAL(info) << "recieve  is_expired :" << seconds_since_epoch() << "," << timestamp;
-				//}
-				
 				return seconds_since_epoch() > timestamp;
 			}
 

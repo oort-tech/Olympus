@@ -11,7 +11,3 @@
 #include <libdevcore/CommonData.h>
 
 thread_local CryptoPP::AutoSeededRandomPool mcp::random_pool;
-
-mcp::p2p::node_id mcp::p2p::toNodeId(dev::PublicCompressed const & pubkey) {
-	return (mcp::p2p::node_id) pubkey.ref().cropped(1);
-}

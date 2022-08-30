@@ -47,10 +47,7 @@ using sync_request_hash = dev::h256;
 
 namespace p2p
 {
-	using node_id = dev::h256;
-	using hash256 = dev::h256;
-
-	node_id toNodeId(dev::PublicCompressed const & pubkey);
+	using node_id = dev::h512;
 }
 }
 

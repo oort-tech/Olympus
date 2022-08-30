@@ -19,18 +19,20 @@ namespace mcp
 {
 	namespace p2p
 	{
-		static uint16_t const version(1);
+		static uint16_t const version(0);
 		static uint16_t const default_port(30606);
 		static uint16_t const default_max_peers(25);
 
 		static size_t const tcp_header_size(4);
 		static size_t const max_tcp_packet_size(128 * 1024 * 1024);
-        //static size_t const max_summary_items(1760);
         static size_t const max_summary_items(500);
 		bool isPrivateAddress(bi::address const& _addressToCheck);
 		bool isLocalHostAddress(bi::address const& _addressToCheck);
 		bool isPublicAddress(bi::address const& _addressToCheck);
 		bool isSameNetwork(bi::address const& _address, bi::address const& _addressToCheck);
+
+		/// The ECDHE agreement failed during RLPx handshake.
+		struct ECDHEError : virtual Exception {};
 
 		class p2p_config
 		{

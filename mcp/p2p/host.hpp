@@ -38,7 +38,7 @@ namespace mcp
 			std::map<node_id, connect_info> outs;
 		};
 
-		class frame_coder;
+		class RLPXFrameCoder;
         class host : public std::enable_shared_from_this<host>
         {
         public:
@@ -52,12 +52,12 @@ namespace mcp
             std::unordered_map<node_id, bi::tcp::endpoint> peers() const;
             std::list<node_info> nodes() const;
 
-			node_id id() const { return toNodeId(alias.pub_comp()); }
+			node_id id() const { return alias.pub(); }
 
 			std::list<capability_desc> caps() const { std::list<capability_desc> ret; for (auto const& i : capabilities) ret.push_back(i.first); return ret; }
-			void start_peer(mcp::p2p::node_id const& _id, dev::RLP const& _hello, std::unique_ptr<mcp::p2p::frame_coder>&& _io, std::shared_ptr<bi::tcp::socket> const & socket);
+			void start_peer(mcp::p2p::node_id const& _id, dev::RLP const& _hello, std::unique_ptr<mcp::p2p::RLPXFrameCoder>&& _io, std::shared_ptr<bi::tcp::socket> const & socket);
 
-			mcp::key_pair alias;
+			KeyPair alias;
 			
             std::map<std::string,uint64_t> get_peers_write_queue_size();
             std::map<std::string, std::shared_ptr<mcp::p2p::peer_metrics> > get_peers_metrics();
