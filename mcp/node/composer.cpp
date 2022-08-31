@@ -54,7 +54,6 @@ std::shared_ptr<mcp::block> mcp::composer::compose_block(dev::Address const & fr
 
 void mcp::composer::pick_parents_and_last_summary_and_wl_block(mcp::db::db_transaction &  transaction_a, mcp::block_hash const & previous_a, dev::Address const & from_a, std::vector<mcp::block_hash>& parents, h256s& links, h256s& approves, mcp::block_hash & last_summary_block, mcp::block_hash & last_summary, mcp::block_hash & last_stable_block)
 {
-	LOG(m_log.debug) << "[pick_parents_and_last_summary_and_wl_block] in";
 	mcp::stopwatch_guard sw("compose:pick_parents");
 
 	{
@@ -114,6 +113,7 @@ void mcp::composer::pick_parents_and_last_summary_and_wl_block(mcp::db::db_trans
 	assert_x(last_summary_block_state->main_chain_index);
 
 	uint64_t const & last_summary_mci(*last_summary_block_state->main_chain_index);
+	LOG(m_log.debug) << "[pick_parents_and_last_summary_and_wl_block] new last_summary_mci=" << last_summary_mci;
 
 	mcp::block_param const & b_param(mcp::param::block_param(last_summary_mci));
 

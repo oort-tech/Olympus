@@ -264,7 +264,7 @@ void mcp::chain::add_new_witness_list(mcp::db::db_transaction & transaction_a, u
 	static uint64_t old_summary_mci = 0;
 	static uint64_t old_elected_epoch = 0;
 	uint64_t elected_epoch = mcp::approve::calc_elect_epoch(mc_last_summary_mci) - 1;
-	if(old_summary_mci == mc_last_summary_mci) return;
+	if(old_summary_mci >= mc_last_summary_mci) return;
 	else old_summary_mci = mc_last_summary_mci;
 
 	static bool restart_not_need_add_witness = true;
@@ -275,6 +275,42 @@ void mcp::chain::add_new_witness_list(mcp::db::db_transaction & transaction_a, u
 	}
 	if(old_elected_epoch == elected_epoch) return;
 	else old_elected_epoch = elected_epoch;
+
+	//test switch to all new witness
+	#if 0
+	{
+		if(elected_epoch == 1){
+			LOG(m_log.info) << "[add_new_witness_list] test in last_summary_mci = " << mc_last_summary_mci << " elected_epoch = " << elected_epoch;
+			std::vector<std::string> test_witness_str_list_v0 = {
+				"0x1144B522F45265C2DFDBAEE8E324719E63A1694C",
+				"0x088415bbf9b7dfe93f2231fa5dd527a04c874845",
+				"0x4158f69f4499f9c5b7d5744ca2020741fd9fc0bc",
+				"0x820a7d4e3d816eabb6e2a5bfe6e5eac60c39c406",
+				"0x8b5c7ce9fbaed1bebb3043416684bc6913962670",
+				"0xb5575c29ba308cac3ff476485e87e4b4ef604f9b",
+				"0x0c19b28490879dc76a6c1584017371f0ff2534bb",
+				"0x4cbe2bec9bc8c0edf3d681fb74681ebcf6d1f5eb",
+				"0x6b15660ae66f6864be4ab5de49abb22cba3f6270",
+				"0x70659723d63f7ce6586e3dcb012e0ea21b77f1b4",
+				"0x7f24f7a7caf8c6ec269debff91a133defd305342",
+				"0x863f64007c3591695b7abf8ff5fad1d0dcda2b81",
+				"0xa4048b64056ed70efd6ea72c62819ea3d88c2b24",
+				"0xadbe5bcf5a09bce4091d130e9b08d59726a6f7cd"
+			};
+			mcp::witness_param w_param_v0;
+			w_param_v0.witness_count = 14;
+			w_param_v0.majority_of_witnesses = w_param_v0.witness_count * 2 / 3 + 1;
+			w_param_v0.witness_list = mcp::param::to_witness_list(test_witness_str_list_v0);
+			assert_x(w_param_v0.witness_list.size() == w_param_v0.witness_count);
+
+			mcp::param::add_witness_param(elected_epoch, w_param_v0);
+
+			vrf_outputs[elected_epoch].clear();
+			m_aq->dropObsolete(m_last_epoch);
+			return;
+		}
+	}
+	#endif
 
 	mcp::witness_param w_param = mcp::param::witness_param(m_last_epoch);
 	LOG(m_log.info) << "[add_new_witness_list] in last_summary_mci = " << mc_last_summary_mci << " elected_epoch = " << elected_epoch;
