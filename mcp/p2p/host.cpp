@@ -313,7 +313,7 @@ void host::connect(std::shared_ptr<node_info> const & ne)
 		std::lock_guard<std::mutex> lock(m_peers_mutex);
 		if (m_peers.count(ne->id))
 		{
-			//LOG(m_log.info) << "Aborted connect, node already connected, node id: " << ne->id.to_string();
+			//LOG(m_log.info) << "Aborted connect, node already connected, node id: " << ne->id.hex();
 			return;
 		}
 	}
@@ -606,7 +606,7 @@ void host::on_node_table_event(node_id const & node_id_a, node_table_event_type 
 {
 	if (type_a == node_table_event_type::node_entry_added)
 	{
-		//LOG(m_log.info) << "Node entry added, id:" << node_id_a.to_string();
+		//LOG(m_log.info) << "Node entry added, id:" << node_id_a.hex();
 
 		if (std::shared_ptr<node_info> nf = m_node_table->get_node(node_id_a))
 		{
