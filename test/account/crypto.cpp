@@ -277,7 +277,21 @@ void test_aes()
 
 void test_secp256k1()
 {
-	std::cout << "-------------secp256k1---------------" << std::endl;
+	dev::Secret s("7CDE0F6EDCD3BCC088A6C0D30235DCCD7B29F1E0C5F1137CBD99734C348D3216");
+	dev::KeyPair alias(s);
+	std::cout << "-----------------------------start" << std::endl;
+	std::cout << "test  PUB:" << dev::toHex(alias.pub()) << std::endl;
+	std::cout << "test  sec:" << dev::toHex(alias.secret().ref()) << std::endl;
+	dev::bytes buf1(2);buf1[0] = 0x1; buf1[1] = 0x2;
+	dev::bytes Cipher;
+	std::cout << "test  buf:" << dev::toHex(buf1) << std::endl;
+	dev::encryptECIES(alias.pub(), &buf1, Cipher);
+	std::cout << "test  Cipher:" << dev::toHex(Cipher) << std::endl;
+	dev::bytes buf2(2);
+	auto dd = dev::decryptECIES(alias.secret(), dev::bytesConstRef(&Cipher), buf2);
+	std::cout << "dd:" << dd << std::endl;
+	std::cout << "test  buf1:" << dev::toHex(buf2) << std::endl;
+	std::cout << "-----------------------------end" << std::endl;
 
 	// dev::Signature sig;
 	// sig.decode_hex("01635E3763EED1E7C1B7611F5CA8CF90C340BEB79BF7DC674D5146D08D32DA976585E03660DB6008988E3B001F1797B717E31BAC6E8A211F674C4A4D83347129FA");
