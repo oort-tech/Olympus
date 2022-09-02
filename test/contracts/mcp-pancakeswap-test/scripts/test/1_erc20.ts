@@ -186,12 +186,19 @@ async function testPermit() {
 }
 
 export async function main() {
+  console.log('1. testAttributes...')
   await testAttributes()
+  console.log('2. testApprove...')
   await testApprove()
+  console.log('3. testTransfer...')
   await testTransfer()
+  console.log('4. testTransferFail...')
   // await testTransferFail()
+  console.log('5. testTransferFrom...')
   await testTransferFrom()
+  console.log('6. testTransferFromMax...')
   await testTransferFromMax()
+  console.log('7. testPermit...')
   await testPermit()
 }
 

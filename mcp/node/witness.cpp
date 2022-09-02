@@ -148,9 +148,9 @@ void mcp::witness::check_and_witness()
 		last_summary_mci = *last_summary_block_state->main_chain_index;
 	}
 
-	mcp::witness_param const & w_param(mcp::param::witness_param(mcp::approve::calc_curr_epoch(last_summary_mci)));
+	mcp::witness_param const & w_param(mcp::param::witness_param(mcp::approve::calc_curr_epoch(last_summary_mci + 1)));
 
-	if (!mcp::param::is_witness(mcp::approve::calc_curr_epoch(last_summary_mci), m_account))
+	if (!mcp::param::is_witness(mcp::approve::calc_curr_epoch(last_summary_mci + 1), m_account))
 	{
 		m_is_witnessing.clear();
 		LOG(m_log.trace) << "Not do witness, account:" << m_account.hexPrefixed() << " is not witness, last_summary_mci:" << last_summary_mci;

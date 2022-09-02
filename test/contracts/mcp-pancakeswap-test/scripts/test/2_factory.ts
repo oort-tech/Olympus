@@ -104,11 +104,17 @@ async function testSetFeeToSetter() {
 }
 
 export async function main() {
+  console.log('1. testSetters...')
   await testSetters()
+  console.log('2. testCreatePair...')
   await testCreatePair()
+  console.log('3. testCreatePairReverse...')
   await testCreatePairReverse()
+  console.log('4. testCreatePairGas...')
   await testCreatePairGas()
+  console.log('5. testSetFeeTo...')
   await testSetFeeTo()
+  console.log('6. testSetFeeToSetter...')
   await testSetFeeToSetter()
 }
 

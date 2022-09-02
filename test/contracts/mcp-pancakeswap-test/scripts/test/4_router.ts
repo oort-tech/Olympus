@@ -45,7 +45,7 @@ async function beforeEach() {
   let pairAddress = await factory.getPair(token0.address, token1.address)
   pair = await ethers.getContractAt('PancakePair', pairAddress)
 
-  if (token0.address > token1.address) {
+  if (token0.address !== (await pair.token0())) {
     const t = token0
     token0 = token1
     token1 = t
@@ -92,8 +92,13 @@ async function testAddLiquidity() {
   const token1Amount = expandTo18Decimals(4)
 
   const expectedLiquidity = expandTo18Decimals(2)
-  await token0.approve(router.address, ethers.constants.MaxUint256)
-  await token1.approve(router.address, ethers.constants.MaxUint256)
+  await (
+    await token0.approve(router.address, ethers.constants.MaxUint256)
+  ).wait()
+  await (
+    await token1.approve(router.address, ethers.constants.MaxUint256)
+  ).wait()
+
   await expect(
     router.addLiquidity(
       token0.address,
@@ -144,7 +149,9 @@ async function testAddLiquidityETH() {
 
   const expectedLiquidity = expandTo18Decimals(2)
   const WETHPairToken0 = await wethPair.token0()
-  await wethPartner.approve(router.address, ethers.constants.MaxUint256)
+  await (
+    await wethPartner.approve(router.address, ethers.constants.MaxUint256)
+  ).wait()
   await expect(
     router.addLiquidityETH(
       wethPartner.address,
@@ -189,9 +196,9 @@ async function testAddLiquidityETH() {
 
 async function addLiquidity(token0Amount: BigNumber, token1Amount: BigNumber) {
   const [wallet, other] = await ethers.getSigners()
-  await token0.transfer(pair.address, token0Amount)
-  await token1.transfer(pair.address, token1Amount)
-  await pair.mint(wallet.address)
+  await (await token0.transfer(pair.address, token0Amount)).wait()
+  await (await token1.transfer(pair.address, token1Amount)).wait()
+  await (await pair.mint(wallet.address)).wait()
 }
 
 async function testRemoveLiquidity() {
@@ -204,7 +211,7 @@ async function testRemoveLiquidity() {
   await addLiquidity(token0Amount, token1Amount)
 
   const expectedLiquidity = expandTo18Decimals(2)
-  await pair.approve(router.address, ethers.constants.MaxUint256)
+  await (await pair.approve(router.address, ethers.constants.MaxUint256)).wait()
   await expect(
     router.removeLiquidity(
       token0.address,
@@ -262,14 +269,16 @@ async function testRemoveLiquidityETH() {
 
   const WETHPartnerAmount = expandTo18Decimals(1)
   const ETHAmount = expandTo18Decimals(4)
-  await wethPartner.transfer(wethPair.address, WETHPartnerAmount)
-  await weth.deposit({ value: ETHAmount })
-  await weth.transfer(wethPair.address, ETHAmount)
-  await wethPair.mint(wallet.address)
+  await (await wethPartner.transfer(wethPair.address, WETHPartnerAmount)).wait()
+  await (await weth.deposit({ value: ETHAmount })).wait()
+  await (await weth.transfer(wethPair.address, ETHAmount)).wait()
+  await (await wethPair.mint(wallet.address)).wait()
 
   const expectedLiquidity = expandTo18Decimals(2)
   const WETHPairToken0 = await wethPair.token0()
-  await wethPair.approve(router.address, ethers.constants.MaxUint256)
+  await (
+    await wethPair.approve(router.address, ethers.constants.MaxUint256)
+  ).wait()
   await expect(
     router.removeLiquidityETH(
       wethPartner.address,
@@ -357,19 +366,21 @@ async function testRemoveLiquidityWithPermit() {
     )
   )
 
-  await router.removeLiquidityWithPermit(
-    token0.address,
-    token1.address,
-    expectedLiquidity.sub(MINIMUM_LIQUIDITY),
-    0,
-    0,
-    wallet.address,
-    ethers.constants.MaxUint256,
-    false,
-    v,
-    r,
-    s
-  )
+  await (
+    await router.removeLiquidityWithPermit(
+      token0.address,
+      token1.address,
+      expectedLiquidity.sub(MINIMUM_LIQUIDITY),
+      0,
+      0,
+      wallet.address,
+      ethers.constants.MaxUint256,
+      false,
+      v,
+      r,
+      s
+    )
+  ).wait()
 
   await afterEach()
 }
@@ -381,10 +392,10 @@ async function testAddRemoveLiquidityETHWithPermit() {
 
   const WETHPartnerAmount = expandTo18Decimals(1)
   const ETHAmount = expandTo18Decimals(4)
-  await wethPartner.transfer(wethPair.address, WETHPartnerAmount)
-  await weth.deposit({ value: ETHAmount })
-  await weth.transfer(wethPair.address, ETHAmount)
-  await wethPair.mint(wallet.address)
+  await (await wethPartner.transfer(wethPair.address, WETHPartnerAmount)).wait()
+  await (await weth.deposit({ value: ETHAmount })).wait()
+  await (await weth.transfer(wethPair.address, ETHAmount)).wait()
+  await (await wethPair.mint(wallet.address)).wait()
 
   const expectedLiquidity = expandTo18Decimals(2)
 
@@ -408,18 +419,20 @@ async function testAddRemoveLiquidityETHWithPermit() {
     )
   )
 
-  await router.removeLiquidityETHWithPermit(
-    wethPartner.address,
-    expectedLiquidity.sub(MINIMUM_LIQUIDITY),
-    0,
-    0,
-    wallet.address,
-    ethers.constants.MaxUint256,
-    false,
-    v,
-    r,
-    s
-  )
+  await (
+    await router.removeLiquidityETHWithPermit(
+      wethPartner.address,
+      expectedLiquidity.sub(MINIMUM_LIQUIDITY),
+      0,
+      0,
+      wallet.address,
+      ethers.constants.MaxUint256,
+      false,
+      v,
+      r,
+      s
+    )
+  ).wait()
 
   await afterEach()
 }
@@ -433,7 +446,9 @@ async function testSwapExactTokensForTokensHappyPath() {
   const expectedOutputAmount = bigNumberify('1663887962654218072')
 
   await addLiquidity(token0Amount, token1Amount)
-  await token0.approve(router.address, ethers.constants.MaxUint256)
+  await (
+    await token0.approve(router.address, ethers.constants.MaxUint256)
+  ).wait()
 
   const [wallet, other] = await ethers.getSigners()
 
@@ -475,11 +490,18 @@ async function testSwapExactTokensForTokensAmounts() {
   const expectedOutputAmount = bigNumberify('1663887962654218072')
 
   await addLiquidity(token0Amount, token1Amount)
-  await token0.approve(router.address, ethers.constants.MaxUint256)
+  await (
+    await token0.approve(router.address, ethers.constants.MaxUint256)
+  ).wait()
 
   const [wallet, other] = await ethers.getSigners()
 
-  await token0.approve(routerEventEmitter.address, ethers.constants.MaxUint256)
+  await (
+    await token0.approve(
+      routerEventEmitter.address,
+      ethers.constants.MaxUint256
+    )
+  ).wait()
   await expect(
     routerEventEmitter.swapExactTokensForTokens(
       router.address,
@@ -506,7 +528,9 @@ async function testSwapTokensForExactTokensHappyPath() {
 
   const [wallet, other] = await ethers.getSigners()
 
-  await token0.approve(router.address, ethers.constants.MaxUint256)
+  await (
+    await token0.approve(router.address, ethers.constants.MaxUint256)
+  ).wait()
   await expect(
     router.swapTokensForExactTokens(
       outputAmount,
@@ -548,7 +572,12 @@ async function testSwapTokensForExactTokensAmounts() {
 
   const [wallet, other] = await ethers.getSigners()
 
-  await token0.approve(routerEventEmitter.address, ethers.constants.MaxUint256)
+  await (
+    await token0.approve(
+      routerEventEmitter.address,
+      ethers.constants.MaxUint256
+    )
+  ).wait()
   await expect(
     routerEventEmitter.swapTokensForExactTokens(
       router.address,
@@ -573,12 +602,14 @@ async function testSwapExactETHForTokensHappyPath() {
 
   const [wallet, other] = await ethers.getSigners()
 
-  await wethPartner.transfer(wethPair.address, WETHPartnerAmount)
-  await weth.deposit({ value: ETHAmount })
-  await weth.transfer(wethPair.address, ETHAmount)
-  await wethPair.mint(wallet.address)
+  await (await wethPartner.transfer(wethPair.address, WETHPartnerAmount)).wait()
+  await (await weth.deposit({ value: ETHAmount })).wait()
+  await (await weth.transfer(wethPair.address, ETHAmount)).wait()
+  await (await wethPair.mint(wallet.address)).wait()
 
-  await token0.approve(router.address, ethers.constants.MaxUint256)
+  await (
+    await token0.approve(router.address, ethers.constants.MaxUint256)
+  ).wait()
 
   const WETHPairToken0 = await wethPair.token0()
   await expect(
@@ -624,12 +655,14 @@ async function testSwapExactETHForTokensAmounts() {
 
   const [wallet, other] = await ethers.getSigners()
 
-  await wethPartner.transfer(wethPair.address, WETHPartnerAmount)
-  await weth.deposit({ value: ETHAmount })
-  await weth.transfer(wethPair.address, ETHAmount)
-  await wethPair.mint(wallet.address)
+  await (await wethPartner.transfer(wethPair.address, WETHPartnerAmount)).wait()
+  await (await weth.deposit({ value: ETHAmount })).wait()
+  await (await weth.transfer(wethPair.address, ETHAmount)).wait()
+  await (await wethPair.mint(wallet.address)).wait()
 
-  await token0.approve(router.address, ethers.constants.MaxUint256)
+  await (
+    await token0.approve(router.address, ethers.constants.MaxUint256)
+  ).wait()
 
   await expect(
     routerEventEmitter.swapExactETHForTokens(
@@ -657,12 +690,14 @@ async function testSwapTokensForExactETHHappyPath() {
 
   const [wallet, other] = await ethers.getSigners()
 
-  await wethPartner.transfer(wethPair.address, WETHPartnerAmount)
-  await weth.deposit({ value: ETHAmount })
-  await weth.transfer(wethPair.address, ETHAmount)
-  await wethPair.mint(wallet.address)
+  await (await wethPartner.transfer(wethPair.address, WETHPartnerAmount)).wait()
+  await (await weth.deposit({ value: ETHAmount })).wait()
+  await (await weth.transfer(wethPair.address, ETHAmount)).wait()
+  await (await wethPair.mint(wallet.address)).wait()
 
-  await wethPartner.approve(router.address, ethers.constants.MaxUint256)
+  await (
+    await wethPartner.approve(router.address, ethers.constants.MaxUint256)
+  ).wait()
   const WETHPairToken0 = await wethPair.token0()
   await expect(
     router.swapTokensForExactETH(
@@ -707,15 +742,17 @@ async function testSwapTokensForExactETHAmounts() {
 
   const [wallet, other] = await ethers.getSigners()
 
-  await wethPartner.transfer(wethPair.address, WETHPartnerAmount)
-  await weth.deposit({ value: ETHAmount })
-  await weth.transfer(wethPair.address, ETHAmount)
-  await wethPair.mint(wallet.address)
+  await (await wethPartner.transfer(wethPair.address, WETHPartnerAmount)).wait()
+  await (await weth.deposit({ value: ETHAmount })).wait()
+  await (await weth.transfer(wethPair.address, ETHAmount)).wait()
+  await (await wethPair.mint(wallet.address)).wait()
 
-  await wethPartner.approve(
-    routerEventEmitter.address,
-    ethers.constants.MaxUint256
-  )
+  await (
+    await wethPartner.approve(
+      routerEventEmitter.address,
+      ethers.constants.MaxUint256
+    )
+  ).wait()
   await expect(
     routerEventEmitter.swapTokensForExactETH(
       router.address,
@@ -740,12 +777,14 @@ async function testSwapExactTokensForETHHapyPath() {
 
   const [wallet, other] = await ethers.getSigners()
 
-  await wethPartner.transfer(wethPair.address, WETHPartnerAmount)
-  await weth.deposit({ value: ETHAmount })
-  await weth.transfer(wethPair.address, ETHAmount)
-  await wethPair.mint(wallet.address)
+  await (await wethPartner.transfer(wethPair.address, WETHPartnerAmount)).wait()
+  await (await weth.deposit({ value: ETHAmount })).wait()
+  await (await weth.transfer(wethPair.address, ETHAmount)).wait()
+  await (await wethPair.mint(wallet.address)).wait()
 
-  await wethPartner.approve(router.address, ethers.constants.MaxUint256)
+  await (
+    await wethPartner.approve(router.address, ethers.constants.MaxUint256)
+  ).wait()
   const WETHPairToken0 = await wethPair.token0()
   await expect(
     router.swapExactTokensForETH(
@@ -790,15 +829,17 @@ async function testSwapExactTokensForETHAmounts() {
 
   const [wallet, other] = await ethers.getSigners()
 
-  await wethPartner.transfer(wethPair.address, WETHPartnerAmount)
-  await weth.deposit({ value: ETHAmount })
-  await weth.transfer(wethPair.address, ETHAmount)
-  await wethPair.mint(wallet.address)
+  await (await wethPartner.transfer(wethPair.address, WETHPartnerAmount)).wait()
+  await (await weth.deposit({ value: ETHAmount })).wait()
+  await (await weth.transfer(wethPair.address, ETHAmount)).wait()
+  await (await wethPair.mint(wallet.address)).wait()
 
-  await wethPartner.approve(
-    routerEventEmitter.address,
-    ethers.constants.MaxUint256
-  )
+  await (
+    await wethPartner.approve(
+      routerEventEmitter.address,
+      ethers.constants.MaxUint256
+    )
+  ).wait()
   await expect(
     routerEventEmitter.swapExactTokensForETH(
       router.address,
@@ -823,10 +864,10 @@ async function testSwapETHForExactTokensHappyPath() {
 
   const [wallet, other] = await ethers.getSigners()
 
-  await wethPartner.transfer(wethPair.address, WETHPartnerAmount)
-  await weth.deposit({ value: ETHAmount })
-  await weth.transfer(wethPair.address, ETHAmount)
-  await wethPair.mint(wallet.address)
+  await (await wethPartner.transfer(wethPair.address, WETHPartnerAmount)).wait()
+  await (await weth.deposit({ value: ETHAmount })).wait()
+  await (await weth.transfer(wethPair.address, ETHAmount)).wait()
+  await (await wethPair.mint(wallet.address)).wait()
 
   const WETHPairToken0 = await wethPair.token0()
 
@@ -875,10 +916,10 @@ async function testSwapETHForExactTokensAmounts() {
 
   const [wallet, other] = await ethers.getSigners()
 
-  await wethPartner.transfer(wethPair.address, WETHPartnerAmount)
-  await weth.deposit({ value: ETHAmount })
-  await weth.transfer(wethPair.address, ETHAmount)
-  await wethPair.mint(wallet.address)
+  await (await wethPartner.transfer(wethPair.address, WETHPartnerAmount)).wait()
+  await (await weth.deposit({ value: ETHAmount })).wait()
+  await (await weth.transfer(wethPair.address, ETHAmount)).wait()
+  await (await wethPair.mint(wallet.address)).wait()
 
   await expect(
     routerEventEmitter.swapETHForExactTokens(
@@ -932,25 +973,45 @@ async function testGetAmountsOut() {
 }
 
 export async function main() {
+  console.log('1. testFactoryAndWETH...')
   await testFactoryAndWETH()
+  console.log('2. testAddLiquidity...')
   await testAddLiquidity()
+  console.log('3. testAddLiquidityETH...')
   await testAddLiquidityETH()
+  console.log('4. testRemoveLiquidity...')
   await testRemoveLiquidity()
+  console.log('5. testRemoveLiquidityETH...')
   await testRemoveLiquidityETH()
-  await testRemoveLiquidityWithPermit()
-  await testAddRemoveLiquidityETHWithPermit()
+  // console.log('6. testRemoveLiquidityWithPermit...')
+  // await testRemoveLiquidityWithPermit()
+  // console.log('7. testAddRemoveLiquidityETHWithPermit...')
+  // await testAddRemoveLiquidityETHWithPermit()
+  console.log('8. testSwapExactTokensForTokensHappyPath...')
   await testSwapExactTokensForTokensHappyPath()
+  console.log('9. testSwapExactTokensForTokensAmounts...')
   await testSwapExactTokensForTokensAmounts()
+  console.log('10. testSwapTokensForExactTokensHappyPath...')
   await testSwapTokensForExactTokensHappyPath()
+  console.log('11. testSwapTokensForExactTokensAmounts...')
   await testSwapTokensForExactTokensAmounts()
+  console.log('12. testSwapExactETHForTokensHappyPath...')
   await testSwapExactETHForTokensHappyPath()
+  console.log('13. testSwapExactETHForTokensAmounts...')
   await testSwapExactETHForTokensAmounts()
+  console.log('14. testSwapTokensForExactETHHappyPath...')
   await testSwapTokensForExactETHHappyPath()
+  console.log('15. testSwapTokensForExactETHAmounts...')
   await testSwapTokensForExactETHAmounts()
+  console.log('16. testSwapExactTokensForETHHapyPath...')
   await testSwapExactTokensForETHHapyPath()
+  console.log('17. testSwapExactTokensForETHAmounts...')
   await testSwapExactTokensForETHAmounts()
+  // console.log('18. testSwapETHForExactTokensHappyPath...')
   // await testSwapETHForExactTokensHappyPath()
+  // console.log('19. testSwapETHForExactTokensAmounts...')
   // await testSwapETHForExactTokensAmounts()
+  console.log('20. testGetAmountsOut...')
   await testGetAmountsOut()
 }
 
