@@ -72,7 +72,7 @@ bool mcp::p2p::peer_store::node_get(mcp::db::db_transaction & transaction, std::
 	std::string result;
 	bool ret = transaction.get(m_nodes, key, result);
 	if (ret)
-		id_a = mcp::p2p::node_id(result.data());
+		id_a = mcp::p2p::node_id(mcp::slice_to_h512(result));
 	return ret;
 }
 
@@ -86,7 +86,7 @@ void mcp::p2p::peer_store::node_put(mcp::db::db_transaction & transaction, std::
 	}
 	dev::Slice key((char *)b_value.data(), b_value.size());
 
-	transaction.put(m_nodes, key, dev::Slice((char*)nf_a->id.data(), nf_a->id.size));
+	transaction.put(m_nodes, key, mcp::h512_to_slice(nf_a->id));
 }
 
 void mcp::p2p::peer_store::node_del(mcp::db::db_transaction & transaction, std::shared_ptr<node_info> nf_a)

@@ -641,6 +641,9 @@ namespace mcp
 	dev::Slice h256_to_slice(h256 const & value);
 	dev::h256 slice_to_h256(dev::Slice const & slice);
 
+	dev::Slice h512_to_slice(h512 const & value);
+	h512 slice_to_h512(dev::Slice const & slice);
+
 	dev::Slice account_to_slice(dev::Address const & value);
 	dev::Address slice_to_account(dev::Slice const & slice);
 

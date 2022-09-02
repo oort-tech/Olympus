@@ -193,10 +193,10 @@ void node_table::handle_receive(bi::udp::endpoint const & from, dev::bytesConstR
 {
 	try {
 		std::unique_ptr<discover_packet> packet = interpret_packet(from, data);
-		//LOG(m_log.info) << "Receive packet, " << packet->source_id.to_string() << "@" << from << " ,type:" << (uint32_t)packet->packet_type();
 		if (!packet)
 			return;
 
+		//LOG(m_log.info) << "Receive packet, " << packet->source_id.hex() << "@" << from << " ,type:" << (uint32_t)packet->packet_type();
 		if (packet->is_expired())
 		{
             LOG(m_log.debug) << "Invalid packet (timestamp in the past) from " << from.address().to_string() << ":" << from.port();
@@ -260,7 +260,7 @@ void node_table::handle_receive(bi::udp::endpoint const & from, dev::bytesConstR
 			auto in = dynamic_cast<find_node_packet const&>(*packet);
 			std::shared_ptr<bi::udp::endpoint> _from = std::make_shared<bi::udp::endpoint>(from);
 			std::vector<std::shared_ptr<node_entry>> nearest = nearest_node_entries(in.target, packet->source_id, _from);
-			static unsigned const nlimit = (max_udp_packet_size - 130) / neighbour::max_size;
+			static unsigned const nlimit = (max_udp_packet_size - 112) / neighbour::max_size;
 			for (unsigned offset = 0; offset < nearest.size(); offset += nlimit)
 			{
 				neighbours_packet p(my_node_info.id, nearest, offset, nlimit);
@@ -312,35 +312,32 @@ void node_table::handle_receive(bi::udp::endpoint const & from, dev::bytesConstR
 
 std::unique_ptr<discover_packet> node_table::interpret_packet(bi::udp::endpoint const & from, dev::bytesConstRef data)
 {
-	std::unique_ptr<discover_packet> packet = std::unique_ptr<discover_packet>();
+	std::unique_ptr<discover_packet> packet = nullptr;
 	// hash + node id + sig + network + packet type + packet (smallest possible packet is ping packet which is 5 bytes)
-	if (data.size() < h256::size + dev::Signature::size + 1 + 1 + 5)
+	if (data.size() < h256::size + dev::Signature::size + 1 + 1 + 6)
 	{
         LOG(m_log.debug) << "Invalid packet (too small) from " << from.address().to_string() << ":" << from.port();
 		return packet;
 	}
-	dev::bytesConstRef hash(data.cropped(0, h256::size));
-	dev::bytesConstRef bytes_to_hash_cref(data.cropped(h256::size, data.size() - h256::size));
-	//dev::bytesConstRef node_id_cref(bytes_to_hash_cref.cropped(0, node_id::size));
-	dev::bytesConstRef rlp_sig_cref(bytes_to_hash_cref.cropped(0, dev::Signature::size));
-	dev::bytesConstRef rlp_cref(bytes_to_hash_cref.cropped(dev::Signature::size));
+	bytesConstRef hashedBytes(data.cropped(h256::size, data.size() - h256::size));
+	bytesConstRef signedBytes(hashedBytes.cropped(Signature::size, hashedBytes.size() - Signature::size));
+	bytesConstRef signatureBytes(hashedBytes.cropped(0, Signature::size));
 
-	h256 echo(dev::sha3(bytes_to_hash_cref));
-	if (!hash.contentsEqual(echo.asBytes()))
+	h256 echo(dev::sha3(hashedBytes));
+	if (!data.cropped(0, h256::size).contentsEqual(echo.asBytes()))
 	{
         LOG(m_log.debug) << "Invalid packet (bad hash) from " << from.address().to_string() << ":" << from.port();
 		return packet;
 	}
 
-	Public sourceid(dev::recover(*(Signature const*)rlp_sig_cref.data(), sha3(rlp_cref)));
+	Public sourceid(dev::recover(*(Signature const*)signatureBytes.data(), sha3(signedBytes)));
 	if (!sourceid)
 	{
 		LOG(m_log.debug) << "Invalid packet (bad signature) from " << from.address().to_string() << ":" << from.port();
 		return packet;
 	}
-	//LOG(m_log.debug) << boost::str(boost::format("receive packet sig, node id:%1%, hash:%2%, sig:%3%") % from_node_id.to_string() % rlp_hash.to_string() % rlp_sig.to_string());
 
-	mcp::mcp_networks network_type((mcp::mcp_networks)rlp_cref[0]);
+	mcp::mcp_networks network_type((mcp::mcp_networks)signedBytes[0]);
 	if(network_type != mcp::mcp_network)
 	{
         LOG(m_log.debug) << "Invalid network type " << (unsigned)network_type << " from " << from.address().to_string() << ":" << from.port();
@@ -349,8 +346,8 @@ std::unique_ptr<discover_packet> node_table::interpret_packet(bi::udp::endpoint 
 
 	try
 	{
-		discover_packet_type p_type((discover_packet_type)rlp_cref[1]);
-		dev::bytesConstRef packet_cref(rlp_cref.cropped(2));
+		discover_packet_type p_type((discover_packet_type)signedBytes[1]);
+		dev::bytesConstRef bodyBytes(signedBytes.cropped(2));
 		switch (p_type)
 		{
 		case discover_packet_type::ping:
@@ -375,15 +372,15 @@ std::unique_ptr<discover_packet> node_table::interpret_packet(bi::udp::endpoint 
 		}
 		default:
 		{
-            LOG(m_log.debug) << "Invalid packet (unknown packet type) from " << from.address().to_string() << ":" << from.port();
+            LOG(m_log.info) << "Invalid packet (unknown packet type) from " << from.address().to_string() << ":" << from.port();
 			break;
 		}
 		}
-		packet->interpret_RLP(packet_cref);
+		packet->interpret_RLP(bodyBytes);
 	}
 	catch (std::exception const & e)
 	{
-        LOG(m_log.debug) << "Invalid packet format " << from.address().to_string() << ":" << from.port() << " message:" << e.what();
+        LOG(m_log.info) << "Invalid packet format " << from.address().to_string() << ":" << from.port() << " message:" << e.what();
 		return packet;
 	}
 
@@ -397,7 +394,7 @@ void node_table::send(bi::udp::endpoint const & to_endpoint, discover_packet con
 	datagram.add_packet_and_sign(secret, packet);
 
 	if (datagram.data.size() > max_udp_packet_size)
-        LOG(m_log.debug) << "Sending truncated datagram, size: " << datagram.data.size() << ", packet type:" << (unsigned)packet.packet_type();
+		LOG(m_log.debug) << "Sending truncated datagram, size: " << datagram.data.size() << ", packet type:" << (unsigned)packet.packet_type(); 
 
 	bool doWrite = false;
 	{
@@ -426,7 +423,7 @@ void node_table::do_write()
 	{
 		if (ec)
 		{
-            LOG(m_log.warning) << "Sending UDP message failed. " << ec.value() << " : " << ec.message();
+            LOG(m_log.debug) << "Sending UDP message failed. " << ec.value() << " : " << ec.message();
 		}
 
 		{

@@ -56,14 +56,10 @@ namespace mcp
 				//	% packet_a.source_id.to_string() % rlp_hash.to_string() % rlp_sig.to_string());
 
 				//data:  H( rlp sig || rlp ) || rlp sig || rlp 
-				data.resize(h256::size + dev::Signature::size + rlp.size());
+				data.resize(h256::size + dev::Signature::size + rlp_cref.size());
 				dev::bytesRef data_hash_ref(&data[0], h256::size);
-				//dev::bytesRef data_node_id_ref(&data[h256::size], node_id::size);
 				dev::bytesRef data_sig_ref(&data[h256::size], dev::Signature::size);
 				dev::bytesRef data_rlp_ref(&data[h256::size + dev::Signature::size], rlp_cref.size());
-
-				//dev::bytesConstRef node_id_cref(packet_a.source_id.data(), packet_a.source_id.size);
-				//node_id_cref.copyTo(data_node_id_ref);
 
 				rlp_sig.ref().copyTo(data_sig_ref);
 				rlp_cref.copyTo(data_rlp_ref);

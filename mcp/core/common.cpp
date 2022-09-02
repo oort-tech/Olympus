@@ -703,20 +703,17 @@ dev::h256 mcp::slice_to_h256(dev::Slice const & slice)
 {
 	return dev::h256(slice.toBytes());
 }
-/*
-dev::Slice mcp::uint512_to_slice(mcp::uint512_union const & value)
+
+dev::Slice mcp::h512_to_slice(h512 const & value)
 {
-	return dev::Slice((char*)value.bytes.data(), value.bytes.size());
+	return dev::Slice(reinterpret_cast<char const*>(value.data()), value.size);
 }
 
-mcp::uint512_union mcp::slice_to_uint512(dev::Slice const & slice)
+h512 mcp::slice_to_h512(dev::Slice const & slice)
 {
-	mcp::uint512_union result;
-	// assert_x(slice.size() == sizeof(result));
-	std::copy((byte *)slice.data(), (byte *)slice.data() + sizeof(result), result.bytes.data());
-	return result;
+	return dev::h512(slice.toBytes());
 }
-*/
+
 dev::Slice mcp::account_to_slice(dev::Address const & value)
 {
 	return dev::Slice((char*)value.data(), value.size);

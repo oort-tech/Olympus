@@ -170,7 +170,7 @@ namespace mcp
 				s << id;
 			}
 
-			static size_t const max_size = 57;
+			static size_t const max_size = 91;
 		};
 
 		class neighbours_packet : public discover_packet
