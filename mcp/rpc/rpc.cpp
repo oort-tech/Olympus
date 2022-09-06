@@ -2464,7 +2464,7 @@ void mcp::rpc_handler::epoch_approves(mcp::json &j_response, bool &)
 {
 	if (!request.count("epoch") || (!request["epoch"].is_string()) || (uint64_t)jsToInt(request["epoch"]) > m_chain->last_epoch() + 2)
 	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidHash());
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams());
 	}
 
 	mcp::json approves_l = mcp::json::array();
@@ -2493,7 +2493,7 @@ void mcp::rpc_handler::epoch_approve_receipts(mcp::json &j_response, bool &)
 {
 	if (!request.count("epoch") || (!request["epoch"].is_string()) || (uint64_t)jsToInt(request["epoch"]) > m_chain->last_epoch() + 2)
 	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidHash());
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams());
 	}
 
 	mcp::json approve_receipts_l = mcp::json::array();
@@ -2524,7 +2524,7 @@ void mcp::rpc_handler::epoch_elected_approve_receipts(mcp::json &j_response, boo
 {
 	if (!request.count("epoch") || (!request["epoch"].is_string()) || (uint64_t)jsToInt(request["epoch"]) > m_chain->last_epoch() + 1)
 	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidHash());
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams());
 	}
 
 	mcp::json electeds_l = mcp::json::array();
