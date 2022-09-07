@@ -270,11 +270,8 @@ bool mcp::Executive::executeCreate(Address const& _sender, u256 const& _endowmen
     // Schedule _init execution if not empty.
 	if (!_init.empty())
 	{
-		dev::h256 code_hash(mcp::blake2b_hash(_init));
-		//dev::bytesConstRef code_hash_ref(code_hash.data(), code_hash.size);
-		//h256 code_hash(code_hash_ref);
 		m_ext = std::make_shared<ExtVM>(m_s, m_envInfo, m_newAddress, _sender, _origin, _endowment, _gasPrice, 
-			dev::bytesConstRef(), _init, code_hash, 0, m_depth + 1, true, false);
+			dev::bytesConstRef(), _init, sha3(_init), 0, m_depth + 1, true, false);
 	}
 
 	//create trace action

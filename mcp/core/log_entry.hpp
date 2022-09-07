@@ -1,11 +1,8 @@
 #pragma once
 
-//#include <mcp/common/numbers.hpp>
-//#include <mcp/common/mcp_json.hpp>
 #include <libdevcore/FixedHash.h>
 #include <libdevcore/RLP.h>
 #include <libdevcore/Address.h>
-//#include <blake2/blake2.h>
 
 using log_bloom = dev::h2048;
 using log_blooms = std::vector<log_bloom>;
@@ -22,11 +19,6 @@ struct log_entry
 	{}
 
 	void streamRLP(RLPStream& _s) const;
-	//void serialize_json(mcp::json & json_a) const;
-	//// added by michael at 3/6
-	//void serialize_json_eth(mcp::json & json_a) const;
-	//
-	//void hash(blake2b_state &) const;
 
 	log_bloom bloom() const;
 

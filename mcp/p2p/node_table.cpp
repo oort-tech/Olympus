@@ -49,7 +49,7 @@ void node_table::start()
 		auto it = m_store.node_begin(transaction);
 		while (it.valid())
 		{
-			mcp::p2p::node_id id(it.value().data());
+			mcp::p2p::node_id id(mcp::slice_to_h512(it.value()));
 
 			dev::bytes result(it.key().size());
 			std::copy((byte *)it.key().data(), (byte *)it.key().data() + result.size(), result.data());

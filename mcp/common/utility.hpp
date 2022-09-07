@@ -81,7 +81,4 @@ namespace mcp
 		}
         return error;
 	}
-
-	dev::h256 blake2b_hash(dev::bytesConstRef const & bytes);
-	dev::h256 blake2b_hash(std::vector<uint8_t> const & bytes);
 }

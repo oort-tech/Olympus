@@ -37,19 +37,6 @@ namespace mcp
 		mcp::block_hash root() const;
 
 		void init_from_genesis_transaction(dev::Address const& from, h256 const& hash, std::string time);
-
-		//bool operator== (mcp::block const &) const;
-
-		//void serialize_json(std::string &) const;
-		//void serialize_json(mcp::json & json_a) const;
-
-		//// added by michael at 2/7
-		//void serialize_json_eth(std::string &) const;
-		//void serialize_json_eth(mcp::json & json_a) const;
-
-		///// @returns v value of the transaction (has chainID and recoveryID encoded in it)
-		///// @throws TransactionIsUnsigned if signature was not initialized
-		//u256 rawV() const;
 	private:
 		dev::Address m_from;// Other fields maybe same with other witness,cause same hash. so that, block must used from fields
 		mcp::block_hash m_previous;

@@ -4,7 +4,6 @@
 #include <mcp/p2p/node_entry.hpp>
 #include <mcp/p2p/discover_packet.hpp>
 #include <mcp/common/common.hpp>
-#include <blake2/blake2.h>
 #include <mcp/common/log.hpp>
 #include <mcp/p2p/peer_store.hpp>
 #include <mcp/common/utility.hpp>
