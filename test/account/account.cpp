@@ -8,7 +8,6 @@
 #include <cryptopp/sha.h>
 #include <cryptopp/hkdf.h>
 #include <cryptopp/pwdbased.h>
-#include <cryptopp/blake2.h>
 
 void test_create_account()
 {

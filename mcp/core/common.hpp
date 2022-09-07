@@ -346,69 +346,6 @@ namespace mcp
 	};
 
 	using AccountMap = std::unordered_map<Address, std::shared_ptr<mcp::account_state>>;
-	// using AccountMaskMap = std::unordered_map<Address, AccountMask>;
-
-	//class transaction_receipt
-	//{
-	//public:
-	//	transaction_receipt(h256 const& _hash, h256 const& _blockhash, unsigned _blocknum, Address const& _from, Address const& _to, unsigned _transactionIndex,
-	//		uint8_t _status, u256 const& _gasUsed, log_entries const& _log, Address const& _contractAddress = Address()
-	//	):
-	//		m_hash(_hash),
-	//		m_blockHash(_blockhash),
-	//		m_blockNumber(_blocknum),
-	//		m_from(_from),
-	//		m_to(_to),
-	//		m_transactionIndex(_transactionIndex),
-	//		m_statusCode(_status),
-	//		m_gasUsed(_gasUsed),
-	//		m_contractAddress(_contractAddress),
-	//		m_bloom(mcp::bloom(_log)),
-	//		m_log(_log)
-	//	{}
- //       transaction_receipt(dev::RLP const & r);
- //       void stream_RLP(dev::RLPStream & s) const;
-	//	void serialize_json(mcp::json & json_a);
-	//	//void hash(blake2b_state &) const;
-	//	bool contains_bloom(dev::h256 const & h_a);
-	//	bool contains_bloom(dev::bytesConstRef const & h_a);
-	//	//static void serialize_null_json(mcp::json & json_a);
-
-	//	h256 const& hash() const { return m_hash; }
-
-	//	h256 const& blockHash() const { return m_blockHash; }
-
-	//	unsigned const& blockNumber() const { return m_blockNumber; }
-
-	//	Address const& from() const { return m_from; }
-
-	//	Address const& to() const { return m_to; }
-
-	//	unsigned const& transactionIndex() const { return m_transactionIndex; }
-
-	//	uint8_t const& statusCode() const { return m_statusCode; }
-
-	//	u256 const& gasUsed() const { return m_gasUsed; }
-
-	//	Address const& contractAddress() const { return m_contractAddress; }
-
-	//	log_bloom const& bloom() const { return m_bloom; }
-
-	//	log_entries const& log() const { return m_log; }
-
-	//private:
-	//	h256 m_hash;
-	//	h256 m_blockHash;
-	//	unsigned m_blockNumber;
-	//	Address m_from;
-	//	Address m_to;
-	//	unsigned m_transactionIndex = 0;
-	//	uint8_t m_statusCode;
-	//	u256 m_gasUsed;
-	//	Address m_contractAddress;
-	//	log_bloom m_bloom;
-	//	log_entries m_log;
-	//};
 
 	class block_state
 	{

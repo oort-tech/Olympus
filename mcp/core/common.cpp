@@ -6,7 +6,6 @@
 #include <mcp/common/working.hpp>
 #include <libevm/VMFace.h>
 #include <boost/endian/conversion.hpp>
-#include <blake2/blake2.h>
 #include <libdevcore/CommonJS.h>
 
 using namespace dev::eth;
@@ -123,93 +122,6 @@ void mcp::dag_account_info::stream_RLP(dev::RLPStream & s) const
 	s.appendList(1);
 	s << latest_stable_block;
 }
-
-
-//mcp::transaction_receipt::transaction_receipt(dev::RLP const & r)
-//{
-//	if (!r.isList() || r.itemCount() != 10)
-//		BOOST_THROW_EXCEPTION(InvalidTransactionReceiptFormat());
-//
-//	m_hash = (h256)r[0];
-//	m_blockHash = (h256)r[1];
-//	m_blockNumber = (unsigned)r[2];
-//	m_from = (Address)r[3];
-//	m_to = (Address)r[4];
-//	m_transactionIndex = (unsigned)r[5];
-//	m_statusCode = (uint8_t)r[6];
-//	m_gasUsed = (u256)r[7];
-//	m_contractAddress = (Address)r[8];
-//	for (auto const& i : r[9])
-//		m_log.emplace_back(i);
-//
-//	m_bloom = mcp::bloom(m_log);
-//}
-//
-//void mcp::transaction_receipt::stream_RLP(dev::RLPStream & s) const
-//{
-//	s.appendList(10);
-//
-//	s << hash() << blockHash() << blockNumber() << from() << to() << transactionIndex() << statusCode() << gasUsed() << contractAddress();
-//
-//	s.appendList(log().size());
-//	for (log_entry const& l: log())
-//		l.streamRLP(s);
-//}
-//
-//void mcp::transaction_receipt::serialize_json(mcp::json & json_a)
-//{
-//	json_a["gas_used"] = gasUsed();
-//	json_a["blockHash"] = blockHash().hex();dev::toJS(
-//	json_a["blockNumber"] = blockNumber();
-//	json_a["from"] = from().hex();dev::toJS(
-//	json_a["to"] = to().hex();dev::toJS(
-//	json_a["transactionIndex"] = transactionIndex();
-//	json_a["statusCode"] = statusCode();
-//	json_a["contractAddress"] = contractAddress().hex();dev::toJS(
-//	json_a["gas_used"] = gasUsed();
-//	json_a["log_bloom"] = bloom().hex();dev::toJS(
-//
-//	mcp::json logs_l = mcp::json::array();
-//    for (auto it = log().begin(); it != log().end(); it++)
-//    {
-//		mcp::json log_l;
-//		it->serialize_json(log_l);
-//		logs_l.push_back(log_l);
-//    }
-//	json_a["log"] = logs_l;
-//}
-//
-////void mcp::transaction_receipt::serialize_null_json(mcp::json & json_a)
-////{
-////	json_a["from_state"] = nullptr;
-////	json_a["to_states"] = nullptr;
-////	json_a["gas_used"] = nullptr;
-////	json_a["log_bloom"] = nullptr;
-////	json_a["log"] = nullptr;
-////}
-//
-////void mcp::transaction_receipt::hash(blake2b_state & hash_a) const
-////{
-////	blake2b_update(&hash_a, from_state.bytes.data(), sizeof(from_state));
-////	for (auto h : to_state)
-////		blake2b_update(&hash_a, h.bytes.data(), sizeof(h.bytes));
-////
-////	mcp::uint256_union gas_used_u = mcp::uint256_union(gas_used);
-////	blake2b_update(&hash_a, gas_used_u.bytes.data(), sizeof(gas_used_u.bytes));
-////
-////	for (auto l : log)
-////		l.hash(hash_a);
-////}
-//
-//bool mcp::transaction_receipt::contains_bloom(dev::h256 const & h_a)
-//{
-//	return m_bloom.containsBloom<3>(sha3(h_a));
-//}
-//
-//bool mcp::transaction_receipt::contains_bloom(dev::bytesConstRef const & h_a)
-//{
-//	return m_bloom.containsBloom<3>(sha3(h_a));
-//}
 
 mcp::block_state::block_state() :
     status(mcp::block_status::unknown),
@@ -612,29 +524,21 @@ mcp::summary_hash mcp::summary::gen_summary_hash(mcp::block_hash const & block_h
 	std::list<mcp::summary_hash> const & parent_hashs, h256 const & receipts_root, std::set<mcp::summary_hash> const & skiplist,
 	mcp::block_status const & status_a, uint64_t const& stable_index_a, uint64_t const& mc_timestamp_a)
 {
-    mcp::summary_hash result;
-    blake2b_state hash_l;
-    auto status(blake2b_init(&hash_l, sizeof(result)));
-    assert_x(status == 0);
+	dev::RLPStream s;
+	s.appendList(8);
+	s << block_hash << previous_hash;
 
-    blake2b_update(&hash_l, block_hash.data(), sizeof(block_hash));
-	blake2b_update(&hash_l, previous_hash.data(), sizeof(previous_hash));
+	s.appendList(parent_hashs.size());
 	for (auto & parent : parent_hashs)
-        blake2b_update(&hash_l, parent.data(), sizeof(parent));
-	blake2b_update(&hash_l, receipts_root.asBytes().data(),sizeof(receipts_root.asBytes()));//used receipt root
-    for (auto & s : skiplist)
-        blake2b_update(&hash_l, s.data(), sizeof(s));
-    blake2b_update(&hash_l, &status_a, sizeof(status_a));
+		s << parent;
 
-	dev::h64 stable_index(stable_index_a);
-	blake2b_update(&hash_l, stable_index.data(), sizeof(stable_index));
-	dev::h64 mc_timestamp(mc_timestamp_a);
-	blake2b_update(&hash_l, mc_timestamp.data(), sizeof(mc_timestamp));
+	s << receipts_root;
+	s.appendList(skiplist.size());
+	for (auto & sk : skiplist)
+		s << sk;
+	s << (uint8_t)status_a << stable_index_a << mc_timestamp_a;
 
-    status = blake2b_final(&hash_l, result.data(), sizeof(result));
-    assert_x(status == 0);
-
-    return result;
+	return dev::sha3(s.out());
 }
 
 mcp::advance_info::advance_info():
@@ -659,33 +563,7 @@ dev::Slice mcp::advance_info::val() const
 {
 	return dev::Slice((char*)this, sizeof(*this));
 }
-/*
-dev::Slice mcp::uint64_to_slice(mcp::uint64_union const & value_a)
-{
-	return dev::Slice((char*)value_a.bytes.data(), value_a.bytes.size());
-}
 
-mcp::uint64_union mcp::slice_to_uint64(dev::Slice const & slice)
-{
-	mcp::uint64_union result;
-	assert_x(slice.size() == sizeof(result));
-	std::copy((byte *)slice.data(), (byte *)slice.data() + sizeof(result), result.bytes.data());
-	return result;
-}
-
-dev::Slice mcp::uint256_to_slice(mcp::uint256_union const & value)
-{
-	return dev::Slice((char*)value.bytes.data(), value.bytes.size());
-}
-
-mcp::uint256_union mcp::slice_to_uint256(dev::Slice const & slice)
-{
-	mcp::uint256_union result;
-	// assert_x(slice.size() == sizeof(result));
-	std::copy((byte *)slice.data(), (byte *)slice.data() + sizeof(result), result.bytes.data());
-	return result;
-}
-*/
 dev::Slice mcp::h64_to_slice(h64 const & value)
 {
 	return dev::Slice(reinterpret_cast<char const*>(value.data()), value.size);
@@ -723,55 +601,7 @@ dev::Address mcp::slice_to_account(dev::Slice const & slice)
 {
 	return Address(slice.toBytes());
 }
-/*
-dev::Slice mcp::address_to_slice(Address const & value)
-{
-	return dev::Slice(reinterpret_cast<char const*>(value.data()), value.size);
-}
 
-Address mcp::slice_to_address(dev::Slice const & slice)
-{
-	return Address(slice.toBytes());
-}
-*/
-//mcp::unlink_block::unlink_block(bool & error_a, dev::RLP const & r)
-//{
-//	error_a = r.itemCount() != 2;
-//	
-//	block = std::make_shared<mcp::block>(error_a, r[0], true);
-//	time = (mcp::uint64_union)r[1];
-//}
-//
-//void mcp::unlink_block::stream_RLP(dev::RLPStream & s) const
-//{
-//	s.appendList(2);
-//	block->stream_RLP(s);
-//	s << time;
-//}
-
-//dev::Address mcp::toAddress(dev::Address const& _from, u256 const& _nonce)
-//{
-//    // sichaoy: don't use rlpList here
-//    return dev::Address(sha3(rlpList(_from, _nonce)));
-//}
-/*
-bool mcp::isZeroH256(u256 const& _r)
-{
-	return !_r;
-}
-
-Address mcp::toAddress(std::string const& _s)
-{
-	try
-	{
-		auto b = fromHex(_s.substr(0, 2) == "0x" ? _s.substr(2) : _s, WhenError::Throw);
-		if (b.size() == 20)
-			return Address(b);
-	}
-	catch (BadHexCharacter&) {}
-	BOOST_THROW_EXCEPTION(InvalidAddress());
-}
-*/
 bool mcp::isAddress(std::string const& _s)
 {
 	if (dev::isHex(_s)) {

@@ -20,43 +20,6 @@ void log_entry::streamRLP(RLPStream& _s) const
 	_s.appendList(3) << address << topics << data;
 }
 
-//void log_entry::serialize_json(mcp::json & json_a) const
-//{
-//	json_a["account"] = acct.to_account();
-//	json_a["data"] = mcp::bytes_to_hex(data);
-//
-//    mcp::json topics_l = mcp::json::array();
-//	for (auto t: topics)
-//	{
-//		topics_l.push_back(t.hex());
-//	}
-//	json_a["topics"] = topics_l;
-//}
-//
-//void log_entry::serialize_json_eth(mcp::json & json_a) const
-//{
-//	json_a["address"] = acct.to_account();
-//	json_a["data"] = "0x" + mcp::bytes_to_hex(data);
-//
-//	mcp::json topics_l = mcp::json::array();
-//	for (auto t : topics)
-//	{
-//		topics_l.push_back("0x" + t.hex());
-//	}
-//	json_a["topics"] = topics_l;
-//}
-
-//void log_entry::hash(blake2b_state & hash_a) const
-//{
-//	blake2b_update(&hash_a, acct.bytes.data(), sizeof(acct.bytes));
-//	for (auto t : topics)
-//	{
-//		mcp::uint256_union topic_u(t);
-//		blake2b_update(&hash_a, topic_u.bytes.data(), sizeof(topic_u.bytes));
-//	}
-//	blake2b_update(&hash_a, data.data(), data.size());
-//}
-
 log_bloom log_entry::bloom() const
 {
 	log_bloom ret;

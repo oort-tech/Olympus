@@ -1,7 +1,6 @@
 #include <mcp/common/numbers.hpp>
 
 #include <mcp/common/common.hpp>
-#include <blake2/blake2.h>
 
 #include <cryptopp/sha.h>
 #include <cryptopp/aes.h>
@@ -54,41 +53,6 @@ void test_argon2()
 }
 */
 
-void test_blake2()
-{
-	/*
-	std::cout << "-------------blake2---------------" << std::endl;
-
-	dev::h256 input;
-	input.decode_hex("5E844EE4D2E26920F8B0C4B7846929057CFCE48BF40BA269B173648999630053");
-
-	std::chrono::time_point<std::chrono::high_resolution_clock> start = std::chrono::high_resolution_clock::now();
-
-	dev::h256 result;
-	blake2b_state state;
-	auto status(blake2b_init(&state, result.bytes.size()));
-	if(status == 0)
-	{ 
-		status = blake2b_update(&state, input.bytes.data(), input.bytes.size());
-		if (status == 0)
-		{ 
-			status == blake2b_final(&state, result.bytes.data(), result.bytes.size());
-			if (status == 0)
-			{
-				std::chrono::nanoseconds dur = std::chrono::duration_cast<std::chrono::nanoseconds> (std::chrono::high_resolution_clock::now() - start);
-				std::cout << "duration:" << dur.count() << "ns" << std::endl;
-
-				std::cout << "input:" << input.to_string() << std::endl;
-				std::cout << "result:" << result.to_string() << std::endl;
-
-				return;
-			}
-		}
-	}
-
-	std::cout << "Caculate blake2 fail";
-	*/
-}
 
 void test_sha3()
 {

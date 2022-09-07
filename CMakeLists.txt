@@ -20,16 +20,12 @@ endif(NOT CMAKE_BUILD_TYPE)
 
 if (WIN32)
 	set (PLATFORM_COMPILE_FLAGS "-DBOOST_SPIRIT_THREADSAFE -DBOOST_STACKTRACE_GNU_SOURCE_NOT_REQUIRED -DETH_FATDB -D_WIN32_WINNT=0x0600 -DWINVER=0x0600 -DWIN32_LEAN_AND_MEAN -DMINIUPNP_STATICLIB -DNOMINMAX")
-	set (BLAKE2_IMPLEMENTATION "blake2/blake2b.c")
 else (WIN32)
 	set (PLATFORM_COMPILE_FLAGS "-DBOOST_SPIRIT_THREADSAFE -DBOOST_STACKTRACE_GNU_SOURCE_NOT_REQUIRED -DETH_FATDB -Werror=switch -fPIC")
 	if (CMAKE_SYSTEM_PROCESSOR MATCHES "^(i.86|x86(_64)?)$")
 		if (CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
 			set (PLATFORM_COMPILE_FLAGS "${PLATFORM_COMPILE_FLAGS} -msse2")
 		endif()
-		set (BLAKE2_IMPLEMENTATION "blake2/blake2b.c")
-	else()
-		set (BLAKE2_IMPLEMENTATION "blake2/blake2b-ref.c")
 	endif()
 endif (WIN32)
 
@@ -185,8 +181,6 @@ add_library (db
 	mcp/db/counter.cpp
 	mcp/db/counter.hpp)
 
-include_directories("${CMAKE_SOURCE_DIR}/blake2")
-
 include_directories("${CMAKE_SOURCE_DIR}/mcp/p2p")
 include_directories("${CMAKE_SOURCE_DIR}/miniupnp")
 include_directories("${CMAKE_SOURCE_DIR}/lz4/lib")
@@ -206,12 +200,6 @@ add_subdirectory(evmc)
 add_subdirectory(libevm)
 add_subdirectory(libdevcore)
 add_subdirectory(libdevcrypto)
-
-add_library (blake2
-	blake2/blake2-config.h
-	blake2/blake2-impl.h
-	blake2/blake2.h
-	${BLAKE2_IMPLEMENTATION})
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 	set (PLATFORM_SECURE_SOURCE mcp/plat/osx/working.mm)
@@ -408,7 +396,6 @@ add_subdirectory(miniupnp/miniupnpc)
 #lz4
 add_subdirectory(lz4/contrib/cmake_unofficial)
 
-set_target_properties (blake2 PROPERTIES COMPILE_FLAGS "${PLATFORM_C_FLAGS} ${PLATFORM_COMPILE_FLAGS} -D__SSE2__")
 set_target_properties (db PROPERTIES COMPILE_FLAGS "${PLATFORM_CXX_FLAGS} ${PLATFORM_COMPILE_FLAGS}")
 set_target_properties (common rpc wallet consensus core node devcrypto devcore p2p mcp evm PROPERTIES COMPILE_FLAGS "${PLATFORM_CXX_FLAGS} ${PLATFORM_COMPILE_FLAGS} -DQT_NO_KEYWORDS -DMCP_VERSION=${VERSION} -DBOOST_ASIO_HAS_STD_ARRAY=1")
 set_target_properties (common rpc wallet consensus core node devcrypto devcore p2p mcp PROPERTIES LINK_FLAGS "${PLATFORM_LINK_FLAGS}")
@@ -452,8 +439,8 @@ else ()
     set (DEPENDENCE_LIBS ${DEPENDENCE_LIBS} ${ZLIB_LIBRARY})
 endif()
 
-target_link_libraries (mcp rpc wallet consensus node p2p core db common devcrypto devcore evm blake2 libminiupnpc-static secp256k1 lz4_static ${CRYPTOPP_LIBRARY} ${Boost_ATOMIC_LIBRARY} ${Boost_CHRONO_LIBRARY} ${Boost_REGEX_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_LOG_LIBRARY} ${Boost_PROGRAM_OPTIONS_LIBRARY} ${Boost_LOG_SETUP_LIBRARY} ${Boost_THREAD_LIBRARY} ${PLATFORM_LIBS}  ${DEPENDENCE_LIBS})
+target_link_libraries (mcp rpc wallet consensus node p2p core db common devcrypto devcore evm libminiupnpc-static secp256k1 lz4_static ${CRYPTOPP_LIBRARY} ${Boost_ATOMIC_LIBRARY} ${Boost_CHRONO_LIBRARY} ${Boost_REGEX_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_LOG_LIBRARY} ${Boost_PROGRAM_OPTIONS_LIBRARY} ${Boost_LOG_SETUP_LIBRARY} ${Boost_THREAD_LIBRARY} ${PLATFORM_LIBS}  ${DEPENDENCE_LIBS})
 
-target_link_libraries (test_account rpc wallet consensus node p2p core db common devcrypto devcore evm blake2 libminiupnpc-static secp256k1 lz4_static ${CRYPTOPP_LIBRARY} ${Boost_ATOMIC_LIBRARY} ${Boost_CHRONO_LIBRARY} ${Boost_REGEX_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_LOG_LIBRARY} ${Boost_PROGRAM_OPTIONS_LIBRARY} ${Boost_LOG_SETUP_LIBRARY} ${Boost_THREAD_LIBRARY} ${PLATFORM_LIBS} ${DEPENDENCE_LIBS})
+target_link_libraries (test_account rpc wallet consensus node p2p core db common devcrypto devcore evm libminiupnpc-static secp256k1 lz4_static ${CRYPTOPP_LIBRARY} ${Boost_ATOMIC_LIBRARY} ${Boost_CHRONO_LIBRARY} ${Boost_REGEX_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_LOG_LIBRARY} ${Boost_PROGRAM_OPTIONS_LIBRARY} ${Boost_LOG_SETUP_LIBRARY} ${Boost_THREAD_LIBRARY} ${PLATFORM_LIBS} ${DEPENDENCE_LIBS})
 
 
