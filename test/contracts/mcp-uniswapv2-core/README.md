@@ -23,4 +23,4 @@ The following assumes the use of `node@>=10`.
 
 You can test the contracts on the beta network as following. 
 
-`npx hardhat run --network ccnbeta test/main.js`
+`npx hardhat run --network ccnbeta scripts/ccn/main.js`
