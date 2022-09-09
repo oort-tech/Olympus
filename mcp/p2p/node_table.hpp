@@ -126,11 +126,11 @@ namespace mcp
 		class node_table : public std::enable_shared_from_this<node_table>
 		{
 		public:
-			node_table(mcp::p2p::peer_store& store_a, KeyPair const & alias_a, node_endpoint const & endpoint_a);
+			node_table(mcp::p2p::peer_store& store_a, KeyPair const & alias_a, node_endpoint const & endpoint_a, mcp::fast_steady_clock& steady_clock_a);
 			~node_table();
 
 			void start();
-			void add_node(node_info const & node_indo_a);
+			void add_node(node_info const & node_indo_a, bool is_known = false);
 			std::shared_ptr<node_entry> get_node(node_id node_id_a);
 			std::list<std::shared_ptr<node_info>> get_random_nodes(size_t const & max_size) const;
 			std::list<std::shared_ptr<node_info>> snapshot(unsigned& index) const;
@@ -139,10 +139,9 @@ namespace mcp
 			std::list<node_info> nodes() const;
 
             mcp::log m_log = { mcp::log("p2p") };
-
 		private:
 			// Constants for Kademlia, derived from address space.
-			static unsigned const s_address_byte_size = node_id::size;							//< Size of address type in bytes.
+			static unsigned const s_address_byte_size = h256::size;							//< Size of address type in bytes.
 			static unsigned const s_bits = 8 * s_address_byte_size;					//< Denoted by n in [Kademlia].
 			static unsigned const s_bins = s_bits - 1;								//< Size of buckets (excludes root, which is us).
 
@@ -185,6 +184,7 @@ namespace mcp
 
 			ba::io_service io_service;
 			node_info my_node_info;
+			h256 const m_hostNodeIDHash;
 			dev::Secret secret;
 			node_endpoint my_endpoint;
 
@@ -219,6 +219,8 @@ namespace mcp
 			bool is_cancel;
 			std::thread io_service_thread;
 			mcp::p2p::peer_store& m_store;
+
+			mcp::fast_steady_clock& m_steady_clock;
 		};
 	}
 }
