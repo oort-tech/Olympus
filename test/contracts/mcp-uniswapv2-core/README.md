@@ -15,10 +15,6 @@ The following assumes the use of `node@>=10`.
 
 `yarn`
 
-## Compile Contracts
-
-`yarn compile`
-
 ## Run Tests
 
 You can test the contracts on the beta network as following. 
