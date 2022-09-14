@@ -4,7 +4,7 @@
 using namespace mcp::p2p;
 
 host::host(bool & error_a, p2p_config const & config_a, boost::asio::io_service & io_service_a, dev::Secret const & node_key,
-	boost::filesystem::path const & application_path_a) :
+	mcp::fast_steady_clock& steady_clock_a, boost::filesystem::path const & application_path_a) :
 	config(config_a),
 	io_service(io_service_a),
 	alias(node_key),
@@ -13,7 +13,8 @@ host::host(bool & error_a, p2p_config const & config_a, boost::asio::io_service 
 	last_ping(std::chrono::steady_clock::time_point::min()),
 	last_try_connect(std::chrono::steady_clock::time_point::min()),
 	last_try_connect_exemption(std::chrono::steady_clock::time_point::min()),
-	m_peer_manager(std::make_shared<peer_manager>(error_a, application_path_a))
+	m_peer_manager(std::make_shared<peer_manager>(error_a, application_path_a)),
+	m_steady_clock(steady_clock_a)
 {
 	if (error_a)
 		return;
@@ -114,7 +115,7 @@ void host::start()
 	map_public(listen_ip, port);
 	accept_loop();
 
-	m_node_table = std::make_shared<node_table>(m_peer_manager->store, alias, node_endpoint(listen_ip, port, port));
+	m_node_table = std::make_shared<node_table>(m_peer_manager->store, alias, node_endpoint(listen_ip, port, port), m_steady_clock);
 	m_node_table->set_event_handler(new host_node_table_event_handler(*this));
 	m_node_table->start();
 
@@ -420,7 +421,7 @@ void host::try_connect_nodes()
 			if (!m_peers.count(info->id))
 			{
 				connect(info);
-				m_node_table->add_node(*info);
+				m_node_table->add_node(*info, true);/// mark as known peer
 			}
 		}
 
@@ -433,7 +434,7 @@ void host::try_connect_nodes()
 			if (!m_peers.count(info->id))
 			{
 				connect(info);
-				m_node_table->add_node(*info);
+				m_node_table->add_node(*info, true);/// mark as known peer
 			}
 		}
 

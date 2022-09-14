@@ -895,7 +895,7 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 		///wallet
 		std::shared_ptr<mcp::wallet> wallet(std::make_shared<mcp::wallet>(chain_store, cache, key_manager, TQ));
 		//host
-		std::shared_ptr<mcp::p2p::host> host(std::make_shared<mcp::p2p::host>(error, config.p2p, io_service, seed, data_path));
+		std::shared_ptr<mcp::p2p::host> host(std::make_shared<mcp::p2p::host>(error, config.p2p, io_service, seed, steady_clock, data_path));
 		if (error)
 		{
 			std::cerr << "host initializing error\n";

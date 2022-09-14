@@ -2,12 +2,14 @@
 
 using namespace mcp::p2p;
 
-node_table::node_table(mcp::p2p::peer_store& store_a, KeyPair const & alias_a, node_endpoint const & endpoint_a) :
+node_table::node_table(mcp::p2p::peer_store& store_a, KeyPair const & alias_a, node_endpoint const & endpoint_a, mcp::fast_steady_clock& steady_clock_a) :
 	m_store(store_a),
 	my_node_info((node_id) alias_a.pub(), endpoint_a),
+	m_hostNodeIDHash{ sha3(my_node_info.id) },
 	secret(alias_a.secret()),
 	socket(std::make_unique<bi::udp::socket>(io_service)),
 	my_endpoint(endpoint_a),
+	m_steady_clock(steady_clock_a),
 	is_cancel(false)
 {
 	for (unsigned i = 0; i < s_bins; i++)
@@ -126,6 +128,14 @@ void node_table::do_discover(node_id const & rand_node_id, unsigned const & roun
 			auto n = nearest[i];
 			tried.push_back(n);
 
+			// Avoid sending FindNode, if we have not sent a valid PONG lately.
+			// This prevents being considered invalid node and FindNode being ignored.
+			if (!n->hasValidEndpointProof(m_steady_clock.now()))
+			{
+				ping(n->endpoint);
+				continue;
+			}
+
 			//send find node
 			find_node_packet p(my_node_info.id, rand_node_id);
 
@@ -196,7 +206,7 @@ void node_table::handle_receive(bi::udp::endpoint const & from, dev::bytesConstR
 		if (!packet)
 			return;
 
-		//LOG(m_log.info) << "Receive packet, " << packet->source_id.hex() << "@" << from << " ,type:" << (uint32_t)packet->packet_type();
+		//LOG(m_log.debug) << "Receive packet, " << packet->source_id.hex() << "@" << from << " ,type:" << (uint32_t)packet->packet_type();
 		if (packet->is_expired())
 		{
             LOG(m_log.debug) << "Invalid packet (timestamp in the past) from " << from.address().to_string() << ":" << from.port();
@@ -242,13 +252,19 @@ void node_table::handle_receive(bi::udp::endpoint const & from, dev::bytesConstR
 				if (auto n = get_node(eviction_entry.new_node_id))
 					drop_node(n);
 				if (auto n = get_node(evicted_node_id))
+				{
 					n->pending = false;
+					n->lastPongReceivedTime = m_steady_clock.now();
+				}
 			}
 			else
 			{
 				// if not, check if it's known/pending or a pubk discovery ping
 				if (auto n = get_node(packet->source_id))
+				{
 					n->pending = false;
+					n->lastPongReceivedTime = m_steady_clock.now();
+				}
 				else
 					add_node(node_info(packet->source_id, node_endpoint(from.address(), from.port(), from.port())));
 			}
@@ -257,6 +273,14 @@ void node_table::handle_receive(bi::udp::endpoint const & from, dev::bytesConstR
 		}
 		case discover_packet_type::find_node:
 		{
+			auto np = get_node(packet->source_id);
+			if (!np || !np->hasValidEndpointProof(m_steady_clock.now()))
+			{
+				LOG(m_log.debug) << "Unexpected FindNode packet! Endpoint proof has expired.";
+				ping(node_endpoint(from.address(), from.port(), from.port()));
+				break;
+			}
+			
 			auto in = dynamic_cast<find_node_packet const&>(*packet);
 			std::shared_ptr<bi::udp::endpoint> _from = std::make_shared<bi::udp::endpoint>(from);
 			std::vector<std::shared_ptr<node_entry>> nearest = nearest_node_entries(in.target, packet->source_id, _from);
@@ -451,72 +475,45 @@ std::shared_ptr<node_entry> node_table::get_node(node_id node_id_a)
 
 std::vector<std::shared_ptr<node_entry>> node_table::nearest_node_entries(node_id const& target_a, node_id const& source_a, std::shared_ptr<bi::udp::endpoint> from)
 {
-	// send s_alpha FindNode packets to nodes we know, closest to target
-	static unsigned last_bin = s_bins - 1;
-	unsigned head = node_entry::calc_distance(my_node_info.id, target_a);
-	unsigned tail = head == 0 ? last_bin : (head - 1) % s_bins;
+	auto const distanceToTargetLess = [](std::pair<int, std::shared_ptr<node_entry>> const& _node1,
+		std::pair<int, std::shared_ptr<node_entry>> const& _node2) {
+		return _node1.first < _node2.first;
+	};
 
-	std::map<unsigned, std::list<std::shared_ptr<node_entry>>> found;
+	h256 const targetHash = sha3(target_a);
 
-	// if d is 0, then we roll look forward, if last, we reverse, else, spread from d
-	if (head > 1 && tail != last_bin)
-		while (head != tail && head < s_bins)
-		{
-			std::lock_guard<std::mutex> lock(states_mutex);
-			for (auto const & n : states[head].nodes)
-				if (auto p = n.lock())
-					found[node_entry::calc_distance(target_a, p->id)].push_back(p);
-
-			if (tail)
-				for (auto const & n : states[tail].nodes)
-					if (auto p = n.lock())
-						found[node_entry::calc_distance(target_a, p->id)].push_back(p);
-
-			head++;
-			if (tail)
-				tail--;
-		}
-	else if (head < 2)
-		while (head < s_bins)
-		{
-			std::lock_guard<std::mutex> lock(states_mutex);
-			for (auto const & n : states[head].nodes)
-				if (auto p = n.lock())
-					found[node_entry::calc_distance(target_a, p->id)].push_back(p);
-			head++;
-		}
-	else
-		while (tail > 0)
-		{
-			std::lock_guard<std::mutex> lock(states_mutex);
-			for (auto const& n : states[tail].nodes)
-				if (auto p = n.lock())
-					found[node_entry::calc_distance(target_a, p->id)].push_back(p);
-			tail--;
-		}
-	
-	std::vector<std::shared_ptr<node_entry>> ret;
-	for (auto& nodes : found)
-	{
-		for (auto const& n : nodes.second)
-		{
-			if (ret.size() < s_bucket_size && !!n->endpoint
-				&& n->id != source_a) //filter remote id
+	std::multiset<std::pair<int, std::shared_ptr<node_entry>>, decltype(distanceToTargetLess)>
+		nodesByDistanceToTarget(distanceToTargetLess);
+	for (auto const& bucket : states)
+		for (auto const& nodeWeakPtr : bucket.nodes)
+			if (auto node = nodeWeakPtr.lock())
 			{
-				if (isPublicAddress(n->endpoint.address))
-				{
-					ret.push_back(n);
-				}
-				else if(nullptr == from
-					|| (isPrivateAddress(from->address()) && isSameNetwork(from->address(), n->endpoint.address))
-					)
-				{
-					ret.push_back(n);
-				}
+				nodesByDistanceToTarget.emplace(node_entry::calc_distance(targetHash, node->nodeIDHash), node);
+
+				if (nodesByDistanceToTarget.size() > s_bucket_size)
+					nodesByDistanceToTarget.erase(--nodesByDistanceToTarget.end());
+			}
+
+	std::vector<std::shared_ptr<node_entry>> ret;
+	for (auto& distanceAndNode : nodesByDistanceToTarget)
+	{
+		if (ret.size() < s_bucket_size && !!distanceAndNode.second->endpoint
+			&& distanceAndNode.second->id != source_a) //filter remote id
+		{
+			if (isPublicAddress(distanceAndNode.second->endpoint.address))
+			{
+				ret.emplace_back(move(distanceAndNode.second));
+			}
+			else if (nullptr == from
+				|| (isPrivateAddress(from->address()) && isSameNetwork(from->address(), distanceAndNode.second->endpoint.address))
+				)
+			{
+				ret.emplace_back(move(distanceAndNode.second));
 			}
 		}
 	}
 		
+
 	return ret;
 }
 
@@ -552,7 +549,7 @@ std::list<node_info>  node_table::nodes() const
 	return result;
 }
 
-void node_table::add_node(node_info const & node_a)
+void node_table::add_node(node_info const & node_a, bool is_known)
 {
 	if (!node_a.endpoint || node_a.id == my_node_info.id)
 		return;
@@ -570,10 +567,14 @@ void node_table::add_node(node_info const & node_a)
 		}
 		else
 		{
-			auto node = std::make_shared<node_entry>(my_node_info.id, node_a.id, node_a.endpoint, node_a.peer_type);
+			auto node = std::make_shared<node_entry>(m_hostNodeIDHash, node_a.id, node_a.endpoint, std::chrono::steady_clock::time_point::min(), node_a.peer_type);
+			if (is_known)
+				node->pending = false;
 			m_nodes[node_a.id] = node;
 		}
 	}
+	if (is_known)
+		note_active_node(node_a.id, node_a.endpoint);
 
 	ping(node_a.endpoint);
 }
@@ -671,7 +672,7 @@ void node_table::note_active_node(node_id const & node_id_a, bi::udp::endpoint c
 	std::shared_ptr<node_entry> new_node = get_node(node_id_a);
 	if (new_node && !new_node->pending)
 	{
-		//LOG(m_log.debug) << "Noting active node: " << node_id_a.to_string() << " " << endpoint_a.address().to_string() << ":" << endpoint_a.port();
+		//LOG(m_log.debug) << "Noting active node: " << node_id_a.hex() << " " << endpoint_a.address().to_string() << ":" << endpoint_a.port();
 		new_node->endpoint.address = endpoint_a.address();
 		new_node->endpoint.udp_port = endpoint_a.port();
 
