@@ -37,6 +37,8 @@ namespace mcp
 		dev::Secret witness_secret() { return m_secret; } 
 		dev::Address witness_account() { return m_account; }
 
+		std::string getInfo();
+
 	private:
 		void do_witness();
 
@@ -60,5 +62,12 @@ namespace mcp
 		static uint32_t const m_max_do_witness_interval;
 		static uint64_t const m_threshold_distance;
         mcp::log m_log = { mcp::log("node") };
+
+		///logs
+		std::atomic<uint64_t> witness_interval_count = { 0 };
+		std::atomic<uint64_t> witness_syncing_count = { 0 };
+		std::atomic<uint64_t> witness_transaction_count = { 0 };
+		std::atomic<uint64_t> witness_notwitness_count = { 0 };
+		std::atomic<uint64_t> witness_majority_count = { 0 };
 	};
 }

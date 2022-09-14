@@ -874,7 +874,7 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 		//}
 
 		ongoing_report(chain_store, host, sync_async, background, cache,
-			sync, processor, capability,chain, alarm, TQ, AQ, m_log);
+			sync, processor, capability,chain, alarm, TQ, AQ, witness, m_log);
 
 		std::unique_ptr<mcp::thread_runner> runner = std::make_unique<mcp::thread_runner>(io_service, config.node.io_threads, "io_service");
 		std::unique_ptr<mcp::thread_runner> sync_runner = std::make_unique<mcp::thread_runner>(sync_io_service, config.node.sync_threads, "sync_io_service");
@@ -898,6 +898,7 @@ void mcp_daemon::ongoing_report(
 	std::shared_ptr<mcp::chain> chain, std::shared_ptr<mcp::alarm> alarm,
 	std::shared_ptr<mcp::TransactionQueue> tq,
 	std::shared_ptr<mcp::ApproveQueue> aq,
+	std::shared_ptr<mcp::witness> witness,
 	mcp::log& log
 )
 {
@@ -1029,6 +1030,8 @@ void mcp_daemon::ongoing_report(
 		<< ", hello_info:" << mcp::CapMetricsRecieved.hello_info
 		<< ", hello_info_ack:" << mcp::CapMetricsRecieved.hello_info_ack;
 
+	if (witness)
+		LOG(log.info) << "witness:" << witness->getInfo();
 
 	LOG(log.info) << store.get_rocksdb_state(32 * 1024 * 1024);
 
@@ -1039,9 +1042,9 @@ void mcp_daemon::ongoing_report(
 	}
 
 	alarm->add(std::chrono::steady_clock::now() + std::chrono::seconds(20), [&store, host, sync_async, background, cache,
-		sync, processor, capability, chain, alarm, tq, aq, &log]() {
+		sync, processor, capability, chain, alarm, tq, aq, witness, &log]() {
 		ongoing_report(store, host, sync_async, background, cache,
-			sync, processor, capability, chain, alarm, tq, aq, log);
+			sync, processor, capability, chain, alarm, tq, aq, witness, log);
 	});
 }
 

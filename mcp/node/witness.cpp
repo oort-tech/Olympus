@@ -76,12 +76,14 @@ void mcp::witness::check_and_witness()
 	if (mcp::mcp_network != mcp::mcp_networks::mcp_mini_test_network 
 		&& std::chrono::steady_clock::now() - m_last_witness_time < m_witness_interval)
 	{
+		witness_interval_count++;
 		m_is_witnessing.clear();
 		return;
 	}
 
 	if (mcp::node_sync::is_syncing())
 	{
+		witness_syncing_count++;
         LOG(m_log.info) << "Not do witness when syncing";
 		m_last_witness_time = std::chrono::steady_clock::now();
 		m_is_witnessing.clear();
@@ -95,6 +97,7 @@ void mcp::witness::check_and_witness()
 		size_t transaction_unstable_count(m_store.transaction_unstable_count(transaction));
 		if (transaction_unstable_count == 0)
 		{
+			witness_transaction_count++;
 			m_is_witnessing.clear();
 			return;
 		}
@@ -126,6 +129,7 @@ void mcp::witness::check_and_witness()
 
 	if (!mcp::param::is_witness(mcp::approve::calc_curr_epoch(last_summary_mci + 1), m_account))
 	{
+		witness_notwitness_count++;
 		m_is_witnessing.clear();
 		LOG(m_log.trace) << "Not do witness, account:" << m_account.hexPrefixed() << " is not witness, last_summary_mci:" << last_summary_mci;
 		return;
@@ -135,6 +139,7 @@ void mcp::witness::check_and_witness()
 	bool is_diff_majority(m_ledger.check_majority_witness(transaction, m_cache, mc_block_hash, m_account, w_param));
 	if (!is_diff_majority)
 	{
+		witness_majority_count++;
 		m_is_witnessing.clear();
 		LOG(m_log.trace) << "Not do witness because check majority different of witnesses";
 		return;
@@ -174,6 +179,17 @@ void mcp::witness::do_witness()
 		LOG(m_log.error) << "witness error," << _e.what();
 		m_is_witnessing.clear();
 	}
+}
+
+std::string mcp::witness::getInfo()
+{
+	std::string str = "lessInterval:" + std::to_string(witness_interval_count)
+		+ " ,syncing:" + std::to_string(witness_syncing_count)
+		+ " ,noTransaction:" + std::to_string(witness_transaction_count)
+		+ " ,notWitness:" + std::to_string(witness_notwitness_count)
+		+ " ,majority:" + std::to_string(witness_majority_count);
+
+	return str;
 }
 
 std::atomic_flag mcp::witness::m_is_witnessing = ATOMIC_FLAG_INIT;
