@@ -20,7 +20,6 @@ namespace mcp
         bool is_witness;
         std::string account_or_file;
         std::string password;
-        std::string last_block;
     };
 	class witness : public std::enable_shared_from_this<mcp::witness>
 	{
@@ -31,8 +30,7 @@ namespace mcp
 			std::shared_ptr<mcp::composer> composer_a, std::shared_ptr<mcp::chain> chain_a,
 			std::shared_ptr<mcp::block_processor> block_processor_a,
 			std::shared_ptr<mcp::block_cache> cache_a, std::shared_ptr<TransactionQueue> tq,
-			std::string const & account_text, std::string const & password_a, 
-			mcp::block_hash const& last_witness_block_hash_a = mcp::block_hash(0)
+			std::string const & account_text, std::string const & password_a
 		);
 		void start();
 		void check_and_witness();
@@ -62,7 +60,5 @@ namespace mcp
 		static uint32_t const m_max_do_witness_interval;
 		static uint64_t const m_threshold_distance;
         mcp::log m_log = { mcp::log("node") };
-        bool m_witness_get_current_chain;
-        mcp::block_hash m_last_witness_block_hash;
 	};
 }

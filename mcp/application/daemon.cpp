@@ -122,43 +122,23 @@ bool mcp_daemon::thread_config::parse_old_version_data(mcp::json const & json_a,
 	auto error(false);
 	try
 	{
-		if (json_a.count("node") && json_a["node"].is_object())
+		/// parse json used low version
+		switch (version)
 		{
-			mcp::json j_node_l = json_a["node"].get<mcp::json>();
-
-			if (version < 2)
-			{
-				std::string io_threads_text;
-				if (j_node_l.count("io_threads") && j_node_l["io_threads"].is_string())
-				{
-					io_threads_text = j_node_l["io_threads"].get<std::string>();
-				}
-
-				std::string work_threads_text;
-				if (j_node_l.count("work_threads") && j_node_l["work_threads"].is_string())
-				{
-					work_threads_text = j_node_l["work_threads"].get<std::string>();
-				}
-
-				try
-				{
-					io_threads = std::stoul(io_threads_text);
-					work_threads = std::stoul(work_threads_text);
-					error |= io_threads == 0;
-					error |= work_threads == 0;
-				}
-				catch (std::logic_error const &)
-				{
-					error = true;
-				}
-			}
-			else
-			{
-				error |= deserialize_json(j_node_l);
-			}
+		//case 0:
+		//{
+		//	/// parse
+		//	break;
+		//}
+		//case 1:
+		//{
+		//	/// parse
+		//	break;
+		//}
+		default:
+			error |= deserialize_json(json_a);
+			break;
 		}
-		else
-			error = true;
 	}
 	catch (std::runtime_error const &)
 	{
@@ -216,115 +196,67 @@ bool mcp_daemon::daemon_config::deserialize_json(bool & upgraded_a, mcp::json & 
 			serialize_json(json_a);
 			return false;
 		}
-		else
+		
+		if (!m_is_network_set)
 		{
-			uint64_t old_version;
-
-			if (!json_a.count("version"))
-				old_version = 0;
-			else if (json_a["version"].is_string())
-				old_version = boost::lexical_cast<uint64_t>(json_a["version"].get<std::string>());
+			unsigned u_network;
+			if (!json_a.count("network"))
+			{
+				std::cerr << "Config \"network\" not found" << std::endl;
+				exit(1);
+			}
+			else if (json_a["network"].is_string())
+				u_network = boost::lexical_cast<unsigned>(json_a["network"].get<std::string>());
 			else
-				old_version = json_a["version"].get<uint64_t>();
+				u_network = json_a["network"].get<unsigned>();
 
-			if (old_version != m_current_version) //need upgrade
-			{
-				error = parse_old_version_data(json_a, old_version);
-				if (!error)
-				{
-					upgraded_a = true;
-					json_a.clear();
-					serialize_json(json_a);
-				}
-				return error;
-			}
-
-			if (!m_is_network_set)
-			{
-				unsigned u_network;
-				if (!json_a.count("network"))
-				{
-					std::cerr << "Config \"network\" not found" << std::endl;
-					exit(1);
-				}
-				else if (json_a["network"].is_string())
-					u_network = boost::lexical_cast<unsigned>(json_a["network"].get<std::string>());
-				else
-					u_network = json_a["network"].get<unsigned>();
-
-				set_network((mcp::mcp_networks)u_network);
-			}
+			set_network((mcp::mcp_networks)u_network);
 		}
 
-        if (json_a.count("node") && json_a["node"].is_object())
-        {
-            mcp::json j_node_l = json_a["node"].get<mcp::json>();;
-            error |= node.deserialize_json(j_node_l);
-        }
-        else
-        {
-            error = true;
-        }
+		if (!(json_a.count("node") && json_a["node"].is_object() &&
+			json_a.count("rpc") && json_a["rpc"].is_object() &&
+			json_a.count("ws") && json_a["ws"].is_object() &&
+			json_a.count("log") && json_a["log"].is_object() &&
+			json_a.count("p2p") && json_a["p2p"].is_object() &&
+			json_a.count("witness") && json_a["witness"].is_object() &&
+			json_a.count("database") && json_a["database"].is_object()))
+			return true;
 
-        if (json_a.count("rpc") && json_a["rpc"].is_object())
-        {
-            mcp::json j_rpc_l = json_a["rpc"].get<mcp::json>();;
-            error |= rpc.deserialize_json(j_rpc_l);
-        }
-        else
-        {
-            error = true;
-        }
+		uint64_t old_version;
 
-        if (json_a.count("ws") && json_a["ws"].is_object())
-        {
-            mcp::json j_ws_l = json_a["ws"].get<mcp::json>();;
-            error |= rpc_ws.deserialize_json(j_ws_l);
-        }
-        else
-        {
-            error = true;
-        }
-
-        if (json_a.count("log") && json_a["log"].is_object())
-        {
-            mcp::json j_log_l = json_a["log"].get<mcp::json>();
-            error |= logging.deserialize_json(j_log_l);
-        }
-        else
-        {
-            error = true;
-        }
-
-        if (json_a.count("p2p") && json_a["p2p"].is_object())
-        {
-            mcp::json j_p2p_l = json_a["p2p"].get<mcp::json>();
-            error |= p2p.deserialize_json( j_p2p_l);
-        }
-        else
-        {
-            error = true;
-        }
-
-        if (json_a.count("witness") && json_a["witness"].is_object())
-        {
-            mcp::json j_witness_l = json_a["witness"].get<mcp::json>();
-            error |= witness.deserialize_json(j_witness_l);
-        }
-        else
-        {
-            error = true;
-        }
-
-		if (json_a.count("database") && json_a["database"].is_object())
-		{
-			mcp::json j_db_l = json_a["database"].get<mcp::json>();
-			error |= db.deserialize_json(j_db_l);
-		}
+		if (!json_a.count("version"))
+			old_version = 0;
+		else if (json_a["version"].is_string())
+			old_version = boost::lexical_cast<uint64_t>(json_a["version"].get<std::string>());
 		else
+			old_version = json_a["version"].get<uint64_t>();
+
+		if (old_version != m_current_version) //need upgrade
 		{
-			error = true;
+			error = parse_old_version_data(json_a, old_version);
+			if (!error)
+			{
+				upgraded_a = true;
+				json_a.clear();
+				serialize_json(json_a);
+			}
+			return error;
 		}
+
+		mcp::json j_node_l = json_a["node"].get<mcp::json>();;
+		error |= node.deserialize_json(j_node_l);
+		mcp::json j_rpc_l = json_a["rpc"].get<mcp::json>();;
+		error |= rpc.deserialize_json(j_rpc_l);
+		mcp::json j_ws_l = json_a["ws"].get<mcp::json>();;
+		error |= rpc_ws.deserialize_json(j_ws_l);
+		mcp::json j_log_l = json_a["log"].get<mcp::json>();
+		error |= logging.deserialize_json(j_log_l);
+		mcp::json j_p2p_l = json_a["p2p"].get<mcp::json>();
+		error |= p2p.deserialize_json(j_p2p_l);
+		mcp::json j_witness_l = json_a["witness"].get<mcp::json>();
+		error |= witness.deserialize_json(j_witness_l);
+		mcp::json j_db_l = json_a["database"].get<mcp::json>();
+		error |= db.deserialize_json(j_db_l);
     }
     catch (std::runtime_error const &)
     {
@@ -340,13 +272,20 @@ bool mcp_daemon::daemon_config::parse_old_version_data(mcp::json const & json_a,
     {
         if (!json_a.empty())
         {
-			error |= node.parse_old_version_data(json_a, version);
-			error |= rpc.parse_old_version_data(json_a, version);
-			error |= rpc_ws.parse_old_version_data(json_a, version);
-			error |= logging.parse_old_version_data(json_a, version);
-			error |= p2p.parse_old_version_data(json_a, version);
-			error |= witness.parse_old_version_data(json_a, version);
-			error |= db.parse_old_version_data(json_a, version);
+			mcp::json j_node_l = json_a["node"].get<mcp::json>();;
+			error |= node.parse_old_version_data(j_node_l, version);
+			mcp::json j_rpc_l = json_a["rpc"].get<mcp::json>();;
+			error |= rpc.parse_old_version_data(j_rpc_l, version);
+			mcp::json j_ws_l = json_a["ws"].get<mcp::json>();;
+			error |= rpc_ws.parse_old_version_data(j_ws_l, version);
+			mcp::json j_log_l = json_a["log"].get<mcp::json>();
+			error |= logging.parse_old_version_data(j_log_l, version);
+			mcp::json j_p2p_l = json_a["p2p"].get<mcp::json>();
+			error |= p2p.parse_old_version_data(j_p2p_l, version);
+			mcp::json j_witness_l = json_a["witness"].get<mcp::json>();
+			error |= witness.parse_old_version_data(j_witness_l, version);
+			mcp::json j_db_l = json_a["database"].get<mcp::json>();
+			error |= db.parse_old_version_data(j_db_l, version);
         }
     }
     catch (std::runtime_error const &)
@@ -628,10 +567,6 @@ bool mcp_daemon::parse_command_to_config(mcp_daemon::daemon_config & config_a, b
     {
         config_a.witness.password = vm_a["password"].as<std::string>();
     }
-    if (vm_a.count("last_block"))
-    {
-        config_a.witness.last_block = vm_a["last_block"].as<std::string>();
-    }
 
 	//database
 	if (vm_a.count("cache"))
@@ -738,7 +673,6 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
     }
     
 	//witness 	
-	mcp::block_hash last_witness_block_hash_l(0);
 	if (config.witness.is_witness)
 	{
 		if (config.witness.account_or_file.empty())
@@ -765,17 +699,6 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 		if (config.witness.password.empty())
 		{
 			config.witness.password = mcp::getPassword("Enter the current passphrase for the witness account:");
-		}
-
-		if (!config.witness.last_block.empty())
-		{
-			try {
-				last_witness_block_hash_l = mcp::block_hash(config.witness.last_block);
-			}
-			catch (...) {
-				std::cerr << "witness account last_witness_block_hash is error\n ";
-				return;
-			}
 		}
 	}
 
@@ -806,12 +729,6 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 			mcp::random_pool.GenerateBlock((byte*)seed.data(), seed.size);
 			config.writestring2file(dev::toHex(seed.ref()), nodekey_path);
 		}
-
-		/*if (sodium_init() < 0)
-		{
-			std::cerr << "encry environment init error,please retry.\n ";
-			return;
-		}*/
 
 		mcp::db::database::init_table_cache(config.db.cache_size);
 
@@ -911,9 +828,7 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 			mcp::error_message error_msg;
 			witness = std::make_shared<mcp::witness>(error_msg,
 				ledger, key_manager, chain_store, alarm, composer, chain, processor, cache, TQ,
-				config.witness.account_or_file, config.witness.password,
-				last_witness_block_hash_l
-				);
+				config.witness.account_or_file, config.witness.password);
 
 			if (error_msg.error)
 			{

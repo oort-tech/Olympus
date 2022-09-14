@@ -76,7 +76,7 @@ namespace mcp_daemon
 		mcp::db::database_config db;
 
 	private:
-		uint64_t m_current_version = 3;
+		uint64_t m_current_version = 0;
 		bool m_is_network_set = false;
 	};
 

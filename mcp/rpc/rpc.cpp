@@ -102,68 +102,22 @@ bool mcp::rpc_config::parse_old_version_data(mcp::json const &json_a, uint64_t c
 	auto error(false);
 	try
 	{
-		if (version < 2)
+		/// parse json used low version
+		switch (version)
 		{
-			if (json_a.count("rpc_enable") && json_a["rpc_enable"].is_string())
-			{
-				rpc_enable = (json_a["rpc_enable"].get<std::string>() == "true" ? true : false);
-			}
-
-			if (json_a.count("rpc") && json_a["rpc"].is_object())
-			{
-				mcp::json j_rpc_l = json_a["rpc"].get<mcp::json>();
-				;
-
-				std::string address_text;
-				if (j_rpc_l.count("address") && j_rpc_l["address"].is_string())
-				{
-					address_text = j_rpc_l["address"].get<std::string>();
-				}
-
-				std::string port_text;
-				if (j_rpc_l.count("port") && j_rpc_l["port"].is_string())
-				{
-					port_text = j_rpc_l["port"].get<std::string>();
-				}
-
-				if (j_rpc_l.count("enable_control") && j_rpc_l["enable_control"].is_string())
-				{
-					enable_control = (j_rpc_l["enable_control"].get<std::string>() == "true" ? true : false);
-				}
-
-				try
-				{
-					auto port_l = std::stoul(port_text);
-					if (port_l <= std::numeric_limits<uint16_t>::max())
-					{
-						port = port_l;
-					}
-					else
-					{
-						error = true;
-					}
-				}
-				catch (std::logic_error const &)
-				{
-					error = true;
-				}
-				boost::system::error_code ec;
-				address = boost::asio::ip::address::from_string(address_text, ec);
-				if (ec)
-				{
-					error = true;
-				}
-			}
-		}
-		else
-		{
-			if (json_a.count("rpc") && json_a["rpc"].is_object())
-			{
-				mcp::json j_rpc_l = json_a["rpc"].get<mcp::json>();
-				error |= deserialize_json(j_rpc_l);
-			}
-			else
-				error = true;
+			//case 0:
+			//{
+			//	/// parse
+			//	break;
+			//}
+			//case 1:
+			//{
+			//	/// parse
+			//	break;
+			//}
+		default:
+			error |= deserialize_json(json_a);
+			break;
 		}
 	}
 	catch (std::runtime_error const &)
