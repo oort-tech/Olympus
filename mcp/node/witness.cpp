@@ -7,8 +7,7 @@ mcp::witness::witness(mcp::error_message & error_msg,
 	std::shared_ptr<mcp::composer> composer_a, std::shared_ptr<mcp::chain> chain_a,
 	std::shared_ptr<mcp::block_processor> block_processor_a,
 	std::shared_ptr<mcp::block_cache> cache_a, std::shared_ptr<TransactionQueue> tq,
-	std::string const & account_or_file_text, std::string const & password_a,
-	mcp::block_hash const & last_witness_block_hash_a
+	std::string const & account_or_file_text, std::string const & password_a
 ) :
 	m_ledger(ledger_a),
 	m_store(store_a),
@@ -19,9 +18,7 @@ mcp::witness::witness(mcp::error_message & error_msg,
 	m_cache(cache_a),
 	m_tq(tq),
 	m_last_witness_time(std::chrono::steady_clock::now()),
-	m_witness_interval(std::chrono::milliseconds(m_max_witness_interval)),
-    m_witness_get_current_chain(true),
-    m_last_witness_block_hash(last_witness_block_hash_a)
+	m_witness_interval(std::chrono::milliseconds(m_max_witness_interval))
 {
 	bool error(!mcp::isAddress(account_or_file_text));
 	if (error) /// Specifies the keystore that needs to be imported. like: --witness_account=\home\0x1144B522F45265C2DFDBAEE8E324719E63A1694C.json
@@ -50,15 +47,6 @@ mcp::witness::witness(mcp::error_message & error_msg,
 	}
 
     mcp::db::db_transaction transaction(m_store.create_transaction());
-    if (m_last_witness_block_hash != mcp::block_hash(0))
-    {
-        if (!m_store.block_exists(transaction, m_last_witness_block_hash))
-        {
-            m_witness_get_current_chain = false;
-            LOG(m_log.info) << "witness account cannot do witness cause: " << m_last_witness_block_hash.hex() << " not exsist.";
-        }
-    }
-
 	m_chain->check_need_send_approve(transaction, m_cache, m_account);
 
     //std::cout << "Witness start success.\n" << std::flush;
@@ -88,12 +76,14 @@ void mcp::witness::check_and_witness()
 	if (mcp::mcp_network != mcp::mcp_networks::mcp_mini_test_network 
 		&& std::chrono::steady_clock::now() - m_last_witness_time < m_witness_interval)
 	{
+		witness_interval_count++;
 		m_is_witnessing.clear();
 		return;
 	}
 
 	if (mcp::node_sync::is_syncing())
 	{
+		witness_syncing_count++;
         LOG(m_log.info) << "Not do witness when syncing";
 		m_last_witness_time = std::chrono::steady_clock::now();
 		m_is_witnessing.clear();
@@ -101,26 +91,13 @@ void mcp::witness::check_and_witness()
 	}
 
 	mcp::db::db_transaction transaction(m_store.create_transaction());
-    //can send witness
-    if (!m_witness_get_current_chain)
-    {
-        if (!m_store.block_exists(transaction, m_last_witness_block_hash))
-        {
-            m_is_witnessing.clear();
-            LOG(m_log.info) << "Not do witness, last_witness_block_hash:" << m_last_witness_block_hash.hex() << " not exsist.";
-            return;
-        }
-        else
-        {
-            m_witness_get_current_chain = true;
-        }
-    }
 
 	if (m_tq->size() == 0)
 	{
 		size_t transaction_unstable_count(m_store.transaction_unstable_count(transaction));
 		if (transaction_unstable_count == 0)
 		{
+			witness_transaction_count++;
 			m_is_witnessing.clear();
 			return;
 		}
@@ -152,6 +129,7 @@ void mcp::witness::check_and_witness()
 
 	if (!mcp::param::is_witness(mcp::approve::calc_curr_epoch(last_summary_mci + 1), m_account))
 	{
+		witness_notwitness_count++;
 		m_is_witnessing.clear();
 		LOG(m_log.trace) << "Not do witness, account:" << m_account.hexPrefixed() << " is not witness, last_summary_mci:" << last_summary_mci;
 		return;
@@ -161,6 +139,7 @@ void mcp::witness::check_and_witness()
 	bool is_diff_majority(m_ledger.check_majority_witness(transaction, m_cache, mc_block_hash, m_account, w_param));
 	if (!is_diff_majority)
 	{
+		witness_majority_count++;
 		m_is_witnessing.clear();
 		LOG(m_log.trace) << "Not do witness because check majority different of witnesses";
 		return;
@@ -202,6 +181,17 @@ void mcp::witness::do_witness()
 	}
 }
 
+std::string mcp::witness::getInfo()
+{
+	std::string str = "lessInterval:" + std::to_string(witness_interval_count)
+		+ " ,syncing:" + std::to_string(witness_syncing_count)
+		+ " ,noTransaction:" + std::to_string(witness_transaction_count)
+		+ " ,notWitness:" + std::to_string(witness_notwitness_count)
+		+ " ,majority:" + std::to_string(witness_majority_count);
+
+	return str;
+}
+
 std::atomic_flag mcp::witness::m_is_witnessing = ATOMIC_FLAG_INIT;
 uint32_t const mcp::witness::m_max_do_witness_interval(1000);
 uint64_t const mcp::witness::m_threshold_distance(50);
@@ -216,7 +206,6 @@ void mcp::witness_config::serialize_json(mcp::json &json_a) const
     json_a["witness"] = is_witness ? "true":"false";
     json_a["witness_account"] = account_or_file;
     json_a["password"] = password;
-    json_a["last_block"] = last_block;
 }
 
 bool mcp::witness_config::deserialize_json(mcp::json const & json_a)
@@ -250,15 +239,6 @@ bool mcp::witness_config::deserialize_json(mcp::json const & json_a)
         {
             error = true;
         }
-
-        if (json_a.count("last_block") && json_a["last_block"].is_string())
-        {
-            last_block = json_a["last_block"].get<std::string>();
-        }
-        else
-        {
-            error = true;
-        }
     }
     catch (std::runtime_error const &)
     {
@@ -272,19 +252,22 @@ bool mcp::witness_config::parse_old_version_data(mcp::json const & json_a, uint6
 	auto error(false);
 	try
 	{
-		if (version < 3) //version 3 add gas price
+		/// parse json used low version
+		switch (version)
 		{
-			if (json_a.count("witness") && json_a["witness"].is_string())
-				is_witness = (json_a["witness"].get<std::string>() == "true" ? true : false);
-
-			if (json_a.count("witness_account") && json_a["witness_account"].is_string())
-				account_or_file = json_a["witness_account"].get<std::string>();
-
-			if (json_a.count("password") && json_a["password"].is_string())
-				password = json_a["password"].get<std::string>();
-
-			if (json_a.count("last_block") && json_a["last_block"].is_string())
-				last_block = json_a["last_block"].get<std::string>();
+			//case 0:
+			//{
+			//	/// parse
+			//	break;
+			//}
+			//case 1:
+			//{
+			//	/// parse
+			//	break;
+			//}
+		default:
+			error |= deserialize_json(json_a);
+			break;
 		}
 	}
 	catch (std::runtime_error const &)

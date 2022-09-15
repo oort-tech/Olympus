@@ -325,8 +325,6 @@ add_library (rpc
 add_library (wallet
 	mcp/wallet/wallet.cpp
 	mcp/wallet/wallet.hpp
-	mcp/wallet/wallet_store.cpp
-	mcp/wallet/wallet_store.hpp
 	mcp/wallet/key_manager.cpp
 	mcp/wallet/key_manager.hpp
 	mcp/wallet/key_store.cpp

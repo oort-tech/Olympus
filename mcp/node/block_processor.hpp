@@ -176,26 +176,6 @@ namespace mcp
 		std::deque<std::shared_ptr<std::promise<mcp::validate_status>>> m_ok_local_promises;
 		std::chrono::time_point<std::chrono::steady_clock> m_last_request_unknown_missing_time;
 
-		//clear unlink block
-		//std::unique_ptr<boost::asio::deadline_timer> m_clear_timer;
-		//std::mutex m_clear_mutex;
-		//std::list<mcp::head_unlink> m_clear_hash;
-		//uint64_t m_clear_time;
-		//uint64_t m_clear_time_interval = 30;
-		//std::thread m_process_unlink_clear_thread;
-		//uint64_t	m_clear_max_size = 10000;
-		//std::list<mcp::block_hash> m_change_successor;
-		//uint256_t	m_clear_min_gas_price;
-
-		//boost::multi_index_container<
-		//	mcp::put_clear_item,
-		//	boost::multi_index::indexed_by<
-		//	boost::multi_index::ordered_non_unique<boost::multi_index::member<mcp::put_clear_item, uint64_t, &mcp::put_clear_item::m_time> >,
-		//	boost::multi_index::hashed_unique<boost::multi_index::member<mcp::put_clear_item, mcp::block_hash, &mcp::put_clear_item::m_clear_block_hash> >
-		//	>
-		//> m_clear_block;
-		//std::mutex max_clear_block_mutex;
-
 		//info
 		std::atomic<uint64_t> block_processor_add = { 0 };
 		std::atomic<uint64_t> block_processor_recent_block_size = { 0 };

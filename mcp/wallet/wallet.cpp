@@ -3,9 +3,6 @@
 #include <mcp/node/composer.hpp>
 #include <future>
 
-////test
-#include <libdevcore/CommonJS.h>
-
 
 mcp::wallet::wallet(
 	mcp::block_store& block_store_a, std::shared_ptr<mcp::block_cache> cache_a, std::shared_ptr<mcp::key_manager> key_manager_a,
@@ -54,27 +51,6 @@ h256 mcp::wallet::send_action(TransactionSkeleton t, boost::optional<std::string
 
 h256 mcp::wallet::importTransaction(Transaction const& _t)
 {
-	// Use the Executive to perform basic validation of the transaction
-	// (e.g. transaction signature, account balance) using the state of
-	// the pending block. This can throw but we'll catch the exception at the RPC level.
-	//try
-	//{
-	//	
-	//}
-	//catch (InvalidNonce const& e)
-	//{
-	//	// Too low nonce is invalid for sure
-	//	bigint const& req = *boost::get_error_info<errinfo_required>(e);
-	//	bigint const& got = *boost::get_error_info<errinfo_got>(e);
-	//	if (req > got)
-	//		throw;
-
-	//	// Checking against pending block doesn't take into account transactions from the same
-	//	// sender, that are currently in Transaction Queue.
-	//	// If nonce is too high, it could be that previous transactions are in TQ.
-	//	// We'll let TQ deal with nonces, it will order pending transactions by nonce.
-	//}
-
 	ImportResult res = m_tq->importLocal(_t);
 	switch (res)
 	{
@@ -108,17 +84,6 @@ u256 mcp::wallet::getTransactionCount(Address const& from, BlockNumber const blo
 
 void mcp::wallet::populateTransactionWithDefaults(TransactionSkeleton& _t)
 {
-	// Default gas value meets the intrinsic gas requirements of both
-	// send value and create contract transactions and is the same default
-	// value used by geth and testrpc.
-	//mcp::db::db_transaction transaction(m_block_store.create_transaction());
-	//u256 ret = 0;
-	//auto state = m_cache->latest_account_state_get(transaction, _t.from);
-	//if (state)
-	//{
-	//	ret = state->nonce();
-	//}
-
 	const u256 defaultTransactionGas = 21000;
 	if (_t.nonce == Invalid256)
 		_t.nonce = getTransactionCount(_t.from);
@@ -126,8 +91,6 @@ void mcp::wallet::populateTransactionWithDefaults(TransactionSkeleton& _t)
 		_t.gasPrice = mcp::gas_price;
 	if (_t.gas == Invalid256)
 		_t.gas = defaultTransactionGas;
-
-	//return ret;
 }
 
 void mcp::wallet::do_wallet_actions()
@@ -161,7 +124,6 @@ void mcp::wallet::queue_wallet_action(std::function<void()> const & action_a)
 void mcp::wallet::stop()
 {
 	LOG(m_log.info) << "Wallet stopped";
-	//composer->stop();
 	{
 		std::lock_guard<std::mutex> lock(m_mutex);
 		m_stopped = true;

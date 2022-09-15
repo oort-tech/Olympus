@@ -94,67 +94,22 @@ bool mcp::rpc_ws_config::parse_old_version_data(mcp::json const & json_a, uint64
     auto error(false);
     try
     {
-        if (version < 2)
-        {
-			if (json_a.count("rpc_ws_enable") && json_a["rpc_ws_enable"].is_string())
-			{
-				rpc_ws_enable = (json_a["rpc_ws_enable"].get<std::string>() == "true" ? true : false);
-			}
-			if (json_a.count("rpc_ws") && json_a["rpc_ws"].is_object())
-			{
-				mcp::json j_rpc_ws_l = json_a["rpc_ws"].get<mcp::json>();;
-				//error |= rpc_ws.parse_old_version_data(j_rpc_ws_l);
-
-				std::string address_text;
-				if (j_rpc_ws_l.count("address") && j_rpc_ws_l["address"].is_string())
-				{
-					address_text = j_rpc_ws_l["address"].get<std::string>();
-				}
-
-				std::string port_text;
-				if (j_rpc_ws_l.count("port") && j_rpc_ws_l["port"].is_string())
-				{
-					port_text = j_rpc_ws_l["port"].get<std::string>();
-				}
-
-				if (j_rpc_ws_l.count("enable_control") && j_rpc_ws_l["enable_control"].is_string())
-				{
-					enable_control = (j_rpc_ws_l["enable_control"].get<std::string>() == "true" ? true : false);
-				}
-
-				try
-				{
-					auto port_l = std::stoul(port_text);
-					if (port_l <= std::numeric_limits<uint16_t>::max())
-					{
-						port = port_l;
-					}
-					else
-					{
-						error = true;
-					}
-				}
-				catch (std::logic_error const &)
-				{
-					error = true;
-				}
-				boost::system::error_code ec;
-				address = boost::asio::ip::address::from_string(address_text, ec);
-				if (ec)
-				{
-					error = true;
-				}
-			}
-        }
-		else
+		/// parse json used low version
+		switch (version)
 		{
-			if (json_a.count("ws") && json_a["ws"].is_object())
-			{
-				mcp::json j_ws_l = json_a["ws"].get<mcp::json>();;
-				error |= deserialize_json(j_ws_l);
-			}
-			else
-				error = true;
+			//case 0:
+			//{
+			//	/// parse
+			//	break;
+			//}
+			//case 1:
+			//{
+			//	/// parse
+			//	break;
+			//}
+		default:
+			error |= deserialize_json(json_a);
+			break;
 		}
     }
     catch (std::runtime_error const &)

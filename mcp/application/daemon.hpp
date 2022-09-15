@@ -24,8 +24,9 @@ namespace mcp_daemon
 		std::shared_ptr<mcp::block_cache> block_cache, std::shared_ptr<mcp::node_sync> sync,
 		std::shared_ptr<mcp::block_processor> processor, std::shared_ptr<mcp::node_capability> capability,
 		std::shared_ptr<mcp::chain> chain, std::shared_ptr<mcp::alarm> alarm,
-		std::shared_ptr<mcp::TransactionQueue>,
-		std::shared_ptr<mcp::ApproveQueue>,
+		std::shared_ptr<mcp::TransactionQueue> tq,
+		std::shared_ptr<mcp::ApproveQueue> aq,
+		std::shared_ptr<mcp::witness> witness,
 		mcp::log& log
 	);
     std::string get_home_directory(std::string path);
@@ -76,7 +77,7 @@ namespace mcp_daemon
 		mcp::db::database_config db;
 
 	private:
-		uint64_t m_current_version = 3;
+		uint64_t m_current_version = 0;
 		bool m_is_network_set = false;
 	};
 
