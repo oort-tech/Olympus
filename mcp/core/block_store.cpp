@@ -778,21 +778,6 @@ void mcp::block_store::successor_del(mcp::db::db_transaction & transaction_a, mc
 	transaction_a.del(successor, mcp::h256_to_slice(root_a));
 }
 
-//bool mcp::block_store::genesis_transaction_hash_get(mcp::db::db_transaction & transaction_a, h256 & hash)
-//{
-//	std::string value;
-//	bool exists(transaction_a.get(prop, mcp::uint256_to_slice(genesis_transaction_hash_key), value));
-//	if (exists)
-//	{
-//		hash = mcp::slice_to_h256(value);
-//	}
-//	return !exists;
-//}
-//
-//void mcp::block_store::genesis_transaction_hash_put(mcp::db::db_transaction & transaction_a, h256 const & hash)
-//{
-//	transaction_a.put(prop, mcp::uint256_to_slice(genesis_transaction_hash_key), mcp::h256_to_slice(hash));
-//}
 
 bool mcp::block_store::genesis_hash_get(mcp::db::db_transaction & transaction_a, mcp::block_hash & genesis_hash)
 {
@@ -810,23 +795,7 @@ void mcp::block_store::genesis_hash_put(mcp::db::db_transaction & transaction_a,
 	transaction_a.put(prop, mcp::h256_to_slice(genesis_hash_key), mcp::h256_to_slice(genesis_hash));
 }
 
-//void mcp::block_store::genesis_block_put(mcp::db::db_transaction & transaction_a, mcp::block_hash const & hash_a, mcp::block const & block_a)
-//{
-//	// all parts of block except data
-//	dev::bytes b_value;
-//	{
-//		dev::RLPStream s;
-//		block_a.streamRLP(s, IncludeSignature::WithoutSignature);
-//		s.swapOut(b_value);
-//	}
-//
-//	dev::Slice s_value((char *)b_value.data(), b_value.size());
-//	transaction_a.put(blocks, mcp::uint256_to_slice(hash_a), s_value);
-//	transaction_a.count_add("block", 1);
-//}
-
 // sync db
-
 bool mcp::block_store::catchup_chain_summaries_get(mcp::db::db_transaction & transaction_a, uint64_t const & index_a, mcp::summary_hash & hash_a)
 {
 	std::string value;

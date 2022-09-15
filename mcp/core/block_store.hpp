@@ -101,7 +101,6 @@ namespace mcp
 		//sync
 		bool catchup_chain_summaries_get(mcp::db::db_transaction & transaction_a, uint64_t const &, mcp::summary_hash &);
 		void catchup_chain_summaries_put(mcp::db::db_transaction & transaction_a, uint64_t const &, mcp::summary_hash const &);
-		//mcp::db::backward_iterator catchup_chain_summaries_rbegin(mcp::db::db_transaction & transaction_a);
 		void catchup_chain_summaries_del(mcp::db::db_transaction &, uint64_t const &);
 		void catchup_chain_summaries_clear(std::shared_ptr<rocksdb::WriteOptions> write_option_a = nullptr);
 
@@ -144,11 +143,8 @@ namespace mcp
 		void successor_put(mcp::db::db_transaction & transaction_a, mcp::block_hash const & root_a, mcp::block_hash const & successor_a);
 		void successor_del(mcp::db::db_transaction & transaction_a, mcp::block_hash const & root_a);
 
-		//bool genesis_transaction_hash_get(mcp::db::db_transaction & transaction_a, h256 &);
-		//void genesis_transaction_hash_put(mcp::db::db_transaction & transaction_a, h256 const&);
 		bool genesis_hash_get(mcp::db::db_transaction & transaction_a, mcp::block_hash & genesis_hash);
 		void genesis_hash_put(mcp::db::db_transaction & transaction_a, mcp::block_hash const & genesis_hash);
-		//void genesis_block_put(mcp::db::db_transaction &, mcp::block_hash const &, mcp::block const &);
 
 		bool catchup_index_get(mcp::db::db_transaction & transaction_a, uint64_t & _v);
 		void catchup_index_put(mcp::db::db_transaction & transaction_a, uint64_t const& _v);

@@ -748,13 +748,6 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 			std::cerr << "key_store initializing error\n";
 			return;
 		}
-		///wallet store
-		mcp::wallet_store wallet_store(error, data_path / "walletdb");
-		if (error)
-		{
-			std::cerr << "wallet_store initializing error\n";
-			return;
-		}
 
 		///steady_clock
 		mcp::fast_steady_clock steady_clock;

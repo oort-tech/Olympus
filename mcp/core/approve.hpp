@@ -92,10 +92,6 @@ namespace mcp
 	private:
 		static bool isZeroSignature(u256 const& _r, u256 const& _s) { return !_r && !_s; }
 
-		// Address m_from;
-		// uint64_t m_epoch;
-		// std::vector<uint8_t> m_proof;
-
 		SignatureStruct m_vrs;	///< The signature of the approve. Encodes the sender.
 		uint64_t m_chainId;
 		mutable h256 m_hashWith;			///< Cached hash of transaction with signature.

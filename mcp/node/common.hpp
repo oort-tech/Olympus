@@ -32,19 +32,6 @@ namespace mcp
 	{
 	public:
 		requesting_item() = default;
-		/*
-		requesting_item(mcp::p2p::node_id const & node_id_a, mcp::block_hash const& hash_a, mcp::requesting_block_cause const& cause_a,
-			uint64_t const& time_a, mcp::sub_packet_type const& type_a = mcp::sub_packet_type::joint_request) :
-			m_node_id(node_id_a),
-			m_request_hash(hash_a),
-			m_cause(cause_a),
-			m_time(time_a),
-			m_type(type_a),
-			m_request_id(0),
-			m_request_count(1)
-		{
-		}
-		*/
 		/// for transaction
 		/// Manager can only use one, so H256 does the conversion
 		requesting_item(mcp::p2p::node_id const & node_id_a, h256 const& hash_a, mcp::requesting_block_cause const& cause_a,
