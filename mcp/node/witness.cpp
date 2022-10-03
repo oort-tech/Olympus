@@ -1,5 +1,9 @@
 #include <mcp/node/witness.hpp>
 #include <mcp/core/genesis.hpp>
+#include <mcp/common/common.hpp>
+#include <secp256k1-vrf.h>
+#include <secp256k1_ecdh.h>
+#include <secp256k1_recovery.h>
 
 mcp::witness::witness(mcp::error_message & error_msg,
 	mcp::ledger& ledger_a, std::shared_ptr<mcp::key_manager> key_manager_a,
@@ -112,28 +116,17 @@ void mcp::witness::check_and_witness()
 			break;
 	}
 
-	uint64_t last_summary_mci(0);
-	if (mc_block_hash != mcp::genesis::block_hash)
-	{
-		std::shared_ptr<mcp::block> mc_block(m_cache->block_get(transaction, mc_block_hash));
-		std::shared_ptr<mcp::block_state> last_summary_block_state(m_cache->block_state_get(transaction, mc_block->last_summary_block()));
-		assert_x(last_summary_block_state
-			&& last_summary_block_state->is_stable
-			&& last_summary_block_state->is_on_main_chain
-			&& last_summary_block_state->main_chain_index);
+	uint64_t new_last_summary_mci = m_composer->get_new_last_summary_mci(transaction);
 
-		last_summary_mci = *last_summary_block_state->main_chain_index;
-	}
+	mcp::witness_param const & w_param(mcp::param::witness_param(mcp::approve::calc_curr_epoch(new_last_summary_mci)));
 
-	mcp::witness_param const & w_param(mcp::param::witness_param(mcp::approve::calc_curr_epoch(last_summary_mci + 1)));
-
-	if (!mcp::param::is_witness(mcp::approve::calc_curr_epoch(last_summary_mci + 1), m_account))
+	if (!mcp::param::is_witness(mcp::approve::calc_curr_epoch(new_last_summary_mci), m_account))
 	{
 		witness_notwitness_count++;
 		m_is_witnessing.clear();
-		LOG(m_log.trace) << "Not do witness, account:" << m_account.hexPrefixed() << " is not witness, last_summary_mci:" << last_summary_mci;
+		LOG(m_log.trace) << "Not do witness, account:" << m_account.hexPrefixed() << " is not witness, new_last_summary_mci:" << new_last_summary_mci;
 		return;
-	}	
+	}
 
 	//check majority different of witnesses
 	bool is_diff_majority(m_ledger.check_majority_witness(transaction, m_cache, mc_block_hash, m_account, w_param));
