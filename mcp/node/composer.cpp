@@ -34,8 +34,10 @@ std::shared_ptr<mcp::block> mcp::composer::compose_block(dev::Address const & fr
     std::vector<mcp::block_hash> parents;
 	h256s links;
 	h256s approves;
+	mcp::block_hash last_summary_block;
+	mcp::block_hash last_summary;
 	mcp::block_hash last_stable_block;
-    pick_parents_and_last_summary_and_wl_block(transaction, previous, from_a, parents, links, approves, last_stable_block);
+    pick_parents_and_last_summary_and_wl_block(transaction, previous, from_a, parents, links, approves, last_summary_block, last_summary, last_stable_block);
     
 	size_t transaction_unstable_count(m_store.transaction_unstable_count(transaction));
 	size_t approve_unstable_count(m_store.approve_unstable_count(transaction));
@@ -47,10 +49,10 @@ std::shared_ptr<mcp::block> mcp::composer::compose_block(dev::Address const & fr
 	LOG(m_log.debug) << "[compose_block] out";
 
     return std::make_shared<mcp::block>(from_a, previous, parents, links, approves, 
-		m_last_summary, m_last_summary_block, last_stable_block, exec_timestamp,s);
+		last_summary, last_summary_block, last_stable_block, exec_timestamp,s);
 }
 
-void mcp::composer::pick_parents_and_last_summary_and_wl_block(mcp::db::db_transaction &  transaction_a, mcp::block_hash const & previous_a, dev::Address const & from_a, std::vector<mcp::block_hash>& parents, h256s& links, h256s& approves, mcp::block_hash & last_stable_block)
+void mcp::composer::pick_parents_and_last_summary_and_wl_block(mcp::db::db_transaction &  transaction_a, mcp::block_hash const & previous_a, dev::Address const & from_a, std::vector<mcp::block_hash>& parents, h256s& links, h256s& approves, mcp::block_hash & last_summary_block, mcp::block_hash & last_summary, mcp::block_hash & last_stable_block)
 {
 	mcp::stopwatch_guard sw("compose:pick_parents");
 
@@ -58,37 +60,89 @@ void mcp::composer::pick_parents_and_last_summary_and_wl_block(mcp::db::db_trans
 		mcp::stopwatch_guard sw("compose:pick_parents2");
 
 		links = m_tq->topTransactions(4096);
-		approves = m_aq->topApproves(4096, mcp::approve::calc_elect_epoch(m_new_last_summary_mci));
 	}
 
-	mcp::block_param const & b_param(mcp::param::block_param(m_new_last_summary_mci));
+	auto snapshot = m_store.create_snapshot();
+	mcp::db::forward_iterator best_dag_free_it(m_store.dag_free_begin(transaction_a, snapshot));
+	mcp::free_key best_dag_free_key(best_dag_free_it.key());
+	mcp::block_hash const & best_pblock_hash(best_dag_free_key.hash_asc);
+
+	//last summary
+	if (best_pblock_hash == mcp::genesis::block_hash)
+		last_summary_block = mcp::genesis::block_hash;
+	else
+	{
+		std::shared_ptr<mcp::block> bp_block(m_cache->block_get(transaction_a, best_pblock_hash));
+		assert_x(bp_block);
+		last_summary_block = bp_block->last_stable_block();
+	}
+
+	int count = 0;
+	std::shared_ptr<mcp::block_state> last_summary_block_state;
+	do
+	{
+		//make sure last summary block is stable
+		bool last_summary_exist(!m_cache->block_summary_get(transaction_a, last_summary_block, last_summary));
+		if (last_summary_exist)
+		{
+			do
+			{
+				//todo: why block stable is not stable when block_summary exists in cache?
+				last_summary_block_state = m_cache->block_state_get(transaction_a, last_summary_block);
+				if (last_summary_block_state && last_summary_block_state->is_stable)
+					break;
+				std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			} while (true);
+
+			break;
+		}
+
+		count++;
+		if (count % 10 == 0)
+			LOG(m_log.warning) << "composer: last summary not exists, check count:" << count;
+
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		if (m_stopped)
+		{
+			BOOST_THROW_EXCEPTION(BadComposeBlock()
+				<< errinfo_comment("compose error:composer stopped"));
+		}
+	} while (true);
+
+	assert_x(last_summary_block_state->is_on_main_chain);
+	assert_x(last_summary_block_state->main_chain_index);
+
+	uint64_t const & last_summary_mci(*last_summary_block_state->main_chain_index);
+	LOG(m_log.debug) << "[pick_parents_and_last_summary_and_wl_block] new last_summary_mci=" << last_summary_mci;
+
+	mcp::block_param const & b_param(mcp::param::block_param(last_summary_mci));
 
 	{
 		mcp::stopwatch_guard sw("compose:pick_parents1");
 		std::set<mcp::block_hash> ordered_parents;
-		ordered_parents.insert(m_best_pblock_hash);
+		ordered_parents.insert(best_pblock_hash);
 		bool has_previous(previous_a != mcp::block_hash(0));
-		if (has_previous && previous_a != m_best_pblock_hash)
+		if (has_previous && previous_a != best_pblock_hash)
 		{
 			ordered_parents.insert(previous_a);
 		}
 
 		//rand dag free
 		mcp::db::forward_iterator dag_free_it;
-		mcp::db::backward_iterator last_dag_free_it(m_store.dag_free_rbegin(transaction_a, m_snapshot));
+		mcp::db::backward_iterator last_dag_free_it(m_store.dag_free_rbegin(transaction_a, snapshot));
 		mcp::free_key last_dag_free_key(last_dag_free_it.key());
 
-		uint64_t rand_witnessed_level = mcp::random_pool.GenerateWord32(last_dag_free_key.witnessed_level_desc, m_best_dag_free_key->witnessed_level_desc);
+		uint64_t rand_witnessed_level = mcp::random_pool.GenerateWord32(last_dag_free_key.witnessed_level_desc, best_dag_free_key.witnessed_level_desc);
 
-		uint64_t min_level = m_best_dag_free_key->level_desc < last_dag_free_key.level_desc ? m_best_dag_free_key->level_desc : last_dag_free_key.level_desc;
-		uint64_t max_level = m_best_dag_free_key->level_desc > last_dag_free_key.level_desc ? m_best_dag_free_key->level_desc : last_dag_free_key.level_desc;
+		uint64_t min_level = best_dag_free_key.level_desc < last_dag_free_key.level_desc ? best_dag_free_key.level_desc : last_dag_free_key.level_desc;
+		uint64_t max_level = best_dag_free_key.level_desc > last_dag_free_key.level_desc ? best_dag_free_key.level_desc : last_dag_free_key.level_desc;
 		uint64_t rand_level = mcp::random_pool.GenerateWord32(min_level, max_level);
 
 		mcp::block_hash rand_hash;
 		mcp::random_pool.GenerateBlock(rand_hash.data(), rand_hash.size);
 
 		mcp::free_key rand_key(rand_witnessed_level, rand_level, rand_hash);
-		mcp::db::forward_iterator rand_it = m_store.dag_free_begin(transaction_a, rand_key, m_snapshot);
+		mcp::db::forward_iterator rand_it = m_store.dag_free_begin(transaction_a, rand_key, snapshot);
 		if (rand_it.valid())
 			dag_free_it = std::move(rand_it);
 
@@ -98,7 +152,7 @@ void mcp::composer::pick_parents_and_last_summary_and_wl_block(mcp::db::db_trans
 		{
 			if (!dag_free_it.valid())
 			{
-				dag_free_it = m_store.dag_free_begin(transaction_a, m_snapshot);
+				dag_free_it = m_store.dag_free_begin(transaction_a, snapshot);
 				assert_x_msg(dag_free_it.valid(), "dag free is null");
 			}
 
@@ -109,7 +163,7 @@ void mcp::composer::pick_parents_and_last_summary_and_wl_block(mcp::db::db_trans
 			if (!ar.second)
 				break;
 
-			if (free_hash != m_best_pblock_hash && free_hash != previous_a)
+			if (free_hash != best_pblock_hash && free_hash != previous_a)
 			{
 				auto r = ordered_parents.insert(free_hash);
 				//exists
@@ -126,23 +180,27 @@ void mcp::composer::pick_parents_and_last_summary_and_wl_block(mcp::db::db_trans
 		assert_x(parents.size() <= b_param.max_parent_size);
 	}
 
-	//release m_snapshot
-	m_snapshot.reset();
+	//release snapshot
+	snapshot.reset();
 
 	{
 		mcp::stopwatch_guard sw("compose:pick_parents3");
 
-		assert_x(m_best_pblock_hash == m_ledger.determine_best_parent(transaction_a, m_cache, parents));
+		assert_x(best_pblock_hash == m_ledger.determine_best_parent(transaction_a, m_cache, parents));
 
-		mcp::witness_param const & w_param(mcp::param::witness_param(mcp::approve::calc_curr_epoch(m_new_last_summary_mci)));
+		if (!mcp::param::is_witness(mcp::approve::calc_curr_epoch(last_summary_mci), from_a))
+			BOOST_THROW_EXCEPTION(BadComposeBlock()
+				<< errinfo_comment("compose error: account is not a witness account now."));
+
+		approves = m_aq->topApproves(b_param.max_link_size, mcp::approve::calc_elect_epoch(last_summary_mci));
+		mcp::witness_param const & w_param(mcp::param::witness_param(mcp::approve::calc_curr_epoch(last_summary_mci)));
 
 		//check majority different of witnesses
-		bool is_diff_majority(m_ledger.check_majority_witness(transaction_a, m_cache, m_best_pblock_hash, from_a, w_param));
+		bool is_diff_majority(m_ledger.check_majority_witness(transaction_a, m_cache, best_pblock_hash, from_a, w_param));
 		if (!is_diff_majority)
 		{
 			BOOST_THROW_EXCEPTION(BadComposeBlock()
 				<< errinfo_comment("compose error: check majority different of witnesses failed"));
-			return;
 		}
 
 		//last stable block
@@ -173,7 +231,7 @@ void mcp::composer::pick_parents_and_last_summary_and_wl_block(mcp::db::db_trans
 		bool next_mc_exists(!m_store.main_chain_get(transaction_a, next_check_mci, next_mc_hash));
 		if (next_mc_exists)
 		{
-			bool is_next_mc_stable(m_ledger.check_stable(transaction_a, m_cache, next_mc_hash, m_best_pblock_hash, parents, from_a, last_stable_block, w_param));
+			bool is_next_mc_stable(m_ledger.check_stable(transaction_a, m_cache, next_mc_hash, best_pblock_hash, parents, from_a, last_stable_block, w_param));
 			if (is_next_mc_stable)
 			{
 				last_stable_block = next_mc_hash;
@@ -195,7 +253,7 @@ void mcp::composer::pick_parents_and_last_summary_and_wl_block(mcp::db::db_trans
 						continue;
 					}
 
-					bool is_stable = m_ledger.check_stable(transaction_a, m_cache, skip_mc_hash, m_best_pblock_hash, parents, from_a, last_stable_block, w_param);
+					bool is_stable = m_ledger.check_stable(transaction_a, m_cache, skip_mc_hash, best_pblock_hash, parents, from_a, last_stable_block, w_param);
 					if (is_stable)
 						last_stable_block = skip_mc_hash;
 
@@ -252,58 +310,4 @@ mcp::block_hash mcp::composer::get_latest_block(mcp::db::db_transaction &  trans
 	return latest_block_hash;
 }
 
-uint64_t mcp::composer::get_new_last_summary_mci(mcp::db::db_transaction &  transaction_a)
-{
-	m_snapshot = m_store.create_snapshot();
-	mcp::db::forward_iterator best_dag_free_it(m_store.dag_free_begin(transaction_a, m_snapshot));
-	m_best_dag_free_key = std::make_shared<mcp::free_key>(best_dag_free_it.key());
-	m_best_pblock_hash = m_best_dag_free_key->hash_asc;
 
-	//last summary
-	if (m_best_pblock_hash == mcp::genesis::block_hash)
-		m_last_summary_block = mcp::genesis::block_hash;
-	else
-	{
-		std::shared_ptr<mcp::block> bp_block(m_cache->block_get(transaction_a, m_best_pblock_hash));
-		assert_x(bp_block);
-		m_last_summary_block = bp_block->last_stable_block();
-	}
-
-	int count = 0;
-	std::shared_ptr<mcp::block_state> last_summary_block_state;
-	do
-	{
-		//make sure last summary block is stable
-		bool last_summary_exist(!m_cache->block_summary_get(transaction_a, m_last_summary_block, m_last_summary));
-		if (last_summary_exist)
-		{
-			do
-			{
-				//todo: why block stable is not stable when block_summary exists in cache?
-				last_summary_block_state = m_cache->block_state_get(transaction_a, m_last_summary_block);
-				if (last_summary_block_state && last_summary_block_state->is_stable)
-					break;
-				std::this_thread::sleep_for(std::chrono::milliseconds(100));
-			} while (true);
-
-			break;
-		}
-
-		count++;
-		if (count % 10 == 0)
-			LOG(m_log.warning) << "composer: last summary not exists, check count:" << count;
-
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
-		if (m_stopped)
-		{
-			BOOST_THROW_EXCEPTION(BadComposeBlock()
-				<< errinfo_comment("compose error:composer stopped"));
-		}
-	} while (true);
-
-	assert_x(last_summary_block_state->is_on_main_chain);
-	assert_x(last_summary_block_state->main_chain_index);
-
-	m_new_last_summary_mci = *last_summary_block_state->main_chain_index;
-	return m_new_last_summary_mci;
-}
