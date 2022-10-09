@@ -28,16 +28,32 @@ using namespace std;
 using namespace dev;
 using namespace dev::eth;
 
+TransactionReceipt::TransactionReceipt(RLP r)
+{
+	if (!r.isList() || r.itemCount() != 4)
+		BOOST_THROW_EXCEPTION(InvalidTransactionReceiptFormat());
+
+	m_statusCode = (uint8_t)r[0];
+	m_gasUsed = (u256)r[1];
+	m_bloom = (log_bloom)r[2];
+	for (auto const& i : r[3])
+		m_log.emplace_back(i);
+
+}
+
 TransactionReceipt::TransactionReceipt(uint8_t _status, u256 const& _gasUsed, mcp::log_entries const& _log):
-	m_statusCodeOrStateRoot(_status),
+	m_statusCode(_status),
 	m_gasUsed(_gasUsed),
 	m_log(_log)
 {}
 
-
-uint8_t TransactionReceipt::statusCode() const
+void TransactionReceipt::streamRLP(RLPStream& _s) const
 {
-	return boost::get<uint8_t>(m_statusCodeOrStateRoot);
+	_s.appendList(4);
+	_s << statusCode() << m_gasUsed << m_bloom;
+	_s.appendList(m_log.size());
+	for (mcp::log_entry const& l : m_log)
+		l.streamRLP(_s);
 }
 
 std::ostream& dev::eth::operator<<(std::ostream& _out, TransactionReceipt const& _r)
@@ -47,10 +63,11 @@ std::ostream& dev::eth::operator<<(std::ostream& _out, TransactionReceipt const&
 	_out << "Logs: " << _r.log().size() << " entries:" << std::endl;
 	for (mcp::log_entry const& i: _r.log())
 	{
-		_out << "Address " << i.acct.to_account() << ". Topics:" << std::endl;
+		_out << "Address " << i.address << ". Topics:" << std::endl;
 		for (auto const& j: i.topics)
 			_out << "  " << j << std::endl;
 		_out << "  Data: " << toHex(i.data) << std::endl;
 	}
+	_out << "Bloom: " << _r.bloom() << std::endl;
 	return _out;
 }

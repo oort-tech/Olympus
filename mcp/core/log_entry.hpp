@@ -1,10 +1,8 @@
 #pragma once
 
-#include <mcp/common/numbers.hpp>
-#include <mcp/common/mcp_json.hpp>
 #include <libdevcore/FixedHash.h>
 #include <libdevcore/RLP.h>
-#include <blake2/blake2.h>
+#include <libdevcore/Address.h>
 
 using log_bloom = dev::h2048;
 using log_blooms = std::vector<log_bloom>;
@@ -16,20 +14,15 @@ struct log_entry
 {
 	log_entry() = default;
 	explicit log_entry(RLP const& _r);
-	log_entry(mcp::account const& _address, h256s _topics, bytes _data):
-		acct(_address), topics(std::move(_topics)), data(std::move(_data))
+	log_entry(Address const& _address, h256s _topics, bytes _data):
+		address(_address), topics(std::move(_topics)), data(std::move(_data))
 	{}
 
 	void streamRLP(RLPStream& _s) const;
-	void serialize_json(mcp::json & json_a) const;
-	// added by michael at 3/6
-	void serialize_json_eth(mcp::json & json_a) const;
-	//
-	void hash(blake2b_state &) const;
 
 	log_bloom bloom() const;
 
-	mcp::account acct;
+	Address address;
 	h256s topics;
 	bytes data;
 };
@@ -49,16 +42,24 @@ struct localised_log_entry: public log_entry
 
 	localised_log_entry(
 		log_entry const& _le,
+		mcp::block_hash const& _blockHash,
+		unsigned _blockNumber,
 		h256 const& _transactionHash,
+		unsigned _transactionIndex,
 		unsigned _logIndex
 	):
 		log_entry(_le),
+		blockHash(_blockHash),
+		blockNumber(_blockNumber),
 		transactionHash(_transactionHash),
+		transactionIndex(_transactionIndex),
 		logIndex(_logIndex)
 	{}
 
-	h256 blockHash;
+	mcp::block_hash blockHash;
+	unsigned blockNumber = 0;
 	h256 transactionHash;
+	unsigned transactionIndex = 0;
 	unsigned logIndex = 0;
 	bool isSpecial = false;
 	h256 special;

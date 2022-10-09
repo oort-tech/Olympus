@@ -91,7 +91,7 @@ bool mcp::graph::determine_if_included(mcp::db::db_transaction & transaction_a, 
 
 	if (is_trace)
 	{
-        LOG(m_log.info) << "earlier_hash: " << earlier_hash.to_string()
+        LOG(m_log.info) << "earlier_hash: " << earlier_hash.hex()
 			<< ", is_stable: " << earlier_state->is_stable
 			<< ", is_on_mc: " << earlier_state->is_on_main_chain 
 			<< ", mci: " << (earlier_state->main_chain_index ? *earlier_state->main_chain_index : 0)
@@ -111,7 +111,7 @@ bool mcp::graph::determine_if_included(mcp::db::db_transaction & transaction_a, 
 		if (is_trace)
 		{
 			uint64_t mc_index = later_state->latest_included_mc_index ? *later_state->latest_included_mc_index : 0;
-            LOG(m_log.info) << "later_hash: " << later_hash.to_string()
+            LOG(m_log.info) << "later_hash: " << later_hash.hex()
 				<< ", is_stable: " << later_state->is_stable
 				<< ", is_on_mc: " << later_state->is_on_main_chain
 				<< ", mci: " << (later_state->main_chain_index ? *later_state->main_chain_index : 0)
@@ -182,7 +182,7 @@ bool mcp::graph::go_up_check_included(mcp::db::db_transaction & transaction_a, s
 
 			if (is_trace)
 			{
-                LOG(m_log.info) << "p_hash: " << p_hash.to_string()
+                LOG(m_log.info) << "p_hash: " << p_hash.hex()
 					<< ", is_stable: " << p_state->is_stable
 					<< ", is_on_mc: " << p_state->is_on_main_chain
 					<< ", mci: " << (p_state->main_chain_index ? *p_state->main_chain_index : 0)
@@ -280,17 +280,14 @@ void  mcp::graph::test_determine_if_included_or_equal()
 	mcp::db::db_transaction transaction(m_store.create_transaction());
 	std::shared_ptr<mcp::block_cache> cache(std::make_shared<mcp::block_cache>(m_store));
 
-	mcp::block_hash previous;
-	previous.decode_hex("0563E2B56907BADECDE03F55DFED61B98E4BEFC22243C7860744A765F4A3F7A8");
+	mcp::block_hash previous("0563E2B56907BADECDE03F55DFED61B98E4BEFC22243C7860744A765F4A3F7A8");
 
 	std::vector<mcp::block_hash> parents;
 	std::vector<std::string> parent_strs;
 	parent_strs.push_back("5B9ECD8D3B2049FAF6D797D5BE4832C13D9E3B4D9E6E9C0A7881565ECF28C016");
 	for (std::string const & p_str : parent_strs)
 	{
-		mcp::block_hash p;
-		p.decode_hex(p_str);
-		parents.push_back(p);
+		parents.push_back(mcp::block_hash(p_str));
 	}
 
     LOG(m_log.info) << "determine_if_included_or_equal1 start";

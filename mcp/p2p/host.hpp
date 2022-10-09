@@ -38,12 +38,12 @@ namespace mcp
 			std::map<node_id, connect_info> outs;
 		};
 
-		class frame_coder;
+		class RLPXFrameCoder;
         class host : public std::enable_shared_from_this<host>
         {
         public:
-            host(bool & error_a, p2p_config const & config_a, boost::asio::io_service & io_service_a, mcp::seed_key const & node_key,
-				 boost::filesystem::path const & application_path_a);
+            host(bool & error_a, p2p_config const & config_a, boost::asio::io_service & io_service_a, dev::Secret const & node_key, 
+				mcp::fast_steady_clock& steady_clock_a, boost::filesystem::path const & application_path_a);
 			~host() { stop(); }
             void start();
             void stop();
@@ -52,12 +52,12 @@ namespace mcp
             std::unordered_map<node_id, bi::tcp::endpoint> peers() const;
             std::list<node_info> nodes() const;
 
-			node_id id() const { return alias.pub_comp(); }
+			node_id id() const { return alias.pub(); }
 
 			std::list<capability_desc> caps() const { std::list<capability_desc> ret; for (auto const& i : capabilities) ret.push_back(i.first); return ret; }
-			void start_peer(mcp::public_key_comp const& _id, dev::RLP const& _hello, std::unique_ptr<mcp::p2p::frame_coder>&& _io, std::shared_ptr<bi::tcp::socket> const & socket);
+			void start_peer(mcp::p2p::node_id const& _id, dev::RLP const& _hello, std::unique_ptr<mcp::p2p::RLPXFrameCoder>&& _io, std::shared_ptr<bi::tcp::socket> const & socket);
 
-			mcp::key_pair alias;
+			KeyPair alias;
 			
             std::map<std::string,uint64_t> get_peers_write_queue_size();
             std::map<std::string, std::shared_ptr<mcp::p2p::peer_metrics> > get_peers_metrics();
@@ -65,7 +65,8 @@ namespace mcp
 			std::mutex pending_conns_mutex;
 			std::unordered_set<node_id> pending_conns;
 			peer_outbound attempt_outs;
-
+			bool is_started() { return is_run; };
+			size_t get_peers_count() { return m_peers.size(); };
 			void replace_bootstrap(node_id const& old_a, node_id new_a);
         private:
             enum class peer_type
@@ -119,6 +120,7 @@ namespace mcp
 
             boost::posix_time::milliseconds const handshake_timeout = boost::posix_time::milliseconds(5000);
 
+			mcp::fast_steady_clock& m_steady_clock;
 			std::shared_ptr<peer_manager> m_peer_manager;
             std::unique_ptr<upnp> up;
             mcp::log m_log = { mcp::log("p2p") };

@@ -25,7 +25,14 @@ mcp::joint_message::joint_message(bool & error_a, dev::RLP const & r)
 		return;
 
 	request_id = (mcp::sync_request_hash)r[0];
-	block = std::make_shared<mcp::block>(error_a, r[1], true);
+	try
+	{
+		block = std::make_shared<mcp::block>(r[1]);
+	}
+	catch (Exception& _e)
+	{
+		error_a = true;
+	}
 	if (error_a)
 		return;
 
@@ -37,38 +44,36 @@ mcp::joint_message::joint_message(bool & error_a, dev::RLP const & r)
 
 void mcp::joint_message::stream_RLP(dev::RLPStream & s) const
 {
-	summary_hash.is_zero() ? s.appendList(2) : s.appendList(3);
+	summary_hash == mcp::summary_hash(0) ? s.appendList(2) : s.appendList(3);
 	s << request_id;
-	block->stream_RLP(s);
-	if (!summary_hash.is_zero())
+	block->streamRLP(s);
+	if (summary_hash != mcp::summary_hash(0))
 	{
 		s << summary_hash;
 	}
 }
 
-mcp::joint_request_message::joint_request_message(mcp::sync_request_hash const& request_id_a, mcp::block_hash const & block_hash_a, mcp::block_type const & type_a)
+mcp::joint_request_message::joint_request_message(mcp::sync_request_hash const& request_id_a, mcp::block_hash const & block_hash_a)
 	:request_id(request_id_a), 
-	block_hash(block_hash_a),
-	type(type_a)
+	block_hash(block_hash_a)
 {
 }
 
 void mcp::joint_request_message::stream_RLP(dev::RLPStream & s) const
 {
-	s.appendList(3);
-	s << request_id << block_hash << (uint8_t)type;
+	s.appendList(2);
+	s << request_id << block_hash;
 }
 
 
 mcp::joint_request_message::joint_request_message(bool & error_a, dev::RLP const & r)
 {
-	error_a = r.itemCount() != 3;
+	error_a = r.itemCount() != 2;
 	if (error_a)
 		return;
 
 	request_id = (mcp::sync_request_hash)r[0];
 	block_hash = (mcp::block_hash)r[1];
-	type = (mcp::block_type)r[2].toInt<uint8_t>();
 }
 
 mcp::catchup_request_message::catchup_request_message(bool & error_a, dev::RLP const & r)
@@ -82,7 +87,7 @@ mcp::catchup_request_message::catchup_request_message(bool & error_a, dev::RLP c
 	unstable_mc_joints_tail = (mcp::block_hash)r[3];
 	first_catchup_chain_summary = (mcp::summary_hash)r[4];
 	for (auto witness : r[5])
-		arr_witnesses.insert((mcp::account)witness);
+		arr_witnesses.insert((dev::Address)witness);
 	distinct_witness_size = (uint64_t)r[6];
     request_id = (mcp::sync_request_hash)r[7];
 }
@@ -197,21 +202,22 @@ mcp::hash_tree_response_message::hash_tree_response_message(bool & error_a, dev:
 }
 
 mcp::hash_tree_response_message::summary_items::summary_items(mcp::block_hash const & bh, mcp::summary_hash const & sh,
-	mcp::summary_hash const & previous_summary_a, std::list<mcp::summary_hash> const & p_summary, std::list<mcp::summary_hash> const & l_summary, std::set<mcp::summary_hash> const & s_summary,
-	mcp::block_status const & status_a, uint64_t const& stable_index_a, uint64_t const& mc_timestamp_a, boost::optional<transaction_receipt> receipt_a,
-	uint64_t level_a, std::shared_ptr<mcp::block> const & block_a, uint64_t mci_a, std::set<mcp::summary_hash> const & skiplist_block_a) :
+	mcp::summary_hash const & previous_summary_a, std::list<mcp::summary_hash> const & p_summary, h256 receiptsRoot_a, std::set<mcp::summary_hash> const & s_summary,
+	mcp::block_status const & status_a, uint64_t const& stable_index_a, uint64_t const& mc_timestamp_a,
+	uint64_t level_a, std::shared_ptr<mcp::block> const & block_a, std::vector<std::shared_ptr<Transaction>> t_a, std::vector<std::shared_ptr<approve>> aq_a, uint64_t mci_a, std::set<mcp::summary_hash> const & skiplist_block_a) :
 	block_hash(bh), 
 	summary(sh),
 	previous_summary(previous_summary_a),
 	parent_summaries(p_summary), 
-	link_summaries(l_summary),
+	receiptsRoot(receiptsRoot_a),
 	skiplist_summaries(s_summary),
 	status(status_a),
 	stable_index(stable_index_a),
 	mc_timestamp(mc_timestamp_a),
-	receipt(receipt_a),
 	level(level_a), 
 	block(block_a),
+	transactions(t_a),
+	approves(aq_a),
 	mci(mci_a), 
 	skiplist_block(skiplist_block_a)
 {
@@ -222,7 +228,7 @@ mcp::hash_tree_response_message::summary_items::summary_items(bool & error_a, de
 	if (error_a)
 		return;
 
-	error_a = r.itemCount() != 14;
+	error_a = r.itemCount() != 15;
 	if (error_a)
 		return;
 
@@ -235,9 +241,7 @@ mcp::hash_tree_response_message::summary_items::summary_items(bool & error_a, de
 	for(dev::RLP const & p_summary : parent_rlp)
 		parent_summaries.push_back((mcp::summary_hash)p_summary);
 
-	dev::RLP const & link_rlp = r[4];
-	for (dev::RLP const & l_summary : link_rlp)
-		link_summaries.push_back((mcp::summary_hash)l_summary);
+	receiptsRoot = (h256)r[4];
 
 	dev::RLP const & skiplist_rlp = r[5];
 	for(dev::RLP const & s_summary : skiplist_rlp)
@@ -246,39 +250,52 @@ mcp::hash_tree_response_message::summary_items::summary_items(bool & error_a, de
 	status = mcp::block_status(r[6].toInt<uint8_t>());
 	stable_index = r[7].toInt<uint64_t>();
 	mc_timestamp = r[8].toInt<uint64_t>();
+	level = (uint64_t)r[9];
 
-	dev::RLP const & receipt_rlp = r[9];
-	if (receipt_rlp.itemCount() == 1)
+	try
 	{
-		receipt = transaction_receipt(error_a, receipt_rlp[0]);
-		assert_x(!error_a);
+		block = std::make_shared<mcp::block>(r[10]);
 	}
-	else
-		receipt = boost::none;
+	catch (Exception& _e)
+	{
+		error_a = true;
+	}
 
-	level = (uint64_t)r[10];
+	try
+	{
+		for (dev::RLP const & tr : r[11])
+		{
+			auto t = std::make_shared<mcp::Transaction>(tr, CheckTransaction::Everything);
+			transactions.push_back(t);
+		}
+		for (dev::RLP const & ar : r[12])
+		{
+			auto a = std::make_shared<mcp::approve>(ar, CheckTransaction::Everything);
+			approves.push_back(a);
+		}
+	}
+	catch (Exception& _e)
+	{
+		error_a = true;
+	}
 
-    block = std::make_shared<mcp::block>(error_a, r[11], true);
-    assert_x(!error_a)
-    mci = (uint64_t)r[12];
+    mci = (uint64_t)r[13];
 
-    dev::RLP const & skiplist_block_rlp = r[13];
+    dev::RLP const & skiplist_block_rlp = r[14];
     for (dev::RLP const & bh : skiplist_block_rlp)
         skiplist_block.insert((mcp::block_hash)bh);
 }
 
 void mcp::hash_tree_response_message::summary_items::stream_RLP(dev::RLPStream & s) const
 {
-	s.appendList(14);
+	s.appendList(15);
 	s << block_hash << summary << previous_summary;
 
 	s.appendList(parent_summaries.size());
 	for (auto p_summary : parent_summaries)
 		s << p_summary;
 
-	s.appendList(link_summaries.size());
-	for (auto l_summary : link_summaries)
-		s << l_summary;
+	s << receiptsRoot;
 
 	s.appendList(skiplist_summaries.size());
 	for (auto s_summary: skiplist_summaries)
@@ -287,20 +304,17 @@ void mcp::hash_tree_response_message::summary_items::stream_RLP(dev::RLPStream &
 	s << (uint8_t)status;
 	s << stable_index;
 	s << mc_timestamp;
-
-	if (receipt)
-	{
-		s.appendList(1);
-		receipt->stream_RLP(s);
-	}
-	else
-	{
-		s.appendList(0);
-	}
-	
 	s << level;
 
-    block->stream_RLP(s);
+    block->streamRLP(s);
+	s.appendList(transactions.size());
+	for (auto t : transactions)
+		t->streamRLP(s);
+
+	s.appendList(approves.size());
+	for (auto a : approves)
+		a->streamRLP(s);
+
     s << mci;
 
     s.appendList(skiplist_block.size());
@@ -326,7 +340,7 @@ mcp::peer_info_message::peer_info_message(bool & error_a, dev::RLP const &r)
 	if (error_a)
 		return;
 
-	error_a = r.itemCount() != 3;
+	error_a = r.itemCount() != 4;
 	if (error_a)
 		return;
 
@@ -334,30 +348,24 @@ mcp::peer_info_message::peer_info_message(bool & error_a, dev::RLP const &r)
 	for (auto r_hash : r[1])
 		arr_tip_blocks.push_back((mcp::block_hash)r_hash);
 	for (auto r_account_hash : r[2])
-	{
-		error_a = r_account_hash.itemCount() != 2;
-		if (error_a)
-			return;
-
-		mcp::account account(r_account_hash[0]);
-		mcp::block_hash hash(r_account_hash[1]);
-		arr_light_tip_blocks.insert(std::make_pair(account, hash));
-	}
+		arr_light_tip_blocks.push_back((h256)r_account_hash);
+	for (auto r_approve_hash : r[3])
+		arr_light_approve_blocks.push_back((h256)r_approve_hash);
 }
 
 void mcp::peer_info_message::stream_RLP(dev::RLPStream & s) const
 {
-	s.appendList(3);
+	s.appendList(4);
 	s << min_retrievable_mci;
 	s.appendList(arr_tip_blocks.size());
 	for (auto hash : arr_tip_blocks)
 		s << hash;
 	s.appendList(arr_light_tip_blocks.size());
-	for (auto p : arr_light_tip_blocks)
-	{
-		s.appendList(2);
-		s << p.first << p.second;
-	}
+	for (auto hash : arr_light_tip_blocks)
+		s << hash;
+	s.appendList(arr_light_approve_blocks.size());
+	for (auto hash : arr_light_approve_blocks)
+		s << hash;
 }
 
 mcp::peer_info_request_message::peer_info_request_message()

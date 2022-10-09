@@ -1,8 +1,12 @@
 #include "process_block_cache.hpp"
+#include "transaction_queue.hpp"
+#include "approve_queue.hpp"
 
-mcp::process_block_cache::process_block_cache(std::shared_ptr<mcp::block_cache> cache_a, mcp::block_store &store_a) :
+mcp::process_block_cache::process_block_cache(std::shared_ptr<mcp::block_cache> cache_a, mcp::block_store &store_a, std::shared_ptr<mcp::TransactionQueue> tq, std::shared_ptr<ApproveQueue> aq) :
 	m_cache(cache_a),
-	m_store(store_a)
+	m_store(store_a),
+	m_tq(tq),
+	m_aq(aq)
 {
 }
 
@@ -95,7 +99,7 @@ void mcp::process_block_cache::block_state_put(mcp::db::db_transaction & transac
 }
 
 
-std::shared_ptr<mcp::account_state> mcp::process_block_cache::latest_account_state_get(mcp::db::db_transaction & transaction_a, mcp::account const & account_a)
+std::shared_ptr<mcp::account_state> mcp::process_block_cache::latest_account_state_get(mcp::db::db_transaction & transaction_a, Address const & account_a)
 {
 	std::shared_ptr<mcp::account_state> state;
 	auto it(m_latest_account_state_puts.get<1>().find(account_a));
@@ -107,7 +111,7 @@ std::shared_ptr<mcp::account_state> mcp::process_block_cache::latest_account_sta
 	{
 		if (m_latest_account_state_puts_flushed.count(account_a))
 		{
-			mcp::account_state_hash hash;
+			h256 hash;
 			bool exists = !m_store.latest_account_state_get(transaction_a, account_a, hash);
 			if (exists)
 			{
@@ -121,28 +125,28 @@ std::shared_ptr<mcp::account_state> mcp::process_block_cache::latest_account_sta
 	return state;
 }
 
-void mcp::process_block_cache::latest_account_state_put(mcp::db::db_transaction & transaction_a, mcp::account const & account_a, std::shared_ptr<mcp::account_state> account_state_a)
+void mcp::process_block_cache::latest_account_state_put(mcp::db::db_transaction & transaction_a, Address const & account_a, std::shared_ptr<mcp::account_state> account_state_a)
 {
-	mcp::account_state_hash acc_hash(account_state_a->hash());
+	h256 acc_hash(account_state_a->hash());
 	m_store.account_state_put(transaction_a, acc_hash, *account_state_a);
 	m_store.latest_account_state_put(transaction_a, account_a, acc_hash);
 	auto it(m_latest_account_state_puts.get<1>().find(account_a));
 	if (it != m_latest_account_state_puts.get<1>().end())
 	{
-		m_latest_account_state_puts.get<1>().modify(it, [account_state_a](put_item<mcp::account, std::shared_ptr<mcp::account_state>> & item_a)
+		m_latest_account_state_puts.get<1>().modify(it, [account_state_a](put_item<Address, std::shared_ptr<mcp::account_state>> & item_a)
 		{
 			item_a.value = account_state_a;
 		});
 	}
 	else
 	{
-		auto r = m_latest_account_state_puts.push_back(put_item<mcp::account, std::shared_ptr<mcp::account_state>>(account_a, account_state_a));
+		auto r = m_latest_account_state_puts.push_back(put_item<Address, std::shared_ptr<mcp::account_state>>(account_a, account_state_a));
 		assert_x(r.second);
 		if (m_latest_account_state_puts.size() >= m_max_latest_account_state_puts_size)
 		{
 			while (m_latest_account_state_puts.size() >= m_max_latest_account_state_puts_size / 2)
 			{
-				put_item<mcp::account, std::shared_ptr<account_state>> const & item(m_latest_account_state_puts.front());
+				put_item<Address, std::shared_ptr<account_state>> const & item(m_latest_account_state_puts.front());
 				m_latest_account_state_puts_flushed.insert(std::move(item.key));
 				m_latest_account_state_puts.pop_front();
 			}
@@ -151,105 +155,132 @@ void mcp::process_block_cache::latest_account_state_put(mcp::db::db_transaction 
 }
 
 
-bool mcp::process_block_cache::unlink_block_exists(mcp::db::db_transaction & transaction_a, mcp::block_hash const &block_hash_a)
+bool mcp::process_block_cache::transaction_exists(mcp::db::db_transaction & transaction_a, h256 const& _hash)
 {
-	std::shared_ptr<mcp::unlink_block> unlink_block = unlink_block_get(transaction_a, block_hash_a);
-	bool exists = unlink_block != nullptr;
-	return exists;
+	auto t = transaction_get(transaction_a, _hash);
+	return t != nullptr;
 }
 
-std::shared_ptr<mcp::unlink_block> mcp::process_block_cache::unlink_block_get(mcp::db::db_transaction & transaction_a, mcp::block_hash const & block_hash_a)
+std::shared_ptr<mcp::Transaction> mcp::process_block_cache::transaction_get(mcp::db::db_transaction & transaction_a, h256 const& _hash)
 {
-	std::shared_ptr<mcp::unlink_block> unlink_block;
-	if (m_unlink_block_dels.count(block_hash_a))
-		return nullptr;
+	std::shared_ptr<mcp::Transaction> t = nullptr;
 
-	auto it(m_unlink_block_puts.get<1>().find(block_hash_a));
-	if (it != m_unlink_block_puts.get<1>().end())
+	auto it(m_transaction_puts.get<1>().find(_hash));
+	if (it != m_transaction_puts.get<1>().end())
 	{
-		unlink_block = it->value;
+		t = it->value;
 	}
 	else
 	{
-		if (m_unlink_block_puts_flushed.count(block_hash_a))
-			unlink_block = m_store.unlink_block_get(transaction_a, block_hash_a);
+		if (m_transaction_puts_flushed.count(_hash))
+			t = m_store.transaction_get(transaction_a, _hash);
 		else
-			unlink_block = m_cache->unlink_block_get(transaction_a, block_hash_a);
+			t = m_cache->transaction_get(transaction_a, _hash);
 	}
-	return unlink_block;
+	return t;
 }
 
-void mcp::process_block_cache::unlink_block_put(mcp::db::db_transaction & transaction_a, mcp::block_hash const & block_hash_a, std::shared_ptr<mcp::unlink_block> unlink_block_a)
+void mcp::process_block_cache::transaction_put(mcp::db::db_transaction & transaction_a, std::shared_ptr<Transaction> _t)
 {
-	m_store.unlink_block_put(transaction_a, block_hash_a, *unlink_block_a);
-	auto r = m_unlink_block_puts.push_back(put_item<mcp::block_hash, std::shared_ptr<mcp::unlink_block>>(block_hash_a, unlink_block_a));
+	auto h = _t->sha3();
+	m_store.transaction_put(transaction_a, h, *_t);
+	auto r = m_transaction_puts.push_back(put_item<h256, std::shared_ptr<mcp::Transaction>>(h, _t));
 	assert_x(r.second);
-	m_unlink_block_dels.erase(block_hash_a);
 
-	if (m_unlink_block_puts.size() >= m_max_unlink_block_puts_size)
+	if (m_transaction_puts.size() >= m_max_transaction_puts_size)
 	{
-		while (m_unlink_block_puts.size() >= m_max_unlink_block_puts_size / 2)
+		while (m_transaction_puts.size() >= m_max_transaction_puts_size / 2)
 		{
-			put_item<mcp::block_hash, std::shared_ptr<unlink_block>> const & item(m_unlink_block_puts.front());
-			m_unlink_block_puts_flushed.insert(std::move(item.key));
-			m_unlink_block_puts.pop_front();
+			put_item<h256, std::shared_ptr<mcp::Transaction>> const & item(m_transaction_puts.front());
+			m_transaction_puts_flushed.insert(std::move(item.key));
+			m_transaction_puts.pop_front();
 		}
 	}
 }
 
-void mcp::process_block_cache::unlink_block_del(mcp::db::db_transaction & transaction_a, mcp::block_hash const & block_hash_a)
+void mcp::process_block_cache::transaction_del_from_queue(h256 const& _hash)
 {
-	m_store.unlink_block_del(transaction_a, block_hash_a);
-	auto r(m_unlink_block_dels.insert(block_hash_a));
-	assert_x(r.second);
-	m_unlink_block_puts.get<1>().erase(block_hash_a);
-	m_unlink_block_puts_flushed.erase(block_hash_a);
+	m_transaction_dels.push_back(_hash);
+}
+
+void mcp::process_block_cache::approve_del_from_queue(h256 const& _hash, uint64_t const& _epoch)
+{
+	if(m_approve_dels.find(_epoch) == m_approve_dels.end()){
+		m_approve_dels.insert(std::make_pair(_epoch, h256s()));
+	}
+	m_approve_dels[_epoch].push_back(_hash);
 }
 
 
-std::shared_ptr<mcp::account_info> mcp::process_block_cache::account_get(mcp::db::db_transaction & transaction_a, mcp::account const & account_a)
+bool mcp::process_block_cache::approve_exists(mcp::db::db_transaction & transaction_a, h256 const& _hash)
 {
-	std::shared_ptr<mcp::account_info> account_info;
-	auto it(m_account_puts.get<1>().find(account_a));
-	if (it != m_account_puts.get<1>().end())
+	auto t = approve_get(transaction_a, _hash);
+	return t != nullptr;
+}
+
+std::shared_ptr<mcp::approve> mcp::process_block_cache::approve_get(mcp::db::db_transaction & transaction_a, h256 const& _hash)
+{
+	return m_cache->approve_get(transaction_a, _hash);
+}
+
+void mcp::process_block_cache::approve_put(mcp::db::db_transaction & transaction_a, std::shared_ptr<approve> _t)
+{
+	auto h = _t->sha3();
+	m_store.approve_put(transaction_a, h, *_t);
+	m_cache->approve_put(h, _t);
+}
+
+
+bool mcp::process_block_cache::account_nonce_get(mcp::db::db_transaction & transaction_a, Address const & account_a, u256 & nonce_a)
+{
+	auto it(m_account_nonce_puts.get<1>().find(account_a));
+	bool exists(it != m_account_nonce_puts.get<1>().end());
+	if (exists)
 	{
-		account_info = it->value;
+		nonce_a = it->value;
 	}
 	else
 	{
-		if (m_account_puts_flushed.count(account_a))
-			account_info = m_store.account_get(transaction_a, account_a);
+		if (m_account_nonce_puts_flushed.count(account_a))
+			exists = m_store.account_nonce_get(transaction_a, account_a, nonce_a);
 		else
-			account_info = m_cache->account_get(transaction_a, account_a);
+			exists = m_cache->account_nonce_get(transaction_a, account_a, nonce_a);
 	}
-	return account_info;
+	return exists;
 }
 
-void mcp::process_block_cache::account_put(mcp::db::db_transaction & transaction_a, mcp::account const & account_a, std::shared_ptr<mcp::account_info> account_info_a)
+void mcp::process_block_cache::account_nonce_put(mcp::db::db_transaction & transaction_a, Address const & account_a, u256 const & nonce_a)
 {
-	m_store.account_put(transaction_a, account_a, *account_info_a);
-	auto it(m_account_puts.get<1>().find(account_a));
-	if (it != m_account_puts.get<1>().end())
+	m_store.account_nonce_put(transaction_a, account_a, nonce_a);
+	auto it(m_account_nonce_puts.get<1>().find(account_a));
+	if (it != m_account_nonce_puts.get<1>().end())
 	{
-		m_account_puts.get<1>().modify(it, [account_info_a](put_item<mcp::account, std::shared_ptr<mcp::account_info>> & item_a)
+		m_account_nonce_puts.get<1>().modify(it, [nonce_a](put_item<Address, u256> & item_a)
 		{
-			item_a.value = account_info_a;
+			item_a.value = nonce_a;
 		});
 	}
 	else
 	{
-		auto r = m_account_puts.push_back(put_item<mcp::account, std::shared_ptr<mcp::account_info>>(account_a, account_info_a));
+		auto r = m_account_nonce_puts.push_back(put_item<Address, u256>(account_a, nonce_a));
 		assert_x(r.second);
-		if (m_account_puts.size() >= m_max_account_puts_size)
+		if (m_account_nonce_puts.size() >= m_max_account_nonce_puts_size)
 		{
-			while (m_account_puts.size() >= m_max_account_puts_size / 2)
+			while (m_account_nonce_puts.size() >= m_max_account_nonce_puts_size / 2)
 			{
-				put_item<mcp::account, std::shared_ptr<account_info>> const & item(m_account_puts.front());
-				m_account_puts_flushed.insert(std::move(item.key));
-				m_account_puts.pop_front();
+				put_item<Address, u256> const & item(m_account_nonce_puts.front());
+				m_account_nonce_puts_flushed.insert(std::move(item.key));
+				m_account_nonce_puts.pop_front();
 			}
 		}
 	}
+}
+
+
+void mcp::process_block_cache::transaction_address_put(mcp::db::db_transaction & transaction_a, h256 const & hash, std::shared_ptr<mcp::TransactionAddress> const& td)
+{
+	m_store.transaction_address_put(transaction_a, hash, *td);
+	m_cache->transaction_address_put(hash, td);
 }
 
 
@@ -351,6 +382,71 @@ void mcp::process_block_cache::block_summary_put(mcp::db::db_transaction & trans
 	}
 }
 
+void mcp::process_block_cache::block_number_put(mcp::db::db_transaction & transaction_a, uint64_t const & index_a, mcp::block_hash const & hash_a)
+{
+	m_store.stable_block_put(transaction_a, index_a, hash_a);
+	m_cache->block_number_put(index_a, hash_a);
+}
+
+bool mcp::process_block_cache::transaction_receipt_exists(mcp::db::db_transaction & transaction_a, h256 const& _hash)
+{
+	auto t = transaction_receipt_get(transaction_a, _hash);
+	return t != nullptr;
+}
+
+std::shared_ptr<dev::eth::TransactionReceipt> mcp::process_block_cache::transaction_receipt_get(mcp::db::db_transaction & transaction_a, h256 const& _hash)
+{
+	std::shared_ptr<dev::eth::TransactionReceipt> t = nullptr;
+
+	auto it(m_transaction_receipt_puts.get<1>().find(_hash));
+	if (it != m_transaction_receipt_puts.get<1>().end())
+	{
+		t = it->value;
+	}
+	else
+	{
+		if (m_transaction_receipt_puts_flushed.count(_hash))
+			t = m_store.transaction_receipt_get(transaction_a, _hash);
+		else
+			t = m_cache->transaction_receipt_get(transaction_a, _hash);
+	}
+	return t;
+}
+
+void mcp::process_block_cache::transaction_receipt_put(mcp::db::db_transaction & transaction_a, h256 const& _hash, std::shared_ptr<dev::eth::TransactionReceipt> _t)
+{
+	m_store.transaction_receipt_put(transaction_a, _hash, *_t);
+	auto r = m_transaction_receipt_puts.push_back(put_item<h256, std::shared_ptr<dev::eth::TransactionReceipt>>(_hash, _t));
+	assert_x(r.second);
+
+	if (m_transaction_receipt_puts.size() >= m_max_transaction_receipt_puts_size)
+	{
+		while (m_transaction_receipt_puts.size() >= m_max_transaction_receipt_puts_size / 2)
+		{
+			put_item<h256, std::shared_ptr<dev::eth::TransactionReceipt>> const & item(m_transaction_receipt_puts.front());
+			m_transaction_receipt_puts_flushed.insert(std::move(item.key));
+			m_transaction_receipt_puts.pop_front();
+		}
+	}
+}
+
+bool mcp::process_block_cache::approve_receipt_exists(mcp::db::db_transaction & transaction_a, h256 const& _hash)
+{
+	auto t = approve_receipt_get(transaction_a, _hash);
+	return t != nullptr;
+}
+
+std::shared_ptr<dev::ApproveReceipt> mcp::process_block_cache::approve_receipt_get(mcp::db::db_transaction & transaction_a, h256 const& _hash)
+{
+	return m_cache->approve_receipt_get(transaction_a, _hash);
+}
+
+void mcp::process_block_cache::approve_receipt_put(mcp::db::db_transaction & transaction_a, h256 const& _hash, std::shared_ptr<dev::ApproveReceipt> _t)
+{
+	m_store.approve_receipt_put(transaction_a, _hash, *_t);
+	m_cache->approve_receipt_put(_hash, _t);
+}
+
 
 void mcp::process_block_cache::mark_as_changing()
 {
@@ -368,24 +464,22 @@ void mcp::process_block_cache::mark_as_changing()
 	m_cache->mark_block_state_as_changing(block_state_changings);
 
 	//latest account state
-	std::unordered_set<mcp::account> latest_account_state_changings(m_latest_account_state_puts_flushed);
-	for (put_item<mcp::account, std::shared_ptr<account_state>> const & item : m_latest_account_state_puts)
+	std::unordered_set<Address> latest_account_state_changings(m_latest_account_state_puts_flushed);
+	for (put_item<Address, std::shared_ptr<account_state>> const & item : m_latest_account_state_puts)
 		latest_account_state_changings.insert(item.key);
 	m_cache->mark_latest_account_state_as_changing(latest_account_state_changings);
 
-	//unlink block
-	std::unordered_set<mcp::block_hash> unlink_block_changings(m_unlink_block_puts_flushed);
-	for (put_item<mcp::block_hash, std::shared_ptr<unlink_block>> const & item : m_unlink_block_puts)
-		unlink_block_changings.insert(item.key);
-	for (mcp::block_hash const & hash : m_unlink_block_dels)
-		unlink_block_changings.insert(hash);
-	m_cache->mark_unlink_block_as_changing(unlink_block_changings);
+	//transactions
+	std::unordered_set<h256> transaction_changings(m_transaction_puts_flushed);
+	for (put_item<h256, std::shared_ptr<mcp::Transaction>> const & item : m_transaction_puts)
+		transaction_changings.insert(item.key);
+	m_cache->mark_transaction_as_changing(transaction_changings);
 
-	//account info
-	std::unordered_set<mcp::account> account_changings(m_account_puts_flushed);
-	for (put_item<mcp::account, std::shared_ptr<account_info>> const & item : m_account_puts)
-		account_changings.insert(item.key);
-	m_cache->mark_account_as_changing(account_changings);
+	//account nonce
+	std::unordered_set<Address> account_nonce_changings(m_account_nonce_puts_flushed);
+	for (put_item<Address, u256> const & item : m_account_nonce_puts)
+		account_nonce_changings.insert(item.key);
+	m_cache->mark_account_nonce_as_changing(account_nonce_changings);
 
 	//successor
 	std::unordered_set<mcp::block_hash> successor_changings(m_successor_puts_flushed);
@@ -400,6 +494,12 @@ void mcp::process_block_cache::mark_as_changing()
 	for (put_item<mcp::block_hash, mcp::summary_hash> const & item : m_block_summary_puts)
 		block_summary_changings.insert(item.key);
 	m_cache->mark_block_summary_as_changing(block_summary_changings);
+
+	//transaction receipt
+	std::unordered_set<h256> receipt_changings(m_transaction_receipt_puts_flushed);
+	for (put_item<h256, std::shared_ptr<dev::eth::TransactionReceipt>> const & item : m_transaction_receipt_puts)
+		receipt_changings.insert(item.key);
+	m_cache->mark_transaction_receipt_as_changing(receipt_changings);
 }
 
 void mcp::process_block_cache::commit_and_clear_changing()
@@ -420,26 +520,32 @@ void mcp::process_block_cache::commit_and_clear_changing()
 
 	//modify latest account state cache
 	m_cache->latest_account_state_earse(m_latest_account_state_puts_flushed);
-	for (put_item<mcp::account, std::shared_ptr<account_state>> const & item : m_latest_account_state_puts)
+	for (put_item<Address, std::shared_ptr<account_state>> const & item : m_latest_account_state_puts)
 		m_cache->latest_account_state_put(item.key, item.value);
 	m_latest_account_state_puts.clear();
 	m_latest_account_state_puts_flushed.clear();
 
-	//modify unlink block cache
-	m_cache->unlink_block_earse(m_unlink_block_puts_flushed);
-	m_cache->unlink_block_earse(m_unlink_block_dels);
-	for (put_item<mcp::block_hash, std::shared_ptr<unlink_block>> const & item : m_unlink_block_puts)
-		m_cache->unlink_block_put(item.key, item.value);
-	m_unlink_block_puts.clear();
-	m_unlink_block_puts_flushed.clear();
-	m_unlink_block_dels.clear();
+	/// The global cache must be updated before the drop transaction.else getTransactionCount maybe error,because transaction drop from queue but nonce not update.
+	//modify account nonce cache
+	m_cache->account_nonce_earse(m_account_nonce_puts_flushed);
+	for (put_item<Address, u256> const & item : m_account_nonce_puts)
+		m_cache->account_nonce_put(item.key, item.value);
+	m_account_nonce_puts.clear();
+	m_account_nonce_puts_flushed.clear();
 
-	//modify account cache
-	m_cache->account_earse(m_account_puts_flushed);
-	for (put_item<mcp::account, std::shared_ptr<mcp::account_info>> const & item : m_account_puts)
-		m_cache->account_put(item.key, item.value);
-	m_account_puts.clear();
-	m_account_puts_flushed.clear();
+
+	//modify transaction cache
+	m_cache->transaction_earse(m_transaction_puts_flushed);
+	for (put_item<h256, std::shared_ptr<mcp::Transaction>> const & item : m_transaction_puts)
+		m_cache->transaction_put(item.key, item.value);
+	m_tq->drop(m_transaction_dels);
+	m_transaction_puts.clear();
+	m_transaction_puts_flushed.clear();
+	m_transaction_dels.clear();
+
+	//modify approve cache
+	m_aq->drop(m_approve_dels);
+	m_approve_dels.clear();
 
 	//modify successor cache
 	m_cache->successor_earse(m_successor_puts_flushed);
@@ -457,13 +563,21 @@ void mcp::process_block_cache::commit_and_clear_changing()
 	m_block_summary_puts.clear();
 	m_block_summary_puts_flushed.clear();
 
+	//modify transaction receipt cache
+	m_cache->transaction_receipt_earse(m_transaction_receipt_puts_flushed);
+	for (put_item<h256, std::shared_ptr<dev::eth::TransactionReceipt>> const & item : m_transaction_receipt_puts)
+		m_cache->transaction_receipt_put(item.key, item.value);
+	m_transaction_receipt_puts.clear();
+	m_transaction_receipt_puts_flushed.clear();
+
 	//clear changing
 	m_cache->clear_block_changing();
 	m_cache->clear_block_state_changing();
 	m_cache->clear_latest_account_state_changing();
-	m_cache->clear_unlink_block_changing();
-	m_cache->clear_account_changing();
+	m_cache->clear_transaction_changing();
+	m_cache->clear_account_nonce_changing();
 	m_cache->clear_successor_changing();
 	m_cache->clear_block_summary_changing();
+	m_cache->clear_transaction_receipt_changing();
 }
 

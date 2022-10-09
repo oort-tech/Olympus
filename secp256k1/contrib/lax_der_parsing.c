@@ -5,7 +5,6 @@
  **********************************************************************/
 
 #include <string.h>
-#include <secp256k1.h>
 
 #include "lax_der_parsing.h"
 
@@ -32,7 +31,7 @@ int ecdsa_signature_parse_der_lax(const secp256k1_context* ctx, secp256k1_ecdsa_
     lenbyte = input[pos++];
     if (lenbyte & 0x80) {
         lenbyte -= 0x80;
-        if (pos + lenbyte > inputlen) {
+        if (lenbyte > inputlen - pos) {
             return 0;
         }
         pos += lenbyte;
@@ -51,7 +50,7 @@ int ecdsa_signature_parse_der_lax(const secp256k1_context* ctx, secp256k1_ecdsa_
     lenbyte = input[pos++];
     if (lenbyte & 0x80) {
         lenbyte -= 0x80;
-        if (pos + lenbyte > inputlen) {
+        if (lenbyte > inputlen - pos) {
             return 0;
         }
         while (lenbyte > 0 && input[pos] == 0) {
@@ -89,7 +88,7 @@ int ecdsa_signature_parse_der_lax(const secp256k1_context* ctx, secp256k1_ecdsa_
     lenbyte = input[pos++];
     if (lenbyte & 0x80) {
         lenbyte -= 0x80;
-        if (pos + lenbyte > inputlen) {
+        if (lenbyte > inputlen - pos) {
             return 0;
         }
         while (lenbyte > 0 && input[pos] == 0) {

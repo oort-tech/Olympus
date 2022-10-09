@@ -3,8 +3,8 @@
 
 using namespace mcp::p2p;
 
-host::host(bool & error_a, p2p_config const & config_a, boost::asio::io_service & io_service_a, mcp::seed_key const & node_key,
-	boost::filesystem::path const & application_path_a) :
+host::host(bool & error_a, p2p_config const & config_a, boost::asio::io_service & io_service_a, dev::Secret const & node_key,
+	mcp::fast_steady_clock& steady_clock_a, boost::filesystem::path const & application_path_a) :
 	config(config_a),
 	io_service(io_service_a),
 	alias(node_key),
@@ -13,7 +13,8 @@ host::host(bool & error_a, p2p_config const & config_a, boost::asio::io_service 
 	last_ping(std::chrono::steady_clock::time_point::min()),
 	last_try_connect(std::chrono::steady_clock::time_point::min()),
 	last_try_connect_exemption(std::chrono::steady_clock::time_point::min()),
-	m_peer_manager(std::make_shared<peer_manager>(error_a, application_path_a))
+	m_peer_manager(std::make_shared<peer_manager>(error_a, application_path_a)),
+	m_steady_clock(steady_clock_a)
 {
 	if (error_a)
 		return;
@@ -26,31 +27,33 @@ host::host(bool & error_a, p2p_config const & config_a, boost::asio::io_service 
 			continue;
 		}
 
-		std::string node_str(bn.substr(10));
+		try {
+			std::string node_str(bn.substr(10));
 
-		std::vector<std::string> node_id_and_addr;
-		boost::split(node_id_and_addr, node_str, boost::is_any_of("@"));
-		if (node_id_and_addr.size() != 2)
-			LOG(m_log.warning) << "Invald boostrap node :" << bn;
-		node_id node_id;
-		bool error(node_id.decode_hex(node_id_and_addr[0]));
-		if (error)
-		{
+			std::vector<std::string> node_id_and_addr;
+			boost::split(node_id_and_addr, node_str, boost::is_any_of("@"));
+			if (node_id_and_addr.size() != 2)
+			{
+				LOG(m_log.warning) << "Invald boostrap node :" << bn;
+				continue;
+			}
+
+			node_id nid(node_id_and_addr[0]);
+			std::string addr(node_id_and_addr[1]);
+			bi::tcp::endpoint ep;
+			if (resolve_host(addr, ep) || nid == node_id())
+			{
+				LOG(m_log.warning) << "Invald boostrap node :" << bn;
+				continue;
+			}
+
+			node_endpoint node_ep(ep.address(), ep.port(), ep.port());
+			bootstrap_nodes.push_back(std::make_shared<node_info>(nid, node_ep));
+		}
+		catch (...) {
 			LOG(m_log.warning) << "Invald boostrap node :" << bn;
 			continue;
 		}
-
-		std::string addr(node_id_and_addr[1]);
-		bi::tcp::endpoint ep;
-		error = resolve_host(addr, ep);
-		if (error)
-		{
-			LOG(m_log.warning) << "Invald boostrap node :" << bn;
-			continue;
-		}
-
-		node_endpoint node_ep(ep.address(), ep.port(), ep.port());
-		bootstrap_nodes.push_back(std::make_shared<node_info>(node_id, node_ep));
 	}
 
 	for (std::string const & bn : config.exemption_nodes)
@@ -61,31 +64,31 @@ host::host(bool & error_a, p2p_config const & config_a, boost::asio::io_service 
 			continue;
 		}
 
-		std::string node_str(bn.substr(10));
+		try {
+			std::string node_str(bn.substr(10));
 
-		std::vector<std::string> node_id_and_addr;
-		boost::split(node_id_and_addr, node_str, boost::is_any_of("@"));
-		if (node_id_and_addr.size() != 2)
-			LOG(m_log.warning) << "Invald exemption node :" << bn;
-		node_id node_id;
-		bool error(node_id.decode_hex(node_id_and_addr[0]));
-		if (error)
-		{
+			std::vector<std::string> node_id_and_addr;
+			boost::split(node_id_and_addr, node_str, boost::is_any_of("@"));
+			if (node_id_and_addr.size() != 2)
+				LOG(m_log.warning) << "Invald exemption node :" << bn;
+
+			node_id node_id(node_id_and_addr[0]);
+
+			std::string addr(node_id_and_addr[1]);
+			bi::tcp::endpoint ep;
+			if (resolve_host(addr, ep))
+			{
+				LOG(m_log.warning) << "Invald exemption node :" << bn;
+				continue;
+			}
+
+			node_endpoint node_ep(ep.address(), ep.port(), ep.port());
+			exemption_nodes.push_back(std::make_shared<node_info>(node_id, node_ep, PeerType::Required));
+		}
+		catch (...) {
 			LOG(m_log.warning) << "Invald exemption node :" << bn;
 			continue;
 		}
-
-		std::string addr(node_id_and_addr[1]);
-		bi::tcp::endpoint ep;
-		error = resolve_host(addr, ep);
-		if (error)
-		{
-			LOG(m_log.warning) << "Invald exemption node :" << bn;
-			continue;
-		}
-
-		node_endpoint node_ep(ep.address(), ep.port(), ep.port());
-		exemption_nodes.push_back(std::make_shared<node_info>(node_id, node_ep, PeerType::Required));
 	}
 
 }
@@ -112,11 +115,11 @@ void host::start()
 	map_public(listen_ip, port);
 	accept_loop();
 
-	m_node_table = std::make_shared<node_table>(m_peer_manager->store, alias, node_endpoint(listen_ip, port, port));
+	m_node_table = std::make_shared<node_table>(m_peer_manager->store, alias, node_endpoint(listen_ip, port, port), m_steady_clock);
 	m_node_table->set_event_handler(new host_node_table_event_handler(*this));
 	m_node_table->start();
 
-    LOG(m_log.info) << "P2P started, mcpnode://" << alias.pub_comp().to_string() << "@" << listen_ip << ":" << port;
+    LOG(m_log.info) << "P2P started, mcpnode://" << id().hex() << "@" << listen_ip << ":" << port;
 
 	run_timer = std::make_unique<ba::deadline_timer>(io_service);
 	run();
@@ -311,12 +314,12 @@ void host::connect(std::shared_ptr<node_info> const & ne)
 		std::lock_guard<std::mutex> lock(m_peers_mutex);
 		if (m_peers.count(ne->id))
 		{
-			//LOG(m_log.info) << "Aborted connect, node already connected, node id: " << ne->id.to_string();
+			//LOG(m_log.info) << "Aborted connect, node already connected, node id: " << ne->id.hex();
 			return;
 		}
 	}
 
-	if (ne->id == alias.pub_comp())
+	if (ne->id == id())//self
 	{
 		return;
 	}
@@ -418,7 +421,7 @@ void host::try_connect_nodes()
 			if (!m_peers.count(info->id))
 			{
 				connect(info);
-				m_node_table->add_node(*info, node_relation::known);
+				m_node_table->add_node(*info, true);/// mark as known peer
 			}
 		}
 
@@ -431,7 +434,7 @@ void host::try_connect_nodes()
 			if (!m_peers.count(info->id))
 			{
 				connect(info);
-				m_node_table->add_node(*info, node_relation::known);
+				m_node_table->add_node(*info, true);/// mark as known peer
 			}
 		}
 
@@ -455,11 +458,10 @@ void host::try_connect_nodes()
 }
 
 // called after successful handshake
-void host::start_peer(mcp::public_key_comp const& _id, dev::RLP const& _rlp, std::unique_ptr<mcp::p2p::frame_coder>&& _io, std::shared_ptr<bi::tcp::socket> const & socket)
+void host::start_peer(mcp::p2p::node_id const& _id, dev::RLP const& _rlp, std::unique_ptr<mcp::p2p::RLPXFrameCoder>&& _io, std::shared_ptr<bi::tcp::socket> const & socket)
 {
 	if (!is_run)
 		return;
-
 
 	hankshake_msg handmsg(_rlp);
 	
@@ -467,7 +469,7 @@ void host::start_peer(mcp::public_key_comp const& _id, dev::RLP const& _rlp, std
 
 	if (remote_node_id != _id)
 	{
-        LOG(m_log.debug) << "Wrong ID: " << remote_node_id.to_string() << " vs. " << _id.to_string();
+        LOG(m_log.debug) << "Wrong ID: " << remote_node_id.hex() << " vs. " << _id.hex();
 		if (socket->is_open())
 			socket->close();
 		
@@ -490,7 +492,7 @@ void host::start_peer(mcp::public_key_comp const& _id, dev::RLP const& _rlp, std
 		if ( !(m_peer_manager->should_reconnect(remote_node_id, _node_info.peer_type, reason)) )
 		{
             boost::system::error_code e;
-            LOG(m_log.info) << "peer: " <<socket->remote_endpoint(e) <<",node id:"<< remote_node_id.to_string() << " is bad peer,be punished reason: " << (int)reason;
+            LOG(m_log.info) << "peer: " <<socket->remote_endpoint(e) <<",node id:"<< remote_node_id.hex() << " is bad peer,be punished reason: " << (int)reason;
 			try
 			{
 				if (socket->is_open())
@@ -508,7 +510,7 @@ void host::start_peer(mcp::public_key_comp const& _id, dev::RLP const& _rlp, std
 
 		std::shared_ptr<peer> new_peer(std::make_shared<peer>(socket, remote_node_id, m_peer_manager, move(_io)));
 		//check self connect
-		if (remote_node_id == alias.pub_comp())
+		if (remote_node_id == id())
 		{
 			new_peer->disconnect(disconnect_reason::self_connect);
 			return;
@@ -523,7 +525,7 @@ void host::start_peer(mcp::public_key_comp const& _id, dev::RLP const& _rlp, std
 				auto exist_peer(m_peers[remote_node_id].lock());
 				if (exist_peer->is_connected())
 				{
-                    LOG(m_log.debug) << boost::str(boost::format("Peer already exists, node id: %1%") % remote_node_id.to_string());
+                    LOG(m_log.debug) << boost::str(boost::format("Peer already exists, node id: %1%") % remote_node_id.hex());
 					new_peer->disconnect(disconnect_reason::duplicate_peer);
 					return;
 				}
@@ -547,7 +549,7 @@ void host::start_peer(mcp::public_key_comp const& _id, dev::RLP const& _rlp, std
 			{
 				boost::system::error_code ec;
                 LOG(m_log.debug) << "Too many peers. peer count: " << m_peers.size() << ",pending peers: " << pending_conns.size()
-					<< ",remote node id: " << remote_node_id.to_string() << ",remote endpoint: " << socket->remote_endpoint(ec) 
+					<< ",remote node id: " << remote_node_id.hex() << ",remote endpoint: " << socket->remote_endpoint(ec) 
 					<< ",max peers: " << max_peer_size(peer_type::ingress);
 
 				new_peer->disconnect(disconnect_reason::too_many_peers);
@@ -591,7 +593,7 @@ void host::start_peer(mcp::public_key_comp const& _id, dev::RLP const& _rlp, std
 	{
 		boost::system::error_code ec;
         LOG(m_log.warning) << boost::str(boost::format("Error while starting Peer %1% : %2%, message: %3%")
-			% remote_node_id.to_string() % socket->remote_endpoint(ec) % e.what());
+			% remote_node_id.hex() % socket->remote_endpoint(ec) % e.what());
 		try
 		{
 			if (socket->is_open())
@@ -605,7 +607,7 @@ void host::on_node_table_event(node_id const & node_id_a, node_table_event_type 
 {
 	if (type_a == node_table_event_type::node_entry_added)
 	{
-		//LOG(m_log.info) << "Node entry added, id:" << node_id_a.to_string();
+		//LOG(m_log.info) << "Node entry added, id:" << node_id_a.hex();
 
 		if (std::shared_ptr<node_info> nf = m_node_table->get_node(node_id_a))
 		{

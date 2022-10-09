@@ -25,20 +25,12 @@
 #include <boost/log/trivial.hpp>
 #include <boost/format.hpp>
 #include <boost/algorithm/string.hpp>
-//#if defined(NDEBUG)
-//#include <boost/log/sinks/async_frontend.hpp>
-//template <class T>
-//using log_sink = boost::log::sinks::asynchronous_sink<T>;
-//#else
-//#include <boost/log/sinks/sync_frontend.hpp>
-//template <class T>
-//using log_sink = boost::log::sinks::synchronous_sink<T>;
-//#endif
 
 BOOST_LOG_ATTRIBUTE_KEYWORD(channel, "Channel", std::string)
 BOOST_LOG_ATTRIBUTE_KEYWORD(timestamp, "TimeStamp", boost::posix_time::ptime)
 BOOST_LOG_ATTRIBUTE_KEYWORD(severity, "Severity", mcp::Verbosity)
 
+mcp::log mcp::g_log = { mcp::log("node") };
 
 mcp::logging::logging() :
 	log_to_console_value(false),
@@ -163,67 +155,22 @@ bool mcp::logging::parse_old_version_data(mcp::json const &json_a, uint64_t cons
 	auto error(false);
 	try
 	{
-		if (version < 2)
+		/// parse json used low version
+		switch (version)
 		{
-			if (json_a.count("node") && json_a["node"].is_object())
-			{
-				mcp::json j_node_l = json_a["node"].get<mcp::json>();
-
-				if (j_node_l.count("logging") && j_node_l["logging"].is_object())
-				{
-					mcp::json j_logging_l = j_node_l["logging"].get<mcp::json>();
-
-					if (j_logging_l.count("log_to_cerr") && j_logging_l["log_to_cerr"].is_string())
-					{
-						log_to_console_value = (j_logging_l["log_to_cerr"].get<std::string>() == "true" ? true : false);
-					}
-
-					if (j_logging_l.count("max_size") && j_logging_l["max_size"].is_string())
-					{
-						std::string max_size_text = j_logging_l["max_size"].get<std::string>();
-						try
-						{
-							max_size = std::stoull(max_size_text);
-						}
-						catch (const std::exception&)
-						{
-							error = true;
-						}
-					}
-
-					if (j_logging_l.count("rotation_size") && j_logging_l["rotation_size"].is_string())
-					{
-						std::string rotation_size_text = j_logging_l["rotation_size"].get<std::string>();
-						try
-						{
-							rotation_size = std::stoull(rotation_size_text);
-						}
-						catch (const std::exception&)
-						{
-							error = true;
-						}
-					}
-
-					if (j_logging_l.count("flush") && j_logging_l["flush"].is_string())
-						flush = (j_logging_l["flush"].get<std::string>() == "true" ? true : false);
-					else
-						flush = true;
-				}
-				else
-					error = true;
-			}
-			else
-				error = true;
-		}
-		else
-		{
-			if (json_a.count("log") && json_a["log"].is_object())
-			{
-				mcp::json j_log_l = json_a["log"].get<mcp::json>();
-				error |= deserialize_json(j_log_l);
-			}
-			else
-				error = true;
+			//case 0:
+			//{
+			//	/// parse
+			//	break;
+			//}
+			//case 1:
+			//{
+			//	/// parse
+			//	break;
+			//}
+		default:
+			error |= deserialize_json(json_a);
+			break;
 		}
 	}
 	catch (std::runtime_error const &)

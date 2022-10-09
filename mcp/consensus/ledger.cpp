@@ -56,7 +56,7 @@ uint64_t mcp::ledger::calc_witnessed_level(mcp::witness_param const & witness_pa
 
 //witnessed level: search up along best parents, if meet majority of witnesses, the level is witnessed level
 bool mcp::ledger::check_majority_witness(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::iblock_cache> cache_a,
-	mcp::block_hash const &best_pblock_hash, mcp::account const & block_from, mcp::witness_param const & witness_param_a)
+	mcp::block_hash const &best_pblock_hash, dev::Address const & block_from, mcp::witness_param const & witness_param_a)
 {
 	uint64_t const & majority_of_witnesses(witness_param_a.majority_of_witnesses);
 	assert_x(majority_of_witnesses > 0);
@@ -64,7 +64,7 @@ bool mcp::ledger::check_majority_witness(mcp::db::db_transaction & transaction_a
 	if(majority_of_witnesses == 1)
 		return true;
 
-	std::unordered_set<mcp::account> collected_witnesses;
+	std::unordered_set<dev::Address> collected_witnesses;
 	collected_witnesses.insert(block_from);
 	mcp::block_hash mc_block_hash(best_pblock_hash);
 	while (true)
@@ -74,11 +74,11 @@ bool mcp::ledger::check_majority_witness(mcp::db::db_transaction & transaction_a
 
 		std::shared_ptr<mcp::block> mc_block = cache_a->block_get(transaction_a, mc_block_hash);
 		assert_x(mc_block);
-		if (collected_witnesses.count(mc_block->hashables->from))
+		if (collected_witnesses.count(mc_block->from()))
 			break;
 		else
 		{
-			collected_witnesses.insert(mc_block->hashables->from);
+			collected_witnesses.insert(mc_block->from());
 			assert_x(collected_witnesses.size() <= majority_of_witnesses);
 			if (collected_witnesses.size() == majority_of_witnesses)
 				return true;
@@ -93,7 +93,7 @@ bool mcp::ledger::check_majority_witness(mcp::db::db_transaction & transaction_a
 }
 
 
-std::shared_ptr<mcp::min_wl_result> mcp::ledger::find_mc_min_wl(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::iblock_cache> cache_a, uint64_t const & witnessed_level_a, mcp::block_hash const &best_parent_block_hash_a, mcp::account const & block_from)
+std::shared_ptr<mcp::min_wl_result> mcp::ledger::find_mc_min_wl(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::iblock_cache> cache_a, uint64_t const & witnessed_level_a, mcp::block_hash const &best_parent_block_hash_a, dev::Address const & block_from)
 {
 	{
 		//mcp::stopwatch_guard sw("find_mc_min_wl");
@@ -119,12 +119,9 @@ std::shared_ptr<mcp::min_wl_result> mcp::ledger::find_mc_min_wl(mcp::db::db_tran
 			std::shared_ptr<mcp::block> mc_block(cache_a->block_get(transaction_a, best_pblock_hash));
 			assert_x(mc_block);
 
-			if (!min_wl_result->witnesses.count(mc_block->hashables->from))
+			if (!min_wl_result->witnesses.count(mc_block->from()))
 			{
-				// std::cerr << "min_wl witness:" << mc_block->hashables->from.to_account() << std::endl;
-				// std::cerr << "min_wl witness block:" << best_pblock_hash.to_string() << std::endl;
-
-				min_wl_result->witnesses.insert(mc_block->hashables->from);
+				min_wl_result->witnesses.insert(mc_block->from());
 				if (mc_block_state->witnessed_level < min_wl_result->min_wl)
 				{
 					min_wl_result->min_wl = mc_block_state->witnessed_level;
@@ -140,7 +137,7 @@ std::shared_ptr<mcp::min_wl_result> mcp::ledger::find_mc_min_wl(mcp::db::db_tran
 
 bool mcp::ledger::check_stable(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::iblock_cache> cache_a,
 	mcp::block_hash const &earlier_hash, mcp::block_hash const & bp_block_hash, std::vector<mcp::block_hash> const &parents_a,
-	mcp::account const & block_from_a, mcp::block_hash const & checked_stable_block_hash, mcp::witness_param const & witness_param_a)
+	dev::Address const & block_from_a, mcp::block_hash const & checked_stable_block_hash, mcp::witness_param const & witness_param_a)
 {
 	//mcp::stopwatch_guard sw("check_stable");
 
@@ -258,7 +255,7 @@ bool mcp::ledger::check_stable(mcp::db::db_transaction & transaction_a, std::sha
 			block = cache_a->block_get(transaction_a, block_hash);
 			assert_x(block);
 
-			if (min_wl_result->witnesses.count(block->hashables->from)
+			if (min_wl_result->witnesses.count(block->from())
 				&& *block_state->bp_included_mc_index < earlier_mci
 				&& *block_state->bp_included_mc_index >= checked_stable_mci)
 			{
@@ -274,8 +271,8 @@ bool mcp::ledger::check_stable(mcp::db::db_transaction & transaction_a, std::sha
 						return false;
 
 					// std::unordered_set<mcp::block_hash> branch_witnesses; changed by Daniel
-					std::unordered_set<mcp::account> branch_witnesses;
-					branch_witnesses.insert(block->hashables->from);
+					std::unordered_set<dev::Address> branch_witnesses;
+					branch_witnesses.insert(block->from());
 
 					//check block does not include earlier block along best parents
 					mcp::block_hash branch_bp_block_hash(block_state->best_parent);
@@ -295,10 +292,10 @@ bool mcp::ledger::check_stable(mcp::db::db_transaction & transaction_a, std::sha
 								break;
 
 							auto branch_bp_block(cache_a->block_get(transaction_a, branch_bp_block_hash));
-							if (min_wl_result->witnesses.count(branch_bp_block->hashables->from)
-								&& !branch_witnesses.count(branch_bp_block->hashables->from))
+							if (min_wl_result->witnesses.count(branch_bp_block->from())
+								&& !branch_witnesses.count(branch_bp_block->from()))
 							{
-								branch_witnesses.insert(branch_bp_block->hashables->from);
+								branch_witnesses.insert(branch_bp_block->from());
 
 								if (branch_witnesses.size() == branch_witness_check_count)
 								{

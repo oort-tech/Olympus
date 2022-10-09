@@ -199,102 +199,22 @@ bool mcp::p2p::p2p_config::parse_old_version_data(mcp::json const & json_a, uint
     auto error(false);
     try
     {
-		if (version < 2)
+		/// parse json used low version
+		switch (version)
 		{
-			if (json_a.count("node") && json_a["node"].is_object())
-			{
-				mcp::json j_node_l = json_a["node"].get<mcp::json>();
-
-				if (j_node_l.count("p2p") && j_node_l["p2p"].is_object())
-				{
-					mcp::json j_p2p_l = j_node_l["p2p"].get<mcp::json>();
-
-					if (j_p2p_l.count("host") && j_p2p_l["host"].is_string())
-					{
-						listen_ip = j_p2p_l["host"].get<std::string>();
-					}
-
-					if (j_p2p_l.count("port") && j_p2p_l["port"].is_string())
-					{
-						std::string port_text = j_p2p_l["port"].get<std::string>();
-						uint64_t port_l(0);
-						try
-						{
-							port_l = std::stoull(port_text);
-							if (port_l <= std::numeric_limits<uint16_t>::max())
-							{
-								port = port_l;
-							}
-							else
-							{
-								error = true;
-							}
-						}
-						catch (std::logic_error const &)
-						{
-							error = true;
-						}
-					}
-
-					if (j_p2p_l.count("max_peers") && j_p2p_l["max_peers"].is_string())
-					{
-						std::string max_peers_text = j_p2p_l["max_peers"].get<std::string>();
-						try
-						{
-							max_peers = std::stoull(max_peers_text);
-						}
-						catch (const std::exception&)
-						{
-							error = true;
-						}
-
-					}
-
-					if (j_p2p_l.count("bootstrap_nodes"))
-					{
-						if (j_p2p_l["bootstrap_nodes"].is_array())
-						{
-							mcp::json j_boot = j_p2p_l["bootstrap_nodes"];
-							bootstrap_nodes.clear();
-							for (auto i : j_boot)
-							{
-								bootstrap_nodes.push_back(i);
-							}
-						}
-					}
-
-					if (j_p2p_l.count("exemption_nodes"))
-					{
-						if (j_p2p_l["exemption_nodes"].is_array())
-						{
-							mcp::json j_exemp = j_p2p_l["exemption_nodes"];
-							for (auto i : j_exemp)
-							{
-								exemption_nodes.push_back(i);
-							}
-						}
-					}
-
-					if (j_p2p_l.count("nat") && j_p2p_l["nat"].is_string())
-					{
-						nat = (j_p2p_l["nat"].get<std::string>() == "true" ? true : false);
-					}
-				}
-				else
-					error = true;
-			}
-			else
-				error = true;
-		}
-		else
-		{
-			if (json_a.count("p2p") && json_a["p2p"].is_object())
-			{
-				mcp::json j_p2p_l = json_a["p2p"].get<mcp::json>();
-				error |= deserialize_json(j_p2p_l);
-			}
-			else
-				error = true;
+			//case 0:
+			//{
+			//	/// parse
+			//	break;
+			//}
+			//case 1:
+			//{
+			//	/// parse
+			//	break;
+			//}
+		default:
+			error |= deserialize_json(json_a);
+			break;
 		}
     }
     catch (std::runtime_error const &)

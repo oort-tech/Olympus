@@ -1,4 +1,5 @@
 #include <mcp/node/sync.hpp>
+#include <libdevcore/TrieHash.h>
 
 mcp::sync_request_status::sync_request_status(mcp::p2p::node_id const & request_node_id_a,
 	mcp::sub_packet_type const & request_type_a) :
@@ -29,8 +30,8 @@ void mcp::sync_request_status::operator=(mcp::sync_request_status const &other_a
 
 void mcp::sync_info::clear()
 {
-	request_hash_tree_from_summary = 0;
-	request_hash_tree_to_summary = 0;
+	request_hash_tree_from_summary.clear();
+	request_hash_tree_to_summary.clear();
 	request_hash_tree_start_index = 0;
 	index = 0;
 	max_index = 0;
@@ -38,7 +39,7 @@ void mcp::sync_info::clear()
 	catchup_del_index.clear();
 	current_del_catchup = 0;
 	to_summary_index.clear();
-	id = 0;
+	id.clear();
 	del_catchup_index = 0;
 }
 
@@ -54,13 +55,15 @@ mcp::sync_info mcp::node_sync::m_request_info;
 mcp::node_sync::node_sync(
 	std::shared_ptr<mcp::node_capability> capability_a, mcp::block_store& store_a,
 	std::shared_ptr<mcp::chain> chain_a, std::shared_ptr<mcp::block_cache> cache_a,
-	std::shared_ptr<mcp::async_task> async_task_a,
+	std::shared_ptr<mcp::TransactionQueue> tq, std::shared_ptr<mcp::ApproveQueue> aq, std::shared_ptr<mcp::async_task> async_task_a,
 	mcp::fast_steady_clock& steady_clock_a, boost::asio::io_service & io_service_a
 ) :
 	m_capability(capability_a),
 	m_store(store_a),
 	m_chain(chain_a),
 	m_cache(cache_a),
+	m_tq(tq),
+	m_aq(aq),
 	m_async_task(async_task_a),
 	m_steady_clock(steady_clock_a),
 	m_stoped(false),
@@ -104,15 +107,6 @@ void mcp::node_sync::joint_request_handler(p2p::node_id const &id, mcp::joint_re
 		mcp::db::db_transaction transaction(m_store.create_transaction());
 
 		std::shared_ptr<mcp::block> block = m_cache->block_get(transaction, request.block_hash);
-		if (block == nullptr 
-			&& request.type == mcp::block_type::light)
-		{
-			std::shared_ptr<mcp::unlink_block> unlink_block = m_cache->unlink_block_get(transaction, request.block_hash);
-			if (unlink_block == nullptr)
-				return;
-			block = unlink_block->block;
-		}
-
 		if (nullptr == block)
 			return;
 
@@ -129,12 +123,6 @@ void mcp::node_sync::joint_request_handler(p2p::node_id const &id, mcp::joint_re
 		}
 		else
 		{
-			//if block data cleaned, not send this block
-			if (!block->hashables->data_hash.is_zero() && block->data.empty())
-			{
-				LOG(log_sync.info) << "joint_request_handler data_hash exist, data empty, hash:" << block->hashables->data_hash.to_string();
-				return;
-			}
 			mcp::joint_message joint(block);
 			joint.request_id = request.request_id;
 			send_block(id, joint);
@@ -143,6 +131,64 @@ void mcp::node_sync::joint_request_handler(p2p::node_id const &id, mcp::joint_re
 	catch (const std::exception& e)
 	{
 		LOG(log_sync.error) << "joint_request_handler error:" << e.what();
+		throw;
+	}
+}
+
+void mcp::node_sync::transaction_request_handler(p2p::node_id const &id, mcp::transaction_request_message const &request)
+{
+	try
+	{
+		mcp::stopwatch_guard sw("sync:transaction_request_handler");
+
+		if (m_stoped)
+			return;
+
+		std::shared_ptr<mcp::Transaction> t = m_tq->get(request.hash);
+		if (nullptr == t)
+		{
+			mcp::db::db_transaction transaction(m_store.create_transaction());
+			t = m_cache->transaction_get(transaction, request.hash);
+			if (nullptr == t) /// not existed
+				return;
+		}
+
+		//mcp::joint_message joint(block);
+		//joint.request_id = request.request_id;
+		send_transaction(id, *t);
+	}
+	catch (const std::exception& e)
+	{
+		LOG(log_sync.error) << "transaction_request_handler error:" << e.what();
+		throw;
+	}
+}
+
+void mcp::node_sync::approve_request_handler(p2p::node_id const &id, mcp::approve_request_message const &request)
+{
+	try
+	{
+		mcp::stopwatch_guard sw("sync:approve_request_handler");
+
+		if (m_stoped)
+			return;
+
+		std::shared_ptr<mcp::approve> t = m_aq->get(request.hash);
+		if (nullptr == t)
+		{
+			mcp::db::db_transaction transaction(m_store.create_transaction());
+			t = m_cache->approve_get(transaction, request.hash);
+			if (nullptr == t) /// not existed
+				return;
+		}
+
+		//mcp::joint_message joint(block);
+		//joint.request_id = request.request_id;
+		send_approve(id, *t);
+	}
+	catch (const std::exception& e)
+	{
+		LOG(log_sync.error) << "approve_request_handler error:" << e.what();
 		throw;
 	}
 }
@@ -169,7 +215,7 @@ void mcp::node_sync::request_catchup(p2p::node_id const& id)
 					mcp::peer_info &pi(m_capability->m_peers.at(id));
 					if (auto p = pi.try_lock_peer())
 					{
-						LOG(log_sync.info) << "id:" << id.to_string() << " ,ip:" << p->remote_endpoint();
+						LOG(log_sync.info) << "id:" << id.hex() << " ,ip:" << p->remote_endpoint();
 					}
 				}
 			}
@@ -245,7 +291,7 @@ void mcp::node_sync::request_catchup(p2p::node_id const& id)
                 }
 				m_request_info.clear();
 				purge_handled_summaries_from_hash_tree();
-				request_remote_mc(transaction, id, 0, 0);
+				request_remote_mc(transaction, id, mcp::summary_hash(0), mcp::block_hash(0));
 			//}
 		}
 	}
@@ -272,19 +318,19 @@ void mcp::node_sync::request_remote_mc(mcp::db::db_transaction & transaction_a, 
 	req_mg.unstable_mc_joints_tail = unstable_tail_block;
 	req_mg.first_catchup_chain_summary = from_summary;
 
-	mcp::witness_param const & w_param(mcp::param::curr_witness_param());
+	mcp::witness_param const & w_param(mcp::param::witness_param(m_chain->last_epoch()));
 	req_mg.arr_witnesses = w_param.witness_list;
 	req_mg.distinct_witness_size = w_param.witness_count - w_param.majority_of_witnesses + 1; //there must be at least one honest witness
 
 	uint64_t timestamp(mcp::seconds_since_epoch());
 	mcp::sub_packet_type ty(mcp::sub_packet_type::catchup_request);
-	req_mg.request_id = m_capability->gen_sync_request_hash(id, timestamp, ty);
+	req_mg.request_id = mcp::gen_sync_request_hash(id, timestamp, ty);
 
 	LOG(log_sync.info) << "request_remote_mc::stable_mci:" << req_mg.last_stable_mci 
 		<< ",last_known_mci:" << req_mg.last_known_mci 
-		<< ",from_summary:" << from_summary.to_string() 
-		<< ",unstable_tail_block:" << unstable_tail_block.to_string() 
-		<< ",request_id:" << req_mg.request_id.to_string();;
+		<< ",from_summary:" << from_summary.hex() 
+		<< ",unstable_tail_block:" << unstable_tail_block.hex()
+		<< ",request_id:" << req_mg.request_id.hex();
 	send_catchup_request(id, req_mg);
 }
 
@@ -297,8 +343,7 @@ void mcp::node_sync::send_catchup_request(p2p::node_id const& id, mcp::catchup_r
 		mcp::peer_info &pi(m_capability->m_peers.at(id));
 		if (auto p = pi.try_lock_peer())
 		{
-			m_capability->m_pcapability_metrics->catchup_request++;
-			m_capability->m_node_id_cap_metrics[id]->catchup_request++;
+			mcp::CapMetricsSend.catchup_request++;
 
 			m_current_request_id = message.request_id;
 			m_current_catchup_request = message;
@@ -389,7 +434,7 @@ void mcp::node_sync::prepare_catchup_chain(mcp::catchup_request_message const& r
 	uint64_t last_stable_mci_remote = request.last_stable_mci;
 	uint64_t last_known_mci_remote = request.last_known_mci;
 	mcp::summary_hash first_catchup_chain_summary = request.first_catchup_chain_summary;
-	std::set<mcp::account> arr_witnesses_remote = request.arr_witnesses;
+	std::set<dev::Address> arr_witnesses_remote = request.arr_witnesses;
 	size_t distinct_witness_size_remote = request.distinct_witness_size;
 
 	mcp::db::db_transaction transaction(m_store.create_transaction());
@@ -399,12 +444,12 @@ void mcp::node_sync::prepare_catchup_chain(mcp::catchup_request_message const& r
 	std::list<mcp::joint_message> arr_unstable_mc_joints;
 	std::list<mcp::joint_message> arr_stable_last_summary_joints;
 	mcp::block_hash last_summary_hash(0);
-	std::unordered_set<mcp::account> arr_found_witnesses;
+	std::unordered_set<dev::Address> arr_found_witnesses;
 
-	if (first_catchup_chain_summary == 0)
+	if (first_catchup_chain_summary == mcp::summary_hash(0))
 	{
 
-		bool remaining_unstable_mc_joints_start = (request.unstable_mc_joints_tail == 0);
+		bool remaining_unstable_mc_joints_start = (request.unstable_mc_joints_tail == mcp::block_hash(0));
 
 		uint64_t last_stable_mci;
 		uint64_t last_mci;
@@ -434,7 +479,7 @@ void mcp::node_sync::prepare_catchup_chain(mcp::catchup_request_message const& r
 			assert_x(mc_exists);
 
 			std::shared_ptr<mcp::block> mc_block = m_cache->block_get(transaction, mc_hash);
-			mcp::account acct = mc_block->hashables->from;
+			dev::Address acct = mc_block->from();
 
 			//find first honest witness
 			if (arr_found_witnesses.size() < distinct_witness_size_remote)
@@ -448,12 +493,12 @@ void mcp::node_sync::prepare_catchup_chain(mcp::catchup_request_message const& r
 			if (arr_found_witnesses.size() == distinct_witness_size_remote)
 			{
 				// Collect last summaries of last distinct witnessed blocks
-				if (!mc_block->hashables->last_summary_block.is_zero() && last_summary_hash.is_zero())
+				if (mc_block->last_summary_block() != mcp::block_hash(0) && last_summary_hash == mcp::block_hash(0))
 				{
-					last_summary_hash = mc_block->hashables->last_summary_block;
+					last_summary_hash = mc_block->last_summary_block();
 				}
 
-				std::shared_ptr<mcp::block_state> first_last_summary_state(m_cache->block_state_get(transaction, mc_block->hashables->last_summary_block));
+				std::shared_ptr<mcp::block_state> first_last_summary_state(m_cache->block_state_get(transaction, mc_block->last_summary_block()));
 				assert_x(first_last_summary_state
 					&& first_last_summary_state->is_on_main_chain
 					&& first_last_summary_state->main_chain_index);
@@ -498,7 +543,7 @@ void mcp::node_sync::prepare_catchup_chain(mcp::catchup_request_message const& r
 
 	// create arr_stable_last_summary_joints
 	mcp::block_hash last_summary_block;
-	if (first_catchup_chain_summary == 0)
+	if (first_catchup_chain_summary == mcp::summary_hash(0))
 	{
 		last_summary_block = last_summary_hash;
 	}
@@ -532,12 +577,12 @@ void mcp::node_sync::prepare_catchup_chain(mcp::catchup_request_message const& r
 		arr_stable_last_summary_joints.push_back(joint);
 
 		LOG(log_sync.debug) << "arr_stable_last_summary_joints, mci = " << last_summary_mci
-			<< ", summary = " << joint.summary_hash.to_string() << ",block:" << last_summary_block.to_string();
-		assert_x(!sh.is_zero());
+			<< ", summary = " << joint.summary_hash.hex() << ",block:" << last_summary_block.hex();
+		assert_x(sh != mcp::summary_hash(0));
 		if (last_summary_mci > last_stable_mci_remote && last_summary_mci > 0 && arr_stable_last_summary_joints.size() < 500)
 		{
 			// go to next - last summary
-			last_summary_block = bk->hashables->last_summary_block;
+			last_summary_block = bk->last_summary_block();
 			std::shared_ptr<mcp::block_state> bs(m_cache->block_state_get(transaction, last_summary_block));
 			last_summary_mci = *bs->main_chain_index;
 		}
@@ -564,8 +609,7 @@ void mcp::node_sync::send_catchup_response(p2p::node_id const& id, mcp::catchup_
 		mcp::peer_info &pi(m_capability->m_peers.at(id));
 		if (auto p = pi.try_lock_peer())
 		{
-			m_capability->m_pcapability_metrics->catchup_response++;
-			m_capability->m_node_id_cap_metrics[id]->catchup_response++;
+			mcp::CapMetricsSend.send_catchup++;
 
 			dev::RLPStream s;
 			p->prep(s, pi.offset + (unsigned)mcp::sub_packet_type::catchup_response, 1);
@@ -753,10 +797,10 @@ mcp::sync_result mcp::node_sync::request_next_hash_tree(p2p::node_id const& id, 
 
 	uint64_t timestamp(mcp::seconds_since_epoch());
 	mcp::sub_packet_type ty(mcp::sub_packet_type::hash_tree_request);
-	request.request_id = m_capability->gen_sync_request_hash(id, timestamp, ty);
+	request.request_id = mcp::gen_sync_request_hash(id, timestamp, ty);
 
-	LOG(log_sync.debug) << "send hash tree request, from summary: " << from_summary.to_string()
-		<< ", to summary: " << to_summary.to_string() << ",next index:" << next_start_index << ",request_id:" << request.request_id.to_string();
+	LOG(log_sync.debug) << "send hash tree request, from summary: " << from_summary.hex()
+		<< ", to summary: " << to_summary.hex() << ",next index:" << next_start_index << ",request_id:" << request.request_id.hex();
 
 
 	send_hash_tree_request(id, request);
@@ -772,8 +816,7 @@ void mcp::node_sync::send_hash_tree_request(p2p::node_id const & id, mcp::hash_t
 		mcp::peer_info &pi(m_capability->m_peers.at(id));
 		if (auto p = pi.try_lock_peer())
 		{
-			m_capability->m_pcapability_metrics->hash_tree_request++;
-			m_capability->m_node_id_cap_metrics[id]->hash_tree_request++;
+			mcp::CapMetricsSend.hash_tree_request++;
 
 			m_current_request_id = message.request_id;
 			dev::RLPStream s;
@@ -834,8 +877,8 @@ mcp::sync_result mcp::node_sync::process_catchup_chain(mcp::catchup_response_mes
 
 			uint64_t distinct_witness_size = m_current_catchup_request.distinct_witness_size;
 			assert_x(distinct_witness_size > 0);
-			std::set<mcp::account> const & arr_witnesses = m_current_catchup_request.arr_witnesses;
-			std::vector<mcp::account> arr_found_witnesses;
+			std::set<dev::Address> const & arr_witnesses = m_current_catchup_request.arr_witnesses;
+			std::vector<dev::Address> arr_found_witnesses;
 			std::vector<mcp::joint_message> arr_witness_joints;
 
 			std::vector<mcp::block_hash> arr_parent_blocks;
@@ -848,7 +891,7 @@ mcp::sync_result mcp::node_sync::process_catchup_chain(mcp::catchup_response_mes
 				std::shared_ptr<mcp::block> block = joint.block;
 				mcp::block_hash bh = block->hash();
 
-				if (!joint.summary_hash.is_zero())
+				if (joint.summary_hash != mcp::summary_hash(0))
 				{
 					LOG(log_sync.info) << "process_catchup_chain_error:unstable mc but has summary";
 					process_catchup_result = mcp::sync_result::catchup_chain_summary_check_fail;
@@ -862,7 +905,7 @@ mcp::sync_result mcp::node_sync::process_catchup_chain(mcp::catchup_response_mes
 					return  process_catchup_result;
 				}
 
-				mcp::account acct = block->hashables->from;
+				dev::Address acct = block->from();
 				if (arr_witnesses.count(acct))
 				{
 					if (std::find(arr_found_witnesses.begin(), arr_found_witnesses.end(), acct) == arr_found_witnesses.end())
@@ -872,13 +915,13 @@ mcp::sync_result mcp::node_sync::process_catchup_chain(mcp::catchup_response_mes
 					arr_witness_joints.push_back(joint);
 				}
 
-				arr_parent_blocks = block->hashables->parents;
+				arr_parent_blocks = block->parents();
 
 				// derive last_summary_block from receiver's own point of view
-				if (!block->hashables->last_summary_block.is_zero() && arr_found_witnesses.size() >= distinct_witness_size)
+				if (block->last_summary_block() != mcp::block_hash(0) && arr_found_witnesses.size() >= distinct_witness_size)
 				{
-					arr_last_summary_blocks.push_back(block->hashables->last_summary_block);
-					assoc_last_summary_by_block[block->hashables->last_summary_block] = block->hashables->last_summary;
+					arr_last_summary_blocks.push_back(block->last_summary_block());
+					assoc_last_summary_by_block[block->last_summary_block()] = block->last_summary();
 				}
 			}
 
@@ -900,7 +943,8 @@ mcp::sync_result mcp::node_sync::process_catchup_chain(mcp::catchup_response_mes
 			for (auto joint : arr_witness_joints)
 			{
 				std::shared_ptr<mcp::block> block = joint.block;
-				if (!validate_message(block->hashables->from, block->hash(), block->signature))
+				dev::Public p = dev::recover(block->signature(), block->hash());
+				if (dev::toAddress(p) != block->from())   //todo used eth sign----------------------------------------
 				{
 					LOG(log_sync.info) << "process_catchup_chain_error:invalid signature";
 					process_catchup_result = mcp::sync_result::catchup_chain_summary_check_fail;
@@ -961,14 +1005,14 @@ mcp::sync_result mcp::node_sync::process_catchup_chain(mcp::catchup_response_mes
 #pragma region validate the joints on catchup chain, and put their summaries in an array
 		if (catchup_chain_tail.summary_hash != last_summary)
 		{
-			LOG(log_sync.info) << "process_catchup_chain_error:last summary do not match." << ",last_summary:" << last_summary.to_string() << ",last_summary_block:" << last_summary_block.to_string() << ",catchup_chain_tail.summary_hash:" << catchup_chain_tail.summary_hash.to_string() << ",catchup_chain_block_summary_error:" << catchup_chain_block_summary_error;
+			LOG(log_sync.info) << "process_catchup_chain_error:last summary do not match." << ",last_summary:" << last_summary.hex() << ",last_summary_block:" << last_summary_block.hex() << ",catchup_chain_tail.summary_hash:" << catchup_chain_tail.summary_hash.hex() << ",catchup_chain_block_summary_error:" << catchup_chain_block_summary_error;
 			process_catchup_result = mcp::sync_result::catchup_chain_summary_check_fail;
 			return  process_catchup_result;
 		}
 
         if (m_cache->block_exists(transaction, last_summary_block))
         {
-            LOG(log_sync.info) << "process_catchup_chain_error:last_summary_block exist" << last_summary_block.to_string();
+            LOG(log_sync.info) << "process_catchup_chain_error:last_summary_block exist" << last_summary_block.hex();
             process_catchup_result = mcp::sync_result::catchup_chain_summary_check_fail;
             return  process_catchup_result;
         }
@@ -977,7 +1021,7 @@ mcp::sync_result mcp::node_sync::process_catchup_chain(mcp::catchup_response_mes
 		{
 			std::shared_ptr<mcp::block> block = joint.block;
 
-			if (joint.summary_hash.is_zero())
+			if (joint.summary_hash == mcp::summary_hash(0))
 			{
 				LOG(log_sync.info) << "process_catchup_chain_error:joints has no summaries";
 				process_catchup_result = mcp::sync_result::catchup_chain_summary_check_fail;
@@ -995,10 +1039,10 @@ mcp::sync_result mcp::node_sync::process_catchup_chain(mcp::catchup_response_mes
 				process_catchup_result = mcp::sync_result::catchup_chain_summary_check_fail;
 				return  process_catchup_result;
 			}
-			if (!block->hashables->last_summary_block.is_zero())
+			if (block->last_summary_block() != mcp::block_hash(0))
 			{
-				last_summary_block = block->hashables->last_summary_block;
-				last_summary = block->hashables->last_summary;
+				last_summary_block = block->last_summary_block();
+				last_summary = block->last_summary();
 			}
 		}
 #pragma endregion
@@ -1041,7 +1085,7 @@ mcp::sync_result mcp::node_sync::process_catchup_chain(mcp::catchup_response_mes
 		{
 			if (last_sync_chain_tail != joint.summary_hash)
 			{
-				LOG(log_sync.error) << "catchup chain:chain tail not overlap:error:summary:" << last_sync_chain_tail.to_string() << ",now:" << joint.summary_hash.to_string();
+				LOG(log_sync.error) << "catchup chain:chain tail not overlap:error:summary:" << last_sync_chain_tail.hex() << ",now:" << joint.summary_hash.hex();
 				process_catchup_result = mcp::sync_result::catchup_chain_summary_check_fail;
 				return process_catchup_result;
 			}
@@ -1055,7 +1099,7 @@ mcp::sync_result mcp::node_sync::process_catchup_chain(mcp::catchup_response_mes
 			mcp::block_hash bh(0);
 			if (!m_store.catchup_chain_summary_block_get(transaction, joint.summary_hash, bh))
 			{
-				LOG(log_sync.error) << "catchup chain: not chain tail gen multi:summary:" << joint.summary_hash.to_string() << "block:" << bh.to_string();
+				LOG(log_sync.error) << "catchup chain: not chain tail gen multi:summary:" << joint.summary_hash.hex() << "block:" << bh.hex();
 				process_catchup_result = mcp::sync_result::catchup_chain_summary_check_fail;
 				return process_catchup_result;
 			}
@@ -1080,7 +1124,7 @@ mcp::sync_result mcp::node_sync::process_catchup_chain(mcp::catchup_response_mes
 				throw;
 			}
 		}
-		LOG(log_sync.debug) << "catchup chain : index:" << index << ",summary hash:" << joint.summary_hash.to_string() << ",block:" << joint.block->hash().to_string();
+		LOG(log_sync.debug) << "catchup chain : index:" << index << ",summary hash:" << joint.summary_hash.hex() << ",block:" << joint.block->hash().hex();
 		index++;
 	}
 
@@ -1148,6 +1192,8 @@ void mcp::node_sync::read_hash_tree(mcp::hash_tree_request_message const& hash_t
 	{
 		from_index = hash_tree_request.next_start_index;
 	}
+	if (from_index == 0)
+		from_index++; /// skip genesis block
 	uint64_t to_index = to_block_state->stable_index;
 
 	//LOG(log_sync.debug) << "read_hash_tree_start:from_summary = " << hash_tree_request.from_summary.to_string()
@@ -1155,6 +1201,7 @@ void mcp::node_sync::read_hash_tree(mcp::hash_tree_request_message const& hash_t
 	//	<< ",from_index = " << from_index << ",to_index = " << to_index;
 
 	uint64_t all_link_size = 0;
+	uint64_t all_approve_size = 0;
 	for (uint64_t index = from_index; index <= to_index; index++)
 	{
 		mcp::block_hash bh;
@@ -1162,7 +1209,7 @@ void mcp::node_sync::read_hash_tree(mcp::hash_tree_request_message const& hash_t
 		assert_x(exists);
 
 		if (hash_tree_response.arr_summaries.size() >= mcp::p2p::max_summary_items
-			|| all_link_size > 250000)
+			|| all_link_size > 1024 || all_approve_size > 1024)
 		{
 			hash_tree_response.next_start_index = index;
 			//LOG(log_sync.debug) << "read_hash_tree_next:" << "index:" << index;
@@ -1176,14 +1223,13 @@ void mcp::node_sync::read_hash_tree(mcp::hash_tree_request_message const& hash_t
 
 		//previous summary hash
 		mcp::summary_hash previous_summary(0);
-		if (!block_ptr->previous().is_zero())
+		if (block_ptr->previous() != mcp::block_hash(0))
 		{
 			bool previous_summary_hash_error(m_cache->block_summary_get(transaction, block_ptr->previous(), previous_summary));
 			assert_x(!previous_summary_hash_error);
 		}
 
 		std::list<mcp::summary_hash> p_summaries;
-		std::list<mcp::summary_hash> l_summaries;
 		std::set<mcp::summary_hash> s_summaries;
 
 		// check if all the parent have summaries
@@ -1201,20 +1247,60 @@ void mcp::node_sync::read_hash_tree(mcp::hash_tree_request_message const& hash_t
 		}
 
 		// check if all the links have summaries
-		std::shared_ptr<std::list<mcp::block_hash>> links(block_ptr->links());
-		for (auto it = links->begin(); it != links->end(); ++it)
+		std::vector<bytes> receipts;
+		std::vector<std::shared_ptr<Transaction>> trannsactions;
+		auto links(block_ptr->links());
+		for (auto it : block_ptr->links())
 		{
 			mcp::summary_hash sh;
-			if (m_cache->block_summary_get(transaction, *it, sh))
+			auto receipt = m_cache->transaction_receipt_get(transaction, it);
+			if (receipt == nullptr)
 			{
-				LOG(log_sync.info) << "read_hash_tree: some parents have no summaries";
-				l_summaries.clear();
+				LOG(log_sync.info) << "read_hash_tree: some receipt have no summaries";
+				receipts.clear();
 				return;
 			}
-			//BOOST_LOG(log) << "read_hash_tree:"<<"block:"<< bh.to_string() <<",parent summary: " << sh.to_string();
-			l_summaries.push_back(sh);
+			RLPStream receiptRLP;
+			receipt->streamRLP(receiptRLP);
+			receipts.push_back(receiptRLP.out());
+
+			auto t = m_cache->transaction_get(transaction, it);
+			if (t == nullptr)
+			{
+				LOG(log_sync.info) << "read_hash_tree: some transactions have no summaries";
+				receipts.clear();
+				return;
+			}
+			trannsactions.push_back(t);
 		}
-		all_link_size += l_summaries.size();
+		all_link_size += links.size();
+
+		// check if all the approves have summaries
+		std::vector<std::shared_ptr<approve>> approves;
+		for (auto it : block_ptr->approves())
+		{
+			mcp::summary_hash sh;
+			auto receipt = m_cache->approve_receipt_get(transaction, it);
+			if (receipt == nullptr)
+			{
+				LOG(log_sync.info) << "read_hash_tree: some approve receipt have no summaries";
+				receipts.clear();
+				return;
+			}
+			RLPStream receiptRLP;
+			receipt->streamRLP(receiptRLP);
+			receipts.push_back(receiptRLP.out());
+
+			auto t = m_cache->approve_get(transaction, it);
+			if (t == nullptr)
+			{
+				LOG(log_sync.info) << "read_hash_tree: some approves have no summaries";
+				return;
+			}
+			approves.push_back(t);
+		}
+		all_approve_size += block_ptr->approves().size();
+		h256 receiptsRoot = dev::orderedTrieRoot(receipts);
 
 		// check if all the blocks on skiplist have summaries
 		mcp::skiplist_info s_info;
@@ -1233,7 +1319,7 @@ void mcp::node_sync::read_hash_tree(mcp::hash_tree_request_message const& hash_t
 		}
 
 		// fill the summary items
-		mcp::hash_tree_response_message::summary_items s(bh, sh, previous_summary, p_summaries, l_summaries, s_summaries, bs->status, bs->stable_index, bs->mc_timestamp, bs->receipt, bs->level, block_ptr, *bs->main_chain_index, s_info.list);
+		mcp::hash_tree_response_message::summary_items s(bh, sh, previous_summary, p_summaries, receiptsRoot, s_summaries, bs->status, bs->stable_index, bs->mc_timestamp, bs->level, block_ptr, trannsactions, approves, *bs->main_chain_index, s_info.list);
 		hash_tree_response.arr_summaries.insert(s);
 
 		//dev::RLPStream rlp_stream;
@@ -1256,8 +1342,7 @@ void mcp::node_sync::send_hash_tree_response(p2p::node_id const& id, mcp::hash_t
 		mcp::peer_info &pi(m_capability->m_peers.at(id));
 		if (auto p = pi.try_lock_peer())
 		{
-			m_capability->m_pcapability_metrics->hash_tree_response++;
-			m_capability->m_node_id_cap_metrics[id]->hash_tree_response++;
+			mcp::CapMetricsSend.send_hash_tree++;
 
 			dev::RLPStream s;
 			p->prep(s, pi.offset + (unsigned)mcp::sub_packet_type::hash_tree_response, 1);
@@ -1306,7 +1391,7 @@ void mcp::node_sync::process_hash_tree(p2p::node_id const &id, mcp::hash_tree_re
 		return;
 	}
 
-	LOG(log_sync.debug) << "process_hash_tree:" << hash_tree_response.request_id.to_string();
+	LOG(log_sync.debug) << "process_hash_tree:" << hash_tree_response.request_id.hex();
 
 	std::queue<std::shared_ptr<mcp::block_processor_item>> items;
 
@@ -1330,98 +1415,94 @@ void mcp::node_sync::process_hash_tree(p2p::node_id const &id, mcp::hash_tree_re
 				break;
 			}
 
-			if (s_item.block_hash.is_zero() || s_item.block_hash != s_item.block->hash())
+			if (s_item.block_hash == mcp::block_hash(0) || s_item.block_hash != s_item.block->hash())
 			{
 				LOG(log_sync.info) << "process_hash_tree : invalid block hash";
 				error = true;
 				break;
 			}
-			if (s_item.summary.is_zero())
+			if (s_item.summary == mcp::summary_hash(0))
 			{
 				LOG(log_sync.info) << "process_hash_tree:no summary";
 				error = true;
 				break;
 			}
 
+			/// Strict processing here requires pre-processing transactions to get to the receiptRoot,
+			/// but, if the transaction or receipt is forged, the summary of the previously processed block is inconsistent, and the subsequent processing will check the parent's summary(not exist)
+			/// so, don't must to do the check
+
 			mcp::summary_hash s_hash = mcp::summary::gen_summary_hash(
-				s_item.block_hash,			   // block hash
-				s_item.previous_summary,	//previous summary hash
-				s_item.parent_summaries,	// parent summary hashs
-				s_item.link_summaries,	// link summary hashs
-				s_item.skiplist_summaries, // skip_list
+				s_item.block_hash,			   /// block hash
+				s_item.previous_summary,	///previous summary hash
+				s_item.parent_summaries,	/// parent summary hashs
+				s_item.receiptsRoot,	/// link transactions receipt root
+				s_item.skiplist_summaries, /// skip_list
 				s_item.status,
 				s_item.stable_index,
-				s_item.mc_timestamp,
-				s_item.receipt
+				s_item.mc_timestamp
 			);
 
 			if (s_item.summary != s_hash)
 			{
-				LOG(log_sync.info) << "process_hash_tree:wrong summary hash" << ", local_summary: " << s_hash.to_string() << ",remote_hash:" << s_item.summary.to_string();
-				LOG(log_sync.info) << "process_hash_tree:wrong summary hash" << ", block: " << s_item.block_hash.to_string() << ".status:" << (int)s_item.status;
-				if (s_item.receipt)
-				{
-					LOG(log_sync.info) << "process_hash_tree:wrong summary hash" << ", to_state: " << s_item.receipt->from_state.to_string() << ".status:" << s_item.receipt->from_state.to_string();
-				}
-				LOG(log_sync.info) << "process_hash_tree:wrong summary hash" << ", previous_summary: " << s_item.previous_summary.to_string();
+				LOG(log_sync.info) << "process_hash_tree:wrong summary hash" << ", local_summary: " << s_hash.hex() << ",remote_hash:" << s_item.summary.hex();
+				LOG(log_sync.info) << "process_hash_tree:wrong summary hash" << ", block: " << s_item.block_hash.hex() << ".status:" << (int)s_item.status << ".stable_index:" << s_item.stable_index << ".mc_timestamp:" << s_item.mc_timestamp;
+				LOG(log_sync.info) << "process_hash_tree:wrong summary hash" << ", previous_summary: " << s_item.previous_summary.hex();
 				for (auto i : s_item.parent_summaries)
 				{
-					LOG(log_sync.info) << "process_hash_tree:wrong summary hash" << ", parent_summary: " << i.to_string();
+					LOG(log_sync.info) << "process_hash_tree:wrong summary hash" << ", parent_summary: " << i.hex();
 				}
-				for (auto i : s_item.link_summaries)
-				{
-					LOG(log_sync.info) << "process_hash_tree:wrong summary hash" << ", link_summary: " << i.to_string();
-				}
+				LOG(log_sync.info) << "process_hash_tree:wrong summary hash" << ", receipt root hash: " << s_item.receiptsRoot.hex();
 				for (auto i : s_item.skiplist_summaries)
 				{
-					LOG(log_sync.info) << "process_hash_tree:wrong summary hash" << ", skiplist_summary: " << i.to_string();
+					LOG(log_sync.info) << "process_hash_tree:wrong summary hash" << ", skiplist_summary: " << i.hex();
 				}
 				error = true;
 				break;
 			}
 
-			// Verify if a block with empty data is valid
-			if (s_item.block->hashables->data_hash != 0 && s_item.block->data.empty() &&
-				(s_item.status != mcp::block_status::fork && s_item.status != mcp::block_status::invalid))
-			{
-				error = true;
-				break;
-			}
+			//// Verify if a block with empty data is valid
+			//if (s_item.block->hashables->data_hash != 0 && s_item.block->data.empty() &&
+			//	(s_item.status != mcp::block_status::fork && s_item.status != mcp::block_status::invalid))
+			//{
+			//	error = true;
+			//	break;
+			//}
 
 			// Verify if all the previous, parents ,links, skiplist of the block exists.
 			// If true, add summary contents to hash_tree_summary table
 			mcp::block_hash previous_hash;
 			{
 				mcp::db::db_transaction & transaction(tx.get_transaction());
-				bool previous_summary_exists(s_item.previous_summary.is_zero()
+				bool previous_summary_exists(s_item.previous_summary == mcp::summary_hash(0)
 					|| m_store.hash_tree_summary_exists(transaction, s_item.previous_summary)
 					|| (!m_store.summary_block_get(transaction, s_item.previous_summary, previous_hash)));
 
 				if (!previous_summary_exists)
 				{
-					LOG(log_sync.info) << "process_hash_tree: previous summary not exsist" << ",block:" << s_item.block_hash.to_string() << ", summary: " << s_hash.to_string()
-						<< ", previous summary: " << s_item.previous_summary.to_string();
+					LOG(log_sync.info) << "process_hash_tree: previous summary not exsist" << ",block:" << s_item.block_hash.hex() << ", summary: " << s_hash.hex()
+						<< ", previous summary: " << s_item.previous_summary.hex();
 					error = true;
 					break;
 				}
 
 				if (!check_summaries_exist(transaction, s_item.parent_summaries))
 				{
-					LOG(log_sync.info) << "process_hash_tree:check_summaries_exist:not exsist" << ",block:" << s_item.block_hash.to_string() << ", summary: " << s_hash.to_string();
+					LOG(log_sync.info) << "process_hash_tree:check_summaries_exist:not exsist" << ",block:" << s_item.block_hash.hex() << ", summary: " << s_hash.hex();
 					error = true;
 					break;
 				}
 
-				if (!check_summaries_exist(transaction, s_item.link_summaries))
-				{
-					LOG(log_sync.info) << "process_hash_tree:check_summaries_exist:not exsist" << ",block:" << s_item.block_hash.to_string() << ", summary: " << s_hash.to_string();
-					error = true;
-					break;
-				}
+				//if (!check_summaries_exist(transaction, s_item.link_summaries))
+				//{
+				//	LOG(log_sync.info) << "process_hash_tree:check_summaries_exist:not exsist" << ",block:" << s_item.block_hash.to_string() << ", summary: " << s_hash.to_string();
+				//	error = true;
+				//	break;
+				//}
 
 				if (!check_summaries_exist(transaction, s_item.skiplist_summaries))
 				{
-					LOG(log_sync.info) << "process_hash_tree:check_summaries_exist:not exsist" << ", summary: " << s_hash.to_string();
+					LOG(log_sync.info) << "process_hash_tree:check_summaries_exist:not exsist" << ", summary: " << s_hash.hex();
 					error = true;
 					break;
 				}
@@ -1432,7 +1513,7 @@ void mcp::node_sync::process_hash_tree(p2p::node_id const &id, mcp::hash_tree_re
                 if (m_request_info.index <= 1)//last
                 {
                     clear_catchup_info(false);
-                    LOG(log_sync.info) << "sync success";
+                    LOG(log_sync.info) << "sync success1";
                     return;
                 }
 
@@ -1444,6 +1525,33 @@ void mcp::node_sync::process_hash_tree(p2p::node_id const &id, mcp::hash_tree_re
 			mcp::joint_message joint(s_item.block, s_item.summary);
 			std::shared_ptr<mcp::block_processor_item> item(std::make_shared<mcp::block_processor_item>(std::move(joint), id, mcp::remote_type::sync));
 			items.push(item);
+			try
+			{
+				for (auto t : s_item.transactions)
+				{
+					m_tq->import(*t, false);
+				}
+			}
+			catch (const std::exception& e)
+			{
+				LOG(log_sync.info) << "process_hash_tree import transaction error:" << e.what();
+				error = true;
+				break;
+			}
+
+			try
+			{
+				for (auto a : s_item.approves)
+				{
+					m_aq->import(*a, false);
+				}
+			}
+			catch (const std::exception& e)
+			{
+				LOG(log_sync.info) << "process_hash_tree import approve error:" << e.what();
+				error = true;
+				break;
+			}
 			//LOG(log_sync.debug) << "level: " << s_item.level << ",block: "<< s_item.block.to_string() << ", summary: " << s_hash.to_string() ;
 		}
 		tx.commit();
@@ -1511,7 +1619,7 @@ void mcp::node_sync::del_catchup_index(uint64_t index)
             m_store.catchup_chain_block_summary_del(transaction, head_elem_block);
             transaction.commit();
 
-            LOG(log_sync.debug) << "process_hash_tree: del_last_request_chain:" << ",index:" << index << ",summary:" << head_elem_summary.to_string() << ",block:" << head_elem_block.to_string();
+            LOG(log_sync.debug) << "process_hash_tree: del_last_request_chain:" << ",index:" << index << ",summary:" << head_elem_summary.hex() << ",block:" << head_elem_block.hex();
         }
     }
     catch (const std::exception& e)
@@ -1557,7 +1665,7 @@ void mcp::node_sync::del_catchup_index(std::map<uint64_t, uint64_t> const& map_a
 			if (index <= 1)//last
 			{
 				clear_catchup_info(false);
-				LOG(log_sync.info) << "sync success";
+				LOG(log_sync.info) << "sync success2";
 				return;
 			}
 
@@ -1573,7 +1681,7 @@ void mcp::node_sync::deal_exist_catchup_index(mcp::block_hash const& hash_a)
 	std::lock_guard<std::mutex> lock(m_request_info.version_mutex);
 	if (m_request_info.to_summary_index.count(hash_a))
 	{
-        LOG(log_sync.debug) << "catchup_del_index hash:" << hash_a.to_string() << ",index:" << std::to_string(m_request_info.to_summary_index[hash_a]);
+        LOG(log_sync.debug) << "catchup_del_index hash:" << hash_a.hex() << ",index:" << std::to_string(m_request_info.to_summary_index[hash_a]);
 
 		m_request_info.catchup_del_index.insert(std::make_pair(m_request_info.to_summary_index[hash_a], m_request_info.version));
 		m_request_info.to_summary_index.erase(hash_a);
@@ -1657,47 +1765,9 @@ void mcp::node_sync::peer_info_request_handler(p2p::node_id const &id)
 	}
 
 	assert_x(have_get_block_count < max_send_count);
-	unsigned max_latest_unlink_send_count = max_send_count - have_get_block_count;
-
-	try
-	{
-		auto snap = m_store.create_snapshot();
-
-		mcp::db::forward_iterator it = m_store.unlink_info_begin(transaction, snap);
-		if (it.valid())
-		{
-			mcp::account rand_account;
-			mcp::random_pool.GenerateBlock(rand_account.bytes.data(), rand_account.bytes.size());
-			mcp::db::forward_iterator rand_it = m_store.unlink_info_begin(transaction, rand_account, snap);
-			if (rand_it.valid())
-			{
-				it = std::move(rand_it);
-			}
-
-			mcp::account start_account(0);
-			while (pi.arr_light_tip_blocks.size() < max_latest_unlink_send_count)
-			{
-				if (!it.valid())
-					it = m_store.unlink_info_begin(transaction, snap);
-
-				mcp::account current_account(mcp::slice_to_account(it.key()));
-				if (start_account == current_account)  // eq start ,break
-					break;
-				if (start_account.is_zero())
-					start_account = current_account;
-
-				mcp::unlink_info info(it.value());
-				if (!info.latest_unlink.is_zero())
-					pi.arr_light_tip_blocks.insert(std::make_pair(current_account, info.latest_unlink));
-				++it;
-			}
-		}
-	}
-	catch (const std::exception& e)
-	{
-		LOG(log_sync.error) << "latest_unlinks error:" << e.what();
-		throw;
-	}
+	//unsigned max_latest_unlink_send_count = max_send_count - have_get_block_count;
+	pi.arr_light_tip_blocks = m_tq->topTransactions(max_send_count - have_get_block_count);
+	pi.arr_light_approve_blocks = m_aq->topApproves(max_send_count - have_get_block_count - pi.arr_light_tip_blocks.size());
 	
 	send_peer_info(id, pi);
 	return;
@@ -1712,8 +1782,7 @@ void mcp::node_sync::send_block(p2p::node_id const & id, mcp::joint_message cons
 		mcp::peer_info &pi(m_capability->m_peers.at(id));
 		if (auto p = pi.try_lock_peer())
 		{
-			m_capability->m_pcapability_metrics->joint++;
-			m_capability->m_node_id_cap_metrics[id]->joint++;
+			mcp::CapMetricsSend.send_joint++;
 
 			//not check known transaction, since it will break sync
 			dev::RLPStream s;
@@ -1724,9 +1793,47 @@ void mcp::node_sync::send_block(p2p::node_id const & id, mcp::joint_message cons
 	}
 }
 
+void mcp::node_sync::send_transaction(p2p::node_id const & id, mcp::Transaction const & message)
+{
+	std::lock_guard<std::mutex> lock(m_capability->m_peers_mutex);
+	if (m_capability->m_peers.count(id))
+	{
+		mcp::peer_info &pi(m_capability->m_peers.at(id));
+		if (auto p = pi.try_lock_peer())
+		{
+			mcp::CapMetricsSend.send_transaction++;
+
+			//not check known transaction, since it will break sync
+			dev::RLPStream s;
+			p->prep(s, pi.offset + (unsigned)mcp::sub_packet_type::transaction, 1);
+			message.streamRLP(s);
+			p->send(s);
+		}
+	}
+}
+
+void mcp::node_sync::send_approve(p2p::node_id const & id, mcp::approve const & message)
+{
+	std::lock_guard<std::mutex> lock(m_capability->m_peers_mutex);
+	if (m_capability->m_peers.count(id))
+	{
+		mcp::peer_info &pi(m_capability->m_peers.at(id));
+		if (auto p = pi.try_lock_peer())
+		{
+			mcp::CapMetricsSend.send_approve++;
+
+			//not check known transaction, since it will break sync
+			dev::RLPStream s;
+			p->prep(s, pi.offset + (unsigned)mcp::sub_packet_type::approve, 1);
+			message.streamRLP(s);
+			p->send(s);
+		}
+	}
+}
+
 bool mcp::node_sync::is_request_hash_tree()
 {
-	return (!m_request_info.request_hash_tree_from_summary.is_zero() && m_request_info.request_hash_tree_start_index != 0);
+	return (m_request_info.request_hash_tree_from_summary != mcp::summary_hash(0) && m_request_info.request_hash_tree_start_index != 0);
 }
 
 // check if all the summaries in the parameter exists in the node
@@ -1741,7 +1848,7 @@ bool mcp::node_sync::check_summaries_exist(mcp::db::db_transaction & transaction
 
 		if (!exists)
 		{
-			LOG(log_sync.info) << "check_summaries_exist:not exsist" << ",summary: " << it->to_string();
+			LOG(log_sync.info) << "check_summaries_exist:not exsist" << ",summary: " << it->hex();
 			return false;
 		}
 
@@ -1872,14 +1979,14 @@ void mcp::node_sync::add_task_sync_request_timer(p2p::node_id const & request_no
 			if (m_task_clear_flag)
 				return;
 
-            LOG(log_sync.info) << "timeout_for_sync_request : node_id:" << request_node_id_a.to_string();
+            LOG(log_sync.info) << "timeout_for_sync_request : node_id:" << request_node_id_a.hex();
 			clear_catchup_info();
 		}
 	});
 	m_sync_request_id++;
 }
 
-void mcp::node_sync::request_new_missing_joints(mcp::joint_request_item& item_a, uint64_t& millisecondsSinceEpoch, bool const& is_timeout)
+void mcp::node_sync::request_new_missing_joints(mcp::requesting_item& item_a, bool const& is_timeout)
 {
 	mcp::stopwatch_guard sw("sync:request_new_missing_joints");
 
@@ -1888,24 +1995,20 @@ void mcp::node_sync::request_new_missing_joints(mcp::joint_request_item& item_a,
 
 	{
 		std::lock_guard<std::mutex> lock(m_capability->m_requesting_lock);
-		if (item_a.cause == mcp::requesting_block_cause::request_peer_info)
+		if (item_a.m_cause == mcp::requesting_block_cause::request_peer_info)
 			m_request_info.peer_info_joint++;
-		else if (item_a.cause == mcp::requesting_block_cause::existing_unknown)
+		else if (item_a.m_cause == mcp::requesting_block_cause::existing_unknown)
 			m_request_info.existing_unknown_joint++;
-		else if (item_a.cause == mcp::requesting_block_cause::new_unknown)
+		else if (item_a.m_cause == mcp::requesting_block_cause::new_unknown)
 			m_request_info.new_unknown_joint++;
 		else
 			assert_x(false);
 
-		mcp::requesting_item item(item_a.id, *item_a.block_hash, millisecondsSinceEpoch, item_a.type);
-		
-		if (!m_capability->m_requesting.add(item, is_timeout))
+		if (!m_capability->m_requesting.add(item_a, is_timeout))
 		{
 			//LOG(log_sync.info) << "block already requested:" << item_a.block_hash->to_string();
 			return;
 		}
-		else
-			item_a.request_id = item.m_request_id;
 	}
 
 	std::lock_guard<std::mutex> lock(m_mutex_joint_request);
@@ -1927,12 +2030,40 @@ void mcp::node_sync::process_request_joints()
 			m_joint_request_pending.pop_front();
 			lock.unlock();
 
-			//block if existed not request again
-			if (!m_block_processor->unhandle->exists(*item_a.block_hash) ||
-				item_a.from == mcp::joint_request_item_from::peerinfo)
+			if (item_a.m_type == mcp::sub_packet_type::transaction_request) /// transaction
 			{
-				mcp::joint_request_message message(item_a.request_id, *item_a.block_hash, item_a.type);
-				send_joint_request(item_a.id, message);
+				h256 h(item_a.m_request_hash);
+				if (!m_tq->exist(h))
+				{
+					mcp::db::db_transaction transaction(m_store.create_transaction());
+					if (!m_cache->transaction_exists(transaction,h))
+					{
+						mcp::transaction_request_message message(item_a.m_request_id, h);
+						send_transaction_request(item_a.m_node_id, message);
+						//LOG(log_sync.info) << "process_request_joints hash:" << h.hex();
+					}
+				}
+			}
+			else if (item_a.m_type == mcp::sub_packet_type::approve_request) /// approve
+			{
+				h256 h(item_a.m_request_hash);
+				if (!m_aq->exist(h))
+				{
+					mcp::db::db_transaction transaction(m_store.create_transaction());
+					if (!m_cache->approve_exists(transaction,h))
+					{
+						mcp::approve_request_message message(item_a.m_request_id, h);
+						LOG(log_sync.trace) << "[process_request_joints] send_approve_request";
+						send_approve_request(item_a.m_node_id, message);
+						//LOG(log_sync.info) << "process_request_joints hash:" << h.hex();
+					}
+				}
+			}
+			else if (!m_block_processor->unhandle->exists(item_a.m_request_hash) || /// block if existed not request again
+				item_a.m_cause == mcp::requesting_block_cause::request_peer_info)
+			{
+				mcp::joint_request_message message(item_a.m_request_id, item_a.m_request_hash);
+				send_joint_request(item_a.m_node_id, message);
 				//LOG(log_sync.info) << "process_request_joints hash:" << message.block_hash.to_string();
 			}
 
@@ -1945,6 +2076,75 @@ void mcp::node_sync::process_request_joints()
 	}
 }
 
+void mcp::node_sync::request_new_missing_transactions(mcp::requesting_item& item_a, bool const& is_timeout)
+{
+	mcp::stopwatch_guard sw("sync:request_new_missing_transactions");
+
+	if (m_stoped)
+		return;
+
+	item_a.m_type = mcp::sub_packet_type::transaction_request;
+	{
+		//std::lock_guard<std::mutex> lock(m_capability->m_requesting_lock);
+		//if (item_a.m_cause == mcp::requesting_block_cause::request_peer_info)
+		//	m_request_info.peer_info_joint++;
+		//else if (item_a.m_cause == mcp::requesting_block_cause::existing_unknown)
+		//	m_request_info.existing_unknown_joint++;
+		//else if (item_a.m_cause == mcp::requesting_block_cause::new_unknown)
+		//	m_request_info.new_unknown_joint++;
+		//else
+		//	assert_x(false);
+
+		std::lock_guard<std::mutex> lock(m_capability->m_requesting_lock);
+		if (!m_capability->m_requesting.add(item_a, is_timeout))
+		{
+			//h256 h(item_a.m_request_hash.number());
+			//LOG(log_sync.info) << "transaction already requested:" << h.hex();
+			return;
+		}
+	}
+
+	std::lock_guard<std::mutex> lock(m_mutex_joint_request);
+	m_joint_request_pending.push_back(item_a);
+
+	m_condition.notify_all();
+}
+
+void mcp::node_sync::request_new_missing_approves(mcp::requesting_item& item_a, bool const& is_timeout)
+{
+	mcp::stopwatch_guard sw("sync:request_new_missing_approves");
+
+	if (m_stoped)
+		return;
+
+	item_a.m_type = mcp::sub_packet_type::approve_request;
+	{
+		//std::lock_guard<std::mutex> lock(m_capability->m_requesting_lock);
+		//if (item_a.m_cause == mcp::requesting_block_cause::request_peer_info)
+		//	m_request_info.peer_info_joint++;
+		//else if (item_a.m_cause == mcp::requesting_block_cause::existing_unknown)
+		//	m_request_info.existing_unknown_joint++;
+		//else if (item_a.m_cause == mcp::requesting_block_cause::new_unknown)
+		//	m_request_info.new_unknown_joint++;
+		//else
+		//	assert_x(false);
+
+		std::lock_guard<std::mutex> lock(m_capability->m_requesting_lock);
+		if (!m_capability->m_requesting.add(item_a, is_timeout))
+		{
+			//LOG(log_sync.info) << "block already requested:" << item_a.m_request_hash.hex();
+			return;
+		}
+	}
+    //LOG(log_sync.trace) << "[request_new_missing_approves] in";
+
+	std::lock_guard<std::mutex> lock(m_mutex_joint_request);
+	m_joint_request_pending.push_back(item_a);
+
+	m_condition.notify_all();
+}
+
+
 void mcp::node_sync::send_joint_request(p2p::node_id const & id, mcp::joint_request_message const & message)
 {
 	std::lock_guard<std::mutex> lock(m_capability->m_peers_mutex);
@@ -1953,8 +2153,7 @@ void mcp::node_sync::send_joint_request(p2p::node_id const & id, mcp::joint_requ
 		mcp::peer_info &pi(m_capability->m_peers.at(id));
 		if (auto p = pi.try_lock_peer())
 		{
-			m_capability->m_pcapability_metrics->joint_request++;
-			m_capability->m_node_id_cap_metrics[id]->joint_request++;
+			mcp::CapMetricsSend.joint_request++;
 
 			dev::RLPStream s;
 			p->prep(s, pi.offset + (unsigned)mcp::sub_packet_type::joint_request, 1);
@@ -1962,6 +2161,44 @@ void mcp::node_sync::send_joint_request(p2p::node_id const & id, mcp::joint_requ
 			p->send(s);
 
 			//LOG(log_sync.info) << "id:" << id .to_string() << " , send_joint_request hash:" << message.block_hash.to_string();
+		}
+	}
+}
+
+void mcp::node_sync::send_transaction_request(p2p::node_id const & id, mcp::transaction_request_message const & message)
+{
+	std::lock_guard<std::mutex> lock(m_capability->m_peers_mutex);
+	if (m_capability->m_peers.count(id))
+	{
+		mcp::peer_info &pi(m_capability->m_peers.at(id));
+		if (auto p = pi.try_lock_peer())
+		{
+			mcp::CapMetricsSend.transaction_request++;
+
+			dev::RLPStream s;
+			p->prep(s, pi.offset + (unsigned)mcp::sub_packet_type::transaction_request, 1);
+			message.stream_RLP(s);
+			p->send(s);
+
+			//LOG(log_sync.info) << "id:" << id .to_string() << " , send_transaction_request hash:" << message.hash.hex();
+		}
+	}
+}
+
+void mcp::node_sync::send_approve_request(p2p::node_id const & id, mcp::approve_request_message const & message)
+{
+	std::lock_guard<std::mutex> lock(m_capability->m_peers_mutex);
+	if (m_capability->m_peers.count(id))
+	{
+		mcp::peer_info &pi(m_capability->m_peers.at(id));
+		if (auto p = pi.try_lock_peer())
+		{
+			mcp::CapMetricsSend.approve_request++;
+
+			dev::RLPStream s;
+			p->prep(s, pi.offset + (unsigned)mcp::sub_packet_type::approve_request, 1);
+			message.stream_RLP(s);
+			p->send(s);
 		}
 	}
 }
@@ -1981,15 +2218,14 @@ void mcp::node_sync::send_peer_info_request(p2p::node_id id)
 				{
 					pi.last_peer_info_request_time = now;
 
-					m_capability->m_pcapability_metrics->peer_info_request++;
-					m_capability->m_node_id_cap_metrics[id]->peer_info_request++;
+					mcp::CapMetricsSend.peer_info_request++;
 
 					dev::RLPStream s;
 					p->prep(s, pi.offset + (unsigned)mcp::sub_packet_type::peer_info_request, 1);
 					mcp::peer_info_request_message message;
 					message.stream_RLP(s);
 					p->send(s);
-					LOG(log_sync.debug) << "send_peer_info_request:node id:" << id.to_string();
+					// LOG(log_sync.debug) << "send_peer_info_request:node id:" << id.hex();
 				}
 			}
 		}
@@ -2012,14 +2248,14 @@ void mcp::node_sync::send_peer_info_request(p2p::node_id id)
 				}
 				else
 				{
-					LOG(log_sync.info) << "send_peer_info_request : error:code:" << error.value() << ",msg:" << error.message() << ",node id:" << id.to_string();
+					LOG(log_sync.info) << "send_peer_info_request : error:code:" << error.value() << ",msg:" << error.message() << ",node id:" << id.hex();
 				}
 
 			});
 		}
 		else
 		{
-			LOG(log_sync.info) << "send_peer_info_request : add not success:" << ",node id:" << id.to_string();
+			LOG(log_sync.info) << "send_peer_info_request : add not success:" << ",node id:" << id.hex();
 		}
 	}
 
@@ -2033,8 +2269,7 @@ void mcp::node_sync::send_peer_info(p2p::node_id const & id, mcp::peer_info_mess
 		mcp::peer_info &pi(m_capability->m_peers.at(id));
 		if (auto p = pi.try_lock_peer())
 		{
-			m_capability->m_pcapability_metrics->peer_info++;
-			m_capability->m_node_id_cap_metrics[id]->peer_info++;
+			mcp::CapMetricsSend.send_peer_info++;
 
 			dev::RLPStream s;
 			p->prep(s, pi.offset + (unsigned)mcp::sub_packet_type::peer_info, 1);

@@ -25,7 +25,7 @@ namespace mcp
         };
 
         class peer_manager;
-		class frame_coder;
+		class RLPXFrameCoder;
         class peer_metrics
         {
         public:
@@ -40,8 +40,7 @@ namespace mcp
         class peer : public std::enable_shared_from_this<peer>
         {
         public:
-            //peer(std::shared_ptr<bi::tcp::socket> const & socket_a, node_id const & node_id_a);
-			peer(std::shared_ptr<bi::tcp::socket> const & socket_a, node_id const & node_id_a, std::shared_ptr<peer_manager> peer_manager_a, std::unique_ptr<frame_coder>&& _io);
+			peer(std::shared_ptr<bi::tcp::socket> const & socket_a, node_id const & node_id_a, std::shared_ptr<peer_manager> peer_manager_a, std::unique_ptr<RLPXFrameCoder>&& _io);
             ~peer();
             void register_capability(std::shared_ptr<peer_capability> const & cap);
             void start();
@@ -62,6 +61,7 @@ namespace mcp
             void do_write();
 			void do_read();
             void drop(disconnect_reason const & reason);
+			void lz4(bytes& o_bytes);
 			/// Check error code after reading and drop peer if error code.
 			bool checkRead(std::size_t _expected, boost::system::error_code _ec, std::size_t _length);
             std::string reason_of(disconnect_reason reason)
@@ -87,7 +87,7 @@ namespace mcp
 			std::shared_ptr<peer_manager> m_peer_manager;
             std::shared_ptr<bi::tcp::socket> socket;
             std::list<std::shared_ptr<peer_capability>> capabilities;
-			std::unique_ptr<frame_coder> m_io;	///< Transport over which packets are sent.
+			std::unique_ptr<RLPXFrameCoder> m_io;	///< Transport over which packets are sent.
             dev::bytes read_buffer;
 			dev::bytes read_header_buffer;
             std::deque<dev::bytes> write_queue;

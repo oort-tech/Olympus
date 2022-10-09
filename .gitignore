@@ -68,5 +68,7 @@ Testing
 # VIM temp files
 *.swp
 /build
-/build_realease
+/build_release
 /build_debug
+
+/secp256k1/src/ecmult_static_context.h

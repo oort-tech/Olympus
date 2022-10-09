@@ -22,15 +22,15 @@ namespace mcp
     {
     public:
         // Simple constructor; executive will operate on given state, with the given environment info.
-        Executive(chain_state& _s, EnvInfo const& _envInfo, bool isTransaction, std::list<std::shared_ptr<mcp::trace>> & _traces, unsigned _level = 0)
-      : m_s(_s),m_envInfo(_envInfo),m_isTransaction(isTransaction),m_traces(_traces), m_depth(_level)
+        Executive(chain_state& _s, EnvInfo const& _envInfo, std::list<std::shared_ptr<mcp::trace>> & _traces, unsigned _level = 0)
+      : m_s(_s),m_envInfo(_envInfo),m_traces(_traces), m_depth(_level)
         {
         };
 
         /// Collect execution results in the result storage provided.
         void setResultRecipient(ExecutionResult& _res) { m_res = &_res; }
 
-        void initialize();
+        void initialize(Transaction const& _transaction);
         bool finalize();
         bool execute();
         bool go(dev::eth::OnOpFunc const& _onOp = dev::eth::OnOpFunc());
@@ -48,20 +48,21 @@ namespace mcp
         u256 gas() const { return m_gas; }
 
         /// @returns the new address for the created contract in the CREATE operation.
-        mcp::account newAddress() const { return m_newAddress; }
+        Address newAddress() const { return m_newAddress; }
 
         owning_bytes_ref takeOutput() { return std::move(m_output); }
 
         /// @returns The exception that has happened during the execution if any.
         TransactionException getException() const noexcept { return m_excepted; }
 
-        bool createOpcode(mcp::account const& _sender, u256 const& _endowment, u256 const& _gasPrice, u256 const& _gas, bytesConstRef _init, mcp::account const& _origin);
-        bool create2Opcode(mcp::account const& _sender, u256 const& _endowment, u256 const& _gasPrice, u256 const& _gas, bytesConstRef _init, mcp::account const& _origin, u256 const& _salt);
-        bool executeCreate(account const & _sender, u256 const& _endowment, u256  const& _gasPrice, u256  const& _gas, dev::bytesConstRef _init, account const& _origin);
+        bool createOpcode(Address const& _sender, u256 const& _endowment, u256 const& _gasPrice, u256 const& _gas, bytesConstRef _init, Address const& _origin);
+        bool create2Opcode(Address const& _sender, u256 const& _endowment, u256 const& _gasPrice, u256 const& _gas, bytesConstRef _init, Address const& _origin, u256 const& _salt);
+        bool executeCreate(Address const& _sender, u256 const& _endowment, u256 const& _gasPrice,
+			u256 const& _gas, bytesConstRef _init, Address const& _origin);
 
-        bool create(mcp::account const& _txSender, u256  const& _endowment, u256  const& _gasPrice, u256  const& _gas, dev::bytesConstRef _init, mcp::account const& _origin);
-        bool call(mcp::account const& _txReceiver, mcp::account const& _txSender, u256 const& _endowment, u256 const& _gasPrice, u256 const& _gas, dev::bytesConstRef _init);
-        bool call(CallParameters const& _cp, u256 const& _gasPrice, mcp::account const& _origin);
+        bool create(Address const& _txSender, u256 const& _endowment, u256 const& _gasPrice, u256 const& _gas, bytesConstRef _init, Address const& _origin);
+        bool call(Address const& _receiveAddress, Address const& _senderAddress, u256 const& _value, u256 const& _gasPrice, bytesConstRef _data, u256 const& _gas);
+        bool call(CallParameters const& _cp, u256 const& _gasPrice, Address const& _origin);
 
         void accrueSubState(SubState& _parentContext);
 
@@ -80,15 +81,14 @@ namespace mcp
 
         mcp::chain_state &m_s;              ///< The state to which this operation/transaction is applied.
 
+		Transaction m_t;					///< The original transaction. Set by setup().
         log_entries m_logs;					///< The log entries created by this transaction. Set by finalize().
 
         u256 m_gasCost;
 
         bool m_isCreation = false;
-        mcp::account m_newAddress;
+		Address m_newAddress;
         size_t m_savepoint = 0;
-
-        bool m_isTransaction;               ///< to indicate if the Executive is created from a transaction
 
 		std::list<std::shared_ptr<mcp::trace>> & m_traces;
 		std::shared_ptr<mcp::trace> m_current_trace;

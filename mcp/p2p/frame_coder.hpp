@@ -11,76 +11,110 @@ namespace mcp
 	namespace p2p
 	{
 		static size_t const handshake_header_size(3);
-
-		class frame_coder_impl
-		{
-		public:
-			/// set key and nonce.
-			void set_key(bool _originated, public_key_comp const&_pub, key_pair_ed const&_key);
-			void set_nonce(nonce const&_remote_nonce, nonce const&_nonce);
-
-			//encry
-			bool encry(bytes& io_cipher);
-
-			//dencry input:io_cipher, output:io_cipher
-			bool dencry(bytes& io_cipher);
-
-			//dencry input:io, output:o_bytes
-			bool dencry(bytesConstRef io, bytes& o_bytes);
-
-		private:
-			//Mutex x_macEnc;  ///< Mutex.
-			secret_encry in_key, out_key;
-			nonce local_nonce;
-			nonce remote_nonce;
-            mcp::log m_log = { mcp::log("p2p") };
-		};
-
 		class hankshake;
 
 		/**
-		* @brief Encoder/decoder transport for RLPx connection established by hankshake.
+		* @brief Encapsulation of Frame
+		* @todo coder integration; padding derived from coder
 		*/
-		class frame_coder
+		struct RLPXFrameInfo
 		{
+			/// Constructor. frame-size || protocol-type, [sequence-id[, total-packet-size]]
+			explicit RLPXFrameInfo(bytesConstRef _frameHeader);
+
+			uint32_t const length;  ///< Size of frame (excludes padding). Max: 2**24
+			uint8_t const padding;  ///< Length of padding which follows @length.
+
+			bytes const data;  ///< Bytes of Header.
+			RLP const header;  ///< Header RLP.
+
+			uint16_t const protocolId;   ///< Protocol ID as negotiated by handshake.
+			bool const multiFrame;       ///< If this frame is part of a sequence
+			uint16_t const sequenceId;   ///< Sequence ID of frame
+			uint32_t const totalLength;  ///< Total length of packet in first frame of multiframe packet.
+		};
+
+		/**
+		* @brief Encoder/decoder transport for RLPx connection established by RLPXHandshake.
+		*
+		* @todo rename to RLPXTranscoder
+		* @todo Remove 'Frame' nomenclature and expect caller to provide RLPXFrame
+		* @todo Remove handshake as friend, remove handshake-based constructor
+		*
+		* Thread Safety
+		* Distinct Objects: Unsafe.
+		* Shared objects: Unsafe.
+		*/
+		class RLPXFrameCoder
+		{
+			friend class Session;
+
 		public:
-			frame_coder(hankshake const& _init);
+			/// Construct; requires instance of RLPXHandshake which has encrypted ECDH key exchange
+			/// (first two phases of handshake).
+			explicit RLPXFrameCoder(hankshake const& _init);
 
 			/// Construct with external key material.
-			frame_coder(bool _originated, public_key_comp const& _remoteEphemeral, nonce const& _remoteNonce, key_pair_ed const& _ecdheLocal, nonce const& _nonce);
+			RLPXFrameCoder(bool _originated, h512 const& _remoteEphemeral, h256 const& _remoteNonce,
+				KeyPair const& _ecdheLocal, h256 const& _nonce, bytesConstRef _ackCipher,
+				bytesConstRef _authCipher);
 
-			~frame_coder();
+			~RLPXFrameCoder();
 
 			/// Establish shared secrets and setup AES and MAC states.
-			void setup(bool _originated, public_key_comp const& _remoteEphemeral, nonce const& _remoteNonce, key_pair_ed const& _ecdheLocal, nonce const& _nonce);
+			void setup(bool _originated, h512 const& _remoteEphemeral, h256 const& _remoteNonce,
+				KeyPair const& _ecdheLocal, h256 const& _nonce, bytesConstRef _ackCipher,
+				bytesConstRef _authCipher);
 
-			/// Legacy. Encrypt _packet header and frame.
-			void write_single_frame_packet(bytesConstRef _packet, bytes& o_bytes);
+			/// Write single-frame payload of packet(s).
+			void writeFrame(uint16_t _protocolType, bytesConstRef _payload, bytes& o_bytes);
 
-			void write_frame_packet(bytesConstRef _packet, bytes& o_bytes);
+			/// Write continuation frame of segmented payload.
+			void writeFrame(
+				uint16_t _protocolType, uint16_t _seqId, bytesConstRef _payload, bytes& o_bytes);
+
+			/// Write first frame of segmented or sequence-tagged payload.
+			void writeFrame(uint16_t _protocolType, uint16_t _seqId, uint32_t _totalSize,
+				bytesConstRef _payload, bytes& o_bytes);
+
+			/// Legacy. Encrypt _packet as ill-defined legacy RLPx frame.
+			void writeSingleFramePacket(bytesConstRef _packet, bytes& o_bytes);
 
 			/// Authenticate and decrypt header in-place.
-			bool auth_and_decrypt_header(bytes& io,uint32_t& len);
+			bool authAndDecryptHeader(bytesRef io_cipherWithMac);
 
 			/// Authenticate and decrypt frame in-place.
-			bool auth_and_decrypt_frame(bytes& io);
+			bool authAndDecryptFrame(bytesRef io_cipherWithMac);
 
-			bool auth_and_decrypt_frame(bytesConstRef io, bytes& o_bytes);
+			/// Return first 16 bytes of current digest from egress mac.
+			h128 egressDigest();
 
-			bytes serialize_packet_size(uint32_t const & size);
-			uint32_t deserialize_packet_size(bytes const & data);
+			/// Return first 16 bytes of current digest from ingress mac.
+			h128 ingressDigest();
 
-			//add packet header(lenth)
-			void write_frame_packet_header(bytes& o_bytes);
+			/// add packet header(lenth)
+			void writeFramePacketHeader(bytes& o_bytes);
+
+			bytes serializePacketSize(uint32_t const & size);
+			uint32_t deserializePacketSize(bytes const & data);
 
 		protected:
-			void write_frame(RLPStream const& _header, bytesConstRef _payload, bytes& o_bytes);
-			void write_frame(bytesConstRef _payload, bytes& o_bytes);
+			void writeFrame(RLPStream const& _header, bytesConstRef _payload, bytes& o_bytes);
 
+			/// Update state of egress MAC with frame header.
+			void updateEgressMACWithHeader(bytesConstRef _headerCipher);
+
+			/// Update state of egress MAC with frame.
+			void updateEgressMACWithFrame(bytesConstRef _cipher);
+
+			/// Update state of ingress MAC with frame header.
+			void updateIngressMACWithHeader(bytesConstRef _headerCipher);
+
+			/// Update state of ingress MAC with frame.
+			void updateIngressMACWithFrame(bytesConstRef _cipher);
 
 		private:
-			std::unique_ptr<class frame_coder_impl> m_impl;
-            mcp::log m_log = { mcp::log("p2p") };
+			std::unique_ptr<class RLPXFrameCoderImpl> m_impl;
 		};
 	}
 }

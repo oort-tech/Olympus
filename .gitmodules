@@ -13,7 +13,7 @@
 [submodule "libevm"]
 	path = libevm
 	url = https://github.com/computecoin-network/libevm.git
-	branch = mcp_dev
+	branch = zhou_truffle
 [submodule "libdevcore"]
 	path = libdevcore
 	url = https://github.com/computecoin-network/libdevcore.git
@@ -21,4 +21,4 @@
 [submodule "libdevcrypto"]
 	path = libdevcrypto
 	url = https://github.com/computecoin-network/libdevcrypto.git
-	branch = mcp
+	branch = zhou_truffle

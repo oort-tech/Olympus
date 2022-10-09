@@ -1,5 +1,8 @@
 #include "block_store.hpp"
+#include "genesis.hpp"
 #include <mcp/common/utility.hpp>
+#include <boost/endian/conversion.hpp>
+#include <mcp/common/log.hpp>
 
 mcp::block_store::block_store(bool & error_a, boost::filesystem::path const & path_a) :
 	m_db(std::make_shared<mcp::db::database>(path_a)),
@@ -8,7 +11,10 @@ mcp::block_store::block_store(bool & error_a, boost::filesystem::path const & pa
 	account_state(0),
 	latest_account_state(0),
 	blocks(0),
-	blocks_data(0),
+	transactions(0),
+	approves(0),
+	account_nonce(0),
+	transaction_address(0),
 	block_state(0),
 	contract_main(0),
 	contract_aux(0),
@@ -16,6 +22,7 @@ mcp::block_store::block_store(bool & error_a, boost::filesystem::path const & pa
 	dag_free(0),
 	main_chain(0),
 	stable_block(0),
+	stable_block_number(0),
 	block_summary(0),
 	summary_block(0),
 	skiplist(0),
@@ -30,7 +37,12 @@ mcp::block_store::block_store(bool & error_a, boost::filesystem::path const & pa
 	next_unlink(0),
 	next_unlink_index(0),
 	head_unlink(0),
-	traces(0)
+	traces(0),
+	transaction_receipt(0),
+	approve_receipt(0),
+	epoch_approves(0),
+	epoch_approve_receipts(0),
+	epoch_elected_approve_receipts(0)
 {
 	if (error_a)
 		return;
@@ -51,25 +63,34 @@ mcp::block_store::block_store(bool & error_a, boost::filesystem::path const & pa
 	account_state = m_db->set_column_family(default_col, "003");
 	latest_account_state = m_db->set_column_family(default_col, "004");
 	blocks = m_db->set_column_family(default_col, "005");
-	blocks_data = m_db->set_column_family(default_col, "006");
-	block_state = m_db->set_column_family(default_col, "007");
-	successor = m_db->set_column_family(default_col, "008");
-	main_chain = m_db->set_column_family(default_col, "009");
-	skiplist = m_db->set_column_family(default_col, "010");
-	block_summary = m_db->set_column_family(default_col, "011");
-	summary_block = m_db->set_column_family(default_col, "012");
-	stable_block = m_db->set_column_family(default_col, "013");
-	contract_main = m_db->set_column_family(default_col, "014");
-	prop = m_db->set_column_family(default_col, "015");
-	catchup_chain_summaries = m_db->set_column_family(default_col, "016");
-	catchup_chain_block_summary = m_db->set_column_family(default_col, "017");
-	catchup_chain_summary_block = m_db->set_column_family(default_col, "018");
-	hash_tree_summary = m_db->set_column_family(default_col, "019");
-	unlink_block = m_db->set_column_family(default_col, "020");
-	traces = m_db->set_column_family(default_col, "021");
-	next_unlink = m_db->set_column_family(default_col, "022");
-	next_unlink_index = m_db->set_column_family(default_col, "023");
-	contract_aux = m_db->set_column_family(default_col, "024");
+	transactions = m_db->set_column_family(default_col, "006");
+	transaction_address = m_db->set_column_family(default_col, "007");
+	account_nonce = m_db->set_column_family(default_col, "008");
+	block_state = m_db->set_column_family(default_col, "009");
+	successor = m_db->set_column_family(default_col, "010");
+	main_chain = m_db->set_column_family(default_col, "011");
+	skiplist = m_db->set_column_family(default_col, "012");
+	block_summary = m_db->set_column_family(default_col, "013");
+	summary_block = m_db->set_column_family(default_col, "014");
+	stable_block = m_db->set_column_family(default_col, "015");
+	stable_block_number = m_db->set_column_family(default_col, "016");
+	contract_main = m_db->set_column_family(default_col, "017");
+	prop = m_db->set_column_family(default_col, "018");
+	catchup_chain_summaries = m_db->set_column_family(default_col, "019");
+	catchup_chain_block_summary = m_db->set_column_family(default_col, "020");
+	catchup_chain_summary_block = m_db->set_column_family(default_col, "021");
+	hash_tree_summary = m_db->set_column_family(default_col, "022");
+	unlink_block = m_db->set_column_family(default_col, "023");
+	traces = m_db->set_column_family(default_col, "024");
+	next_unlink = m_db->set_column_family(default_col, "025");
+	next_unlink_index = m_db->set_column_family(default_col, "026");
+	contract_aux = m_db->set_column_family(default_col, "027");
+	transaction_receipt = m_db->set_column_family(default_col, "028");
+	approves = m_db->set_column_family(default_col, "029");
+	approve_receipt = m_db->set_column_family(default_col, "030");
+	epoch_approves = m_db->set_column_family(default_col, "031");
+	epoch_approve_receipts = m_db->set_column_family(default_col, "032");
+	epoch_elected_approve_receipts = m_db->set_column_family(default_col, "033");
 
 	//use iterator
 	dag_free = m_db->set_column_family(default_col, "101");
@@ -132,15 +153,15 @@ std::string mcp::block_store::get_rocksdb_state(uint64_t limit)
 
 void mcp::block_store::version_put(mcp::db::db_transaction & transaction_a, int version_a)
 {
-	mcp::uint256_union version_value(version_a);
-	transaction_a.put(prop, mcp::uint256_to_slice(version_key), mcp::uint256_to_slice(version_value));
+	dev::h256 version_value(version_a);
+	transaction_a.put(prop, mcp::h256_to_slice(version_key), mcp::h256_to_slice(version_value));
 }
 
 int mcp::block_store::version_get()
 {
 	mcp::db::db_transaction transaction(create_transaction());
 	std::string data;
-	bool exists(transaction.get(prop, mcp::uint256_to_slice(version_key), data));
+	bool exists(transaction.get(prop, mcp::h256_to_slice(version_key), data));
 	int result;
 	if (!exists)
 	{
@@ -148,9 +169,9 @@ int mcp::block_store::version_get()
 	}
 	else
 	{
-		mcp::uint256_union version_value(mcp::slice_to_uint256(dev::Slice(data)));
-		assert_x(version_value.qwords[2] == 0 && version_value.qwords[1] == 0 && version_value.qwords[0] == 0);
-		result = version_value.number().convert_to<int>();
+		dev::h256 version_value(mcp::slice_to_h256(dev::Slice(data)));
+		// assert_x(version_value.qwords[2] == 0 && version_value.qwords[1] == 0 && version_value.qwords[0] == 0);
+		result = ((dev::h256::Arith) version_value).convert_to<int>();
 	}
 	return result;
 }
@@ -158,40 +179,25 @@ int mcp::block_store::version_get()
 std::shared_ptr<mcp::block> mcp::block_store::block_get(mcp::db::db_transaction & transaction_a, mcp::block_hash const & hash_a)
 {
 	std::string value;
-	bool exists(transaction_a.get(blocks, mcp::uint256_to_slice(hash_a), value));
-	std::shared_ptr<mcp::block> result;
+	bool exists(transaction_a.get(blocks, mcp::h256_to_slice(hash_a), value));
+	std::shared_ptr<mcp::block> result = nullptr;
 	if (exists)
 	{
 		dev::RLP r(value);
-		bool error(false);
-		result = std::make_shared<mcp::block>(error, r, false);
-		assert_x_msg(!error, "hash:" + hash_a.to_string() + " ,data:" + value);
-		assert_x_msg(result != nullptr, "hash:" + hash_a.to_string() + " ,data:" + value);
+		//auto mode = IncludeSignature::WithSignature;
+		//if (hash_a == mcp::genesis::block_hash)
+		//	mode = IncludeSignature::WithoutSignature;
 
-		bool data_exists(!block_data_get(transaction_a, result->hashables->data_hash, result->data));
-		if (data_exists)
-			assert_x(result->hashables->data_hash == mcp::block::data_hash(result->data));
+		result = std::make_shared<mcp::block>(r);
+		assert_x_msg(result != nullptr, "hash:" + hash_a.hex() + " ,data:" + value);
 	}
 	return result;
-}
-
-bool mcp::block_store::block_data_get(mcp::db::db_transaction & transaction_a, mcp::data_hash const & hash_a, dev::bytes & data_a)
-{
-	std::string value;
-	bool exists(transaction_a.get(blocks_data, mcp::uint256_to_slice(hash_a), value));
-	if (exists)
-	{
-		dev::RLP r(value);
-		assert_x(r.itemCount() == 1)
-		data_a = r[0].toBytes();
-	}
-	return !exists;
 }
 
 bool mcp::block_store::block_exists(mcp::db::db_transaction & transaction_a, mcp::block_hash const & hash_a)
 {
 	std::string result;
-	bool exists(transaction_a.get(blocks, mcp::uint256_to_slice(hash_a), result));
+	bool exists(transaction_a.get(blocks, mcp::h256_to_slice(hash_a), result));
 	return exists;
 }
 
@@ -201,36 +207,13 @@ void mcp::block_store::block_put(mcp::db::db_transaction & transaction_a, mcp::b
 	dev::bytes b_value;
 	{
 		dev::RLPStream s;
-		block_a.stream_RLP_nodata(s);
+		block_a.streamRLP(s);
 		s.swapOut(b_value);
 	}
 
 	dev::Slice s_value((char *)b_value.data(), b_value.size());
-	transaction_a.put(blocks, mcp::uint256_to_slice(hash_a), s_value);
+	transaction_a.put(blocks, mcp::h256_to_slice(hash_a), s_value);
 	transaction_a.count_add("block", 1);
-
-	// block data
-	if (!block_a.data.empty())
-		block_data_put(transaction_a, block_a.hashables->data_hash, block_a.data);
-}
-
-void mcp::block_store::block_data_put(mcp::db::db_transaction & transaction_a, mcp::data_hash const & hash_a, dev::bytes const & data_a)
-{
-	dev::bytes b_value;
-	{
-		dev::RLPStream s;
-		s.appendList(1);
-		s << data_a;
-		s.swapOut(b_value);
-	}
-
-	dev::Slice s_value((char *)b_value.data(), b_value.size());
-	transaction_a.put(blocks_data, mcp::uint256_to_slice(hash_a), s_value);
-}
-
-void mcp::block_store::block_data_del(mcp::db::db_transaction & transaction_a, mcp::data_hash const & hash_a)
-{
-	transaction_a.del(blocks_data, mcp::uint256_to_slice(hash_a));
 }
 
 ///////////
@@ -245,7 +228,110 @@ size_t mcp::block_store::block_count(mcp::db::db_transaction & transaction_a)
 	return transaction_a.count_get("block");
 }
 
-bool mcp::block_store::dag_account_get(mcp::db::db_transaction & transaction_a, mcp::account const & account_a, mcp::dag_account_info & info_a)
+
+bool mcp::block_store::transaction_exists(mcp::db::db_transaction & transaction_a, h256 const& hash_a)
+{
+	std::string result;
+	bool exists(transaction_a.get(transactions, mcp::h256_to_slice(hash_a), result));
+	return exists;
+}
+
+std::shared_ptr<mcp::Transaction> mcp::block_store::transaction_get(mcp::db::db_transaction & transaction_a, h256 const& hash_a)
+{
+	std::string value;
+	bool exists(transaction_a.get(transactions, mcp::h256_to_slice(hash_a), value));
+	std::shared_ptr<mcp::Transaction> result = nullptr;
+	if (exists)
+	{
+		dev::RLP r(value);
+		result = std::make_shared<mcp::Transaction>(r,CheckTransaction::None);
+	}
+	return result;
+}
+
+void mcp::block_store::transaction_put(mcp::db::db_transaction & transaction_a, h256 const& hash_a, mcp::Transaction const& _t)
+{
+	// all parts of block except data
+	dev::bytes b_value;
+	{
+		dev::RLPStream s;
+		_t.streamRLP(s);
+		s.swapOut(b_value);
+	}
+
+	dev::Slice s_value((char *)b_value.data(), b_value.size());
+	transaction_a.put(transactions, mcp::h256_to_slice(hash_a), s_value);
+}
+
+bool mcp::block_store::account_nonce_get(mcp::db::db_transaction & transaction_a, Address const & account_a, u256& nonce_a)
+{
+	std::string value;
+	bool exists(transaction_a.get(account_nonce, mcp::account_to_slice(account_a), value));
+	if (exists)
+		nonce_a = ((dev::h256::Arith)mcp::slice_to_h256(value)).convert_to<u256>();
+	return exists;
+}
+
+void mcp::block_store::account_nonce_put(mcp::db::db_transaction & transaction_a, Address const & account_a, u256 const& nonce_a)
+{
+	transaction_a.put(account_nonce, mcp::account_to_slice(account_a), mcp::h256_to_slice(nonce_a));
+}
+
+std::shared_ptr<mcp::TransactionAddress> mcp::block_store::transaction_address_get(mcp::db::db_transaction & transaction_a, h256 const& hash_a)
+{
+	std::string value;
+	bool exists(transaction_a.get(transaction_address, mcp::h256_to_slice(hash_a), value));
+	std::shared_ptr<mcp::TransactionAddress> result = nullptr;
+	if (exists)
+	{
+		dev::RLP r(value);
+		result = std::make_shared<mcp::TransactionAddress>(r);
+	}
+	return result;
+}
+
+void mcp::block_store::transaction_address_put(mcp::db::db_transaction & transaction_a, h256 const& hash_a, mcp::TransactionAddress const& _td)
+{
+	dev::bytes b_value = _td.rlp();
+	dev::Slice s_value((char *)b_value.data(), b_value.size());
+	transaction_a.put(transaction_address, mcp::h256_to_slice(hash_a), s_value);
+}
+
+bool mcp::block_store::approve_exists(mcp::db::db_transaction & transaction_a, h256 const& hash_a)
+{
+	std::string result;
+	bool exists(transaction_a.get(approves, mcp::h256_to_slice(hash_a), result));
+	return exists;
+}
+
+std::shared_ptr<mcp::approve> mcp::block_store::approve_get(mcp::db::db_transaction & transaction_a, h256 const& hash_a)
+{
+	std::string value;
+	bool exists(transaction_a.get(approves, mcp::h256_to_slice(hash_a), value));
+	std::shared_ptr<mcp::approve> result = nullptr;
+	if (exists)
+	{
+		dev::RLP r(value);
+		result = std::make_shared<mcp::approve>(r,CheckTransaction::None);
+	}
+	return result;
+}
+
+void mcp::block_store::approve_put(mcp::db::db_transaction & transaction_a, h256 const& hash_a, mcp::approve const& _t)
+{
+	// all parts of block except data
+	dev::bytes b_value;
+	{
+		dev::RLPStream s;
+		_t.streamRLP(s);
+		s.swapOut(b_value);
+	}
+
+	dev::Slice s_value((char *)b_value.data(), b_value.size());
+	transaction_a.put(approves, mcp::h256_to_slice(hash_a), s_value);
+}
+
+bool mcp::block_store::dag_account_get(mcp::db::db_transaction & transaction_a, dev::Address const & account_a, mcp::dag_account_info & info_a)
 {
 	std::string value;
 	bool exists(transaction_a.get(dag_account_info, mcp::account_to_slice(account_a), value));
@@ -259,7 +345,7 @@ bool mcp::block_store::dag_account_get(mcp::db::db_transaction & transaction_a, 
 	return !exists;
 }
 
-void mcp::block_store::dag_account_put(mcp::db::db_transaction & transaction_a, mcp::account const & account_a, mcp::dag_account_info const & info_a)
+void mcp::block_store::dag_account_put(mcp::db::db_transaction & transaction_a, dev::Address const & account_a, mcp::dag_account_info const & info_a)
 {
 	dev::bytes b_value;
 	{
@@ -272,38 +358,12 @@ void mcp::block_store::dag_account_put(mcp::db::db_transaction & transaction_a, 
 	transaction_a.put(dag_account_info, mcp::account_to_slice(account_a), s_value);
 }
 
-std::shared_ptr<mcp::account_info> mcp::block_store::account_get(mcp::db::db_transaction & transaction_a, mcp::account const & account_a)
-{
-	std::shared_ptr<mcp::account_info> info;
-	std::string value;
-	bool exists(transaction_a.get(account_info, mcp::account_to_slice(account_a), value));
-	if (exists)
-	{
-		dev::RLP r(value);
-		bool error(false);
-		info = std::make_shared<mcp::account_info>(error, r);
-		assert_x(!error);
-	}
-	return info;
-}
 
-void mcp::block_store::account_put(mcp::db::db_transaction & transaction_a, mcp::account const & account_a, mcp::account_info & info_a)
-{
-	dev::bytes b_value;
-	{
-		dev::RLPStream s;
-		info_a.stream_RLP(s);
-		s.swapOut(b_value);
-	}
-	dev::Slice s_value((char *)b_value.data(), b_value.size());
-	transaction_a.put(account_info, mcp::account_to_slice(account_a), s_value);
-}
-
-std::shared_ptr<mcp::account_state> mcp::block_store::account_state_get(mcp::db::db_transaction & transaction_a, mcp::account_state_hash const & hash_a)
+std::shared_ptr<mcp::account_state> mcp::block_store::account_state_get(mcp::db::db_transaction & transaction_a, h256 const& hash_a)
 {
 	std::shared_ptr<mcp::account_state> result;
 	std::string value;
-	bool exists(transaction_a.get(account_state, mcp::uint256_to_slice(hash_a), value));
+	bool exists(transaction_a.get(account_state, mcp::h256_to_slice(hash_a), value));
 	if (exists)
 	{
 		dev::RLP r(value);
@@ -314,7 +374,7 @@ std::shared_ptr<mcp::account_state> mcp::block_store::account_state_get(mcp::db:
 	return result;
 }
 
-void mcp::block_store::account_state_put(mcp::db::db_transaction & transaction_a, mcp::account_state_hash const & hash_a, mcp::account_state const & value_a)
+void mcp::block_store::account_state_put(mcp::db::db_transaction & transaction_a, h256 const& hash_a, mcp::account_state const & value_a)
 {
 	dev::bytes b_value;
 	{
@@ -323,61 +383,61 @@ void mcp::block_store::account_state_put(mcp::db::db_transaction & transaction_a
 		s.swapOut(b_value);
 	}
 	dev::Slice s_value((char *)b_value.data(), b_value.size());
-	transaction_a.put(account_state, mcp::uint256_to_slice(hash_a), s_value);
+	transaction_a.put(account_state, mcp::h256_to_slice(hash_a), s_value);
 }
 
 
-bool mcp::block_store::latest_account_state_get(mcp::db::db_transaction & transaction_a, mcp::account const & account_a, mcp::account_state_hash & hash_a)
+bool mcp::block_store::latest_account_state_get(mcp::db::db_transaction & transaction_a, Address const & account_a, h256& hash_a)
 {
 	std::string value;
 	bool exists(transaction_a.get(latest_account_state, mcp::account_to_slice(account_a), value));
 	if (exists)
-		hash_a = mcp::slice_to_uint256(value);
+		hash_a = mcp::slice_to_h256(value);
 	return !exists;
 }
 
-void mcp::block_store::latest_account_state_put(mcp::db::db_transaction & transaction_a, mcp::account const & account_a, mcp::account_state_hash const & hash_a)
+void mcp::block_store::latest_account_state_put(mcp::db::db_transaction & transaction_a, Address const & account_a, h256 const& hash_a)
 {
-	transaction_a.put(latest_account_state, mcp::account_to_slice(account_a), mcp::uint256_to_slice(hash_a));
+	transaction_a.put(latest_account_state, mcp::account_to_slice(account_a), mcp::h256_to_slice(hash_a));
 }
 
 bool mcp::block_store::block_summary_get(mcp::db::db_transaction & transaction_a, mcp::block_hash const & block_hash_a, mcp::summary_hash & summary_hash_a)
 {
 	std::string value;
-	bool exists(transaction_a.get(block_summary, mcp::uint256_to_slice(block_hash_a), value));
+	bool exists(transaction_a.get(block_summary, mcp::h256_to_slice(block_hash_a), value));
 	if (exists)
 	{
-		summary_hash_a = mcp::slice_to_uint256(value);
+		summary_hash_a = mcp::slice_to_h256(value);
 	}
 	return !exists;
 }
 
 void mcp::block_store::block_summary_put(mcp::db::db_transaction & transaction_a, mcp::block_hash const & block_hash_a, mcp::summary_hash const & summary_hash_a)
 {
-	transaction_a.put(block_summary, mcp::uint256_to_slice(block_hash_a), mcp::uint256_to_slice(summary_hash_a));
+	transaction_a.put(block_summary, mcp::h256_to_slice(block_hash_a), mcp::h256_to_slice(summary_hash_a));
 }
 
 
 bool mcp::block_store::summary_block_get(mcp::db::db_transaction & transaction_a, mcp::summary_hash const &  summary_hash_a, mcp::block_hash & block_hash_a)
 {
 	std::string value;
-	bool exists(transaction_a.get(summary_block, mcp::uint256_to_slice(summary_hash_a), value));
+	bool exists(transaction_a.get(summary_block, mcp::h256_to_slice(summary_hash_a), value));
 	if (exists)
 	{
-		block_hash_a = mcp::slice_to_uint256(value);
+		block_hash_a = mcp::slice_to_h256(value);
 	}
 	return !exists;
 }
 
 void mcp::block_store::summary_block_put(mcp::db::db_transaction & transaction_a, mcp::summary_hash const & summary_hash_a, mcp::block_hash const & block_hash_a)
 {
-	transaction_a.put(summary_block, mcp::uint256_to_slice(summary_hash_a), mcp::uint256_to_slice(block_hash_a));
+	transaction_a.put(summary_block, mcp::h256_to_slice(summary_hash_a), mcp::h256_to_slice(block_hash_a));
 }
 
 std::shared_ptr<mcp::block_state> mcp::block_store::block_state_get(mcp::db::db_transaction & transaction_a, mcp::block_hash const & hash_a)
 {
 	std::string value;
-	bool exists(transaction_a.get(block_state, mcp::uint256_to_slice(hash_a), value));
+	bool exists(transaction_a.get(block_state, mcp::h256_to_slice(hash_a), value));
 	std::shared_ptr<mcp::block_state> result;
 	if (exists)
 	{
@@ -399,7 +459,7 @@ void mcp::block_store::block_state_put(mcp::db::db_transaction & transaction_a, 
 		s.swapOut(b_value);
 	}
 	dev::Slice s_value((char *)b_value.data(), b_value.size());
-	transaction_a.put(block_state, mcp::uint256_to_slice(hash_a), s_value);
+	transaction_a.put(block_state, mcp::h256_to_slice(hash_a), s_value);
 }
 
 mcp::db::forward_iterator mcp::block_store::dag_free_begin(mcp::db::db_transaction & transaction_a, std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a)
@@ -470,25 +530,25 @@ size_t mcp::block_store::dag_free_count(mcp::db::db_transaction & transaction_a)
 bool mcp::block_store::main_chain_get(mcp::db::db_transaction & transaction_a, uint64_t const & mci_a, mcp::block_hash & hash_a, std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a)
 {
 	std::string value;
-	mcp::uint64_union mci(mci_a);
-	bool exists(transaction_a.get(main_chain, mcp::uint64_to_slice(mci), value, snapshot_a));
+	dev::h64 mci(mci_a);
+	bool exists(transaction_a.get(main_chain, mcp::h64_to_slice(mci), value, snapshot_a));
 	if (exists)
 	{
-		hash_a = mcp::slice_to_uint256(value);
+		hash_a = mcp::slice_to_h256(value);
 	}
 	return !exists;
 }
 
 void mcp::block_store::main_chain_put(mcp::db::db_transaction & transaction_a, uint64_t const & mci_a, mcp::block_hash const & hash_a)
 {
-	mcp::uint64_union mci(mci_a);
-	transaction_a.put(main_chain, mcp::uint64_to_slice(mci), mcp::uint256_to_slice(hash_a));
+	dev::h64 mci(mci_a);
+	transaction_a.put(main_chain, mcp::h64_to_slice(mci), mcp::h256_to_slice(hash_a));
 }
 
 void mcp::block_store::main_chain_del(mcp::db::db_transaction & transaction_a, uint64_t const & mci_a)
 {
-	mcp::uint64_union mci(mci_a);
-	transaction_a.del(main_chain, mcp::uint64_to_slice(mci));
+	dev::h64 mci(mci_a);
+	transaction_a.del(main_chain, mcp::h64_to_slice(mci));
 }
 
 size_t mcp::block_store::stable_block_count(mcp::db::db_transaction & transaction_a)
@@ -499,75 +559,121 @@ size_t mcp::block_store::stable_block_count(mcp::db::db_transaction & transactio
 bool mcp::block_store::stable_block_get(mcp::db::db_transaction & transaction_a, uint64_t const & index_a, mcp::block_hash & hash_a, std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a)
 {
 	std::string value;
-	mcp::uint64_union index(index_a);
-	bool exists(transaction_a.get(stable_block, mcp::uint64_to_slice(index), value, snapshot_a));
+	dev::h64 index(index_a);
+	bool exists(transaction_a.get(stable_block, mcp::h64_to_slice(index), value, snapshot_a));
 	if (exists)
 	{
-		hash_a = mcp::slice_to_uint256(value);
+		hash_a = mcp::slice_to_h256(value);
+	}
+	return !exists;
+}
+
+bool mcp::block_store::stable_block_get(mcp::db::db_transaction & transaction_a, mcp::block_hash const& hash_a, uint64_t & index_a, std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a)
+{
+	std::string value;
+	bool exists(transaction_a.get(stable_block_number, mcp::h256_to_slice(hash_a), value, snapshot_a));
+	if (exists)
+	{
+		index_a = ((dev::h64::Arith)mcp::slice_to_h64(value)).convert_to<uint64_t>();
 	}
 	return !exists;
 }
 
 void mcp::block_store::stable_block_put(mcp::db::db_transaction & transaction_a, uint64_t const & index_a, mcp::block_hash const & hash_a)
 {
-	mcp::uint64_union index(index_a);
-	transaction_a.put(stable_block, mcp::uint64_to_slice(index), mcp::uint256_to_slice(hash_a));
+	dev::h64 index(index_a);
+	transaction_a.put(stable_block, mcp::h64_to_slice(index), mcp::h256_to_slice(hash_a));
+	transaction_a.put(stable_block_number, mcp::h256_to_slice(hash_a), mcp::h64_to_slice(index));
 }
 
-size_t mcp::block_store::light_unstable_count(mcp::db::db_transaction & transaction_a)
+size_t mcp::block_store::transaction_unstable_count(mcp::db::db_transaction & transaction_a)
 {
-	return transaction_a.count_get("light_unstable");
+	return transaction_a.count_get("transaction_unstable");
 }
 
-void mcp::block_store::light_unstable_count_add(mcp::db::db_transaction & transaction_a)
+void mcp::block_store::transaction_unstable_count_add(mcp::db::db_transaction & transaction_a, uint32_t v)
 {
-	transaction_a.count_add("light_unstable", 1);
+	transaction_a.count_add("transaction_unstable", v);
 }
 
-void mcp::block_store::light_unstable_count_reduce(mcp::db::db_transaction & transaction_a)
+void mcp::block_store::transaction_unstable_count_reduce(mcp::db::db_transaction & transaction_a, uint32_t v)
 {
-	transaction_a.count_reduce("light_unstable", 1);
+	transaction_a.count_reduce("transaction_unstable", v);
 }
 
+size_t mcp::block_store::transaction_count(mcp::db::db_transaction & transaction_a)
+{
+	return transaction_a.count_get("transaction");
+}
+
+void mcp::block_store::transaction_count_add(mcp::db::db_transaction & transaction_a, uint32_t v)
+{
+	transaction_a.count_add("transaction", v);
+}
+
+size_t mcp::block_store::approve_unstable_count(mcp::db::db_transaction & transaction_a)
+{
+	return transaction_a.count_get("approve_unstable");
+}
+
+void mcp::block_store::approve_unstable_count_add(mcp::db::db_transaction & transaction_a, uint32_t v)
+{
+	transaction_a.count_add("approve_unstable", v);
+}
+
+void mcp::block_store::approve_unstable_count_reduce(mcp::db::db_transaction & transaction_a, uint32_t v)
+{
+	transaction_a.count_reduce("approve_unstable", v);
+}
+
+size_t mcp::block_store::approve_count(mcp::db::db_transaction & transaction_a)
+{
+	return transaction_a.count_get("approve");
+}
+
+void mcp::block_store::approve_count_add(mcp::db::db_transaction & transaction_a, uint32_t v)
+{
+	transaction_a.count_add("approve", v);
+}
 
 uint64_t mcp::block_store::last_mci_get(mcp::db::db_transaction & transaction_a)
 {
 	std::string value;
-	bool exists(transaction_a.get(prop, mcp::uint256_to_slice(last_mci_key), value));
+	bool exists(transaction_a.get(prop, mcp::h256_to_slice(last_mci_key), value));
 	uint64_t result(0);
 	if (exists)
-		result = mcp::slice_to_uint64(value).number();
+		result = ((dev::h64::Arith) mcp::slice_to_h64(value)).convert_to<uint64_t>();
 	return result;
 }
 
 void mcp::block_store::last_mci_put(mcp::db::db_transaction & transaction_a, uint64_t const & last_mci_a)
 {
-	mcp::uint64_union last_mci(last_mci_a);
-	transaction_a.put(prop, mcp::uint256_to_slice(last_mci_key), mcp::uint64_to_slice(last_mci));
+	dev::h64 last_mci(last_mci_a);
+	transaction_a.put(prop, mcp::h256_to_slice(last_mci_key), mcp::h64_to_slice(last_mci));
 }
 
 
 uint64_t mcp::block_store::last_stable_mci_get(mcp::db::db_transaction & transaction_a)
 {
 	std::string value;
-	bool exists(transaction_a.get(prop, mcp::uint256_to_slice(last_stable_mci_key), value));
+	bool exists(transaction_a.get(prop, mcp::h256_to_slice(last_stable_mci_key), value));
 	uint64_t result(0);
 	if (exists)
-		result = mcp::slice_to_uint64(value).number();
+		result = ((dev::h64::Arith)mcp::slice_to_h64(value)).convert_to<uint64_t>();
 	return result;
 }
 
 void mcp::block_store::last_stable_mci_put(mcp::db::db_transaction & transaction_a, uint64_t const & last_stable_mci_a)
 {
-	mcp::uint64_union last_stable_mci(last_stable_mci_a);
-	transaction_a.put(prop, mcp::uint256_to_slice(last_stable_mci_key), mcp::uint64_to_slice(last_stable_mci));
+	dev::h64 last_stable_mci(last_stable_mci_a);
+	transaction_a.put(prop, mcp::h256_to_slice(last_stable_mci_key), mcp::h64_to_slice(last_stable_mci));
 }
 
 
 mcp::advance_info mcp::block_store::advance_info_get(mcp::db::db_transaction & transaction_a)
 {
 	std::string value;
-	bool exists(transaction_a.get(prop, mcp::uint256_to_slice(advance_info_key), value));
+	bool exists(transaction_a.get(prop, mcp::h256_to_slice(advance_info_key), value));
 	mcp::advance_info result;
 	if (exists)
 		result = mcp::advance_info(value);
@@ -576,30 +682,30 @@ mcp::advance_info mcp::block_store::advance_info_get(mcp::db::db_transaction & t
 
 void mcp::block_store::advance_info_put(mcp::db::db_transaction & transaction_a, mcp::advance_info const & value_a)
 {
-	transaction_a.put(prop, mcp::uint256_to_slice(advance_info_key), value_a.val());
+	transaction_a.put(prop, mcp::h256_to_slice(advance_info_key), value_a.val());
 }
 
 
 uint64_t mcp::block_store::last_stable_index_get(mcp::db::db_transaction & transaction_a)
 {
 	std::string value;
-	bool exists(transaction_a.get(prop, mcp::uint256_to_slice(last_stable_index_key), value));
+	bool exists(transaction_a.get(prop, mcp::h256_to_slice(last_stable_index_key), value));
 	uint64_t result(0);
 	if (exists)
-		result = mcp::slice_to_uint64(value).number();
+		result = ((dev::h64::Arith)mcp::slice_to_h64(value)).convert_to<uint64_t>();
 	return result;
 }
 
 void mcp::block_store::last_stable_index_put(mcp::db::db_transaction & transaction_a, uint64_t const & last_stable_index_a)
 {
-	mcp::uint64_union last_stable_index(last_stable_index_a);
-	transaction_a.put(prop, mcp::uint256_to_slice(last_stable_index_key), mcp::uint64_to_slice(last_stable_index));
+	dev::h64 last_stable_index(last_stable_index_a);
+	transaction_a.put(prop, mcp::h256_to_slice(last_stable_index_key), mcp::h64_to_slice(last_stable_index));
 }
 
 
 void mcp::block_store::block_children_get(mcp::db::db_transaction & transaction_a, mcp::block_hash const & p_hash_a, std::list<mcp::block_hash> & c_hashs_a)
 {
-	mcp::block_child_key key(p_hash_a, 0);
+	mcp::block_child_key key(p_hash_a, mcp::block_hash(0));
 	mcp::db::forward_iterator it(transaction_a.begin(block_child, key.val()));
 	while (true)
 	{
@@ -630,7 +736,7 @@ void mcp::block_store::block_child_put(mcp::db::db_transaction & transaction_a, 
 bool mcp::block_store::skiplist_get(mcp::db::db_transaction & transaction_a, mcp::block_hash const & hash_a, mcp::skiplist_info & skiplist_a)
 {
 	std::string value;
-	bool exists(transaction_a.get(skiplist, mcp::uint256_to_slice(hash_a), value));
+	bool exists(transaction_a.get(skiplist, mcp::h256_to_slice(hash_a), value));
 	if (exists)
 	{
 		dev::RLP r(value);
@@ -648,70 +754,70 @@ void mcp::block_store::skiplist_put(mcp::db::db_transaction & transaction_a, mcp
 		s.swapOut(b_value);
 	}
 	dev::Slice s_value((char *)b_value.data(), b_value.size());
-	transaction_a.put(skiplist, mcp::uint256_to_slice(hash_a), s_value);
+	transaction_a.put(skiplist, mcp::h256_to_slice(hash_a), s_value);
 }
 
 bool mcp::block_store::successor_get(mcp::db::db_transaction & transaction_a, mcp::block_hash const & root_a, mcp::block_hash & successor_a, std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a)
 {
 	std::string value;
-	bool exists(transaction_a.get(successor, mcp::uint256_to_slice(root_a), value, snapshot_a));
+	bool exists(transaction_a.get(successor, mcp::h256_to_slice(root_a), value, snapshot_a));
 	if (exists)
 	{
-		successor_a = mcp::slice_to_uint256(value);
+		successor_a = mcp::slice_to_h256(value);
 	}
 	return !exists;
 }
 
 void mcp::block_store::successor_put(mcp::db::db_transaction & transaction_a, mcp::block_hash const & root_a, mcp::block_hash const & successor_a)
 {
-	transaction_a.put(successor, mcp::uint256_to_slice(root_a), mcp::uint256_to_slice(successor_a));
+	transaction_a.put(successor, mcp::h256_to_slice(root_a), mcp::h256_to_slice(successor_a));
 }
 
 void mcp::block_store::successor_del(mcp::db::db_transaction & transaction_a, mcp::block_hash const & root_a)
 {
-	transaction_a.del(successor, mcp::uint256_to_slice(root_a));
+	transaction_a.del(successor, mcp::h256_to_slice(root_a));
 }
+
 
 bool mcp::block_store::genesis_hash_get(mcp::db::db_transaction & transaction_a, mcp::block_hash & genesis_hash)
 {
 	std::string value;
-	bool exists(transaction_a.get(prop, mcp::uint256_to_slice(genesis_hash_key), value));
+	bool exists(transaction_a.get(prop, mcp::h256_to_slice(genesis_hash_key), value));
 	if (exists)
 	{
-		genesis_hash = mcp::slice_to_uint256(value);
+		genesis_hash = mcp::slice_to_h256(value);
 	}
 	return !exists;
 }
 
 void mcp::block_store::genesis_hash_put(mcp::db::db_transaction & transaction_a, mcp::block_hash const & genesis_hash)
 {
-	transaction_a.put(prop, mcp::uint256_to_slice(genesis_hash_key), mcp::uint256_to_slice(genesis_hash));
+	transaction_a.put(prop, mcp::h256_to_slice(genesis_hash_key), mcp::h256_to_slice(genesis_hash));
 }
 
 // sync db
-
 bool mcp::block_store::catchup_chain_summaries_get(mcp::db::db_transaction & transaction_a, uint64_t const & index_a, mcp::summary_hash & hash_a)
 {
 	std::string value;
-	mcp::uint64_union index(index_a);
-	bool exists(transaction_a.get(catchup_chain_summaries, mcp::uint64_to_slice(index), value));
+	dev::h64 index(index_a);
+	bool exists(transaction_a.get(catchup_chain_summaries, mcp::h64_to_slice(index), value));
 	if (exists)
 	{
-		hash_a = mcp::slice_to_uint256(value);
+		hash_a = mcp::slice_to_h256(value);
 	}
 	return !exists;
 }
 
 void mcp::block_store::catchup_chain_summaries_put(mcp::db::db_transaction & transaction_a, uint64_t const & index_a, mcp::summary_hash const & hash_a)
 {
-	mcp::uint64_union index(index_a);
-	transaction_a.put(catchup_chain_summaries, mcp::uint64_to_slice(index), mcp::uint256_to_slice(hash_a));
+	dev::h64 index(index_a);
+	transaction_a.put(catchup_chain_summaries, mcp::h64_to_slice(index), mcp::h256_to_slice(hash_a));
 }
 
 void mcp::block_store::catchup_chain_summaries_del(mcp::db::db_transaction & transaction_a, uint64_t const & index_a)
 {
-	mcp::uint64_union index(index_a);
-	transaction_a.del(catchup_chain_summaries, mcp::uint64_to_slice(index));
+	dev::h64 index(index_a);
+	transaction_a.del(catchup_chain_summaries, mcp::h64_to_slice(index));
 }
 
 void mcp::block_store::catchup_chain_summaries_clear(std::shared_ptr<rocksdb::WriteOptions> write_option_a)
@@ -724,99 +830,103 @@ void mcp::block_store::catchup_chain_summaries_clear(std::shared_ptr<rocksdb::Wr
 bool mcp::block_store::catchup_chain_block_summary_get(mcp::db::db_transaction & transaction_a, mcp::block_hash const & block_hash_a, mcp::summary_hash & summary_hash_a)
 {
 	std::string value;
-	bool exists(transaction_a.get(catchup_chain_block_summary, mcp::uint256_to_slice(block_hash_a), value));
+	bool exists(transaction_a.get(catchup_chain_block_summary, mcp::h256_to_slice(block_hash_a), value));
 	if (exists)
 	{
-		summary_hash_a = mcp::slice_to_uint256(value);
+		summary_hash_a = mcp::slice_to_h256(value);
 	}
 	return !exists;
 }
 
 void mcp::block_store::catchup_chain_block_summary_put(mcp::db::db_transaction & transaction_a, mcp::block_hash const & block_hash_a, mcp::summary_hash const & summary_hash_a)
 {
-	transaction_a.put(catchup_chain_block_summary, mcp::uint256_to_slice(block_hash_a), mcp::uint256_to_slice(summary_hash_a));
+	transaction_a.put(catchup_chain_block_summary, mcp::h256_to_slice(block_hash_a), mcp::h256_to_slice(summary_hash_a));
 }
 
 void mcp::block_store::catchup_chain_block_summary_del(mcp::db::db_transaction & transaction_a, mcp::block_hash const & block_hash_a)
 {
-	transaction_a.del(catchup_chain_block_summary, mcp::uint256_to_slice(block_hash_a));
+	transaction_a.del(catchup_chain_block_summary, mcp::h256_to_slice(block_hash_a));
 }
 
 void mcp::block_store::catchup_chain_block_summary_clear(std::shared_ptr<rocksdb::WriteOptions> write_option_a)
 {
 	mcp::summary_hash min(0);
-	mcp::summary_hash max;
-	max.bytes.fill(255);
 
-	m_db->del_range(catchup_chain_block_summary, mcp::uint256_to_slice(min), mcp::uint256_to_slice(max), write_option_a);
+	std::array<uint8_t, mcp::summary_hash::size> maxValue;
+	maxValue.fill(255);
+	mcp::summary_hash max(maxValue.data(), mcp::summary_hash::ConstructFromPointer);
+
+	m_db->del_range(catchup_chain_block_summary, mcp::h256_to_slice(min), mcp::h256_to_slice(max), write_option_a);
 }
 
 
 bool mcp::block_store::catchup_chain_summary_block_get(mcp::db::db_transaction & transaction_a, mcp::summary_hash const & summary_hash_a, mcp::block_hash & block_hash_a)
 {
 	std::string value;
-	bool exists(transaction_a.get(catchup_chain_summary_block, mcp::uint256_to_slice(summary_hash_a), value));
+	bool exists(transaction_a.get(catchup_chain_summary_block, mcp::h256_to_slice(summary_hash_a), value));
 	if (exists)
 	{
-		block_hash_a = mcp::slice_to_uint256(value);
+		block_hash_a = mcp::slice_to_h256(value);
 	}
 	return !exists;
 }
 
 void mcp::block_store::catchup_chain_summary_block_put(mcp::db::db_transaction & transaction_a, mcp::summary_hash const & summary_hash_a, mcp::block_hash const & block_hash_a)
 {
-	transaction_a.put(catchup_chain_summary_block, mcp::uint256_to_slice(summary_hash_a), mcp::uint256_to_slice(block_hash_a));
+	transaction_a.put(catchup_chain_summary_block, mcp::h256_to_slice(summary_hash_a), mcp::h256_to_slice(block_hash_a));
 }
 
 void mcp::block_store::catchup_chain_summary_block_del(mcp::db::db_transaction & transaction_a, mcp::summary_hash const & summary_hash_a)
 {
-	transaction_a.del(catchup_chain_summary_block, mcp::uint256_to_slice(summary_hash_a));
+	transaction_a.del(catchup_chain_summary_block, mcp::h256_to_slice(summary_hash_a));
 }
 
 void mcp::block_store::catchup_chain_summary_block_clear(std::shared_ptr<rocksdb::WriteOptions> write_option_a)
 {
 	mcp::summary_hash min(0);
-	mcp::summary_hash max;
-	max.bytes.fill(255);
+	std::array<uint8_t, mcp::summary_hash::size> maxValue;
+	maxValue.fill(255);
+	mcp::summary_hash max(maxValue.data(), mcp::summary_hash::ConstructFromPointer);
 
-	m_db->del_range(catchup_chain_summary_block, mcp::uint256_to_slice(min), mcp::uint256_to_slice(max), write_option_a);
+	m_db->del_range(catchup_chain_summary_block, mcp::h256_to_slice(min), mcp::h256_to_slice(max), write_option_a);
 }
 
 bool mcp::block_store::hash_tree_summary_exists(mcp::db::db_transaction & transaction_a, mcp::summary_hash const & summary_a)
 {
 	std::string value;
-	bool exists(transaction_a.get(hash_tree_summary, mcp::uint256_to_slice(summary_a), value));
+	bool exists(transaction_a.get(hash_tree_summary, mcp::h256_to_slice(summary_a), value));
 	return exists;
 }
 
 void mcp::block_store::hash_tree_summary_put(mcp::db::db_transaction & transaction_a, mcp::summary_hash const & summary_a)
 {
-	transaction_a.put(hash_tree_summary, mcp::uint256_to_slice(summary_a), dev::Slice());
+	transaction_a.put(hash_tree_summary, mcp::h256_to_slice(summary_a), dev::Slice());
 }
 
 void mcp::block_store::hash_tree_summary_del(mcp::db::db_transaction & transaction_a, mcp::summary_hash const & summary_a)
 {
-	transaction_a.del(hash_tree_summary, mcp::uint256_to_slice(summary_a));
+	transaction_a.del(hash_tree_summary, mcp::h256_to_slice(summary_a));
 }
 
 void mcp::block_store::hash_tree_summary_clear(std::shared_ptr<rocksdb::WriteOptions> write_option_a)
 {
 	mcp::summary_hash min(0);
-	mcp::summary_hash max;
-	max.bytes.fill(255);
+	std::array<uint8_t, mcp::summary_hash::size> maxValue;
+	maxValue.fill(255);
+	mcp::summary_hash max(maxValue.data(), mcp::summary_hash::ConstructFromPointer);
 
-	m_db->del_range(hash_tree_summary, mcp::uint256_to_slice(min), mcp::uint256_to_slice(max), write_option_a);
+	m_db->del_range(hash_tree_summary, mcp::h256_to_slice(min), mcp::h256_to_slice(max), write_option_a);
 }
 
 bool mcp::block_store::contract_main_trie_node_get(mcp::db::db_transaction & transaction_a, mcp::code_hash const & hash_a, std::string & value_a)
 {
-	bool exists(transaction_a.get(contract_main, mcp::uint256_to_slice(hash_a), value_a));
+	bool exists(transaction_a.get(contract_main, mcp::h256_to_slice(hash_a), value_a));
 	return !exists;
 }
 
 void mcp::block_store::contract_main_trie_node_put(mcp::db::db_transaction & transaction_a, mcp::code_hash const & hash_a, std::string const & value_a)
 {
-	transaction_a.put(contract_main, mcp::uint256_to_slice(hash_a), dev::Slice(value_a));
+	transaction_a.put(contract_main, mcp::h256_to_slice(hash_a), dev::Slice(value_a));
 }
 
 bool mcp::block_store::contract_aux_state_key_get(mcp::db::db_transaction & transaction_a, dev::bytes const & key_a, dev::bytes & value_a)
@@ -849,315 +959,52 @@ void mcp::block_store::contract_aux_state_key_put(mcp::db::db_transaction & tran
 bool mcp::block_store::catchup_index_get(mcp::db::db_transaction & transaction_a, uint64_t & _v)
 {
 	std::string value;
-	bool exists(transaction_a.get(prop, mcp::uint256_to_slice(catchup_index), value));
+	bool exists(transaction_a.get(prop, mcp::h256_to_slice(catchup_index), value));
 	if (exists)
 	{
-		_v = mcp::slice_to_uint64(value).number();
+		_v = ((dev::h64::Arith)mcp::slice_to_h64(value)).convert_to<uint64_t>();
 	}
 	return !exists;
 }
 
 void mcp::block_store::catchup_index_put(mcp::db::db_transaction & transaction_a, uint64_t const& _v)
 {
-	mcp::uint64_union v(_v);
-	transaction_a.put(prop, mcp::uint256_to_slice(catchup_index), mcp::uint64_to_slice(v));
+	dev::h64 v(_v);
+	transaction_a.put(prop, mcp::h256_to_slice(catchup_index), mcp::h64_to_slice(v));
 }
 
 void mcp::block_store::catchup_index_del(mcp::db::db_transaction & transaction_a)
 {
-	transaction_a.del(prop, mcp::uint256_to_slice(catchup_index));
+	transaction_a.del(prop, mcp::h256_to_slice(catchup_index));
 }
 
 bool mcp::block_store::catchup_max_index_get(mcp::db::db_transaction & transaction_a, uint64_t & _v)
 {
 	std::string value;
-	bool exists(transaction_a.get(prop, mcp::uint256_to_slice(catchup_max_index), value));
+	bool exists(transaction_a.get(prop, mcp::h256_to_slice(catchup_max_index), value));
 	if (exists)
 	{
-		_v = mcp::slice_to_uint64(value).number();
+		_v = ((dev::h64::Arith)mcp::slice_to_h64(value)).convert_to<uint64_t>();
 	}
 	return !exists;
 }
 
 void mcp::block_store::catchup_max_index_put(mcp::db::db_transaction & transaction_a, uint64_t const& _v)
 {
-	mcp::uint64_union v(_v);
-	transaction_a.put(prop, mcp::uint256_to_slice(catchup_max_index), mcp::uint64_to_slice(v));
+	dev::h64 v(_v);
+	transaction_a.put(prop, mcp::h256_to_slice(catchup_max_index), mcp::h64_to_slice(v));
 }
 
 void mcp::block_store::catchup_max_index_del(mcp::db::db_transaction & transaction_a)
 {
-	transaction_a.del(prop, mcp::uint256_to_slice(catchup_max_index));
+	transaction_a.del(prop, mcp::h256_to_slice(catchup_max_index));
 }
 
-std::shared_ptr<mcp::unlink_block> mcp::block_store::unlink_block_get(mcp::db::db_transaction & transaction_a, mcp::block_hash const & hash_a, std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a)
-{
-	std::string value;
-	bool exists(transaction_a.get(unlink_block, mcp::uint256_to_slice(hash_a), value, snapshot_a));
-	std::shared_ptr<mcp::unlink_block> result = nullptr;
-	if (exists)
-	{
-		dev::RLP r(value);
-		bool error(false);
-		result = std::make_shared<mcp::unlink_block>(error, r);
-		assert_x(!error);
-		assert_x(result != nullptr);
-	}
-	return result;
-}
-
-bool mcp::block_store::unlink_block_exists(mcp::db::db_transaction & transaction_a, mcp::block_hash const & hash_a)
-{
-	std::string result;
-	bool exists(transaction_a.get(unlink_block, mcp::uint256_to_slice(hash_a), result));
-	return exists;
-}
-
-void mcp::block_store::unlink_block_put(mcp::db::db_transaction & transaction_a, mcp::block_hash const & hash_a, mcp::unlink_block const & block_a)
-{
-	dev::bytes b_value;
-	{
-		dev::RLPStream s;
-		block_a.stream_RLP(s);
-		s.swapOut(b_value);
-	}
-
-	bool exist = unlink_block_exists(transaction_a, hash_a);
-
-	dev::Slice s_value((char *)b_value.data(), b_value.size());
-	transaction_a.put(unlink_block, mcp::uint256_to_slice(hash_a), s_value);
-
-	if (!exist)
-		transaction_a.count_add("unlink_block", 1);
-}
-
-void mcp::block_store::unlink_block_del(mcp::db::db_transaction & transaction_a, mcp::block_hash const & hash_a)
-{
-	bool exist = unlink_block_exists(transaction_a, hash_a);
-
-	if (exist)
-	{
-		transaction_a.del(unlink_block, mcp::uint256_to_slice(hash_a));
-		transaction_a.count_reduce("unlink_block", 1);
-	}
-}
-
-size_t mcp::block_store::unlink_block_count(mcp::db::db_transaction & transaction_a, std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a)
-{
-	return transaction_a.count_get("unlink_block", snapshot_a);
-}
-
-std::shared_ptr<mcp::unlink_info> mcp::block_store::unlink_info_get(mcp::db::db_transaction & transaction_a, mcp::account const & account_a)
-{
-	std::string value;
-	bool exists(transaction_a.get(unlink_info, mcp::account_to_slice(account_a), value));
-	std::shared_ptr<mcp::unlink_info> result = nullptr;
-	if (exists)
-	{
-		result = std::make_shared<mcp::unlink_info>(value);
-		assert_x(result != nullptr);
-	}
-
-	return result;
-}
-
-bool mcp::block_store::unlink_info_exists(mcp::db::db_transaction & transaction_a, mcp::account const & account_a)
-{
-	std::string result;
-	bool exists(transaction_a.get(unlink_info, mcp::account_to_slice(account_a), result));
-	return exists;
-}
-
-
-bool unlink_sametime = true;
-
-void mcp::block_store::unlink_info_put(mcp::db::db_transaction & transaction_a, mcp::account const & account_a, mcp::unlink_info const & unlink_a)
-{
-	if (!unlink_sametime)
-		assert_x(false);
-
-	unlink_sametime = false;
-	bool exists = false;
-	if (unlink_info_exists(transaction_a, account_a))
-		exists = true;
-
-	transaction_a.put(unlink_info, mcp::account_to_slice(account_a), unlink_a.val());
-	if (!exists)
-	{
-		transaction_a.count_add("unlink_info", 1);
-	}
-	unlink_sametime = true;
-}
-
-void mcp::block_store::unlink_info_del(mcp::db::db_transaction & transaction_a, mcp::account const & account_a)
-{
-	if (!unlink_sametime)
-		assert_x(false);
-
-	unlink_sametime = false;
-	if (unlink_info_exists(transaction_a, account_a))
-	{
-		transaction_a.del(unlink_info, mcp::account_to_slice(account_a));
-		transaction_a.count_reduce("unlink_info", 1);
-	}
-	unlink_sametime = true;
-}
-
-mcp::db::forward_iterator mcp::block_store::unlink_info_begin(mcp::db::db_transaction & transaction_a, std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a)
-{
-	mcp::db::forward_iterator result(transaction_a.begin(unlink_info, snapshot_a));
-	return result;
-}
-
-mcp::db::forward_iterator mcp::block_store::unlink_info_begin(mcp::db::db_transaction & transaction_a, mcp::account const & account_a, std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a)
-{
-	mcp::db::forward_iterator result(transaction_a.begin(unlink_info, mcp::account_to_slice(account_a), snapshot_a));
-	return result;
-}
-
-size_t mcp::block_store::unlink_info_count(mcp::db::db_transaction & transaction_a, std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a)
-{
-	return transaction_a.count_get("unlink_info", snapshot_a);
-}
-
-bool mcp::block_store::next_unlink_exists(mcp::db::db_transaction & transaction_a, mcp::next_unlink const & next_unlink_a)
-{
-	std::string result;
-	bool exists(transaction_a.get(next_unlink, next_unlink_a.val(), result));
-	return exists;
-}
-
-void mcp::block_store::next_unlink_put(mcp::db::db_transaction & transaction_a, mcp::next_unlink const & next_unlink_a)
-{
-	mcp::block_hash const & root(next_unlink_a.hash);
-	std::string const & root_key(std::string((char*)root.bytes.data(), root.bytes.size()));
-	std::string const & root_index_key(root_key + "idx");
-	transaction_a.count_add(root_key, 1);
-	transaction_a.count_add(root_index_key, 1);
-
-	uint64_t index(transaction_a.count_get(root_index_key));
-	mcp::uint64_union index_union(index);
-	dev::Slice index_slice(mcp::uint64_to_slice(index_union));
-
-	transaction_a.put(next_unlink, next_unlink_a.val(), index_slice);
-
-	dev::Slicebytes next_index_key;
-	next_index_key.resize(root.bytes.size() + index_union.bytes.size());
-	dev::SliceRef next_index_key_ref(&next_index_key);
-
-	dev::Slice root_slice(mcp::uint256_to_slice(root));
-	root_slice.copyTo(next_index_key_ref.cropped(0, root.bytes.size()));
-	index_slice.copyTo(next_index_key_ref.cropped(root.bytes.size(), index_union.bytes.size()));
-
-	transaction_a.put(next_unlink_index, dev::Slice(next_index_key.data(), next_index_key.size()), mcp::uint256_to_slice(next_unlink_a.next));
-}
-
-void mcp::block_store::next_unlink_del(mcp::db::db_transaction & transaction_a, mcp::next_unlink const & next_unlink_a)
-{
-	std::string value;
-	bool exists(transaction_a.get(next_unlink, next_unlink_a.val(), value));
-	if (exists)
-	{
-		mcp::block_hash const & root(next_unlink_a.hash);
-		std::string const & root_key(std::string((char*)root.bytes.data(), root.bytes.size()));
-		transaction_a.count_reduce(root_key, 1);
-
-		transaction_a.del(next_unlink, next_unlink_a.val());
-
-		mcp::uint64_union index_union(mcp::slice_to_uint64(value));
-		dev::Slice index_slice(mcp::uint64_to_slice(index_union));
-
-		dev::Slicebytes next_index_key;
-		next_index_key.resize(root.bytes.size() + index_union.bytes.size());
-		dev::SliceRef next_index_key_ref(&next_index_key);
-
-		dev::Slice root_slice(mcp::uint256_to_slice(root));
-		root_slice.copyTo(next_index_key_ref.cropped(0, root.bytes.size()));
-		index_slice.copyTo(next_index_key_ref.cropped(root.bytes.size(), index_union.bytes.size()));
-
-		transaction_a.del(next_unlink_index, dev::Slice(next_index_key.data(), next_index_key.size()));
-
-		uint64_t count(transaction_a.count_get(root_key));
-		if (count == 0)
-		{
-			transaction_a.count_del(root_key);
-			std::string const & root_index_key(root_key + "idx");
-			transaction_a.count_del(root_index_key);
-		}
-	}
-}
-
-void mcp::block_store::next_unlink_get(mcp::db::db_transaction & transaction_a, mcp::block_hash const & hash_a, std::list<mcp::next_unlink>& li)
-{
-	mcp::block_hash const & root(hash_a);
-	std::string const & root_key(std::string((char*)root.bytes.data(), root.bytes.size()));
-	std::string const & root_index_key(root_key + "idx");
-	uint64_t index(transaction_a.count_get(root_index_key));
-
-	for (uint64_t i = 1; i <= index; i++)
-	{
-		mcp::uint64_union index_union(i);
-		dev::Slice index_slice(mcp::uint64_to_slice(index_union));
-
-		dev::Slicebytes next_index_key;
-		next_index_key.resize(root.bytes.size() + index_union.bytes.size());
-		dev::SliceRef next_index_key_ref(&next_index_key);
-
-		dev::Slice root_slice(mcp::uint256_to_slice(root));
-		root_slice.copyTo(next_index_key_ref.cropped(0, root.bytes.size()));
-		index_slice.copyTo(next_index_key_ref.cropped(root.bytes.size(), index_union.bytes.size()));
-
-		std::string value;
-		bool exists(transaction_a.get(next_unlink_index, dev::Slice(next_index_key.data(), next_index_key.size()), value));
-		if (exists) //may not exist
-		{
-			mcp::block_hash next(mcp::slice_to_uint256(value));
-			li.push_back(mcp::next_unlink(hash_a,next));
-		}
-	}
-}
-
-bool mcp::block_store::head_unlink_exists(mcp::db::db_transaction & transaction_a, mcp::head_unlink const & head_unlink_a)
-{
-	std::string result;
-	bool exists(transaction_a.get(head_unlink, head_unlink_a.val(), result));
-	return exists;
-}
-
-void mcp::block_store::head_unlink_put(mcp::db::db_transaction & transaction_a, mcp::head_unlink const & head_unlink_a)
-{
-	bool exist = head_unlink_exists(transaction_a, head_unlink_a);
-	std::string _v = "";
-	transaction_a.put(head_unlink, head_unlink_a.val(), _v);
-	if (!exist)
-		transaction_a.count_add("head_unlink", 1);
-}
-
-void mcp::block_store::head_unlink_del(mcp::db::db_transaction & transaction_a, mcp::head_unlink const & head_unlink_a)
-{
-	bool exist = head_unlink_exists(transaction_a, head_unlink_a);
-	if (exist)
-	{
-		transaction_a.del(head_unlink, head_unlink_a.val());
-		transaction_a.count_reduce("head_unlink", 1);
-	}
-}
-
-mcp::db::forward_iterator mcp::block_store::head_link_begin(mcp::db::db_transaction & transaction_a, std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a)
-{
-	mcp::db::forward_iterator result(transaction_a.begin(head_unlink, snapshot_a));
-	return result;
-}
-
-size_t mcp::block_store::head_unlink_count(mcp::db::db_transaction & transaction_a, std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a)
-{
-	return transaction_a.count_get("head_unlink", snapshot_a);
-}
 
 bool mcp::block_store::traces_get(mcp::db::db_transaction & transaction_a, mcp::block_hash const & block_hash_a, std::list<std::shared_ptr<mcp::trace>> & traces_a)
 {
 	std::string value;
-	bool exists(transaction_a.get(traces, mcp::uint256_to_slice(block_hash_a), value));
+	bool exists(transaction_a.get(traces, mcp::h256_to_slice(block_hash_a), value));
 	if (exists)
 	{
 		dev::RLP r_list(value);
@@ -1186,15 +1033,152 @@ void mcp::block_store::traces_put(mcp::db::db_transaction & transaction_a, mcp::
 	}
 
 	dev::Slice s_value((char *)b_value.data(), b_value.size());
-	transaction_a.put(traces, mcp::uint256_to_slice(block_hash_a), s_value);
+	transaction_a.put(traces, mcp::h256_to_slice(block_hash_a), s_value);
 }
 
+std::shared_ptr<dev::eth::TransactionReceipt> mcp::block_store::transaction_receipt_get(mcp::db::db_transaction & transaction_a, h256 const & hash_a)
+{
+	std::string value;
+	bool exists(transaction_a.get(transaction_receipt, mcp::h256_to_slice(hash_a), value));
+	std::shared_ptr<dev::eth::TransactionReceipt> result;
+	if (exists)
+	{
+		dev::RLP r(value);
+		result = std::make_shared<dev::eth::TransactionReceipt>(r);
+	}
+	return result;
+}
 
-mcp::uint256_union const mcp::block_store::version_key(0);
-mcp::uint256_union const mcp::block_store::genesis_hash_key(1);
-mcp::uint256_union const mcp::block_store::last_mci_key(2);
-mcp::uint256_union const mcp::block_store::last_stable_mci_key(3);
-mcp::uint256_union const mcp::block_store::advance_info_key(4);
-mcp::uint256_union const mcp::block_store::last_stable_index_key(5);
-mcp::uint256_union const mcp::block_store::catchup_index(6);
-mcp::uint256_union const mcp::block_store::catchup_max_index(7);
+void mcp::block_store::transaction_receipt_put(mcp::db::db_transaction & transaction_a, h256 const& hash_a, dev::eth::TransactionReceipt const& receipt)
+{
+	dev::bytes b_value;
+	{
+		dev::RLPStream s;
+		receipt.streamRLP(s);
+		s.swapOut(b_value);
+	}
+	dev::Slice s_value((char *)b_value.data(), b_value.size());
+	transaction_a.put(transaction_receipt, mcp::h256_to_slice(hash_a), s_value);
+}
+
+std::shared_ptr<dev::ApproveReceipt> mcp::block_store::approve_receipt_get(mcp::db::db_transaction & transaction_a, h256 const & hash_a)
+{
+	std::string value;
+	bool exists(transaction_a.get(approve_receipt, mcp::h256_to_slice(hash_a), value));
+	std::shared_ptr<dev::ApproveReceipt> result;
+	if (exists)
+	{
+		dev::RLP r(value);
+		result = std::make_shared<dev::ApproveReceipt>(r);
+	}
+	return result;
+}
+
+void mcp::block_store::approve_receipt_put(mcp::db::db_transaction & transaction_a, h256 const& hash_a, dev::ApproveReceipt const& receipt)
+{
+	dev::bytes b_value;
+	{
+		dev::RLPStream s;
+		receipt.streamRLP(s);
+		s.swapOut(b_value);
+	}
+	dev::Slice s_value((char *)b_value.data(), b_value.size());
+	transaction_a.put(approve_receipt, mcp::h256_to_slice(hash_a), s_value);
+}
+
+void mcp::block_store::epoch_approves_get(mcp::db::db_transaction & transaction_a, uint64_t const & epoch, std::list<h256> & hashs_a)
+{
+	mcp::epoch_approves_key key(epoch, h256());
+	mcp::db::forward_iterator it(transaction_a.begin(epoch_approves, key.val()));
+	while (true)
+	{
+		if (!it.valid())
+			break;
+		mcp::epoch_approves_key approve_key(it.key());
+		if (approve_key.epoch != epoch)
+			break;
+
+		hashs_a.push_back(approve_key.hash);
+
+		++it;
+	}
+}
+
+void mcp::block_store::epoch_approves_put(mcp::db::db_transaction & transaction_a, mcp::epoch_approves_key const & key_a)
+{
+	transaction_a.put(epoch_approves, key_a.val(), dev::Slice());
+}
+
+void mcp::block_store::epoch_approve_receipts_get(mcp::db::db_transaction & transaction_a, uint64_t const & epoch, std::list<h256> & hashs_a)
+{
+	mcp::epoch_approves_key key(epoch, h256());
+	mcp::db::forward_iterator it(transaction_a.begin(epoch_approve_receipts, key.val()));
+	while (true)
+	{
+		if (!it.valid())
+			break;
+		mcp::epoch_approves_key approve_key(it.key());
+		if (approve_key.epoch != epoch)
+			break;
+
+		hashs_a.push_back(approve_key.hash);
+
+		++it;
+	}
+}
+
+void mcp::block_store::epoch_approve_receipts_put(mcp::db::db_transaction & transaction_a, mcp::epoch_approves_key const & key_a)
+{
+	transaction_a.put(epoch_approve_receipts, key_a.val(), dev::Slice());
+}
+
+bool mcp::block_store::epoch_elected_approve_receipts_get(mcp::db::db_transaction & transaction_a, uint64_t const & epoch, epoch_elected_list & list)
+{
+	std::string value;
+	bool exists(transaction_a.get(epoch_elected_approve_receipts, mcp::h64_to_slice(h64(epoch)), value));
+	if (exists)
+	{
+		dev::RLP r(value);
+		list = mcp::epoch_elected_list(r);
+	}
+	return !exists;
+}
+
+void mcp::block_store::epoch_elected_approve_receipts_put(mcp::db::db_transaction & transaction_a, uint64_t const & epoch, epoch_elected_list & list)
+{
+	dev::bytes b_value;
+	{
+		dev::RLPStream s;
+		list.stream_RLP(s);
+		s.swapOut(b_value);
+	}
+	dev::Slice s_value((char *)b_value.data(), b_value.size());
+	transaction_a.put(epoch_elected_approve_receipts, mcp::h64_to_slice(h64(epoch)), s_value);
+}
+
+uint64_t mcp::block_store::last_epoch_get(mcp::db::db_transaction & transaction_a)
+{
+	std::string value;
+	bool exists(transaction_a.get(prop, mcp::h256_to_slice(last_epoch_key), value));
+	uint64_t result(0);
+	if (exists)
+		result = ((dev::h64::Arith) mcp::slice_to_h64(value)).convert_to<uint64_t>();
+	return result;
+}
+
+void mcp::block_store::last_epoch_put(mcp::db::db_transaction & transaction_a, uint64_t const & last_epoch_a)
+{
+	dev::h64 last_epoch(last_epoch_a);
+	transaction_a.put(prop, mcp::h256_to_slice(last_epoch_key), mcp::h64_to_slice(last_epoch));
+}
+
+dev::h256 const mcp::block_store::version_key(0);
+dev::h256 const mcp::block_store::genesis_hash_key(1);
+dev::h256 const mcp::block_store::genesis_transaction_hash_key(2);
+dev::h256 const mcp::block_store::last_mci_key(3);
+dev::h256 const mcp::block_store::last_stable_mci_key(4);
+dev::h256 const mcp::block_store::advance_info_key(5);
+dev::h256 const mcp::block_store::last_stable_index_key(6);
+dev::h256 const mcp::block_store::catchup_index(7);
+dev::h256 const mcp::block_store::catchup_max_index(8);
+dev::h256 const mcp::block_store::last_epoch_key(9);

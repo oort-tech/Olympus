@@ -16,46 +16,23 @@ mcp::key_content::key_content(bool & error_a, std::string const & json_a)
 	try
 	{
 		mcp::json js = mcp::json::parse(json_a);
-
-		if (!error_a)
-		{
-			std::string account_text = js["account"];
-			error_a = account.decode_account(account_text);
-
-			if (!error_a)
-			{
-				std::string kdf_salt_text = js["kdf_salt"];
-				error_a = kdf_salt.decode_hex(kdf_salt_text);
-
-				if (!error_a)
-				{
-					std::string iv_text = js["iv"];
-					error_a = iv.decode_hex(iv_text);
-
-					if (!error_a)
-					{
-						std::string ciphertext_text = js["ciphertext"];
-						error_a = ciphertext.decode_hex(ciphertext_text);
-						// added by michael at 1/19
-						//if (!error_a) {
-						//	std::string public_key_text = js["public_key"];
-						//	error_a = public_key.decode_hex(public_key_text);
-						//}
-					}
-				}
-			}
-		}
+		account = dev::Address(js["account"].get<std::string>());
+		kdf_salt = dev::h128(js["kdf_salt"].get<std::string>());
+		iv = dev::h128(js["iv"].get<std::string>());
+		ciphertext = dev::h256(js["ciphertext"].get<std::string>());
 	}
-	catch (std::exception const &e)
+	catch (...)
 	{
 		error_a = true;
 	}
 }
 
-mcp::key_content::key_content(mcp::account const & account, mcp::uint128_union const & kdf_salt_a,
-	mcp::uint128_union const & iv_a, mcp::secret_ciphertext const & ciphertext_a) :
+mcp::key_content::key_content(
+	dev::Address const & account,
+	dev::h128 const & kdf_salt_a,
+	dev::h128 const & iv_a,
+	dev::h256 const & ciphertext_a) :
 	account(account),
-	// public_key(pubic_key),
 	kdf_salt(kdf_salt_a),
 	iv(iv_a),
 	ciphertext(ciphertext_a)
@@ -64,31 +41,27 @@ mcp::key_content::key_content(mcp::account const & account, mcp::uint128_union c
 
 dev::Slice mcp::key_content::val() const
 {
-	//return mcp::mdb_val(sizeof(*this), const_cast<mcp::key_content *> (this));
 	return dev::Slice((char*)this, sizeof(*this));
 }
 
 std::string mcp::key_content::to_json() const
 {
 	mcp::json js;
-	js["account"] = account.to_account();
-	// js["public_key"] = public_key.to_string();
-	js["kdf_salt"] = kdf_salt.to_string();
-	js["iv"] = iv.to_string();
-	js["ciphertext"] = ciphertext.to_string();
-
-	std::string str_json = js.dump();
-	return str_json;
+	js["account"] = account.hexPrefixed();
+	js["kdf_salt"] = kdf_salt.hex();
+	js["iv"] = iv.hex();
+	js["ciphertext"] = ciphertext.hex();
+	return js.dump();
 }
 
 mcp::value_previous_work::value_previous_work(dev::Slice const & val_a)
 {
 	assert_x(val_a.size() == sizeof(*this));
-	std::copy(reinterpret_cast<uint8_t const *> (val_a.data()), reinterpret_cast<uint8_t const *> (val_a.data()) + sizeof(previous), previous.chars.begin());
-	std::copy(reinterpret_cast<uint8_t const *> (val_a.data()) + sizeof(previous), reinterpret_cast<uint8_t const *> (val_a.data()) + sizeof(previous) + sizeof(work), work.bytes.begin());
+	std::copy(reinterpret_cast<uint8_t const *> (val_a.data()), reinterpret_cast<uint8_t const *> (val_a.data()) + sizeof(previous), previous.asArray().begin());
+	std::copy(reinterpret_cast<uint8_t const *> (val_a.data()) + sizeof(previous), reinterpret_cast<uint8_t const *> (val_a.data()) + sizeof(previous) + sizeof(work), work.asArray().begin());
 }
 
-mcp::value_previous_work::value_previous_work(mcp::uint256_union const & previous_a, mcp::uint64_union const & work_a) :
+mcp::value_previous_work::value_previous_work(mcp::block_hash const & previous_a, dev::h64 const & work_a) :
 	previous(previous_a),
 	work(work_a)
 {
@@ -99,7 +72,6 @@ dev::Slice mcp::value_previous_work::val() const
 	static_assert (sizeof(*this) == sizeof(previous) + sizeof(work), "Class not packed");
 	return dev::Slice((char*)this, sizeof(*this));
 }
-
 
 //store
 mcp::key_store::key_store(bool & error_a, boost::filesystem::path const& _path) :
@@ -115,19 +87,18 @@ mcp::key_store::key_store(bool & error_a, boost::filesystem::path const& _path) 
 
 	int default_col = m_database->create_column_family(rocksdb::kDefaultColumnFamilyName, cfops);
 	m_keys = m_database->set_column_family(default_col, "k");
-	m_work = m_database->set_column_family(default_col, "w");
 	error_a = !m_database->open();
 	if(error_a)
 		std::cerr << "Key store db open error" << std::endl;
 }
 
 //keys
-void mcp::key_store::keys_put(mcp::db::db_transaction& transaction, mcp::account const& _k, mcp::key_content const& _v)
+void mcp::key_store::keys_put(mcp::db::db_transaction& transaction, dev::Address const& _k, mcp::key_content const& _v)
 {
 	transaction.put(m_keys, mcp::account_to_slice(_k), _v.val());
 }
 
-bool mcp::key_store::keys_get(mcp::db::db_transaction& transaction, mcp::account const& _k, mcp::key_content& _v)
+bool mcp::key_store::keys_get(mcp::db::db_transaction& transaction, dev::Address const& _k, mcp::key_content& _v)
 {
 	std::string result;
 	bool ret = transaction.get(m_keys, mcp::account_to_slice(_k), result);
@@ -136,12 +107,12 @@ bool mcp::key_store::keys_get(mcp::db::db_transaction& transaction, mcp::account
 	return !ret;
 }
 
-void mcp::key_store::keys_del(mcp::db::db_transaction& transaction, mcp::account const & _k)
+void mcp::key_store::keys_del(mcp::db::db_transaction& transaction, dev::Address const & _k)
 {
 	transaction.del(m_keys, mcp::account_to_slice(_k));
 }
 
-bool mcp::key_store::keys_exists(mcp::db::db_transaction& transaction, mcp::account const & _k)
+bool mcp::key_store::keys_exists(mcp::db::db_transaction& transaction, dev::Address const & _k)
 {
 	return transaction.exists(m_keys, mcp::account_to_slice(_k));;
 }
@@ -151,7 +122,7 @@ mcp::db::forward_iterator mcp::key_store::keys_begin(mcp::db::db_transaction& tr
 	return transaction.begin(m_keys);
 }
 
-mcp::db::forward_iterator mcp::key_store::keys_begin(mcp::db::db_transaction& transaction, mcp::account const & _k)
+mcp::db::forward_iterator mcp::key_store::keys_begin(mcp::db::db_transaction& transaction, dev::Address const & _k)
 {
 	return transaction.begin(m_keys, mcp::account_to_slice(_k));
 }
@@ -161,54 +132,10 @@ mcp::db::backward_iterator mcp::key_store::keys_rbegin(mcp::db::db_transaction& 
 	return transaction.rbegin(m_keys);
 }
 
-mcp::db::backward_iterator mcp::key_store::keys_rbegin(mcp::db::db_transaction& transaction, mcp::account const & _k)
+mcp::db::backward_iterator mcp::key_store::keys_rbegin(mcp::db::db_transaction& transaction, dev::Address const & _k)
 {
 	return transaction.rbegin(m_keys, mcp::account_to_slice(_k));
 }
 
-//work
-void mcp::key_store::work_put(mcp::db::db_transaction& transaction, mcp::account const & _k, mcp::value_previous_work const & _v)
-{
-	transaction.put(m_work, mcp::account_to_slice(_k), _v.val());
-}
-
-bool mcp::key_store::work_get(mcp::db::db_transaction& transaction, mcp::account const & _k, mcp::value_previous_work & _v)
-{
-	std::string result;
-	bool ret = transaction.get(m_work, mcp::account_to_slice(_k), result);
-	if (ret)
-		_v = mcp::value_previous_work(dev::Slice(result));
-	return !ret;
-}
-
-void mcp::key_store::work_del(mcp::db::db_transaction& transaction, mcp::account const & _k)
-{
-	transaction.del(m_work, mcp::account_to_slice(_k));
-}
-
-bool mcp::key_store::work_exists(mcp::db::db_transaction& transaction, mcp::account const & _k)
-{
-	return transaction.exists(m_work, mcp::account_to_slice(_k));;
-}
-
-mcp::db::forward_iterator mcp::key_store::work_begin(mcp::db::db_transaction& transaction)
-{
-	return transaction.begin(m_work);
-}
-
-mcp::db::forward_iterator mcp::key_store::work_begin(mcp::db::db_transaction& transaction, mcp::account const & _k)
-{
-	return transaction.begin(m_work, mcp::account_to_slice(_k));
-}
-
-mcp::db::backward_iterator mcp::key_store::work_rbegin(mcp::db::db_transaction& transaction)
-{
-	return transaction.rbegin(m_work);
-}
-
-mcp::db::backward_iterator mcp::key_store::work_rbegin(mcp::db::db_transaction& transaction, mcp::account const & _k)
-{
-	return transaction.rbegin(m_work, mcp::account_to_slice(_k));
-}
 
 

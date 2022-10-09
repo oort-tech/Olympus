@@ -37,11 +37,6 @@ namespace mcp
 
 			bool is_expired() const
 			{
-				//if (seconds_since_epoch() > timestamp)
-				//{
-				//	BOOST_LOG_TRIVIAL(info) << "recieve  is_expired :" << seconds_since_epoch() << "," << timestamp;
-				//}
-				
 				return seconds_since_epoch() > timestamp;
 			}
 
@@ -175,7 +170,7 @@ namespace mcp
 				s << id;
 			}
 
-			static size_t const max_size = 57;
+			static size_t const max_size = 91;
 		};
 
 		class neighbours_packet : public discover_packet

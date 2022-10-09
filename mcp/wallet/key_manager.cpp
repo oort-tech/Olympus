@@ -1,19 +1,14 @@
 #include "key_manager.hpp"
 #include <mcp/common/common.hpp>
 
-void mcp::kdf::phs(mcp::raw_key & result_a, std::string const & password_a, mcp::uint128_union const & salt_a)
+#include <cryptopp/sha.h>
+#include <cryptopp/hkdf.h>
+
+void mcp::kdf::phs(dev::Secret & result_a, std::string const & password_a, dev::h128 const & salt_a)
 {
 	std::lock_guard<std::mutex> lock(mutex);
-
-	uint32_t memory_cost = 16 * 1024 * 1024;
-	auto success = crypto_pwhash(result_a.data.bytes.data(),
-		result_a.data.bytes.size(),
-		password_a.data(),
-		password_a.size(),
-		salt_a.bytes.data(),
-		1, memory_cost, crypto_pwhash_ALG_ARGON2ID13);
-	assert_x(success == 0);
-	(void)success;
+	CryptoPP::HKDF<CryptoPP::SHA256> hkdf;
+	hkdf.DeriveKey((byte*) result_a.data(), result_a.size, (byte*) password_a.data(), password_a.length(), salt_a.data(), salt_a.size, NULL, 0);
 }
 
 mcp::key_manager::key_manager(boost::filesystem::path const & application_path_a, mcp::key_store& store_a):
@@ -24,7 +19,7 @@ mcp::key_manager::key_manager(boost::filesystem::path const & application_path_a
 	auto it = m_store.keys_begin(transaction);
 	for (; it.valid(); ++it)
 	{
-		mcp::account account(mcp::slice_to_account(it.key()));
+		dev::Address account(mcp::slice_to_account(it.key()));
 		mcp::key_content key_content(it.value());
 		m_key_contents[account] = key_content;
 	}
@@ -32,67 +27,13 @@ mcp::key_manager::key_manager(boost::filesystem::path const & application_path_a
 	boost::filesystem::create_directories(m_backup_path);
 }
 
-bool mcp::key_manager::exists(mcp::account const & account_a)
+bool mcp::key_manager::exists(dev::Address const & account_a)
 {
 	std::lock_guard<std::mutex> lock(m_key_contents_mutex);
 	return m_key_contents.count(account_a) > 0;
 }
 
-bool mcp::key_manager::work_account_exisit(mcp::account const & account_a)
-{
-	mcp::db::db_transaction transaction = m_store.create_transaction();
-	auto result(m_store.work_exists(transaction, account_a));
-	return result;
-}
-
-bool mcp::key_manager::work_account_get(mcp::account const & account_a, mcp::block_hash &  previous_a, mcp::uint64_union & work_a)
-{
-	auto result(false);
-	mcp::value_previous_work previous_work_l;
-	mcp::db::db_transaction transaction = m_store.create_transaction();
-	auto exists(!m_store.work_get(transaction, account_a, previous_work_l));
-	if (exists)
-	{
-		previous_a = previous_work_l.previous;
-		work_a = previous_work_l.work;
-	}
-	else
-		result = true;
-	return result;
-}
-
-bool mcp::key_manager::work_get(mcp::account const & account_a, mcp::block_hash const&  previous_a, mcp::uint64_union & work_a)
-{
-    auto result(false);
-	mcp::value_previous_work previous_work_l;
-	mcp::db::db_transaction transaction = m_store.create_transaction();
-	auto exists(!m_store.work_get(transaction, account_a, previous_work_l));
-
-	if (exists)
-	{
-		if (previous_work_l.previous == previous_a)
-		{
-			work_a = previous_work_l.work;
-			assert_x(!result);
-		}
-		else
-			result = true;
-	}
-	else
-		result = true;
-
-	return result;
-}
-
-void mcp::key_manager::work_put(mcp::account const & account_a, mcp::block_hash const&  previous_a, mcp::uint64_union const & work_a)
-{
-    mcp::value_previous_work previous_work_l(previous_a, work_a);
-
-	mcp::db::db_transaction transaction = m_store.create_transaction();
-	m_store.work_put(transaction, account_a, previous_work_l);
-}
-
-bool mcp::key_manager::find(mcp::account const & account_a, mcp::key_content & kc_a)
+bool mcp::key_manager::find(dev::Address const & account_a, mcp::key_content & kc_a)
 {
 	bool exists(true);
 	std::lock_guard<std::mutex> lock(m_key_contents_mutex);
@@ -107,19 +48,19 @@ bool mcp::key_manager::find(mcp::account const & account_a, mcp::key_content & k
 	return exists;
 }
 
-std::list<mcp::account> mcp::key_manager::list()
+std::list<dev::Address> mcp::key_manager::list()
 {
-	std::list<mcp::account> accounts;
+	std::list<dev::Address> accounts;
 	std::lock_guard<std::mutex> lock(m_key_contents_mutex);
 	for (auto pair : m_key_contents)
 		accounts.push_back(pair.first);
 	return accounts;
 }
 
-mcp::account mcp::key_manager::create(std::string const & password_a, bool generate_work_a, bool const & is_backup_a)
+dev::Address mcp::key_manager::create(std::string const & password_a, bool generate_work_a, bool const & is_backup_a)
 {
-	mcp::raw_key prv;
-	random_pool.GenerateBlock(prv.data.bytes.data(), prv.data.bytes.size());
+	dev::Secret prv;
+	random_pool.GenerateBlock((byte*)prv.data(), prv.size);
 
 	mcp::key_content kc(gen_key_content(prv, password_a));
 	add_or_update_key(kc, is_backup_a);
@@ -127,9 +68,9 @@ mcp::account mcp::key_manager::create(std::string const & password_a, bool gener
 	return kc.account;
 }
 
-bool mcp::key_manager::change_password(mcp::account const & account_a, std::string const & old_password_a, std::string const & new_password_a)
+bool mcp::key_manager::change_password(dev::Address const & account_a, std::string const & old_password_a, std::string const & new_password_a)
 {
-	mcp::raw_key prv;
+	dev::Secret prv;
 	bool error(decrypt_prv(account_a, old_password_a, prv));
 	if (!error)
 	{
@@ -139,9 +80,9 @@ bool mcp::key_manager::change_password(mcp::account const & account_a, std::stri
 	return error;
 }
 
-bool mcp::key_manager::remove(mcp::account const & account_a, std::string const & password_a)
+bool mcp::key_manager::remove(dev::Address const & account_a, std::string const & password_a)
 {
-	mcp::raw_key prv;
+	dev::Secret prv;
 	bool error(decrypt_prv(account_a, password_a, prv));
 	if (!error)
 	{
@@ -172,7 +113,14 @@ bool mcp::key_manager::import(std::string const & json_a, key_content & kc_a, bo
 	return error;
 }
 
-bool mcp::key_manager::decrypt_prv(mcp::account const & account, std::string const & password_a, mcp::raw_key & prv)
+mcp::key_content mcp::key_manager::importRawKey(dev::Secret & prv, std::string const & password)
+{
+	mcp::key_content kc = gen_key_content(prv, password);
+	add_or_update_key(kc, true);
+	return kc;
+}
+
+bool mcp::key_manager::decrypt_prv(dev::Address const & account, std::string const & password_a, dev::Secret & prv)
 {
 	bool error(false);
 	mcp::key_content kc;
@@ -190,66 +138,61 @@ bool mcp::key_manager::decrypt_prv(mcp::account const & account, std::string con
 	return error;
 }
 
-bool mcp::key_manager::decrypt_prv(mcp::key_content const & kc_a, std::string const & password_a, mcp::raw_key & prv)
+bool mcp::key_manager::decrypt_prv(mcp::key_content const & kc_a, std::string const & password_a, dev::Secret & prv)
 {
-	bool error(false);
-
-	mcp::raw_key derive_pwd;
+	dev::Secret derive_pwd;
 	m_kdf.phs(derive_pwd, password_a, kc_a.kdf_salt);
 
-	prv.decrypt(kc_a.ciphertext, derive_pwd, kc_a.iv);
+	mcp::encry::dencryption(
+		(unsigned char*)prv.data(),
+		(const unsigned char*)kc_a.ciphertext.data(),
+		kc_a.ciphertext.size,
+		(const unsigned char*)kc_a.iv.data(),
+		(const unsigned char*)derive_pwd.data()
+	);
 
-	mcp::public_key compare;
-	mcp::encry::generate_public_from_secret(prv.data, compare);
-
-	if (kc_a.account != mcp::account(compare))
-	{
-		error = true;
-	}
-
-	return error;
+	return kc_a.account != dev::toAddress(dev::toPublic(prv));
 }
 
-bool mcp::key_manager::is_locked(mcp::account const & account_a)
+bool mcp::key_manager::is_locked(dev::Address const & account_a)
 {
 	std::lock_guard<std::mutex> lock(m_unlocked_mutex);
-	return m_unlocked.count(account_a) > 0;
+	return m_unlocked.count(account_a) == 0;
 }
 
-bool mcp::key_manager::find_unlocked_prv(mcp::account const & account_a, mcp::raw_key & prv)
+bool mcp::key_manager::find_unlocked_prv(dev::Address const & account_a, dev::Secret & prv)
 {
 	bool exists(true);
 	std::lock_guard<std::mutex> lock(m_unlocked_mutex);
 	if (m_unlocked.count(account_a))
-		prv.data = m_unlocked[account_a];
+		prv = m_unlocked[account_a];
 	else
 		exists = false;
 	return exists;
 }
 
-void mcp::key_manager::lock(mcp::account const & account_a)
+void mcp::key_manager::lock(dev::Address const & account_a)
 {
 	std::lock_guard<std::mutex> lock(m_unlocked_mutex);
 	m_unlocked.erase(account_a);
 }
 
-bool mcp::key_manager::unlock(mcp::account const & account_a, std::string const & password_a)
+bool mcp::key_manager::unlock(dev::Address const & account_a, std::string const & password_a)
 {
-	mcp::raw_key prv;
+	dev::Secret prv;
 	bool error(decrypt_prv(account_a, password_a, prv));
 	if (!error)
 	{
 		std::lock_guard<std::mutex> lock(m_unlocked_mutex);
-		m_unlocked[account_a] = prv.data;
+		m_unlocked[account_a] = prv;
 	}
-	
 	return error;
 }
 
-void mcp::key_manager::write_backup(mcp::account const & account, std::string const & json)
+void mcp::key_manager::write_backup(dev::Address const & account, std::string const & json)
 {
 	std::ofstream backup_file;
-	std::string file_name((m_backup_path / (account.to_account() + ".json")).string());
+	std::string file_name((m_backup_path / (account.hexPrefixed() + ".json")).string());
 	backup_file.open(file_name);
 	if (!backup_file.fail())
 	{
@@ -257,25 +200,27 @@ void mcp::key_manager::write_backup(mcp::account const & account, std::string co
 	}
 }
 
-mcp::key_content mcp::key_manager::gen_key_content(mcp::raw_key const & prv, std::string const & password_a)
+mcp::key_content mcp::key_manager::gen_key_content(dev::Secret const & prv, std::string const & password_a)
 {
-	mcp::uint128_union kdf_salt;
-	random_pool.GenerateBlock(kdf_salt.bytes.data(), kdf_salt.bytes.size());
+	dev::h128 kdf_salt;
+	random_pool.GenerateBlock(kdf_salt.data(), kdf_salt.size);
 
-	mcp::raw_key derive_pwd;
+	dev::Secret derive_pwd;
 	m_kdf.phs(derive_pwd, password_a, kdf_salt);
 
-	mcp::uint128_union iv;
-	random_pool.GenerateBlock(iv.bytes.data(), iv.bytes.size());
+	dev::h128 iv;
+	random_pool.GenerateBlock(iv.data(), iv.size);
 
-	mcp::uint256_union ciphertext;
-	ciphertext.encrypt(prv, derive_pwd, iv);
+	dev::h256 ciphertext;
+	mcp::encry::encryption(
+		(unsigned char*)ciphertext.data(),
+		(const unsigned char*)prv.data(),
+		prv.size,
+		(const unsigned char*)iv.data(),
+		(const unsigned char*)derive_pwd.data()
+	);
 
-	mcp::public_key pub;
-	mcp::encry::generate_public_from_secret(prv.data, pub);
-
-	mcp::key_content kc(mcp::account(pub), kdf_salt, iv, ciphertext);
-	return kc;
+	return mcp::key_content(dev::toAddress(dev::toPublic(prv)), kdf_salt, iv, ciphertext);
 }
 
 void mcp::key_manager::add_or_update_key(mcp::key_content const & kc, bool const & is_backup_a)
@@ -284,9 +229,36 @@ void mcp::key_manager::add_or_update_key(mcp::key_content const & kc, bool const
 		std::lock_guard<std::mutex> lock(m_key_contents_mutex);
 		m_key_contents[kc.account] = kc;
 	}
+
 	mcp::db::db_transaction transaction = m_store.create_transaction();
 	m_store.keys_put(transaction, kc.account, kc);
 
-	if(is_backup_a)
+	if (is_backup_a)
 		write_backup(kc.account, kc.to_json());
+}
+
+std::pair<bool, Secret> mcp::key_manager::authenticate(dev::Address account, boost::optional<std::string> const & password)
+{
+	std::pair<bool, Secret> ret;
+	
+	if (m_key_contents.count(account))
+	{
+		if (m_unlocked.count(account))
+		{
+			ret = std::make_pair(false, m_unlocked[account]);
+		}
+		else if (password)
+		{
+			dev::Secret prv;
+			if (decrypt_prv(account, *password, prv))
+				BOOST_THROW_EXCEPTION(AccountLocked());
+			ret = std::make_pair(false, prv);
+		}
+		else
+			BOOST_THROW_EXCEPTION(AccountLocked());
+	}
+	else
+		BOOST_THROW_EXCEPTION(UnknownAccount());
+	
+	return ret;
 }

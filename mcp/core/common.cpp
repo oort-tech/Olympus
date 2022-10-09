@@ -1,14 +1,12 @@
 #include "common.hpp"
-#include <libdevcore/Common.h>
+#include "config.hpp"
 #include <mcp/common/Exceptions.h>
 #include <mcp/common/SecureTrieDB.h>
 #include <mcp/common/common.hpp>
 #include <mcp/common/working.hpp>
 #include <libevm/VMFace.h>
-#include <queue>
 #include <boost/endian/conversion.hpp>
-
-#include <exception>
+#include <libdevcore/CommonJS.h>
 
 using namespace dev::eth;
 
@@ -17,18 +15,18 @@ mcp::TransactionException mcp::toTransactionException(Exception const& _e)
 	// Basic Transaction exceptions
 	if (!!dynamic_cast<RLPException const*>(&_e))
 		return TransactionException::BadRLP;
-	if (!!dynamic_cast<OutOfGasIntrinsic const*>(&_e))
+	if (!!dynamic_cast<dev::eth::OutOfGasIntrinsic const*>(&_e))
 		return TransactionException::OutOfGasIntrinsic;
-	if (!!dynamic_cast<InvalidSignature const*>(&_e))
+	if (!!dynamic_cast<dev::eth::InvalidSignature const*>(&_e))
 		return TransactionException::InvalidSignature;
 	// Executive exceptions
 	if (!!dynamic_cast<OutOfGasBase const*>(&_e))
 		return TransactionException::OutOfGasBase;
-	if (!!dynamic_cast<InvalidNonce const*>(&_e))
+	if (!!dynamic_cast<dev::eth::InvalidNonce const*>(&_e))
 		return TransactionException::InvalidNonce;
-	if (!!dynamic_cast<NotEnoughCash const*>(&_e))
+	if (!!dynamic_cast<dev::eth::NotEnoughCash const*>(&_e))
 		return TransactionException::NotEnoughCash;
-	if (!!dynamic_cast<BlockGasLimitReached const*>(&_e))
+	if (!!dynamic_cast<dev::eth::BlockGasLimitReached const*>(&_e))
 		return TransactionException::BlockGasLimitReached;
 	if (!!dynamic_cast<AddressAlreadyUsed const*>(&_e))
 		return TransactionException::AddressAlreadyUsed;
@@ -125,120 +123,6 @@ void mcp::dag_account_info::stream_RLP(dev::RLPStream & s) const
 	s << latest_stable_block;
 }
 
-mcp::account_info::account_info(bool & error_a, dev::RLP const & r)
-{
-	error_a = r.itemCount() != 2;
-	latest_stable_block = (mcp::block_hash)r[0];
-	latest_linked = (mcp::block_hash)r[1];
-}
-
-void mcp::account_info::stream_RLP(dev::RLPStream & s) const
-{
-    s.appendList(2);
-    s << latest_stable_block << latest_linked;
-}
-
-mcp::transaction_receipt::transaction_receipt(account_state_hash from_state_a, std::set<account_state_hash> to_state_a,
-		u256 gas_used_a, log_entries log_a) :
-    from_state(from_state_a),
-    to_state(to_state_a),
-	gas_used(gas_used_a),
-	bloom(mcp::bloom(log_a)),
-	log(log_a)
-{
-}
-
-mcp::transaction_receipt::transaction_receipt(bool & error_a, dev::RLP const & r)
-{
-	error_a = r.itemCount() != 4;
-	if (error_a)
-		return;
-
-	from_state = (mcp::account_state_hash)r[0];
-	for (auto state : r[1])
-		to_state.insert((mcp::block_hash)state);
-
-	gas_used = (u256)r[2];
-
-	log_entries log_l;
-	for (auto const& i : r[3])
-		log_l.emplace_back(i);
-	log = log_l;
-
-	bloom = mcp::bloom(log);
-}
-
-void mcp::transaction_receipt::stream_RLP(dev::RLPStream & s) const
-{
-	s.appendList(4);
-
-	s << from_state;
-
-	s.appendList(to_state.size());
-	for (auto state : to_state)
-		s << state;
-
-	s << gas_used;
-
-	s.appendList(log.size());
-	for (log_entry const& l: log)
-		l.streamRLP(s);
-}
-
-void mcp::transaction_receipt::serialize_json(mcp::json & json_a)
-{
-	json_a["from_state"] = from_state.to_string();
-
-	mcp::json to_states_l = mcp::json::array();
-	for (mcp::account_state_hash const & state : to_state)
-		to_states_l.push_back(state.to_string());
-	json_a["to_states"] = to_states_l;
-
-	json_a["gas_used"] = gas_used;
-	json_a["log_bloom"] = bloom.hex();
-
-	mcp::json logs_l = mcp::json::array();
-    for (auto it = log.begin(); it != log.end(); it++)
-    {
-		mcp::json log_l;
-		it->serialize_json(log_l);
-		logs_l.push_back(log_l);
-    }
-	json_a["log"] = logs_l;
-}
-
-void mcp::transaction_receipt::serialize_null_json(mcp::json & json_a)
-{
-	json_a["from_state"] = nullptr;
-	json_a["to_states"] = nullptr;
-	json_a["gas_used"] = nullptr;
-	json_a["log_bloom"] = nullptr;
-	json_a["log"] = nullptr;
-}
-
-void mcp::transaction_receipt::hash(blake2b_state & hash_a) const
-{
-	blake2b_update(&hash_a, from_state.bytes.data(), sizeof(from_state));
-	for (auto h : to_state)
-		blake2b_update(&hash_a, h.bytes.data(), sizeof(h.bytes));
-
-	mcp::uint256_union gas_used_u = mcp::uint256_union(gas_used);
-	blake2b_update(&hash_a, gas_used_u.bytes.data(), sizeof(gas_used_u.bytes));
-
-	for (auto l : log)
-		l.hash(hash_a);
-}
-
-bool mcp::transaction_receipt::contains_bloom(dev::h256 const & h_a)
-{
-	return bloom.containsBloom<3>(sha3(h_a));
-}
-
-bool mcp::transaction_receipt::contains_bloom(dev::bytesConstRef const & h_a)
-{
-	return bloom.containsBloom<3>(sha3(h_a));
-}
-
 mcp::block_state::block_state() :
     status(mcp::block_status::unknown),
     is_free(false),
@@ -255,8 +139,7 @@ mcp::block_state::block_state() :
 	stable_timestamp(0),
 	bp_included_mc_index(boost::none),
 	earliest_bp_included_mc_index(boost::none),
-	latest_bp_included_mc_index(boost::none),
-	receipt(boost::none)
+	latest_bp_included_mc_index(boost::none)
 {
 }
 
@@ -266,391 +149,175 @@ mcp::block_state::block_state(bool & error_a, dev::RLP const & r)
 	if (error_a)
 		return;
 
-	block_type = (mcp::block_type)(r[0].toInt<uint8_t>());
-	switch (block_type)
+	error_a = r.itemCount() != 16;
+	if (error_a)
+		return;
+
+	status = (mcp::block_status)(r[0].toInt<uint8_t>());
+	is_free = r[1].toInt();
+	is_stable = r[2].toInt();
 	{
-	case mcp::block_type::genesis:
-	{
-		error_a = r.itemCount() != 13;
-		if (error_a)
-			return;
-
-		status = (mcp::block_status)(r[1].toInt<uint8_t>());
-		is_free = r[2].toInt();
-		is_stable = r[3].toInt();
+		dev::RLP const & main_rlp = r[3];
+		if (main_rlp.itemCount() == 1)
 		{
-			dev::RLP const & main_rlp = r[4];
-			if (main_rlp.itemCount() == 1)
-			{
-				main_chain_index = main_rlp[0].toInt();
-			}
-			else
-			{
-				main_chain_index = boost::none;
-			}
+			main_chain_index = main_rlp[0].toInt();
 		}
-
-		level = (uint64_t)r[5];
-		mc_timestamp = (uint64_t)r[6];
-		stable_timestamp = (uint64_t)r[7];
-
-		is_on_main_chain = r[8].toInt();
-		witnessed_level = (uint64_t)r[9];
-		best_parent = (mcp::block_hash)r[10];
-
+		else
 		{
-			dev::RLP const & receipt_rlp = r[11];
-			assert_x(receipt_rlp.itemCount() == 1)
-			receipt = transaction_receipt(error_a, receipt_rlp[0]);
+			main_chain_index = boost::none;
 		}
-
-		stable_index = (uint64_t)r[12];
-
-		break;
-	}
-	case mcp::block_type::dag:
-	{
-		error_a = r.itemCount() != 17;
-		if (error_a)
-			return;
-
-		status = (mcp::block_status)(r[1].toInt<uint8_t>());
-		is_free = r[2].toInt();
-		is_stable = r[3].toInt();
-		{
-			dev::RLP const & main_rlp = r[4];
-			if (main_rlp.itemCount() == 1)
-			{
-				main_chain_index = main_rlp[0].toInt();
-			}
-			else
-			{
-				main_chain_index = boost::none;
-			}
-		}
-
-		level = (uint64_t)r[5];
-		mc_timestamp = (uint64_t)r[6];
-		stable_timestamp = (uint64_t)r[7];
-
-		is_on_main_chain = r[8].toInt();
-		witnessed_level = (uint64_t)r[9];
-		best_parent = (mcp::block_hash)r[10];
-
-		{
-			dev::RLP const & rlp = r[11];
-			if (rlp.itemCount() == 1)
-			{
-				earliest_included_mc_index = rlp[0].toInt();
-			}
-			else
-			{
-				earliest_included_mc_index = boost::none;
-			}
-		}
-
-		{
-			dev::RLP const & rlp = r[12];
-			if (rlp.itemCount() == 1)
-			{
-				latest_included_mc_index = rlp[0].toInt();
-			}
-			else
-			{
-				latest_included_mc_index = boost::none;
-			}
-		}
-
-		{
-			dev::RLP const & rlp = r[13];
-			if (rlp.itemCount() == 1)
-			{
-				bp_included_mc_index = rlp[0].toInt();
-			}
-			else
-			{
-				bp_included_mc_index = boost::none;
-			}
-		}
-
-		{
-			dev::RLP const & rlp = r[14];
-			if (rlp.itemCount() == 1)
-			{
-				earliest_bp_included_mc_index = rlp[0].toInt();
-			}
-			else
-			{
-				earliest_bp_included_mc_index = boost::none;
-			}
-		}
-
-		{
-			dev::RLP const & rlp = r[15];
-			if (rlp.itemCount() == 1)
-			{
-				latest_bp_included_mc_index = rlp[0].toInt();
-			}
-			else
-			{
-				latest_bp_included_mc_index = boost::none;
-			}
-		}
-
-		stable_index = (uint64_t)r[16];
-
-		break;
-	}
-	case mcp::block_type::light:
-	{
-		error_a = r.itemCount() != 9;
-		if (error_a)
-			return;
-
-		status = (mcp::block_status)(r[1].toInt<uint8_t>());
-		is_stable = r[2].toInt();
-		{
-			dev::RLP const & main_rlp = r[3];
-			if (main_rlp.itemCount() == 1)
-			{
-				main_chain_index = main_rlp[0].toInt();
-			}
-			else
-			{
-				main_chain_index = boost::none;
-			}
-		}
-
-		level = (uint64_t)r[4];
-		mc_timestamp = (uint64_t)r[5];
-		stable_timestamp = (uint64_t)r[6];
-		stable_index = (uint64_t)r[7];
-
-		{
-			dev::RLP const & rlp = r[8];
-			if (rlp.itemCount() == 1)
-			{
-				receipt = transaction_receipt(error_a, rlp[0]);
-			}
-			else
-			{
-				receipt = boost::none;
-			}
-		}
-
-		//light default
-		is_free = false;
-		is_on_main_chain = false;
-		witnessed_level = 0;
-		best_parent = 0;
-		earliest_included_mc_index = boost::none;
-		latest_included_mc_index = boost::none;
-		bp_included_mc_index = boost::none;
-		earliest_bp_included_mc_index = boost::none;
-		latest_bp_included_mc_index = boost::none;
-
-		break;
 	}
 
-	default:
+	level = (uint64_t)r[4];
+	mc_timestamp = (uint64_t)r[5];
+	stable_timestamp = (uint64_t)r[6];
+
+	is_on_main_chain = r[7].toInt();
+	witnessed_level = (uint64_t)r[8];
+	best_parent = (mcp::block_hash)r[9];
+
 	{
-		assert_x_msg(false, "invalid block type");
-		throw;
+		dev::RLP const & rlp = r[10];
+		if (rlp.itemCount() == 1)
+		{
+			earliest_included_mc_index = rlp[0].toInt();
+		}
+		else
+		{
+			earliest_included_mc_index = boost::none;
+		}
 	}
+
+	{
+		dev::RLP const & rlp = r[11];
+		if (rlp.itemCount() == 1)
+		{
+			latest_included_mc_index = rlp[0].toInt();
+		}
+		else
+		{
+			latest_included_mc_index = boost::none;
+		}
 	}
+
+	{
+		dev::RLP const & rlp = r[12];
+		if (rlp.itemCount() == 1)
+		{
+			bp_included_mc_index = rlp[0].toInt();
+		}
+		else
+		{
+			bp_included_mc_index = boost::none;
+		}
+	}
+
+	{
+		dev::RLP const & rlp = r[13];
+		if (rlp.itemCount() == 1)
+		{
+			earliest_bp_included_mc_index = rlp[0].toInt();
+		}
+		else
+		{
+			earliest_bp_included_mc_index = boost::none;
+		}
+	}
+
+	{
+		dev::RLP const & rlp = r[14];
+		if (rlp.itemCount() == 1)
+		{
+			latest_bp_included_mc_index = rlp[0].toInt();
+		}
+		else
+		{
+			latest_bp_included_mc_index = boost::none;
+		}
+	}
+
+	stable_index = (uint64_t)r[15];
 }
 
 void mcp::block_state::stream_RLP(dev::RLPStream & s) const
 {
-	switch (block_type)
+	s.appendList(16);
+
+	s << (uint8_t)status << is_free << is_stable;
+
+	if (main_chain_index)
 	{
-	case mcp::block_type::genesis:
+		s.appendList(1);
+		s << *main_chain_index;
+	}
+	else
 	{
-		assert_x(!earliest_included_mc_index);
-		assert_x(!latest_included_mc_index);
-		assert_x(!bp_included_mc_index);
-		assert_x(!earliest_bp_included_mc_index);
-		assert_x(!latest_bp_included_mc_index);
-
-		s.appendList(13);
-
-		s << (uint8_t)block_type << (uint8_t)status << is_free << is_stable;
-
-		if (main_chain_index)
-		{
-			s.appendList(1);
-			s << *main_chain_index;
-		}
-		else
-		{
-			s.appendList(0);
-		}
-
-		s << level << mc_timestamp << stable_timestamp 
-			<< is_on_main_chain << witnessed_level << best_parent;
-
-		if (receipt)
-		{
-			s.appendList(1);
-			receipt->stream_RLP(s);
-		}
-		else
-			assert_x(receipt);
-
-		s << stable_index;
-
-		break;
+		s.appendList(0);
 	}
-	case mcp::block_type::dag:
+
+	s << level << mc_timestamp << stable_timestamp
+		<< is_on_main_chain << witnessed_level << best_parent;
+
+	if (earliest_included_mc_index)
 	{
-		assert_x(!receipt);
-
-		s.appendList(17);
-
-		s << (uint8_t)block_type << (uint8_t)status << is_free << is_stable;
-
-		if (main_chain_index)
-		{
-			s.appendList(1);
-			s << *main_chain_index;
-		}
-		else
-		{
-			s.appendList(0);
-		}
-
-		s << level << mc_timestamp << stable_timestamp 
-			<< is_on_main_chain << witnessed_level << best_parent;
-
-		if (earliest_included_mc_index)
-		{
-			s.appendList(1);
-			s << *earliest_included_mc_index;
-		}
-		else
-		{
-			s.appendList(0);
-		}
-
-		if (latest_included_mc_index)
-		{
-			s.appendList(1);
-			s << *latest_included_mc_index;
-		}
-		else
-		{
-			s.appendList(0);
-		}
-
-		if (bp_included_mc_index)
-		{
-			s.appendList(1);
-			s << *bp_included_mc_index;
-		}
-		else
-		{
-			s.appendList(0);
-		}
-
-		if (earliest_bp_included_mc_index)
-		{
-			s.appendList(1);
-			s << *earliest_bp_included_mc_index;
-		}
-		else
-		{
-			s.appendList(0);
-		}
-
-		if (latest_bp_included_mc_index)
-		{
-			s.appendList(1);
-			s << *latest_bp_included_mc_index;
-		}
-		else
-		{
-			s.appendList(0);
-		}
-
-		s << stable_index;
-
-		break;
+		s.appendList(1);
+		s << *earliest_included_mc_index;
 	}
-	case mcp::block_type::light:
+	else
 	{
-		assert_x(!is_on_main_chain);
-		assert_x(witnessed_level == 0);
-		assert_x(best_parent.is_zero());
-		assert_x(!earliest_included_mc_index);
-		assert_x(!latest_included_mc_index);
-		assert_x(!bp_included_mc_index);
-		assert_x(!earliest_bp_included_mc_index);
-		assert_x(!latest_bp_included_mc_index);
-
-		s.appendList(9);
-
-		s << (uint8_t)block_type << (uint8_t)status << is_stable;
-
-		if (main_chain_index)
-		{
-			s.appendList(1);
-			s << *main_chain_index;
-		}
-		else
-		{
-			s.appendList(0);
-		}
-
-		s << level << mc_timestamp << stable_timestamp << stable_index;
-
-		if (receipt)
-		{
-			s.appendList(1);
-			receipt->stream_RLP(s);
-		}
-		else
-		{
-			s.appendList(0);
-		}
-
-		break;
+		s.appendList(0);
 	}
-	default:
+
+	if (latest_included_mc_index)
 	{
-		assert_x_msg(false, "invalid block type");
-		throw;
+		s.appendList(1);
+		s << *latest_included_mc_index;
 	}
+	else
+	{
+		s.appendList(0);
 	}
+
+	if (bp_included_mc_index)
+	{
+		s.appendList(1);
+		s << *bp_included_mc_index;
+	}
+	else
+	{
+		s.appendList(0);
+	}
+
+	if (earliest_bp_included_mc_index)
+	{
+		s.appendList(1);
+		s << *earliest_bp_included_mc_index;
+	}
+	else
+	{
+		s.appendList(0);
+	}
+
+	if (latest_bp_included_mc_index)
+	{
+		s.appendList(1);
+		s << *latest_bp_included_mc_index;
+	}
+	else
+	{
+		s.appendList(0);
+	}
+
+	s << stable_index;
 }
 
-void mcp::block_state::serialize_json(mcp::json & json_a, mcp::account const & contract_account_a)
+void mcp::block_state::serialize_json(mcp::json & json_a)
 {
-	json_a["type"] = (uint8_t)block_type;
 
 	mcp::json content_l = mcp::json::object();
 	content_l["level"] = level;
-	switch (block_type)
-	{
-	case mcp::block_type::genesis:
-	{
-		content_l["witnessed_level"] = witnessed_level;
-		break;
-	}
-	case mcp::block_type::dag:
-	{
-		content_l["witnessed_level"] = witnessed_level;
-		content_l["best_parent"] = best_parent.to_string();
-		break;
-	}
-	case mcp::block_type::light:
-	{
-		break;
-	}
-	default:
-		assert_x_msg(false, "Invalid block type");
-		break;
-	}
-
+	content_l["witnessed_level"] = witnessed_level;
+	content_l["best_parent"] = best_parent.hexPrefixed();
 	json_a["content"] = content_l;
 
 	json_a["is_stable"] = is_stable ? 1 : 0;
@@ -667,45 +334,8 @@ void mcp::block_state::serialize_json(mcp::json & json_a, mcp::account const & c
 			stable_content_l["mci"] = nullptr;
 
 		stable_content_l["mc_timestamp"] = mc_timestamp;
-
-		switch (block_type)
-		{
-		case mcp::block_type::genesis:
-		{
-			stable_content_l["is_on_mc"] = is_on_main_chain ? 1 : 0;
-			stable_content_l["is_free"] = is_free ? 1 : 0;
-
-			if (receipt)
-				receipt->serialize_json(stable_content_l);
-			else
-				assert_x(receipt);
-
-			break;
-		}
-		case mcp::block_type::dag:
-		{
-			stable_content_l["is_on_mc"] = is_on_main_chain ? 1 : 0;
-			stable_content_l["is_free"] = is_free ? 1 : 0;
-
-			break;
-		}
-		case mcp::block_type::light:
-		{
-			if (receipt)
-				receipt->serialize_json(stable_content_l);
-			else
-				transaction_receipt::serialize_null_json(stable_content_l);
-			
-			if (!contract_account_a.is_zero())
-				stable_content_l["contract_account"] = contract_account_a.to_account();
-			else
-				stable_content_l["contract_account"] = nullptr;
-			break;
-		}
-		default:
-			assert_x_msg(false, "Invalid block type");
-			break;
-		}
+		stable_content_l["is_on_mc"] = is_on_main_chain ? 1 : 0;
+		stable_content_l["is_free"] = is_free ? 1 : 0;
 
 		json_a["stable_content"] = stable_content_l;
 	}
@@ -741,7 +371,7 @@ void mcp::free_key::serialize(mcp::stream & stream_a) const
     uint64_t be_level_desc(boost::endian::native_to_big(std::numeric_limits<uint64_t>::max() - level_desc));
     write(stream_a, be_level_desc);
 
-    write(stream_a, hash_asc.bytes);
+    write(stream_a, hash_asc.asArray());
 }
 
 void mcp::free_key::deserialize(mcp::stream & stream_a)
@@ -754,7 +384,7 @@ void mcp::free_key::deserialize(mcp::stream & stream_a)
     read(stream_a, be_level_desc);
     level_desc = std::numeric_limits<uint64_t>::max() - boost::endian::big_to_native(be_level_desc);
 
-    read(stream_a, hash_asc.bytes);
+    read(stream_a, hash_asc.asArray());
 }
 
 
@@ -799,51 +429,18 @@ dev::Slice mcp::block_child_key::val() const
     return dev::Slice((char *)this, sizeof(*this));
 }
 
-
-mcp::account_state::account_state() :
-    account(0),
-    block_hash(0),
-    previous(0),
-    balance(0)
-{
-}
-
-mcp::account_state::account_state(mcp::account const & account_a, mcp::block_hash const & block_hash_a, mcp::account_state_hash const & previous_a, u256 nonce_a, mcp::amount const & balance_a, Changedness _c) :
-    account(account_a),
-    block_hash(block_hash_a),
-    previous(previous_a),
-    m_isAlive(true),
-    m_isUnchanged(_c == Unchanged),
-    m_nonce(nonce_a),
-    balance(balance_a)
-{
-}
-
-mcp::account_state::account_state(mcp::account const & account_a, mcp::block_hash const & block_hash_a, mcp::account_state_hash const & previous_a, u256 nonce_a, mcp::amount const & balance_a, h256 storageRoot_a, h256 codeHash_a, Changedness _c) :
-    account(account_a),
-    block_hash(block_hash_a),
-    previous(previous_a),
-    balance(balance_a),
-    m_isAlive(true),
-    m_isUnchanged(_c == Unchanged),
-    m_nonce(nonce_a),
-    m_storageRoot(storageRoot_a),
-    m_codeHash(codeHash_a)
-{
-}
-
 mcp::account_state::account_state(bool & error_a, dev::RLP const & r, Changedness _c) :
-    m_isUnchanged(_c == Unchanged)
+	m_isUnchanged(_c == Unchanged)
 {
-    error_a = r.itemCount() != 8;
-    account = (mcp::account)r[0];
-    block_hash = (mcp::block_hash)r[1];
-    previous = (mcp::account_state_hash)r[2];
-    m_nonce = (uint256_t)r[3];
-    balance = (uint256_t)r[4];
-    m_storageRoot = (h256)r[5];
-    m_codeHash = (h256)r[6];
-    m_isAlive = r[7].toInt();
+	error_a = r.itemCount() != 8;
+	m_account = (Address)r[0];
+	m_ts = (h256)r[1];
+	m_previous = (h256)r[2];
+	m_nonce = (u256)r[3];
+	m_balance = (u256)r[4];
+	m_storageRoot = (h256)r[5];
+	m_codeHash = (h256)r[6];
+	m_isAlive = r[7].toInt();
 
 	record_init_hash();
 }
@@ -855,53 +452,37 @@ void mcp::account_state::record_init_hash()
 
 void mcp::account_state::stream_RLP(dev::RLPStream & s) const
 {
-    s.appendList(8);
-    s << account << block_hash << previous << m_nonce << balance << m_storageRoot << m_codeHash << m_isAlive;
+	s.appendList(8);
+	s << m_account  << m_ts  << m_previous << m_nonce << m_balance << m_storageRoot << m_codeHash << m_isAlive;
 }
 
-mcp::account_state_hash mcp::account_state::hash()
+h256 mcp::account_state::hash()
 {
-    mcp::account_state_hash result;
-    blake2b_state hash_l;
-    auto status(blake2b_init(&hash_l, sizeof(result.bytes)));
-    assert_x(status == 0);
+	RLPStream s;
+	stream_RLP(s);
 
-    blake2b_update(&hash_l, account.bytes.data(), sizeof(account.bytes));
-    blake2b_update(&hash_l, block_hash.bytes.data(), sizeof(block_hash.bytes));
-    blake2b_update(&hash_l, previous.bytes.data(), sizeof(previous.bytes));
-
-    uint256_union nonce_union = uint256_union(m_nonce);
-    blake2b_update(&hash_l, nonce_union.bytes.data(), sizeof(nonce_union.bytes));
-
-    uint256_union balance_union = uint256_union(balance);
-    blake2b_update(&hash_l, balance_union.bytes.data(), sizeof(balance_union.bytes));
-    
-    blake2b_update(&hash_l, m_storageRoot.data(), m_storageRoot.size);
-    blake2b_update(&hash_l, m_codeHash.data(), m_codeHash.size);
-    blake2b_update(&hash_l, &m_isAlive , sizeof(bool));
-
-    status = blake2b_final(&hash_l, result.bytes.data(), sizeof(result.bytes));
-    assert_x(status == 0);
-
-    return result;
-}
-
-void mcp::account_state::addBalance(mcp::amount const& _amount)
-{
-	balance += _amount;
-	changed();
-	return;
+	return dev::sha3(s.out());
 }
 
 void mcp::account_state::setCode(dev::bytes&& _code)
 {
-    m_codeCache = std::move(_code);
-    m_hasNewCode = true;
-    m_codeHash = mcp::uint256_t(dev::sha3(m_codeCache));
-	return;
+	auto const newHash = sha3(_code);
+	if (newHash != m_codeHash)
+	{
+		m_codeCache = std::move(_code);
+		m_hasNewCode = true;
+		m_codeHash = newHash;
+	}
 }
 
-mcp::uint256_t mcp::account_state::originalStorageValue(mcp::uint256_t const& _key, mcp::overlay_db const& _db) const
+void mcp::account_state::resetCode()
+{
+	m_codeCache.clear();
+	m_hasNewCode = false;
+	m_codeHash = EmptySHA3;
+}
+
+u256 mcp::account_state::originalStorageValue(u256 const& _key, mcp::overlay_db const& _db) const
 {
     auto it = m_storageOriginal.find(_key);
     if (it != m_storageOriginal.end())
@@ -915,15 +496,6 @@ mcp::uint256_t mcp::account_state::originalStorageValue(mcp::uint256_t const& _k
     return value;
 }
 
-bool mcp::account_state::has_code() const
-{
-    return codeHash() != EmptySHA3;
-}
-
-size_t mcp::account_state::codeSize(mcp::account const& _contract) const
-{
-	return 0;
-}
 
 mcp::skiplist_info::skiplist_info()
 {
@@ -949,53 +521,24 @@ void mcp::skiplist_info::stream_RLP(dev::RLPStream & s) const
 }
 
 mcp::summary_hash mcp::summary::gen_summary_hash(mcp::block_hash const & block_hash, mcp::summary_hash const & previous_hash,
-	std::list<mcp::summary_hash> const & parent_hashs, std::list<mcp::summary_hash> const & link_hashs, std::set<mcp::summary_hash> const & skiplist, 
-	mcp::block_status const & status_a, uint64_t const& stable_index_a, uint64_t const& mc_timestamp_a, boost::optional<transaction_receipt> receipt)
+	std::list<mcp::summary_hash> const & parent_hashs, h256 const & receipts_root, std::set<mcp::summary_hash> const & skiplist,
+	mcp::block_status const & status_a, uint64_t const& stable_index_a, uint64_t const& mc_timestamp_a)
 {
-    mcp::summary_hash result;
-    blake2b_state hash_l;
-    auto status(blake2b_init(&hash_l, sizeof(result.bytes)));
-    assert_x(status == 0);
+	dev::RLPStream s;
+	s.appendList(8);
+	s << block_hash << previous_hash;
 
-    blake2b_update(&hash_l, block_hash.bytes.data(), sizeof(block_hash.bytes));
-	blake2b_update(&hash_l, previous_hash.bytes.data(), sizeof(previous_hash.bytes));
+	s.appendList(parent_hashs.size());
 	for (auto & parent : parent_hashs)
-        blake2b_update(&hash_l, parent.bytes.data(), sizeof(parent.bytes));
-	for (auto & link : link_hashs)
-		blake2b_update(&hash_l, link.bytes.data(), sizeof(link.bytes));
-    for (auto & s : skiplist)
-        blake2b_update(&hash_l, s.bytes.data(), sizeof(s.bytes));
-    blake2b_update(&hash_l, &status_a, sizeof(status_a));
+		s << parent;
 
-	mcp::uint64_union stable_index(stable_index_a);
-	blake2b_update(&hash_l, stable_index.bytes.data(), sizeof(stable_index.bytes));
-	mcp::uint64_union mc_timestamp(mc_timestamp_a);
-	blake2b_update(&hash_l, mc_timestamp.bytes.data(), sizeof(mc_timestamp.bytes));
+	s << receipts_root;
+	s.appendList(skiplist.size());
+	for (auto & sk : skiplist)
+		s << sk;
+	s << (uint8_t)status_a << stable_index_a << mc_timestamp_a;
 
-	if (receipt)
-		receipt->hash(hash_l);
-
-    status = blake2b_final(&hash_l, result.bytes.data(), sizeof(result.bytes));
-    assert_x(status == 0);
-
-    return result;
-}
-
-mcp::fork_successor_key::fork_successor_key(mcp::block_hash const & previous_a, mcp::block_hash const & successor_a) : 
-	previous(previous_a),
-	successor(successor_a)
-{
-}
-
-mcp::fork_successor_key::fork_successor_key(dev::Slice const & val_a)
-{
-	assert_x(val_a.size() == sizeof(*this));
-	std::copy(reinterpret_cast<uint8_t const *> (val_a.data()), reinterpret_cast<uint8_t const *> (val_a.data()) + sizeof(*this), reinterpret_cast<uint8_t *> (this));
-}
-
-dev::Slice mcp::fork_successor_key::val() const
-{
-	return dev::Slice((char*)this, sizeof(*this));
+	return dev::sha3(s.out());
 }
 
 mcp::advance_info::advance_info():
@@ -1021,113 +564,52 @@ dev::Slice mcp::advance_info::val() const
 	return dev::Slice((char*)this, sizeof(*this));
 }
 
-dev::Slice mcp::uint64_to_slice(mcp::uint64_union const & value_a)
+dev::Slice mcp::h64_to_slice(h64 const & value)
 {
-	return dev::Slice((char*)value_a.bytes.data(), value_a.bytes.size());
-};
-
-mcp::uint64_union mcp::slice_to_uint64(dev::Slice const & slice)
+	return dev::Slice(reinterpret_cast<char const*>(value.data()), value.size);
+}
+dev::h64 mcp::slice_to_h64(dev::Slice const & slice)
 {
-	mcp::uint64_union result;
-	assert_x(slice.size() == sizeof(result));
-	std::copy((byte *)slice.data(), (byte *)slice.data() + sizeof(result), result.bytes.data());
-	return result;
-};
-
-dev::Slice mcp::uint256_to_slice(mcp::uint256_union const & value)
-{
-	return dev::Slice((char*)value.bytes.data(), value.bytes.size());
-};
-
-mcp::uint256_union mcp::slice_to_uint256(dev::Slice const & slice)
-{
-	mcp::uint256_union result;
-	// assert_x(slice.size() == sizeof(result));
-	std::copy((byte *)slice.data(), (byte *)slice.data() + sizeof(result), result.bytes.data());
-	return result;
-};
-
-// Added by Raul
-dev::Slice mcp::uint512_to_slice(mcp::uint512_union const & value)
-{
-	return dev::Slice((char*)value.bytes.data(), value.bytes.size());
-};
-
-mcp::uint512_union mcp::slice_to_uint512(dev::Slice const & slice)
-{
-	mcp::uint512_union result;
-	// assert_x(slice.size() == sizeof(result));
-	std::copy((byte *)slice.data(), (byte *)slice.data() + sizeof(result), result.bytes.data());
-	return result;
-};
-
-// added by michael at 1/13
-dev::Slice mcp::account_to_slice(mcp::account const & value)
-{
-	return dev::Slice((char*)value.bytes.data(), value.bytes.size());
-};
-
-mcp::account mcp::slice_to_account(dev::Slice const & slice)
-{
-	mcp::account result;
-	assert_x(slice.size() == sizeof(result));
-	std::copy((byte *)slice.data(), (byte *)slice.data() + sizeof(result), result.bytes.data());
-	return result;
-};
-//
-
-mcp::unlink_info::unlink_info(dev::Slice const & val_a)
-{
-	assert_x(val_a.size() == sizeof(*this));
-	std::copy(reinterpret_cast<uint8_t const *> (val_a.data()), reinterpret_cast<uint8_t const *> (val_a.data()) + sizeof(*this), reinterpret_cast<uint8_t *> (this));
+	return dev::h64(slice.toBytes());
 }
 
-dev::Slice mcp::unlink_info::val() const
+dev::Slice mcp::h256_to_slice(h256 const & value)
 {
-	return dev::Slice((char *)this, sizeof(*this));
+	return dev::Slice(reinterpret_cast<char const*>(value.data()), value.size);
+}
+dev::h256 mcp::slice_to_h256(dev::Slice const & slice)
+{
+	return dev::h256(slice.toBytes());
 }
 
-mcp::next_unlink::next_unlink(dev::Slice const & val_a)
+dev::Slice mcp::h512_to_slice(h512 const & value)
 {
-	assert_x(val_a.size() == sizeof(*this));
-	std::copy(reinterpret_cast<uint8_t const *> (val_a.data()), reinterpret_cast<uint8_t const *> (val_a.data()) + sizeof(*this), reinterpret_cast<uint8_t *> (this));
+	return dev::Slice(reinterpret_cast<char const*>(value.data()), value.size);
 }
 
-dev::Slice mcp::next_unlink::val() const
+h512 mcp::slice_to_h512(dev::Slice const & slice)
 {
-	return dev::Slice((char *)this, sizeof(*this));
+	return dev::h512(slice.toBytes());
 }
 
-mcp::head_unlink::head_unlink(dev::Slice const & val_a)
+dev::Slice mcp::account_to_slice(dev::Address const & value)
 {
-	assert_x(val_a.size() == sizeof(*this));
-	std::copy(reinterpret_cast<uint8_t const *> (val_a.data()), reinterpret_cast<uint8_t const *> (val_a.data()) + sizeof(*this), reinterpret_cast<uint8_t *> (this));
+	return dev::Slice((char*)value.data(), value.size);
 }
 
-dev::Slice mcp::head_unlink::val() const
+dev::Address mcp::slice_to_account(dev::Slice const & slice)
 {
-	return dev::Slice((char *)this, sizeof(*this));
+	return Address(slice.toBytes());
 }
 
-mcp::unlink_block::unlink_block(bool & error_a, dev::RLP const & r)
+bool mcp::isAddress(std::string const& _s)
 {
-	error_a = r.itemCount() != 2;
-	
-	block = std::make_shared<mcp::block>(error_a, r[0], true);
-	time = (mcp::uint64_union)r[1];
-}
-
-void mcp::unlink_block::stream_RLP(dev::RLPStream & s) const
-{
-	s.appendList(2);
-	block->stream_RLP(s);
-	s << time;
-}
-
-mcp::account mcp::toAddress(mcp::account const& _from, u256 const& _nonce)
-{
-    // sichaoy: don't use rlpList here
-    return mcp::account(sha3(rlpList(_from, _nonce)));
+	if (dev::isHex(_s)) {
+		return (_s.length() + (_s.substr(0, 2) == "0x" ? 0 : 2) == 42) ? true : false;
+	}
+	else {
+		return false;
+	}
 }
 
 mcp::call_trace_action::call_trace_action(bool & error_a, dev::RLP const & r)
@@ -1137,11 +619,11 @@ mcp::call_trace_action::call_trace_action(bool & error_a, dev::RLP const & r)
 		return;
 
 	call_type = (std::string)r[0];
-	from = (mcp::account)r[1];
-	gas = (mcp::uint256_t)r[2];
+	from = (Address)r[1];
+	gas = (u256)r[2];
 	data = (dev::bytes)r[3];
-	to = (mcp::account)r[4];
-	amount = (mcp::uint256_t)r[5];
+	to = (Address)r[4];
+	amount = (u256)r[5];
 }
 
 void mcp::call_trace_action::stream_RLP(dev::RLPStream & s) const
@@ -1153,10 +635,10 @@ void mcp::call_trace_action::stream_RLP(dev::RLPStream & s) const
 void mcp::call_trace_action::serialize_json(mcp::json & json_a) const
 {
 	json_a["call_type"] = call_type;
-	json_a["from"] = from.to_account();
+	json_a["from"] = dev::toJS(from);
 	json_a["gas"] = gas.str();
-	json_a["data"] = mcp::bytes_to_hex(data);
-	json_a["to"] = to.to_account();
+	json_a["data"] = dev::toJS(data);
+	json_a["to"] = dev::toJS(to);
 	json_a["amount"] = amount.str();
 }
 
@@ -1179,7 +661,7 @@ void mcp::call_trace_result::stream_RLP(dev::RLPStream & s) const
 void mcp::call_trace_result::serialize_json(mcp::json & json_a) const
 {
 	json_a["gas_used"] = gas_used.str();
-	json_a["output"] = mcp::bytes_to_hex(output);
+	json_a["output"] = dev::toJS(output);
 }
 
 mcp::create_trace_action::create_trace_action(bool & error_a, dev::RLP const & r)
@@ -1188,10 +670,10 @@ mcp::create_trace_action::create_trace_action(bool & error_a, dev::RLP const & r
 	if (error_a)
 		return;
 
-	from = (mcp::account)r[0];
-	gas = (mcp::uint256_t)r[1];
+	from = (Address)r[0];
+	gas = (u256)r[1];
 	init = (dev::bytes)r[2];
-	amount = (mcp::uint256_t)r[3];
+	amount = (u256)r[3];
 }
 
 void mcp::create_trace_action::stream_RLP(dev::RLPStream & s) const
@@ -1202,9 +684,9 @@ void mcp::create_trace_action::stream_RLP(dev::RLPStream & s) const
 
 void mcp::create_trace_action::serialize_json(mcp::json & json_a) const
 {
-	json_a["from"] = from.to_account();
+	json_a["from"] = dev::toJS(from);
 	json_a["gas"] = gas.str();
-	json_a["init"] = mcp::bytes_to_hex(init);
+	json_a["init"] = dev::toJS(init);
 	json_a["amount"] = amount.str();
 }
 
@@ -1214,8 +696,8 @@ mcp::create_trace_result::create_trace_result(bool & error_a, dev::RLP const & r
 	if (error_a)
 		return;
 
-	gas_used = (mcp::uint256_t)r[0];
-	contract_account = (mcp::account)r[1];
+	gas_used = (u256)r[0];
+	contract_account = (Address)r[1];
 	code = (dev::bytes)r[2];
 }
 
@@ -1228,8 +710,8 @@ void mcp::create_trace_result::stream_RLP(dev::RLPStream & s) const
 void mcp::create_trace_result::serialize_json(mcp::json & json_a) const
 {
 	json_a["gas_used"] = gas_used.str();
-	json_a["contract_account"] = contract_account.to_account();
-	json_a["code"] = mcp::bytes_to_hex(code);
+	json_a["contract_account"] = dev::toJS(contract_account);
+	json_a["code"] = dev::toJS(code);
 }
 
 mcp::suicide_trace_action::suicide_trace_action(bool & error_a, dev::RLP const & r)
@@ -1238,9 +720,9 @@ mcp::suicide_trace_action::suicide_trace_action(bool & error_a, dev::RLP const &
 	if (error_a)
 		return;
 
-	contract_account = (mcp::account)r[0];
-	refund_account = (mcp::account)r[1];
-	balance = (mcp::uint256_t)r[2];
+	contract_account = (Address)r[0];
+	refund_account = (Address)r[1];
+	balance = (u256)r[2];
 }
 
 void mcp::suicide_trace_action::stream_RLP(dev::RLPStream & s) const
@@ -1251,8 +733,8 @@ void mcp::suicide_trace_action::stream_RLP(dev::RLPStream & s) const
 
 void mcp::suicide_trace_action::serialize_json(mcp::json & json_a) const
 {
-	json_a["contract_account"] = contract_account.to_account();
-	json_a["refund_account"] = refund_account.to_account();
+	json_a["contract_account"] = dev::toJS(contract_account);
+	json_a["refund_account"] = dev::toJS(refund_account);
 	json_a["balance"] = balance.str();
 }
 
@@ -1350,7 +832,6 @@ void mcp::trace::serialize_json(mcp::json & json_a) const
 		else
 			json_a["result"] = nullptr;
 	}
-
 }
 
 boost::filesystem::path mcp::working_path()
@@ -1378,4 +859,33 @@ boost::filesystem::path mcp::unique_path()
 {
 	auto result(working_path() / boost::filesystem::unique_path());
 	return result;
+}
+
+mcp::epoch_approves_key::epoch_approves_key(dev::Slice const & val_a)
+{
+    assert_x(val_a.size() == sizeof(*this));
+    std::copy(reinterpret_cast<uint8_t const *> (val_a.data()), reinterpret_cast<uint8_t const *> (val_a.data()) + sizeof(*this), reinterpret_cast<uint8_t *> (this));
+}
+
+mcp::epoch_elected_list::epoch_elected_list()
+{
+}
+
+mcp::epoch_elected_list::epoch_elected_list(std::vector<h256> const &hashs_a) :
+    hashs(hashs_a)
+{
+}
+
+mcp::epoch_elected_list::epoch_elected_list(dev::RLP const & r)
+{
+    assert_x(r.isList());
+    for (auto sk : r)
+        hashs.emplace_back((h256) sk);
+}
+
+void mcp::epoch_elected_list::stream_RLP(dev::RLPStream & s) const
+{
+    s.appendList(hashs.size());
+    for (h256 sk : hashs)
+        s << sk;
 }

@@ -1,0 +1,13 @@
+prefix=/root/ccn/git/mcp/secp256k1-vrf/build
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: libsecp256k1-vrf
+Description: Optimized C library for EC operations on curve secp256k1
+URL: https://github.com/aergoio/secp256k1-vrf
+Version: 0.1
+Cflags: -I${includedir}
+Libs: -L${libdir} -lsecp256k1-vrf
+Libs.private: 
+

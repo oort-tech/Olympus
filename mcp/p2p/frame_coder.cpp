@@ -1,258 +1,265 @@
 #include "frame_coder.hpp"
+#include <cryptopp/aes.h>
+#include <cryptopp/keccak.h>
+#include <cryptopp/modes.h>
+#include <libdevcore/Assertions.h>
+#include <libdevcore/SHA3.h>
 using namespace mcp;
 using namespace mcp::p2p;
-using namespace mcp::encry;
 
-void frame_coder_impl::set_key(bool _originated, public_key_comp const&_pub, key_pair_ed const&_key)
-{
-	public_key_comp remote_pub, local_pub;
-	secret_encry local_sec;
-	if (!get_encry_public_key_from_sign_key(remote_pub, _pub)
-		|| !get_encry_secret_key_from_sign_key(local_sec, _key.secret())
-		|| !get_encry_public_key_from_sign_key(local_pub, _key.pub())
-		)
-	{
-		LOG(m_log.info) << "set_key error.";
-		return;
-	}
-
-	if (_originated) //local is client
-	{
-		if (crypto_kx_client_session_keys(in_key.ref().data(), out_key.ref().data(),
-			local_pub.ref().data(), local_sec.ref().data(), remote_pub.ref().data()) != 0)
-		{
-            LOG(m_log.info) << "set_client_key error.";
-			return;
-		}
-	}
-	else  //local is server
-	{
-		if (crypto_kx_server_session_keys(in_key.ref().data(), out_key.ref().data(),
-			local_pub.ref().data(), local_sec.ref().data(), remote_pub.ref().data()) != 0)
-		{
-            LOG(m_log.info) << "set_server_key error.";
-			return;
-		}
-	}
-}
-
-void frame_coder_impl::set_nonce(nonce const&_remote_nonce, nonce const&_nonce)
-{
-	_remote_nonce.ref().copyTo(remote_nonce.ref());
-	_nonce.ref().copyTo(local_nonce.ref());
-}
-
-bool frame_coder_impl::encry(bytes& io_cipher)
-{
-	size_t msg_len = io_cipher.size();
-	bytes cipherText(crypto_cipher_len + msg_len);
-
-	bytes plain(std::move(io_cipher));
-	io_cipher.resize(msg_len + crypto_cipher_len);
-	if (encryption(io_cipher.data(), plain.data(), msg_len, local_nonce.ref().data(), out_key.ref().data()) != 0)
-	{
-		return false;
-	}
-
-	return true;
-}
-
-bool frame_coder_impl::dencry(bytes& io_cipher)
-{
-	size_t msg_len = io_cipher.size();
-
-	bytes plain(std::move(io_cipher));
-
-	io_cipher.resize(msg_len - crypto_cipher_len);
-
-	if (dencryption(io_cipher.data(), plain.data(), msg_len, remote_nonce.ref().data(), in_key.ref().data()) != 0)
-	{
-		return false;
-	}
-	return true;
-}
-
-bool frame_coder_impl::dencry(bytesConstRef io, bytes& o_bytes)
-{
-	size_t msg_len = io.size();
-
-	if (o_bytes.size() != msg_len - crypto_cipher_len)
-	{
-		o_bytes.resize(msg_len - crypto_cipher_len);
-	}
-
-	if (crypto_secretbox_open_easy(o_bytes.data(), io.data(), msg_len, remote_nonce.ref().data(), in_key.ref().data()) != 0)
-	{
-		return false;
-	}
-	return true;
-}
-
-frame_coder::~frame_coder()
+RLPXFrameInfo::RLPXFrameInfo(bytesConstRef _header) :
+	length((_header[0] * 256 + _header[1]) * 256 + _header[2]),
+	padding((16 - (length % 16)) % 16),
+	data(_header.cropped(3).toBytes()),
+	header(RLP(data, RLP::ThrowOnFail | RLP::FailIfTooSmall)),
+	protocolId(header[0].toInt<uint16_t>()),
+	multiFrame(header.itemCount() > 1),
+	sequenceId(multiFrame ? header[1].toInt<uint16_t>() : 0),
+	totalLength(header.itemCount() == 3 ? header[2].toInt<uint32_t>() : 0)
 {}
 
-frame_coder::frame_coder(hankshake const& _init) :
-	m_impl(new frame_coder_impl)
+namespace mcp
 {
-	setup(_init.m_originated, _init.m_ecdheRemote, _init.m_remoteNonce, _init.m_ecdheLocal, _init.m_nonce);
+	namespace p2p
+	{
+		class RLPXFrameCoderImpl
+		{
+		public:
+			/// Update state of _mac.
+			void updateMAC(CryptoPP::Keccak_256& _mac, bytesConstRef _seed = {});
+
+			CryptoPP::SecByteBlock frameEncKey;						///< Key for m_frameEnc
+			CryptoPP::CTR_Mode<CryptoPP::AES>::Encryption frameEnc;	///< Encoder for egress plaintext.
+
+			CryptoPP::SecByteBlock frameDecKey;						///< Key for m_frameDec
+			CryptoPP::CTR_Mode<CryptoPP::AES>::Encryption frameDec;	///< Decoder for egress plaintext.
+
+			CryptoPP::SecByteBlock macEncKey;						/// Key for m_macEnd
+			CryptoPP::ECB_Mode<CryptoPP::AES>::Encryption macEnc;	/// One-way coder used by updateMAC for ingress and egress MAC updates.
+
+			CryptoPP::Keccak_256 egressMac;		///< State of MAC for egress ciphertext.
+			CryptoPP::Keccak_256 ingressMac;	///< State of MAC for ingress ciphertext.
+
+		private:
+			Mutex x_macEnc;  ///< Mutex.
+		};
+	}
 }
 
-frame_coder::frame_coder(bool _originated, public_key_comp const& _remoteEphemeral, nonce const& _remoteNonce, key_pair_ed const& _ecdheLocal, nonce const& _nonce) :
-	m_impl(new frame_coder_impl)
+RLPXFrameCoder::~RLPXFrameCoder()
+{}
+
+RLPXFrameCoder::RLPXFrameCoder(hankshake const& _init) :
+	m_impl(new RLPXFrameCoderImpl)
 {
-	setup(_originated, _remoteEphemeral, _remoteNonce, _ecdheLocal, _nonce);
+	setup(_init.m_originated, _init.m_ecdheRemote, _init.m_remoteNonce, _init.m_ecdheLocal, _init.m_nonce, &_init.m_ackCipher, &_init.m_authCipher);
 }
 
-void frame_coder::setup(bool _originated, public_key_comp const& _remoteEphemeral, nonce const& _remoteNonce, key_pair_ed const& _ecdheLocal, nonce const& _nonce)
+RLPXFrameCoder::RLPXFrameCoder(bool _originated, h512 const& _remoteEphemeral, h256 const& _remoteNonce, KeyPair const& _ecdheLocal, h256 const& _nonce, bytesConstRef _ackCipher, bytesConstRef _authCipher) :
+	m_impl(new RLPXFrameCoderImpl)
 {
-	m_impl->set_key(_originated,_remoteEphemeral, _ecdheLocal);
-	m_impl->set_nonce(_remoteNonce, _nonce);
+	setup(_originated, _remoteEphemeral, _remoteNonce, _ecdheLocal, _nonce, _ackCipher, _authCipher);
 }
 
-void frame_coder::write_frame(RLPStream const& _header, bytesConstRef _payload, bytes& o_bytes)
+void RLPXFrameCoder::setup(bool _originated, h512 const& _remoteEphemeral, h256 const& _remoteNonce, KeyPair const& _ecdheLocal, h256 const& _nonce, bytesConstRef _ackCipher, bytesConstRef _authCipher)
 {
-	bytes header(handshake_header_size);
-	bytesConstRef(&_header.out()).copyTo(bytesRef(&header));
+	bytes keyMaterialBytes(64);
+	bytesRef keyMaterial(&keyMaterialBytes);
 
-	if (!m_impl->encry(header))
-	{
-        LOG(m_log.info) << "encry Header error.";
-		return;
-	}
+	// shared-secret = sha3(ecdhe-shared-secret || sha3(nonce || initiator-nonce))
+	Secret ephemeralShared;
 
+	// Try agree ECDHE. This can fail due to invalid remote public key. In this
+	// case throw an exception to be caught RLPXHandshake::transition().
+	if (!crypto::ecdh::agree(_ecdheLocal.secret(), _remoteEphemeral, ephemeralShared))
+		BOOST_THROW_EXCEPTION(ECDHEError{});
 
-	o_bytes.swap(header);
+	ephemeralShared.ref().copyTo(keyMaterial.cropped(0, h256::size));
+	h512 nonceMaterial;
+	h256 const& leftNonce = _originated ? _remoteNonce : _nonce;
+	h256 const& rightNonce = _originated ? _nonce : _remoteNonce;
+	leftNonce.ref().copyTo(nonceMaterial.ref().cropped(0, h256::size));
+	rightNonce.ref().copyTo(nonceMaterial.ref().cropped(h256::size, h256::size));
+	auto outRef(keyMaterial.cropped(h256::size, h256::size));
+	sha3(nonceMaterial.ref(), outRef); // output h(nonces)
 
-	bytes payload(_payload.size());
-	_payload.copyTo(bytesRef(&payload));
-	if(!m_impl->encry(payload))
-	{
-        LOG(m_log.info) << "encry payload error.";
-		return;
-	}
+	sha3(keyMaterial, outRef); // output shared-secret
+							   // token: sha3(outRef, bytesRef(&token)); -> m_host (to be saved to disk)
 
-	o_bytes.resize(crypto_cipher_len + mcp::p2p::handshake_header_size + payload.size());
-	bytesRef macRef(o_bytes.data() + crypto_cipher_len + mcp::p2p::handshake_header_size, payload.size());
-	bytesConstRef(&payload).copyTo(macRef);
+							   // aes-secret = sha3(ecdhe-shared-secret || shared-secret)
+	sha3(keyMaterial, outRef); // output aes-secret
+	assert(m_impl->frameEncKey.empty() && "ECDHE aggreed before!");
+	m_impl->frameEncKey.resize(h256::size);
+	memcpy(m_impl->frameEncKey.data(), outRef.data(), h256::size);
+	m_impl->frameDecKey.resize(h256::size);
+	memcpy(m_impl->frameDecKey.data(), outRef.data(), h256::size);
+	h128 iv;
+	m_impl->frameEnc.SetKeyWithIV(m_impl->frameEncKey, h256::size, iv.data());
+	m_impl->frameDec.SetKeyWithIV(m_impl->frameDecKey, h256::size, iv.data());
+
+	// mac-secret = sha3(ecdhe-shared-secret || aes-secret)
+	sha3(keyMaterial, outRef); // output mac-secret
+	m_impl->macEncKey.resize(h256::size);
+	memcpy(m_impl->macEncKey.data(), outRef.data(), h256::size);
+	m_impl->macEnc.SetKey(m_impl->macEncKey, h256::size);
+
+	// Initiator egress-mac: sha3(mac-secret^recipient-nonce || auth-sent-init)
+	//           ingress-mac: sha3(mac-secret^initiator-nonce || auth-recvd-ack)
+	// Recipient egress-mac: sha3(mac-secret^initiator-nonce || auth-sent-ack)
+	//           ingress-mac: sha3(mac-secret^recipient-nonce || auth-recvd-init)
+
+	(*(h256*)outRef.data() ^ _remoteNonce).ref().copyTo(keyMaterial);
+	bytesConstRef egressCipher = _originated ? _authCipher : _ackCipher;
+	keyMaterialBytes.resize(h256::size + egressCipher.size());
+	keyMaterial.retarget(keyMaterialBytes.data(), keyMaterialBytes.size());
+	egressCipher.copyTo(keyMaterial.cropped(h256::size, egressCipher.size()));
+	m_impl->egressMac.Update(keyMaterial.data(), keyMaterial.size());
+
+	// recover mac-secret by re-xoring remoteNonce
+	(*(h256*)keyMaterial.data() ^ _remoteNonce ^ _nonce).ref().copyTo(keyMaterial);
+	bytesConstRef ingressCipher = _originated ? _ackCipher : _authCipher;
+	keyMaterialBytes.resize(h256::size + ingressCipher.size());
+	keyMaterial.retarget(keyMaterialBytes.data(), keyMaterialBytes.size());
+	ingressCipher.copyTo(keyMaterial.cropped(h256::size, ingressCipher.size()));
+	m_impl->ingressMac.Update(keyMaterial.data(), keyMaterial.size());
 }
 
-void frame_coder::write_frame(bytesConstRef _payload, bytes& o_bytes)
+void RLPXFrameCoder::writeFrame(uint16_t _protocolType, bytesConstRef _payload, bytes& o_bytes)
 {
-	bytes payload(_payload.size());
-	_payload.copyTo(bytesRef(&payload));
-	if (!m_impl->encry(payload))
-	{
-        LOG(m_log.info) << "encry payload error.";
-		return;
-	}
-
-	if (o_bytes.size() != payload.size())
-	{
-		o_bytes.resize(payload.size());
-	}
-	
-	bytesRef macRef(o_bytes.data(), payload.size());
-	bytesConstRef(&payload).copyTo(macRef);
-}
-
-void frame_coder::write_single_frame_packet(bytesConstRef _packet, bytes& o_bytes)
-{
-	if (!m_impl)
-	{
-        LOG(m_log.info) << "Internal error in write_single_frame_packet: frame_coder_impl disappeared.";
-		return;
-	}
-
 	RLPStream header;
-	uint32_t len = (uint32_t)_packet.size() + crypto_cipher_len;
+	uint32_t len = (uint32_t)_payload.size();
 	header.appendRaw(bytes({ byte((len >> 16) & 0xff), byte((len >> 8) & 0xff), byte(len & 0xff) }));
-
-	write_frame(header, _packet, o_bytes);
+	header.appendList(1) << _protocolType;
+	writeFrame(header, _payload, o_bytes);
 }
 
-void frame_coder::write_frame_packet(bytesConstRef _packet, bytes& o_bytes)
+void RLPXFrameCoder::writeFrame(uint16_t _protocolType, uint16_t _seqId, bytesConstRef _payload, bytes& o_bytes)
 {
-	if (!m_impl)
-	{
-        LOG(m_log.info) << "Internal error in write_single_frame_packet: frame_coder_impl disappeared.";
-		return;
-	}
-
-	write_frame(_packet, o_bytes);
+	RLPStream header;
+	uint32_t len = (uint32_t)_payload.size();
+	header.appendRaw(bytes({ byte((len >> 16) & 0xff), byte((len >> 8) & 0xff), byte(len & 0xff) }));
+	header.appendList(2) << _protocolType << _seqId;
+	writeFrame(header, _payload, o_bytes);
 }
 
-bool frame_coder::auth_and_decrypt_header(bytes& io, uint32_t& len)
+void RLPXFrameCoder::writeFrame(uint16_t _protocolType, uint16_t _seqId, uint32_t _totalSize, bytesConstRef _payload, bytes& o_bytes)
 {
-	if (!m_impl)
-	{
-        LOG(m_log.info) << "Internal error in auth_and_decrypt_header: frame_coder_impl disappeared.";
+	RLPStream header;
+	uint32_t len = (uint32_t)_payload.size();
+	header.appendRaw(bytes({ byte((len >> 16) & 0xff), byte((len >> 8) & 0xff), byte(len & 0xff) }));
+	header.appendList(3) << _protocolType << _seqId << _totalSize;
+	writeFrame(header, _payload, o_bytes);
+}
+
+void RLPXFrameCoder::writeFrame(RLPStream const& _header, bytesConstRef _payload, bytes& o_bytes)
+{
+	// TODO: SECURITY check header values && header <= 16 bytes
+	bytes headerWithMac(h256::size);
+	bytesConstRef(&_header.out()).copyTo(bytesRef(&headerWithMac));
+	m_impl->frameEnc.ProcessData(headerWithMac.data(), headerWithMac.data(), 16);
+	updateEgressMACWithHeader(bytesConstRef(&headerWithMac).cropped(0, 16));
+	egressDigest().ref().copyTo(bytesRef(&headerWithMac).cropped(h128::size, h128::size));
+
+	auto padding = (16 - (_payload.size() % 16)) % 16;
+	o_bytes.swap(headerWithMac);
+	o_bytes.resize(32 + _payload.size() + padding + h128::size);
+	bytesRef packetRef(o_bytes.data() + 32, _payload.size());
+	m_impl->frameEnc.ProcessData(packetRef.data(), _payload.data(), _payload.size());
+	bytesRef paddingRef(o_bytes.data() + 32 + _payload.size(), padding);
+	if (padding)
+		m_impl->frameEnc.ProcessData(paddingRef.data(), paddingRef.data(), padding);
+	bytesRef packetWithPaddingRef(o_bytes.data() + 32, _payload.size() + padding);
+	updateEgressMACWithFrame(packetWithPaddingRef);
+	bytesRef macRef(o_bytes.data() + 32 + _payload.size() + padding, h128::size);
+	egressDigest().ref().copyTo(macRef);
+}
+
+void RLPXFrameCoder::writeSingleFramePacket(bytesConstRef _packet, bytes& o_bytes)
+{
+	RLPStream header;
+	uint32_t len = (uint32_t)_packet.size();
+	header.appendRaw(bytes({ byte((len >> 16) & 0xff), byte((len >> 8) & 0xff), byte(len & 0xff) }));
+	header.appendRaw(bytes({ 0xc2,0x80,0x80 }));
+	writeFrame(header, _packet, o_bytes);
+}
+
+bool RLPXFrameCoder::authAndDecryptHeader(bytesRef io)
+{
+	asserts(io.size() == h256::size);
+	updateIngressMACWithHeader(io);
+	bytesConstRef macRef = io.cropped(h128::size, h128::size);
+	h128 expected = ingressDigest();
+	if (*(h128*)macRef.data() != expected)
 		return false;
-	}
-
-	if (io.size() != handshake_header_size + crypto_cipher_len)
-	{
-        LOG(m_log.info) << "auth Decrypt Header lenth error.";
-		return false;
-	}
-
-	if (!m_impl->dencry(io))
-	{
-        LOG(m_log.info) << "auth Decrypt Header error.";
-		return false;
-	}
-
-	len = (uint32_t)(io[2]) | (uint32_t)(io[1]) << 8 | (uint32_t)(io[0]) << 16;
-
+	m_impl->frameDec.ProcessData(io.data(), io.data(), h128::size);
 	return true;
 }
 
-bool frame_coder::auth_and_decrypt_frame(bytes& io)
+bool RLPXFrameCoder::authAndDecryptFrame(bytesRef io)
 {
-	if (!m_impl)
-	{
-        LOG(m_log.info) << "Internal error in auth_and_decrypt_frame: frame_coder_impl disappeared.";
+	bytesRef cipherText(io.cropped(0, io.size() - h128::size));
+	updateIngressMACWithFrame(cipherText);
+	bytesConstRef frameMac(io.data() + io.size() - h128::size, h128::size);
+	if (*(h128*)frameMac.data() != ingressDigest())
 		return false;
-	}
-
-	if (io.size() < crypto_cipher_len)
-	{
-        LOG(m_log.info) << "auth Decrypt Frame lenth error.";
-		return false;
-	}
-
-	if (!m_impl->dencry(io))
-	{
-        LOG(m_log.info) << "auth Decrypt Frame error.";
-		return false;
-	}
-
+	m_impl->frameDec.ProcessData(io.data(), io.data(), io.size() - h128::size);
 	return true;
 }
 
-bool frame_coder::auth_and_decrypt_frame(bytesConstRef io, bytes& o_bytes)
+h128 RLPXFrameCoder::egressDigest()
 {
-	if (!m_impl)
-	{
-        LOG(m_log.info) << "Internal error in auth_and_decrypt_frame: frame_coder_impl disappeared.";
-		return false;
-	}
-
-	if (io.size() < crypto_cipher_len)
-	{
-        LOG(m_log.info) << "auth Decrypt Frame lenth error.";
-		return false;
-	}
-
-	if (!m_impl->dencry(io, o_bytes))
-	{
-        LOG(m_log.info) << "auth Decrypt Frame error.";
-		return false;
-	}
-
-	return true;
+	CryptoPP::Keccak_256 h(m_impl->egressMac);
+	h128 digest;
+	h.TruncatedFinal(digest.data(), h128::size);
+	return digest;
 }
 
-bytes frame_coder::serialize_packet_size(uint32_t const & size)
+h128 RLPXFrameCoder::ingressDigest()
+{
+	CryptoPP::Keccak_256 h(m_impl->ingressMac);
+	h128 digest;
+	h.TruncatedFinal(digest.data(), h128::size);
+	return digest;
+}
+
+void RLPXFrameCoder::updateEgressMACWithHeader(bytesConstRef _headerCipher)
+{
+	m_impl->updateMAC(m_impl->egressMac, _headerCipher.cropped(0, 16));
+}
+
+void RLPXFrameCoder::updateEgressMACWithFrame(bytesConstRef _cipher)
+{
+	m_impl->egressMac.Update(_cipher.data(), _cipher.size());
+	m_impl->updateMAC(m_impl->egressMac);
+}
+
+void RLPXFrameCoder::updateIngressMACWithHeader(bytesConstRef _headerCipher)
+{
+	m_impl->updateMAC(m_impl->ingressMac, _headerCipher.cropped(0, 16));
+}
+
+void RLPXFrameCoder::updateIngressMACWithFrame(bytesConstRef _cipher)
+{
+	m_impl->ingressMac.Update(_cipher.data(), _cipher.size());
+	m_impl->updateMAC(m_impl->ingressMac);
+}
+
+void RLPXFrameCoder::writeFramePacketHeader(bytes& o_bytes)
+{
+	uint32_t packet_size(o_bytes.size());
+	dev::bytes header(serializePacketSize(packet_size));
+
+	uint32_t header_size = header.size();
+
+	bytes result(std::move(o_bytes));
+
+	o_bytes.resize(header_size + packet_size);
+
+	dev::bytesConstRef(header.data(), header_size).copyTo(dev::bytesRef(o_bytes.data(), header_size));
+	dev::bytesConstRef(result.data(), packet_size).copyTo(dev::bytesRef(o_bytes.data() + header_size, packet_size));
+}
+
+bytes RLPXFrameCoder::serializePacketSize(uint32_t const & size)
 {
 	std::vector<uint8_t> data(mcp::p2p::tcp_header_size);
 	data[0] = (size >> 24) & 0xff;
@@ -262,25 +269,31 @@ bytes frame_coder::serialize_packet_size(uint32_t const & size)
 	return data;
 }
 
-uint32_t frame_coder::deserialize_packet_size(bytes const & data)
+uint32_t RLPXFrameCoder::deserializePacketSize(bytes const & data)
 {
 	uint32_t size((data[0] << 24) + (data[1] << 16) + (data[2] << 8) + data[3]);
 	return size;
 }
 
-void frame_coder::write_frame_packet_header(bytes& o_bytes)
+void RLPXFrameCoderImpl::updateMAC(CryptoPP::Keccak_256& _mac, bytesConstRef _seed)
 {
-	uint32_t packet_size(o_bytes.size());
-	dev::bytes header(serialize_packet_size(packet_size));
+	if (_seed.size() && _seed.size() != h128::size)
+		asserts(false);
 
-	uint32_t header_size = header.size();
+	CryptoPP::Keccak_256 prevDigest(_mac);
+	h128 encDigest(h128::size);
+	prevDigest.TruncatedFinal(encDigest.data(), h128::size);
+	h128 prevDigestOut = encDigest;
 
-	bytes resalt(std::move(o_bytes));
+	{
+		Guard l(x_macEnc);
+		macEnc.ProcessData(encDigest.data(), encDigest.data(), 16);
+	}
+	if (_seed.size())
+		encDigest ^= *(h128*)_seed.data();
+	else
+		encDigest ^= *(h128*)prevDigestOut.data();
 
-	o_bytes.resize(header_size + packet_size);
-
-	dev::bytesConstRef(header.data(), header_size).copyTo(dev::bytesRef(o_bytes.data(), header_size));
-	dev::bytesConstRef(resalt.data(), packet_size).copyTo(dev::bytesRef(o_bytes.data() + header_size, packet_size));
+	// update mac for final digest
+	_mac.Update(encDigest.data(), h128::size);
 }
-
-

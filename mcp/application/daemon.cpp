@@ -122,43 +122,23 @@ bool mcp_daemon::thread_config::parse_old_version_data(mcp::json const & json_a,
 	auto error(false);
 	try
 	{
-		if (json_a.count("node") && json_a["node"].is_object())
+		/// parse json used low version
+		switch (version)
 		{
-			mcp::json j_node_l = json_a["node"].get<mcp::json>();
-
-			if (version < 2)
-			{
-				std::string io_threads_text;
-				if (j_node_l.count("io_threads") && j_node_l["io_threads"].is_string())
-				{
-					io_threads_text = j_node_l["io_threads"].get<std::string>();
-				}
-
-				std::string work_threads_text;
-				if (j_node_l.count("work_threads") && j_node_l["work_threads"].is_string())
-				{
-					work_threads_text = j_node_l["work_threads"].get<std::string>();
-				}
-
-				try
-				{
-					io_threads = std::stoul(io_threads_text);
-					work_threads = std::stoul(work_threads_text);
-					error |= io_threads == 0;
-					error |= work_threads == 0;
-				}
-				catch (std::logic_error const &)
-				{
-					error = true;
-				}
-			}
-			else
-			{
-				error |= deserialize_json(j_node_l);
-			}
+		//case 0:
+		//{
+		//	/// parse
+		//	break;
+		//}
+		//case 1:
+		//{
+		//	/// parse
+		//	break;
+		//}
+		default:
+			error |= deserialize_json(json_a);
+			break;
 		}
-		else
-			error = true;
 	}
 	catch (std::runtime_error const &)
 	{
@@ -216,115 +196,67 @@ bool mcp_daemon::daemon_config::deserialize_json(bool & upgraded_a, mcp::json & 
 			serialize_json(json_a);
 			return false;
 		}
-		else
+		
+		if (!m_is_network_set)
 		{
-			uint64_t old_version;
-
-			if (!json_a.count("version"))
-				old_version = 0;
-			else if (json_a["version"].is_string())
-				old_version = boost::lexical_cast<uint64_t>(json_a["version"].get<std::string>());
+			unsigned u_network;
+			if (!json_a.count("network"))
+			{
+				std::cerr << "Config \"network\" not found" << std::endl;
+				exit(1);
+			}
+			else if (json_a["network"].is_string())
+				u_network = boost::lexical_cast<unsigned>(json_a["network"].get<std::string>());
 			else
-				old_version = json_a["version"].get<uint64_t>();
+				u_network = json_a["network"].get<unsigned>();
 
-			if (old_version != m_current_version) //need upgrade
-			{
-				error = parse_old_version_data(json_a, old_version);
-				if (!error)
-				{
-					upgraded_a = true;
-					json_a.clear();
-					serialize_json(json_a);
-				}
-				return error;
-			}
-
-			if (!m_is_network_set)
-			{
-				unsigned u_network;
-				if (!json_a.count("network"))
-				{
-					std::cerr << "Config \"network\" not found" << std::endl;
-					exit(1);
-				}
-				else if (json_a["network"].is_string())
-					u_network = boost::lexical_cast<unsigned>(json_a["network"].get<std::string>());
-				else
-					u_network = json_a["network"].get<unsigned>();
-
-				set_network((mcp::mcp_networks)u_network);
-			}
+			set_network((mcp::mcp_networks)u_network);
 		}
 
-        if (json_a.count("node") && json_a["node"].is_object())
-        {
-            mcp::json j_node_l = json_a["node"].get<mcp::json>();;
-            error |= node.deserialize_json(j_node_l);
-        }
-        else
-        {
-            error = true;
-        }
+		if (!(json_a.count("node") && json_a["node"].is_object() &&
+			json_a.count("rpc") && json_a["rpc"].is_object() &&
+			json_a.count("ws") && json_a["ws"].is_object() &&
+			json_a.count("log") && json_a["log"].is_object() &&
+			json_a.count("p2p") && json_a["p2p"].is_object() &&
+			json_a.count("witness") && json_a["witness"].is_object() &&
+			json_a.count("database") && json_a["database"].is_object()))
+			return true;
 
-        if (json_a.count("rpc") && json_a["rpc"].is_object())
-        {
-            mcp::json j_rpc_l = json_a["rpc"].get<mcp::json>();;
-            error |= rpc.deserialize_json(j_rpc_l);
-        }
-        else
-        {
-            error = true;
-        }
+		uint64_t old_version;
 
-        if (json_a.count("ws") && json_a["ws"].is_object())
-        {
-            mcp::json j_ws_l = json_a["ws"].get<mcp::json>();;
-            error |= rpc_ws.deserialize_json(j_ws_l);
-        }
-        else
-        {
-            error = true;
-        }
-
-        if (json_a.count("log") && json_a["log"].is_object())
-        {
-            mcp::json j_log_l = json_a["log"].get<mcp::json>();
-            error |= logging.deserialize_json(j_log_l);
-        }
-        else
-        {
-            error = true;
-        }
-
-        if (json_a.count("p2p") && json_a["p2p"].is_object())
-        {
-            mcp::json j_p2p_l = json_a["p2p"].get<mcp::json>();
-            error |= p2p.deserialize_json( j_p2p_l);
-        }
-        else
-        {
-            error = true;
-        }
-
-        if (json_a.count("witness") && json_a["witness"].is_object())
-        {
-            mcp::json j_witness_l = json_a["witness"].get<mcp::json>();
-            error |= witness.deserialize_json(j_witness_l);
-        }
-        else
-        {
-            error = true;
-        }
-
-		if (json_a.count("database") && json_a["database"].is_object())
-		{
-			mcp::json j_db_l = json_a["database"].get<mcp::json>();
-			error |= db.deserialize_json(j_db_l);
-		}
+		if (!json_a.count("version"))
+			old_version = 0;
+		else if (json_a["version"].is_string())
+			old_version = boost::lexical_cast<uint64_t>(json_a["version"].get<std::string>());
 		else
+			old_version = json_a["version"].get<uint64_t>();
+
+		if (old_version != m_current_version) //need upgrade
 		{
-			error = true;
+			error = parse_old_version_data(json_a, old_version);
+			if (!error)
+			{
+				upgraded_a = true;
+				json_a.clear();
+				serialize_json(json_a);
+			}
+			return error;
 		}
+
+		mcp::json j_node_l = json_a["node"].get<mcp::json>();;
+		error |= node.deserialize_json(j_node_l);
+		mcp::json j_rpc_l = json_a["rpc"].get<mcp::json>();;
+		error |= rpc.deserialize_json(j_rpc_l);
+		mcp::json j_ws_l = json_a["ws"].get<mcp::json>();;
+		error |= rpc_ws.deserialize_json(j_ws_l);
+		mcp::json j_log_l = json_a["log"].get<mcp::json>();
+		error |= logging.deserialize_json(j_log_l);
+		mcp::json j_p2p_l = json_a["p2p"].get<mcp::json>();
+		error |= p2p.deserialize_json(j_p2p_l);
+		mcp::json j_witness_l = json_a["witness"].get<mcp::json>();
+		error |= witness.deserialize_json(j_witness_l);
+		mcp::json j_db_l = json_a["database"].get<mcp::json>();
+		error |= db.deserialize_json(j_db_l);
     }
     catch (std::runtime_error const &)
     {
@@ -340,13 +272,20 @@ bool mcp_daemon::daemon_config::parse_old_version_data(mcp::json const & json_a,
     {
         if (!json_a.empty())
         {
-			error |= node.parse_old_version_data(json_a, version);
-			error |= rpc.parse_old_version_data(json_a, version);
-			error |= rpc_ws.parse_old_version_data(json_a, version);
-			error |= logging.parse_old_version_data(json_a, version);
-			error |= p2p.parse_old_version_data(json_a, version);
-			error |= witness.parse_old_version_data(json_a, version);
-			error |= db.parse_old_version_data(json_a, version);
+			mcp::json j_node_l = json_a["node"].get<mcp::json>();;
+			error |= node.parse_old_version_data(j_node_l, version);
+			mcp::json j_rpc_l = json_a["rpc"].get<mcp::json>();;
+			error |= rpc.parse_old_version_data(j_rpc_l, version);
+			mcp::json j_ws_l = json_a["ws"].get<mcp::json>();;
+			error |= rpc_ws.parse_old_version_data(j_ws_l, version);
+			mcp::json j_log_l = json_a["log"].get<mcp::json>();
+			error |= logging.parse_old_version_data(j_log_l, version);
+			mcp::json j_p2p_l = json_a["p2p"].get<mcp::json>();
+			error |= p2p.parse_old_version_data(j_p2p_l, version);
+			mcp::json j_witness_l = json_a["witness"].get<mcp::json>();
+			error |= witness.parse_old_version_data(j_witness_l, version);
+			mcp::json j_db_l = json_a["database"].get<mcp::json>();
+			error |= db.parse_old_version_data(j_db_l, version);
         }
     }
     catch (std::runtime_error const &)
@@ -628,16 +567,6 @@ bool mcp_daemon::parse_command_to_config(mcp_daemon::daemon_config & config_a, b
     {
         config_a.witness.password = vm_a["password"].as<std::string>();
     }
-    if (vm_a.count("last_block"))
-    {
-        config_a.witness.last_block = vm_a["last_block"].as<std::string>();
-    }
-	if (vm_a.count("gas_price"))
-	{
-		mcp::uint256_union uint;
-		error = uint.decode_dec(vm_a["gas_price"].as<std::string>());
-		config_a.witness.gas_price = uint.number();
-	}
 
 	//database
 	if (vm_a.count("cache"))
@@ -727,14 +656,10 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 		}
         case mcp::mcp_networks::mcp_test_network:
         {
-            config.p2p.bootstrap_nodes.push_back("mcpnode://3F5349ACCE1D65FC455D3B23FC738C0DED5940ED8AD39602C9549E65A8F4B5A9@39.105.126.14:30614");
-            config.p2p.bootstrap_nodes.push_back("mcpnode://E00030837CCAAA78D5F46F7181E2D5213FFA8FE8E50ABF498446BD7D6F4A982B@47.101.214.190:30613");
             break;
         }
         case mcp::mcp_networks::mcp_live_network:
         {
-			config.p2p.bootstrap_nodes.push_back("mcpnode://4DBE033F9321CBB281766787FFD63E387FFE435F880C158E25D26A1A842117F2@47.103.129.104:30606");
-			config.p2p.bootstrap_nodes.push_back("mcpnode://717C2B88A87F9FFE8E996A61FC0C34CA8135D3DAC246E76FBC512008956F0D3C@101.200.132.154:30607");
             break;
         }
         case mcp::mcp_networks::mcp_beta_network:
@@ -748,7 +673,6 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
     }
     
 	//witness 	
-	mcp::block_hash last_witness_block_hash_l(0);
 	if (config.witness.is_witness)
 	{
 		if (config.witness.account_or_file.empty())
@@ -758,8 +682,7 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 		}
 		else
 		{
-			mcp::account witness;
-			if (witness.decode_account(config.witness.account_or_file))
+			if (!mcp::isAddress(config.witness.account_or_file))
 			{
 				std::string path = get_home_directory(config.witness.account_or_file);
 				config.witness.account_or_file.clear();
@@ -777,15 +700,6 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 		{
 			config.witness.password = mcp::getPassword("Enter the current passphrase for the witness account:");
 		}
-
-		if (!config.witness.last_block.empty())
-		{
-			if (last_witness_block_hash_l.decode_hex(config.witness.last_block))
-			{
-				std::cerr << "witness account last_witness_block_hash is error\n ";
-				return;
-			}
-		}
 	}
 
 	boost::asio::io_service io_service;
@@ -798,22 +712,22 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 	try
 	{
 		//node key
-		mcp::seed_key seed;
 		boost::filesystem::path nodekey_path(data_path / "nodekey");
 		std::string nodekey_str;
 		config.readfile2string(nodekey_str, nodekey_path);
 
-		bool nodekey_error(seed.decode_hex(nodekey_str));
-		if (nodekey_error)
-		{
-			mcp::random_pool.GenerateBlock(seed.ref().data(), seed.ref().size());
-			config.writestring2file(seed.to_string(), nodekey_path);
+		dev::Secret seed;
+		try {
+			if (!nodekey_str.empty()) {
+				seed = dev::Secret(nodekey_str);
+			}
+			else {
+				throw "Nodekey is empty";
+			}
 		}
-
-		if (sodium_init() < 0)
-		{
-			std::cerr << "encry environment init error,please retry.\n ";
-			return;
+		catch (...) {
+			mcp::random_pool.GenerateBlock((byte*)seed.data(), seed.size);
+			config.writestring2file(dev::toHex(seed.ref()), nodekey_path);
 		}
 
 		mcp::db::database::init_table_cache(config.db.cache_size);
@@ -832,13 +746,6 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 		if (error)
 		{
 			std::cerr << "key_store initializing error\n";
-			return;
-		}
-		///wallet store
-		mcp::wallet_store wallet_store(error, data_path / "walletdb");
-		if (error)
-		{
-			std::cerr << "wallet_store initializing error\n";
 			return;
 		}
 
@@ -864,33 +771,41 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 		mcp::ledger ledger;
 		///chain
 		std::shared_ptr<mcp::chain> chain(std::make_shared<mcp::chain>(chain_store, ledger));
+
+		/// transaction queue
+		std::shared_ptr<mcp::TransactionQueue> TQ(std::make_shared<mcp::TransactionQueue>(chain_store, cache, chain, sync_async));
+		/// approve queue
+		std::shared_ptr<mcp::ApproveQueue> AQ(std::make_shared<mcp::ApproveQueue>(chain_store, cache, chain, sync_async));
+		chain->set_approve_queue(AQ);
+
 		///validation
-		std::shared_ptr<mcp::validation> validation(std::make_shared<mcp::validation>(chain_store, ledger, invalid_block_cache, cache));
+		std::shared_ptr<mcp::validation> validation(std::make_shared<mcp::validation>(chain_store, ledger, invalid_block_cache, cache, TQ, AQ));
+		///node_capability
+		std::shared_ptr<mcp::node_capability> capability(std::make_shared<mcp::node_capability>(io_service, chain_store, steady_clock, cache, sync_async, block_arrival, TQ, AQ));
+		TQ->set_capability(capability);
+		AQ->set_capability(capability);
 
 		///composer
-		std::shared_ptr<mcp::composer> composer(std::make_shared<mcp::composer>(chain_store, cache, ledger, chain, config.witness.gas_price));
+		std::shared_ptr<mcp::composer> composer(std::make_shared<mcp::composer>(chain_store, cache, ledger, TQ, AQ));
 
-		///node_capability
-		std::shared_ptr<mcp::node_capability> capability(std::make_shared<mcp::node_capability>(io_service, chain_store, steady_clock, cache, sync_async, block_arrival));
-		
 		///sync
-		std::shared_ptr<mcp::node_sync> sync(std::make_shared<mcp::node_sync>(capability, chain_store, chain, cache, sync_async, steady_clock, bg_io_service));
+		std::shared_ptr<mcp::node_sync> sync(std::make_shared<mcp::node_sync>(capability, chain_store, chain, cache, TQ, AQ, sync_async, steady_clock, bg_io_service));
 		capability->set_sync(sync);
 		chain->set_complete_store_notice_func(
 			std::bind(&mcp::node_sync::put_hash_tree_summaries, sync, std::placeholders::_1)
 		);
 
 		/// block processor
-		std::shared_ptr<mcp::block_processor> processor(std::make_shared<mcp::block_processor>(error, chain_store, cache, chain, sync, capability, validation, sync_async, steady_clock, block_arrival, bg_io_service, invalid_block_cache, alarm, config.witness.gas_price));
+		std::shared_ptr<mcp::block_processor> processor(std::make_shared<mcp::block_processor>(error, chain_store, cache, chain, sync, capability, validation, sync_async, TQ, AQ, steady_clock, block_arrival, bg_io_service, invalid_block_cache, alarm));
 		if (error)
 			return;
 		capability->set_processor(processor);
 		sync->set_processor(processor);
 
 		///wallet
-		std::shared_ptr<mcp::wallet> wallet(std::make_shared<mcp::wallet>(wallet_store, chain_store, key_manager, composer, processor));
+		std::shared_ptr<mcp::wallet> wallet(std::make_shared<mcp::wallet>(chain_store, cache, key_manager, TQ));
 		//host
-		std::shared_ptr<mcp::p2p::host> host(std::make_shared<mcp::p2p::host>(error, config.p2p, io_service, seed, data_path));
+		std::shared_ptr<mcp::p2p::host> host(std::make_shared<mcp::p2p::host>(error, config.p2p, io_service, seed, steady_clock, data_path));
 		if (error)
 		{
 			std::cerr << "host initializing error\n";
@@ -905,10 +820,8 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 		{
 			mcp::error_message error_msg;
 			witness = std::make_shared<mcp::witness>(error_msg,
-				ledger, key_manager, chain_store, alarm, wallet, chain, cache,
-				config.witness.account_or_file, config.witness.password,
-				last_witness_block_hash_l, config.witness.gas_price
-				);
+				ledger, key_manager, chain_store, alarm, composer, chain, processor, cache, TQ,
+				config.witness.account_or_file, config.witness.password);
 
 			if (error_msg.error)
 			{
@@ -917,9 +830,10 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 			}
 			witness->start();
 		}
+		chain->set_witness(witness);
 
 		std::shared_ptr<mcp::rpc> rpc = get_rpc(
-			chain_store, chain, cache, key_manager, wallet, host, background,
+			chain_store, chain, cache, key_manager, wallet, host, background, composer,
 			io_service, config.rpc
 		);
 		if (config.rpc.rpc_enable)
@@ -931,29 +845,29 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 			LOG(m_log.info) << "RPC is disabled";
 		}
 
-		std::shared_ptr<mcp::rpc_ws> rpc_ws = get_rpc_ws(io_service, background, config.rpc_ws);
-		if (config.rpc_ws.rpc_ws_enable)
-		{
-			rpc_ws->start();
-			rpc_ws->register_subscribe("new_block");
-			rpc_ws->register_subscribe("stable_block");
-			chain->set_ws_new_block_func(
-				std::bind(&mcp::rpc_ws::on_new_block, rpc_ws, std::placeholders::_1)
-			);
-			chain->set_ws_stable_block_func(
-				std::bind(&mcp::rpc_ws::on_stable_block, rpc_ws, std::placeholders::_1)
-			);
-			chain->set_ws_stable_mci_func(
-				std::bind(&mcp::rpc_ws::on_stable_mci, rpc_ws, std::placeholders::_1)
-			);
-		}
-		else
-		{
-			LOG(m_log.info) << "WebSocket RPC is disabled";
-		}
+		//std::shared_ptr<mcp::rpc_ws> rpc_ws = get_rpc_ws(io_service, background, config.rpc_ws);
+		//if (config.rpc_ws.rpc_ws_enable)
+		//{
+		//	rpc_ws->start();
+		//	rpc_ws->register_subscribe("new_block");
+		//	rpc_ws->register_subscribe("stable_block");
+		//	chain->set_ws_new_block_func(
+		//		std::bind(&mcp::rpc_ws::on_new_block, rpc_ws, std::placeholders::_1)
+		//	);
+		//	chain->set_ws_stable_block_func(
+		//		std::bind(&mcp::rpc_ws::on_stable_block, rpc_ws, std::placeholders::_1)
+		//	);
+		//	chain->set_ws_stable_mci_func(
+		//		std::bind(&mcp::rpc_ws::on_stable_mci, rpc_ws, std::placeholders::_1)
+		//	);
+		//}
+		//else
+		//{
+		//	LOG(m_log.info) << "WebSocket RPC is disabled";
+		//}
 
 		ongoing_report(chain_store, host, sync_async, background, cache,
-			sync, processor, capability,chain, alarm, m_log);
+			sync, processor, capability,chain, alarm, TQ, AQ, witness, m_log);
 
 		std::unique_ptr<mcp::thread_runner> runner = std::make_unique<mcp::thread_runner>(io_service, config.node.io_threads, "io_service");
 		std::unique_ptr<mcp::thread_runner> sync_runner = std::make_unique<mcp::thread_runner>(sync_io_service, config.node.sync_threads, "sync_io_service");
@@ -975,6 +889,9 @@ void mcp_daemon::ongoing_report(
 	std::shared_ptr<mcp::block_cache> cache, std::shared_ptr<mcp::node_sync> sync,
 	std::shared_ptr<mcp::block_processor> processor, std::shared_ptr<mcp::node_capability> capability,
 	std::shared_ptr<mcp::chain> chain, std::shared_ptr<mcp::alarm> alarm,
+	std::shared_ptr<mcp::TransactionQueue> tq,
+	std::shared_ptr<mcp::ApproveQueue> aq,
+	std::shared_ptr<mcp::witness> witness,
 	mcp::log& log
 )
 {
@@ -1000,7 +917,7 @@ void mcp_daemon::ongoing_report(
 	//io service sync
 	LOG(log.info) << "sync_async: " << sync_async->get_size();
 	//io service background
-	LOG(log.info) << "sync_async: " << background->get_size();
+	LOG(log.info) << "background: " << background->get_size();
 
 
 	LOG(log.info) << "block cache: " << cache->report_cache_size();
@@ -1015,6 +932,7 @@ void mcp_daemon::ongoing_report(
 		<< ", dependency_size:" << processor->unhandle->dependency_size()
 		<< ", missing_size:" << processor->unhandle->missing_size()
 		<< ", light_missing_size:" << processor->unhandle->light_missing_size()
+		<< ", approve_missing_size:" << processor->unhandle->approve_missing_size()
 		<< ", tips_size:" << processor->unhandle->tips_size();
 
 	LOG(log.info) << "block_processor dag_old_size: " << processor->dag_old_size
@@ -1028,58 +946,85 @@ void mcp_daemon::ongoing_report(
 	mcp::db::db_transaction transaction(store.create_transaction());
 	size_t block_count(store.block_count(transaction));
 	size_t stable_count(store.stable_block_count(transaction));
-	size_t light_unstable_count(store.light_unstable_count(transaction));
+	size_t transaction_unstable_count(store.transaction_unstable_count(transaction));
+	size_t transaction_count(store.transaction_count(transaction));
+	size_t approve_unstable_count(store.approve_unstable_count(transaction));
+	size_t approve_count(store.approve_count(transaction));
 	size_t dag_free_count(store.dag_free_count(transaction));
-	size_t unlink_count(store.unlink_info_count(transaction));
-	size_t unlink_block_count(store.unlink_block_count(transaction));
-	size_t head_count(store.head_unlink_count(transaction));
 
 	uint64_t last_mci = chain->last_mci();
 	uint64_t last_stable_mci = chain->last_stable_mci();
 
 	LOG(log.info) << "block:" << block_count
 		<< ", unstable block:" << block_count - stable_count
-		<< "(light:" << light_unstable_count << ")"
 		<< ", stable block:" << stable_count
-		<< ", unlink block:" << unlink_block_count
-		<< ", unlink:" << unlink_count
-		<< ", head:" << head_count
+		<< ", unstable transaction:" << transaction_unstable_count
+		<< ", transaction:" << transaction_count
+		<< ", unstable approve:" << approve_unstable_count
+		<< ", approve:" << approve_count
+		//<< ", unlink block:" << unlink_block_count
+		//<< ", unlink:" << unlink_count
+		//<< ", head:" << head_count
 		<< processor->get_clear_unlink_info()
 		<< ", dag free:" << dag_free_count
 		<< ", last_stable_mci:" << last_stable_mci
 		<< ", last_mci:" << last_mci;
 
-	auto p_cap_metrics = capability->m_pcapability_metrics;
-	if (p_cap_metrics)
-	{
-		LOG(log.info) << "capability send: "
-			<< "joint:" << p_cap_metrics->joint
-			<< ", broadcast_joint:" << p_cap_metrics->broadcast_joint
-			<< ", joint_request:" << p_cap_metrics->joint_request
+	LOG(log.info) << "TQ:" << tq->getInfo();
+	LOG(log.info) << "AQ:" << aq->getInfo();
 
-			<< ", catchup_request:" << p_cap_metrics->catchup_request
-			<< ", catchup_response:" << p_cap_metrics->catchup_response
-
-			<< ", hash_tree_request:" << p_cap_metrics->hash_tree_request
-			<< ", hash_tree_response:" << p_cap_metrics->hash_tree_response
-
-			<< ", peer_info count:" << p_cap_metrics->peer_info
-			<< ", peer_info_request:" << p_cap_metrics->peer_info_request
-
-			<< ", hello_info:" << p_cap_metrics->hello_info
-			<< ", hello_info_request:" << p_cap_metrics->hello_info_request
-			<< ", hello_info_ack:" << p_cap_metrics->hello_info_ack;
-	}
-
+	LOG(log.info) << "capability send: "
+		<< ", broadcast_joint:" << mcp::CapMetricsSend.broadcast_joint
+		<< ", joint_request:" << mcp::CapMetricsSend.joint_request
+		<< ", send_joint:" << mcp::CapMetricsSend.send_joint
+		<< ", joint:" << mcp::CapMetricsSend.joint
+		<< ", broadcast_transaction:" << mcp::CapMetricsSend.broadcast_transaction
+		<< ", transaction_request:" << mcp::CapMetricsSend.transaction_request
+		<< ", send_transaction:" << mcp::CapMetricsSend.send_transaction
+		<< ", transaction:" << mcp::CapMetricsSend.transaction
+		<< ", broadcast_approve:" << mcp::CapMetricsSend.broadcast_approve
+		<< ", approve_request:" << mcp::CapMetricsSend.approve_request
+		<< ", send_approve:" << mcp::CapMetricsSend.send_approve
+		<< ", approve:" << mcp::CapMetricsSend.approve
+		<< ", catchup_request:" << mcp::CapMetricsSend.catchup_request
+		<< ", send_catchup:" << mcp::CapMetricsSend.send_catchup
+		<< ", catchup_response:" << mcp::CapMetricsSend.catchup_response
+		<< ", hash_tree_request:" << mcp::CapMetricsSend.hash_tree_request
+		<< ", send_hash_tree:" << mcp::CapMetricsSend.send_hash_tree
+		<< ", hash_tree_response:" << mcp::CapMetricsSend.hash_tree_response
+		<< ", peer_info_request:" << mcp::CapMetricsSend.peer_info_request
+		<< ", send_peer_info:" << mcp::CapMetricsSend.send_peer_info
+		<< ", peer_info:" << mcp::CapMetricsSend.peer_info
+		<< ", hello_info_request:" << mcp::CapMetricsSend.hello_info_request
+		<< ", send_hello_info:" << mcp::CapMetricsSend.send_hello_info
+		<< ", hello_info:" << mcp::CapMetricsSend.hello_info
+		<< ", hello_info_ack:" << mcp::CapMetricsSend.hello_info_ack;
 	LOG(log.info) << "capability receive: "
-		<< "joint_request:" << capability->receive_joint_request_count
-		<< ", catchup_request:" << capability->receive_catchup_request_count
-		<< ", catchup_response:" << capability->receive_catchup_response_count
-		<< ", hash_tree_request:" << capability->receive_hash_tree_request_count
-		<< ", hash_tree_response:" << capability->receive_hash_tree_response_count
-		<< ", peer_info_request:" << capability->receive_peer_info_request_count
-		<< ", peer_info:" << capability->receive_peer_info_count;
+		<< ", joint_request:" << mcp::CapMetricsRecieved.joint_request
+		<< ", send_joint:" << mcp::CapMetricsRecieved.send_joint
+		<< ", joint:" << mcp::CapMetricsRecieved.joint
+		<< ", transaction_request:" << mcp::CapMetricsRecieved.transaction_request
+		<< ", send_transaction:" << mcp::CapMetricsRecieved.send_transaction
+		<< ", transaction:" << mcp::CapMetricsRecieved.transaction
+		<< ", approve_request:" << mcp::CapMetricsRecieved.approve_request
+		<< ", send_approve:" << mcp::CapMetricsRecieved.send_approve
+		<< ", approve:" << mcp::CapMetricsRecieved.approve
+		<< ", catchup_request:" << mcp::CapMetricsRecieved.catchup_request
+		<< ", send_catchup:" << mcp::CapMetricsRecieved.send_catchup
+		<< ", catchup_response:" << mcp::CapMetricsRecieved.catchup_response
+		<< ", hash_tree_request:" << mcp::CapMetricsRecieved.hash_tree_request
+		<< ", send_hash_tree:" << mcp::CapMetricsRecieved.send_hash_tree
+		<< ", hash_tree_response:" << mcp::CapMetricsRecieved.hash_tree_response
+		<< ", peer_info_request:" << mcp::CapMetricsRecieved.peer_info_request
+		<< ", send_peer_info:" << mcp::CapMetricsRecieved.send_peer_info
+		<< ", peer_info:" << mcp::CapMetricsRecieved.peer_info
+		<< ", hello_info_request:" << mcp::CapMetricsRecieved.hello_info_request
+		<< ", send_hello_info:" << mcp::CapMetricsRecieved.send_hello_info
+		<< ", hello_info:" << mcp::CapMetricsRecieved.hello_info
+		<< ", hello_info_ack:" << mcp::CapMetricsRecieved.hello_info_ack;
 
+	if (witness)
+		LOG(log.info) << "witness:" << witness->getInfo();
 
 	LOG(log.info) << store.get_rocksdb_state(32 * 1024 * 1024);
 
@@ -1090,9 +1035,9 @@ void mcp_daemon::ongoing_report(
 	}
 
 	alarm->add(std::chrono::steady_clock::now() + std::chrono::seconds(20), [&store, host, sync_async, background, cache,
-		sync, processor, capability, chain, alarm, &log]() {
+		sync, processor, capability, chain, alarm, tq, aq, witness, &log]() {
 		ongoing_report(store, host, sync_async, background, cache,
-			sync, processor, capability, chain, alarm, log);
+			sync, processor, capability, chain, alarm, tq, aq, witness, log);
 	});
 }
 

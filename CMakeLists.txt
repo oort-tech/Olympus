@@ -20,16 +20,12 @@ endif(NOT CMAKE_BUILD_TYPE)
 
 if (WIN32)
 	set (PLATFORM_COMPILE_FLAGS "-DBOOST_SPIRIT_THREADSAFE -DBOOST_STACKTRACE_GNU_SOURCE_NOT_REQUIRED -DETH_FATDB -D_WIN32_WINNT=0x0600 -DWINVER=0x0600 -DWIN32_LEAN_AND_MEAN -DMINIUPNP_STATICLIB -DNOMINMAX")
-	set (BLAKE2_IMPLEMENTATION "blake2/blake2b.c")
 else (WIN32)
 	set (PLATFORM_COMPILE_FLAGS "-DBOOST_SPIRIT_THREADSAFE -DBOOST_STACKTRACE_GNU_SOURCE_NOT_REQUIRED -DETH_FATDB -Werror=switch -fPIC")
 	if (CMAKE_SYSTEM_PROCESSOR MATCHES "^(i.86|x86(_64)?)$")
 		if (CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
 			set (PLATFORM_COMPILE_FLAGS "${PLATFORM_COMPILE_FLAGS} -msse2")
 		endif()
-		set (BLAKE2_IMPLEMENTATION "blake2/blake2b.c")
-	else()
-		set (BLAKE2_IMPLEMENTATION "blake2/blake2b-ref.c")
 	endif()
 endif (WIN32)
 
@@ -72,31 +68,6 @@ endif (BOOST_CUSTOM)
 
 find_package (Boost 1.66.0 REQUIRED COMPONENTS date_time filesystem system log log_setup thread program_options regex chrono atomic)
 include_directories (${Boost_INCLUDE_DIR})
-
-
-set(sodium_INCLUDE_DIR "" CACHE PATH "sodium include directory")
-set(sodium_LIBRARY_DEBUG "" CACHE FILEPATH "Debug sodium library directory")
-set(sodium_LIBRARY_RELEASE "" CACHE FILEPATH "Release sodium library directory")
-if ((NOT sodium_INCLUDE_DIR STREQUAL "") OR (NOT sodium_LIBRARY_DEBUG STREQUAL "") OR (NOT sodium_LIBRARY_RELEASE STREQUAL ""))
-	if (NOT EXISTS "${sodium_INCLUDE_DIR}/sodium.h")
-	    message(FATAL_ERROR, "sodium_INCLUDE_DIR error")
-		return()
-	endif()
-	if (NOT EXISTS ${sodium_LIBRARY_DEBUG})
-	    message(FATAL_ERROR, "sodium_LIBRARY_DEBUG error")
-		return()
-	endif()
-	if (NOT EXISTS ${sodium_LIBRARY_RELEASE})
-	    message(FATAL_ERROR, "sodium_LIBRARY_RELEASE error")
-		return()
-	endif()
-	
-	include_directories (${sodium_INCLUDE_DIR})
-	set(sodium_LIBRARY debug ${sodium_LIBRARY_DEBUG} optimized ${sodium_LIBRARY_RELEASE})
-else ()
-    set(sodium_LIBRARY "")
-endif()
-
 
 set(rocksdb_INCLUDE_DIR "" CACHE PATH "rocksdb include directory")
 set(rocksdb_LIBRARY_DEBUG "" CACHE FILEPATH "Debug rocksdb library directory")
@@ -173,12 +144,7 @@ else ()
     set(ZLIB_LIBRARY "")
 endif()
 
-if (WIN32)
-    if ((sodium_INCLUDE_DIR STREQUAL "") OR (sodium_LIBRARY STREQUAL ""))
-	    message(FATAL_ERROR, "sodium_INCLUDE_DIR or sodium_LIBRARY can not be null")
-		return()
-	endif()
-	
+if (WIN32)	
 	if ((rocksdb_INCLUDE_DIR STREQUAL "") OR (rocksdb_LIBRARY STREQUAL ""))
 	    message(FATAL_ERROR, "rocksdb_INCLUDE_DIR or rocksdb_LIBRARY can not be null")
 		return()
@@ -215,12 +181,11 @@ add_library (db
 	mcp/db/counter.cpp
 	mcp/db/counter.hpp)
 
-include_directories("${CMAKE_SOURCE_DIR}/blake2")
-
 include_directories("${CMAKE_SOURCE_DIR}/mcp/p2p")
 include_directories("${CMAKE_SOURCE_DIR}/miniupnp")
 include_directories("${CMAKE_SOURCE_DIR}/lz4/lib")
 include_directories("${CMAKE_SOURCE_DIR}/evmc/include")
+include_directories("${CMAKE_SOURCE_DIR}/secp256k1/src")
 include_directories("${CMAKE_SOURCE_DIR}/secp256k1/include")
 
 set (CRYPTOPP_LIBRARY cryptopp-static)
@@ -235,12 +200,6 @@ add_subdirectory(evmc)
 add_subdirectory(libevm)
 add_subdirectory(libdevcore)
 add_subdirectory(libdevcrypto)
-
-add_library (blake2
-	blake2/blake2-config.h
-	blake2/blake2-impl.h
-	blake2/blake2.h
-	${BLAKE2_IMPLEMENTATION})
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 	set (PLATFORM_SECURE_SOURCE mcp/plat/osx/working.mm)
@@ -319,6 +278,12 @@ add_library (node
 	mcp/node/arrival.hpp
 	mcp/node/debug.cpp
 	mcp/node/debug.hpp
+	mcp/node/transaction_queue.cpp
+	mcp/node/transaction_queue.hpp
+	mcp/node/common.cpp
+	mcp/node/common.hpp
+	mcp/node/approve_queue.cpp
+	mcp/node/approve_queue.hpp
     )
 
 add_library (p2p
@@ -346,22 +311,20 @@ add_library (p2p
 	mcp/p2p/discover_packet.hpp
 	mcp/p2p/discover_packet.cpp
 	mcp/p2p/upnp.hpp
-	mcp/p2p/upnp.cpp
-	mcp/p2p/dh_x25519.hpp
-	mcp/p2p/dh_x25519.cpp)
+	mcp/p2p/upnp.cpp)
 	
 add_library (rpc
 	mcp/rpc/rpc.cpp
 	mcp/rpc/rpc.hpp
 	mcp/rpc/rpc_ws.cpp
 	mcp/rpc/rpc_ws.hpp
+	mcp/rpc/jsonHelper.cpp
+	mcp/rpc/jsonHelper.hpp
 	)
 	
 add_library (wallet
 	mcp/wallet/wallet.cpp
 	mcp/wallet/wallet.hpp
-	mcp/wallet/wallet_store.cpp
-	mcp/wallet/wallet_store.hpp
 	mcp/wallet/key_manager.cpp
 	mcp/wallet/key_manager.hpp
 	mcp/wallet/key_store.cpp
@@ -398,6 +361,14 @@ add_library (core
 	mcp/core/log_entry.cpp
 	mcp/core/transaction_receipt.hpp
 	mcp/core/transaction_receipt.cpp
+	mcp/core/transaction.hpp
+	mcp/core/transaction.cpp
+	mcp/core/transaction_queue.hpp
+	mcp/core/approve_receipt.hpp
+	mcp/core/approve_receipt.cpp
+	mcp/core/approve.hpp
+	mcp/core/approve.cpp
+	mcp/core/iapprove_queue.hpp
 	)
 	
 add_executable (mcp
@@ -423,13 +394,12 @@ add_subdirectory(miniupnp/miniupnpc)
 #lz4
 add_subdirectory(lz4/contrib/cmake_unofficial)
 
-set_target_properties (blake2 PROPERTIES COMPILE_FLAGS "${PLATFORM_C_FLAGS} ${PLATFORM_COMPILE_FLAGS} -D__SSE2__")
 set_target_properties (db PROPERTIES COMPILE_FLAGS "${PLATFORM_CXX_FLAGS} ${PLATFORM_COMPILE_FLAGS}")
-set_target_properties (common rpc wallet consensus core node devcrypto devcore p2p mcp evm PROPERTIES COMPILE_FLAGS "${PLATFORM_CXX_FLAGS} ${PLATFORM_COMPILE_FLAGS} -DQT_NO_KEYWORDS -DMCP_VERSION=${VERSION} -DBOOST_ASIO_HAS_STD_ARRAY=1 -DSODIUM_STATIC")
+set_target_properties (common rpc wallet consensus core node devcrypto devcore p2p mcp evm PROPERTIES COMPILE_FLAGS "${PLATFORM_CXX_FLAGS} ${PLATFORM_COMPILE_FLAGS} -DQT_NO_KEYWORDS -DMCP_VERSION=${VERSION} -DBOOST_ASIO_HAS_STD_ARRAY=1")
 set_target_properties (common rpc wallet consensus core node devcrypto devcore p2p mcp PROPERTIES LINK_FLAGS "${PLATFORM_LINK_FLAGS}")
 set_target_properties (libminiupnpc-static PROPERTIES COMPILE_FLAGS "${PLATFORM_C_FLAGS} ${PLATFORM_COMPILE_FLAGS}")
 
-set_target_properties (test_account PROPERTIES COMPILE_FLAGS "${PLATFORM_CXX_FLAGS} ${PLATFORM_COMPILE_FLAGS} -DQT_NO_KEYWORDS -DMCP_VERSION=${VERSION} -DBOOST_ASIO_HAS_STD_ARRAY=1 -DSODIUM_STATIC")
+set_target_properties (test_account PROPERTIES COMPILE_FLAGS "${PLATFORM_CXX_FLAGS} ${PLATFORM_COMPILE_FLAGS} -DQT_NO_KEYWORDS -DMCP_VERSION=${VERSION} -DBOOST_ASIO_HAS_STD_ARRAY=1")
 set_target_properties (test_account PROPERTIES LINK_FLAGS "${PLATFORM_LINK_FLAGS}")
 
 if (WIN32)
@@ -442,12 +412,6 @@ else ()
 	LINK_DIRECTORIES(/usr/local/lib/)
     LINK_DIRECTORIES(/usr/lib/x86_64-linux-gnu/)
 endif (WIN32)
-
-if (sodium_LIBRARY STREQUAL "")
-    set (DEPENDENCE_LIBS sodium)
-else ()
-    set (DEPENDENCE_LIBS ${sodium_LIBRARY})
-endif()
 
 if (rocksdb_LIBRARY STREQUAL "")
     set (DEPENDENCE_LIBS ${DEPENDENCE_LIBS} rocksdb)
@@ -473,8 +437,8 @@ else ()
     set (DEPENDENCE_LIBS ${DEPENDENCE_LIBS} ${ZLIB_LIBRARY})
 endif()
 
-target_link_libraries (mcp rpc wallet consensus node p2p core db common devcrypto devcore evm blake2 libminiupnpc-static secp256k1 lz4_static ${CRYPTOPP_LIBRARY} ${Boost_ATOMIC_LIBRARY} ${Boost_CHRONO_LIBRARY} ${Boost_REGEX_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_LOG_LIBRARY} ${Boost_PROGRAM_OPTIONS_LIBRARY} ${Boost_LOG_SETUP_LIBRARY} ${Boost_THREAD_LIBRARY} ${PLATFORM_LIBS}  ${DEPENDENCE_LIBS})
+target_link_libraries (mcp rpc wallet consensus node p2p core db common devcrypto devcore evm libminiupnpc-static secp256k1 lz4_static ${CRYPTOPP_LIBRARY} ${Boost_ATOMIC_LIBRARY} ${Boost_CHRONO_LIBRARY} ${Boost_REGEX_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_LOG_LIBRARY} ${Boost_PROGRAM_OPTIONS_LIBRARY} ${Boost_LOG_SETUP_LIBRARY} ${Boost_THREAD_LIBRARY} ${PLATFORM_LIBS}  ${DEPENDENCE_LIBS})
 
-target_link_libraries (test_account rpc wallet consensus node p2p core db common devcrypto devcore evm blake2 libminiupnpc-static secp256k1 lz4_static ${CRYPTOPP_LIBRARY} ${Boost_ATOMIC_LIBRARY} ${Boost_CHRONO_LIBRARY} ${Boost_REGEX_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_LOG_LIBRARY} ${Boost_PROGRAM_OPTIONS_LIBRARY} ${Boost_LOG_SETUP_LIBRARY} ${Boost_THREAD_LIBRARY} ${PLATFORM_LIBS} ${DEPENDENCE_LIBS})
+target_link_libraries (test_account rpc wallet consensus node p2p core db common devcrypto devcore evm libminiupnpc-static secp256k1 lz4_static ${CRYPTOPP_LIBRARY} ${Boost_ATOMIC_LIBRARY} ${Boost_CHRONO_LIBRARY} ${Boost_REGEX_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_LOG_LIBRARY} ${Boost_PROGRAM_OPTIONS_LIBRARY} ${Boost_LOG_SETUP_LIBRARY} ${Boost_THREAD_LIBRARY} ${PLATFORM_LIBS} ${DEPENDENCE_LIBS})
 
 

@@ -1,20 +1,14 @@
 #pragma once
 
-#include <mcp/common/EVMSchedule.h>
+#include "overlay_db.hpp"
+#include "log_entry.hpp"
+#include "blocks.hpp"
+#include "transaction.hpp"
+#include "approve.hpp"
 #include <libdevcore/RLP.h>
-#include <libdevcore/SHA3.h>
 #include <libdevcore/TrieCommon.h>
 
-#include <blake2/blake2.h>
-#include <mcp/core/log_entry.hpp>
-#include <mcp/core/blocks.hpp>
-#include <mcp/core/overlay_db.hpp>
 
-#include <unordered_map>
-#include <set>
-
-
-using namespace dev;
 namespace mcp
 {
 	class dag_account_info
@@ -25,20 +19,6 @@ namespace mcp
 		void stream_RLP(dev::RLPStream & s) const;
 
 		mcp::block_hash latest_stable_block;
-	};
-
-	/**
-	* Latest information about an account
-	*/
-	class account_info
-	{
-	public:
-		account_info() :latest_stable_block(0), latest_linked(0){};
-        account_info(bool & error_a, dev::RLP const & r);
-        void stream_RLP(dev::RLPStream & s) const;
-
-		mcp::block_hash latest_stable_block;
-		mcp::block_hash latest_linked;
 	};
 
 	class free_key
@@ -90,13 +70,13 @@ namespace mcp
 	{
 		u256 gasUsed = 0;
 		TransactionException excepted = TransactionException::Unknown;
-		mcp::account newAddress;
+		Address newAddress;
 		dev::bytes output;
 		CodeDeposit codeDeposit = CodeDeposit::None;		///< Failed if an attempted deposit failed due to lack of gas.
 		u256 gasRefunded = 0;
 		unsigned depositSize = 0; 							///< Amount of code of the creation's attempted deposit.
 		u256 gasForDeposit;			 						///< Amount of gas remaining for the code deposit phase.
-		std::set<mcp::account> modified_accounts;			///< The accounts that have been modified by the transaction.
+		std::set<Address> modified_accounts;			///< The accounts that have been modified by the transaction.
 	};
 
 	enum class Permanence
@@ -150,22 +130,36 @@ namespace mcp
         	Unchanged
     	};
 	
-		account_state();
-		account_state(mcp::account const & account_a, mcp::block_hash const & block_hash_a, mcp::account_state_hash const & previous_a, u256 nonce_a, mcp::amount const & balance_a, Changedness _c = Changed);
-		account_state(mcp::account const & account_a, mcp::block_hash const & block_hash_a, mcp::account_state_hash const & previous_a, u256 nonce_a, mcp::amount const & balance_a, h256 storageRoot_a, h256 codeHash_a, Changedness _c);
+		account_state() {}
+		account_state(Address const & _account, h256 const&ts, h256 const& _previous, u256 _nonce, u256 _balance, Changedness _c = Changed):
+			m_account(_account), 
+			m_ts(ts),
+			m_previous(_previous),
+			m_isAlive(true), 
+			m_isUnchanged(_c == Unchanged), 
+			m_nonce(_nonce), 
+			m_balance(_balance) {}
+		account_state(Address const & _account, h256 const&ts, h256 const& _previous, u256 const& _nonce, u256 const& _balance, h256 const& _contractRoot,
+			h256 const& _codeHash, Changedness _c)
+			:m_account(_account),
+			m_ts(ts),
+			m_previous(_previous),
+			m_isAlive(true),
+			m_isUnchanged(_c == Unchanged),
+			m_nonce(_nonce),
+			m_balance(_balance),
+			m_storageRoot(_contractRoot),
+			m_codeHash(_codeHash)
+		{
+			assert(_contractRoot);
+		}
 		account_state(bool & error_a, dev::RLP const & r, Changedness _c = Unchanged);
 		void stream_RLP(dev::RLPStream & s) const;
-		mcp::account_state_hash hash();
-		mcp::account account;
-		mcp::block_hash block_hash;
-		mcp::account_state_hash previous;
-		mcp::amount balance;
+		h256 hash();
 
-		mcp::account_state_hash init_hash = 0;
+		h256 init_hash = h256(0);
 
 		void record_init_hash();
-
-		bool has_code() const;
 
 		/// Kill this account. Useful for the suicide opcode. Following this call, isAlive() returns
     	/// false.
@@ -176,9 +170,18 @@ namespace mcp
         	m_storageOriginal.clear();
 	    	m_codeHash = dev::EmptySHA3;
 	    	m_storageRoot = dev::EmptyTrie;
-        	balance = 0;
+        	m_balance = 0;
             changed();
     	}
+
+		/// Sets the transaction of the account state
+		void setTs(h256 const& ts) { m_ts = ts; }
+
+		/// Sets the transaction of the account state
+		void setPrevious() { m_previous = init_hash; }
+
+		/// Sets the transaction of the account state
+		h256 previous() { return m_previous; }
 
 		/// @returns true iff this object represents an account in the state. Returns false if this object
     	/// represents an account that should no longer exist in the trie (an account that never existed or was
@@ -192,13 +195,25 @@ namespace mcp
 
 		/// @returns true if the balance and code is zero / empty. Code is considered empty
     	/// during creation phase.
-    	bool isEmpty() const { return balance == 0 && codeHash() == EmptySHA3; }
+    	bool isEmpty() const { return nonce() == 0 && balance()  == 0 && codeHash() == EmptySHA3; }
+
+		/// @returns the balance of this account.
+		u256 const& balance() const { return m_balance; }
+
+		/// Increments the balance of this account by the given amount.
+		void addBalance(u256 _value) { m_balance += _value; changed(); }
+
+		/// @returns the address of the account.
+		Address account() const { return m_account; }
 
 		/// @returns the nonce of the account.
 		u256 nonce() const { return m_nonce; }
 
 		/// Increment the nonce of the account by one.
 		void incNonce() { ++m_nonce; changed(); }
+
+		/// original Nonce value  .
+		u256 oriNonce() const { return m_nonce - 1; }
 
 		/// Set nonce to a new value. This is used when reverting changes made to
 		/// the account.
@@ -208,17 +223,9 @@ namespace mcp
     	/// which encodes the base-state of the account's storage (upon which the storage is overlaid).
     	h256 baseRoot() const { assert_x(m_storageRoot); return m_storageRoot; }
 
-		bool hasNewCode() const { return m_hasNewCode; }
-
-		void addBalance(mcp::amount const& _amount);
-
-		h256 codeHash() const { return m_codeHash; }
-
-		size_t codeSize(mcp::account const& _contract) const;
-
 		/// @returns account's storage value corresponding to the @_key
-    	/// taking into account overlayed modifications
-		mcp::uint256_t storageValue(mcp::uint256_t const& _key, mcp::overlay_db const& _db) const
+		/// taking into account overlayed modifications
+		u256 storageValue(u256 const& _key, mcp::overlay_db const& _db) const
 		{
 			auto mit = m_storageOverlay.find(_key);
 			if (mit != m_storageOverlay.end())
@@ -229,42 +236,50 @@ namespace mcp
 
 		/// @returns account's original storage value corresponding to the @_key
 		/// not taking into account overlayed modifications
-		mcp::uint256_t originalStorageValue(mcp::uint256_t const& _key, mcp::overlay_db const& _db) const;
+		u256 originalStorageValue(u256 const& _key, mcp::overlay_db const& _db) const;
 
 		/// @returns the storage overlay as a simple hash map.
-		std::unordered_map<mcp::uint256_t, mcp::uint256_t> const& storageOverlay() const { return m_storageOverlay; }
+		std::unordered_map<u256, u256> const& storageOverlay() const { return m_storageOverlay; }
 
 		/// Set a key/value pair in the account's storage. This actually goes into the overlay, for committing
-    	/// to the trie later.
-    	void setStorage(uint256_t _p, uint256_t _v) { m_storageOverlay[_p] = _v; changed(); }
+		/// to the trie later.
+		void setStorage(uint256_t _p, uint256_t _v) { m_storageOverlay[_p] = _v; changed(); }
 
 		/// Empty the storage.  Used when a contract is overwritten.
-    	void clearStorage()
-    	{
-        	m_storageOverlay.clear();
-        	m_storageOriginal.clear();
-        	m_storageRoot = dev::EmptyTrie;
-        	changed();
-    	}
+		void clearStorage()
+		{
+			m_storageOverlay.clear();
+			m_storageOriginal.clear();
+			m_storageRoot = dev::EmptyTrie;
+			changed();
+		}
 
 		/// Set the storage root.  Used when clearStorage() is reverted.
-    	void setStorageRoot(uint256_t const& _root)
-    	{
-        	m_storageOverlay.clear();
-        	m_storageOriginal.clear();
-        	m_storageRoot = _root;
-        	changed();
-    	}
+		void setStorageRoot(uint256_t const& _root)
+		{
+			m_storageOverlay.clear();
+			m_storageOriginal.clear();
+			m_storageRoot = _root;
+			changed();
+		}
+
+		/// @returns the hash of the account's code.
+		h256 codeHash() const { return m_codeHash; }
+
+		bool hasNewCode() const { return m_hasNewCode; }
 
 		/// Sets the code of the account. Used by "create" messages.
 		void setCode(dev::bytes&& _code);
 
+		/// Reset the code set by previous setCode
+		void resetCode();
+
 		/// Specify to the object what the actual code is for the account. @a _code must have a SHA3
 		/// equal to codeHash().
-		void noteCode(bytesConstRef _code) { assert_x(sha3(_code) == m_codeHash); m_codeCache = _code.toBytes(); }
+		void noteCode(bytesConstRef _code) { assert(sha3(_code) == m_codeHash); m_codeCache = _code.toBytes(); }
 
 		/// @returns the account's code.
-    	dev::bytes const& code() const { return m_codeCache; }
+		bytes const& code() const { return m_codeCache; }
 
 		//clear temp state to make it just like the state get from db
 		void clear_temp_state()
@@ -289,8 +304,20 @@ namespace mcp
 		/// True if new code was deployed to the account
     	bool m_hasNewCode = false;
 
+		/// Account
+		Address m_account;
+
+		/// transaction hash that causes the account state changed
+		h256 m_ts;
+
+		/// previous account state 
+		h256 m_previous;
+
 		/// Account's nonce.
 		u256 m_nonce;
+
+		/// Account's balance.
+		u256 m_balance = 0;
 
 		/// The base storage root. Used with the state DB to give a base to the storage. m_storageOverlay is
     	/// overlaid on this and takes precedence for all values set.
@@ -318,28 +345,7 @@ namespace mcp
     	static const u256 c_contractConceptionCodeHash;
 	};
 
-	using AccountMap = std::unordered_map<mcp::account, std::shared_ptr<mcp::account_state>>;
-	// using AccountMaskMap = std::unordered_map<Address, AccountMask>;
-
-	class transaction_receipt
-	{
-	public:
-		transaction_receipt(account_state_hash from_state_a, std::set<account_state_hash> to_state_a,
-			u256 gas_used_a, log_entries log_a);
-        transaction_receipt(bool & error_a, dev::RLP const & r);
-        void stream_RLP(dev::RLPStream & s) const;
-		void serialize_json(mcp::json & json_a);
-		void hash(blake2b_state &) const;
-		bool contains_bloom(dev::h256 const & h_a);
-		bool contains_bloom(dev::bytesConstRef const & h_a);
-		static void serialize_null_json(mcp::json & json_a);
-
-		mcp::account_state_hash from_state;
-		std::set<mcp::account_state_hash> to_state;
-		u256 gas_used;
-		log_bloom bloom;
-		log_entries log;
-	};
+	using AccountMap = std::unordered_map<Address, std::shared_ptr<mcp::account_state>>;
 
 	class block_state
 	{
@@ -347,9 +353,8 @@ namespace mcp
 		block_state();
         block_state(bool & error_a, dev::RLP const & r);
         void stream_RLP(dev::RLPStream & s) const;
-		void serialize_json(mcp::json & json_a, mcp::account const & contract_account_a);
+		void serialize_json(mcp::json & json_a);
 
-		mcp::block_type block_type;
         mcp::block_status status;
 		bool is_stable;
 		uint64_t stable_index;
@@ -358,7 +363,6 @@ namespace mcp
 		uint64_t mc_timestamp;
 		uint64_t stable_timestamp;
 
-		//dag
 		bool is_free;
 		bool is_on_main_chain;
 		boost::optional<uint64_t> earliest_included_mc_index;
@@ -368,9 +372,6 @@ namespace mcp
 		boost::optional<uint64_t> latest_bp_included_mc_index;
 		uint64_t witnessed_level;
 		mcp::block_hash best_parent;
-
-		//light
-		boost::optional<transaction_receipt> receipt;
 	};
 
 	class skiplist_info
@@ -388,20 +389,8 @@ namespace mcp
 	{
 	public:
         static mcp::summary_hash gen_summary_hash(mcp::block_hash const & block_hash, mcp::summary_hash const & previous_hash,
-            std::list<mcp::summary_hash> const & parent_hashs, std::list<mcp::summary_hash> const & link_hashs,
-            std::set<mcp::summary_hash> const & skip_list, mcp::block_status const & status, uint64_t const& stable_index_a, uint64_t const& mc_timestamp_a,
-            boost::optional<transaction_receipt> receipt);
-	};
-
-	class fork_successor_key
-	{
-	public:
-		fork_successor_key(mcp::block_hash const & previous_a, mcp::block_hash const & successor_a);
-		fork_successor_key(dev::Slice const & val_a);
-		dev::Slice val() const;
-
-		mcp::block_hash previous;
-		mcp::block_hash successor;
+            std::list<mcp::summary_hash> const & parent_hashs, h256 const & receipts_root,
+            std::set<mcp::summary_hash> const & skip_list, mcp::block_status const & status, uint64_t const& stable_index_a, uint64_t const& mc_timestamp_a);
 	};
 
 	class advance_info
@@ -412,7 +401,7 @@ namespace mcp
 		advance_info(dev::Slice const & val_a);
 		dev::Slice val() const;
 
-		uint64_union mci;
+		dev::h64 mci;
 		mcp::block_hash witness_block;
 	};
 
@@ -422,54 +411,7 @@ namespace mcp
 		uint64_t min_wl;
 
 		// Updated to 512, Daniel
-		std::unordered_set<mcp::account> witnesses;
-	};
-
-	class unlink_info
-	{
-	public:
-		unlink_info() :earliest_unlink(0), latest_unlink(0) {}
-		unlink_info(dev::Slice const& val_a);
-		dev::Slice val() const;
-	
-		mcp::block_hash earliest_unlink;
-		mcp::block_hash latest_unlink;
-	};
-
-	class next_unlink
-	{
-	public:
-		next_unlink() :hash(0), next(0) {}
-		next_unlink(mcp::block_hash const& hash_a, mcp::block_hash const& next_a) :hash(hash_a), next(next_a) {}
-		next_unlink(dev::Slice const& val_a);
-		dev::Slice val() const;
-
-		mcp::block_hash hash;
-		mcp::block_hash next;
-	};
-
-	class head_unlink
-	{
-	public:
-		head_unlink() :hash(0), time(0) {}
-		head_unlink(mcp::uint64_union const& time_a, mcp::block_hash const& hash_a) :time(time_a), hash(hash_a){}
-		head_unlink(dev::Slice const& val_a);
-		dev::Slice val() const;
-
-		mcp::uint64_union time;
-		mcp::block_hash hash;
-	};
-
-	class unlink_block
-	{
-	public:
-		unlink_block() :time(0), block(nullptr){}
-		unlink_block(mcp::uint64_union const& time_a, std::shared_ptr<mcp::block> const& block_a) :time(time_a), block(block_a) {}
-		unlink_block(bool & error_a, dev::RLP const & r);
-		void stream_RLP(dev::RLPStream & s) const;
-
-		std::shared_ptr<mcp::block> block;
-		mcp::uint64_union time;
+		std::unordered_set<dev::Address> witnesses;
 	};
 
 	//trace
@@ -496,11 +438,11 @@ namespace mcp
 		void serialize_json(mcp::json & json_a) const;
 
 		std::string call_type;
-		mcp::account from;
-		mcp::uint256_t gas;
+		Address from;
+		u256 gas;
 		bytes data;
-		mcp::account to;
-		mcp::uint256_t amount;
+		Address to;
+		u256 amount;
 	};
 
 	class call_trace_result : public trace_result
@@ -511,7 +453,7 @@ namespace mcp
 		void stream_RLP(dev::RLPStream & s) const;
 		void serialize_json(mcp::json & json_a) const;
 
-		mcp::uint256_t gas_used;
+		u256 gas_used;
 		dev::bytes output;
 	};
 
@@ -523,8 +465,8 @@ namespace mcp
 		void stream_RLP(dev::RLPStream & s) const;
 		void serialize_json(mcp::json & json_a) const;
 
-		mcp::account from;
-		mcp::uint256_t gas;
+		Address from;
+		u256 gas;
 		dev::bytes init;
 		mcp::uint256_t amount;
 	};
@@ -537,8 +479,8 @@ namespace mcp
 		void stream_RLP(dev::RLPStream & s) const;
 		void serialize_json(mcp::json & json_a) const;
 
-		mcp::uint256_t gas_used;
-		mcp::account contract_account;
+		u256 gas_used;
+		Address contract_account;
 		dev::bytes code;
 	};
 
@@ -550,9 +492,9 @@ namespace mcp
 		void stream_RLP(dev::RLPStream & s) const;
 		void serialize_json(mcp::json & json_a) const;
 
-		mcp::account contract_account;
-		mcp::account refund_account;
-		mcp::uint256_t balance;
+		Address contract_account;
+		Address refund_account;
+		u256 balance;
 	};
 
 	enum class trace_type : uint8_t
@@ -577,25 +519,97 @@ namespace mcp
 		uint32_t depth;
 	};
 
+	/// processed transaction -> block info
+	struct TransactionAddress
+	{
+		TransactionAddress(mcp::block_hash const& block_hash_a, unsigned index_a):blockHash(block_hash_a), index(index_a) {}
+		TransactionAddress(RLP const& _rlp) { blockHash = (mcp::block_hash)_rlp[0]; index = _rlp[1].toInt<unsigned>();/* blockNum = (uint64_t)_rlp[2];*/}
+		bytes rlp() const { RLPStream s(2); s << blockHash << index /*<< blockNum*/; return s.out(); }
 
-	dev::Slice uint64_to_slice(mcp::uint64_union const & value);
-	mcp::uint64_union slice_to_uint64(dev::Slice const & slice);
+		explicit operator bool() const { return blockHash != mcp::block_hash(0); }
 
-	dev::Slice uint256_to_slice(mcp::uint256_union const & value);
-	mcp::uint256_union slice_to_uint256(dev::Slice const & slice);
+		mcp::block_hash blockHash;
+		unsigned index = 0;
+		//uint64_t blockNum = 0;
+	};
+	
+	// transaction queue import
+	enum class ImportResult
+	{
+		Success = 0,
+		UnknownParent,
+		FutureTimeKnown,
+		FutureTimeUnknown,
+		AlreadyInChain,
+		AlreadyKnown,
+		Malformed,
+		OverbidGasPrice,
+		BadChain/*,
+		ZeroSignature*/
+	};
+	
+	// approve queue import
+	enum class ImportApproveResult
+	{
+		Success = 0,
+		AlreadyInChain,
+		AlreadyKnown,
+		EpochIsTooHigh,
+		Malformed,
+		BadChain/*,
+		ZeroSignature*/
+	};
 
-	// Added by Daniel
-	dev::Slice uint512_to_slice(mcp::uint512_union const & value);
-	mcp::uint512_union slice_to_uint512(dev::Slice const & slice);
+	/// Import transaction policy
+	enum class IfDropped
+	{
+		Ignore, ///< Don't import transaction that was previously dropped.
+		Retry 	///< Import transaction even if it was dropped before.
+	};
+	
+	using BlockNumber = uint64_t;
 
-	// added by michael at 1/13
-	dev::Slice account_to_slice(mcp::account const & value);
-	mcp::account slice_to_account(dev::Slice const & slice);
+	static const BlockNumber LatestBlock = (BlockNumber)-2;
+	static const BlockNumber PendingBlock = (BlockNumber)-1;
 
-	mcp::account toAddress(mcp::account const& _from, u256 const& _nonce);
+	dev::Slice h64_to_slice(h64 const & value);
+	dev::h64 slice_to_h64(dev::Slice const & slice);
+
+	dev::Slice h256_to_slice(h256 const & value);
+	dev::h256 slice_to_h256(dev::Slice const & slice);
+
+	dev::Slice h512_to_slice(h512 const & value);
+	h512 slice_to_h512(dev::Slice const & slice);
+
+	dev::Slice account_to_slice(dev::Address const & value);
+	dev::Address slice_to_account(dev::Slice const & slice);
+
+	bool isAddress(std::string const& _s);
 
 	// OS-specific way of finding a path to a home directory.
 	boost::filesystem::path working_path();
 	// Get a unique path within the home directory, used for testing
 	boost::filesystem::path unique_path();
+	
+	class epoch_approves_key
+	{
+	public:
+		epoch_approves_key(uint64_t const &epoch_a, h256 const &hash_a) : epoch(epoch_a), hash(hash_a){ }
+		epoch_approves_key(dev::Slice const &);
+		//bool operator== (mcp::epoch_approves_key const &) const;
+		dev::Slice val() const { return dev::Slice((char *)this, sizeof(*this)); }
+		uint64_t epoch;
+		h256 hash;
+	};
+
+	class epoch_elected_list
+	{
+	public:
+		epoch_elected_list();
+		epoch_elected_list(std::vector<h256> const &);
+		epoch_elected_list(dev::RLP const & r);
+		void stream_RLP(dev::RLPStream & s) const;
+
+		std::vector<h256> hashs;
+	};
 }

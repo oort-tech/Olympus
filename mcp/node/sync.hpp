@@ -1,4 +1,5 @@
 #pragma once
+#include "common.hpp"
 #include <mcp/node/node_capability.hpp>
 #include <mcp/p2p/host.hpp>
 #include <mcp/common/stopwatch.hpp>
@@ -18,7 +19,6 @@ namespace mcp
 		request_next_hash_tree_no_summary
 	};
 
-	enum class sub_packet_type;
 	class sync_request_status
 	{
 	public:
@@ -48,8 +48,8 @@ namespace mcp
 		uint64_t peer_info_joint = 0;
 		uint64_t existing_unknown_joint = 0;
 
-		mcp::summary_hash	request_hash_tree_from_summary = 0;
-		mcp::summary_hash	request_hash_tree_to_summary = 0;
+		mcp::summary_hash	request_hash_tree_from_summary = mcp::summary_hash(0);
+		mcp::summary_hash	request_hash_tree_to_summary = mcp::summary_hash(0);
 		uint64_t			request_hash_tree_start_index = 0;
 		mcp::block_hash		last_stable_block_expected;
 		std::list<joint_message> unstable_mc_joints;
@@ -61,7 +61,7 @@ namespace mcp
 		std::map<uint64_t, uint64_t> catchup_del_index;
 		uint64_t			current_del_catchup = 0;
 		std::unordered_map<mcp::block_hash, uint64_t> to_summary_index;
-		p2p::node_id id = 0;
+		p2p::node_id		id = p2p::node_id(0);
 		uint64_t			del_catchup_index = 0;
 		uint64_t			version = 0;
 		std::mutex			version_mutex;
@@ -73,7 +73,7 @@ namespace mcp
 		node_sync(
 			std::shared_ptr<mcp::node_capability> capability_a, mcp::block_store& store_a,
 			std::shared_ptr<mcp::chain> chain_a, std::shared_ptr<mcp::block_cache> cache_a,
-			std::shared_ptr<mcp::async_task> async_task_a,
+			std::shared_ptr<mcp::TransactionQueue> tq, std::shared_ptr<mcp::ApproveQueue> aq, std::shared_ptr<mcp::async_task> async_task_a,
 			mcp::fast_steady_clock& steady_clock_a, boost::asio::io_service & io_service_a
 		);
 		~node_sync() { stop(); }
@@ -94,7 +94,7 @@ namespace mcp
 
 			for (auto it = m_request_info.to_summary_index.begin(); it != m_request_info.to_summary_index.end(); it++)
 			{
-				ret = ret + " ," + it->first.to_string() + " ," + std::to_string(it->second);
+				ret = ret + " ," + it->first.hex() + " ," + std::to_string(it->second);
 			}
 
 			return ret;
@@ -108,9 +108,13 @@ namespace mcp
 		void hash_tree_response_handler(p2p::node_id const &, mcp::hash_tree_response_message const &);
 
 		void peer_info_request_handler(p2p::node_id const &);
-		void request_new_missing_joints(mcp::joint_request_item& item_a, uint64_t& millisecondsSinceEpoch, bool const& is_timeout = false);
+		void request_new_missing_joints(mcp::requesting_item& item_a, bool const& is_timeout = false);
+		void request_new_missing_transactions(mcp::requesting_item& item_a, bool const& is_timeout = false);
+		void request_new_missing_approves(mcp::requesting_item& item_a, bool const& is_timeout = false);
 
 		void joint_request_handler(p2p::node_id const &, mcp::joint_request_message const &);
+		void transaction_request_handler(p2p::node_id const &, mcp::transaction_request_message const &);
+		void approve_request_handler(p2p::node_id const &, mcp::approve_request_message const &);
 		void send_peer_info_request(p2p::node_id id);
 		void send_peer_info(p2p::node_id const &, mcp::peer_info_message const &);
 
@@ -137,6 +141,8 @@ namespace mcp
 		void process_hash_tree(p2p::node_id const &, mcp::hash_tree_response_message const &);
 
 		void send_block(p2p::node_id const & id, mcp::joint_message const & message);
+		void send_transaction(p2p::node_id const & id, mcp::Transaction const & message);
+		void send_approve(p2p::node_id const & id, mcp::approve const & message);
 
 		bool is_request_hash_tree();
 		bool check_summaries_exist(mcp::db::db_transaction &transaction, std::list<mcp::summary_hash> const& summaries);
@@ -151,6 +157,8 @@ namespace mcp
 
 		void process_request_joints();
 		void send_joint_request(p2p::node_id const &, mcp::joint_request_message const &);
+		void send_transaction_request(p2p::node_id const &, mcp::transaction_request_message const &);
+		void send_approve_request(p2p::node_id const &, mcp::approve_request_message const &);
 
 		void clear_catchup_info(bool lock = true);
 		void del_catchup_index(std::map<uint64_t, uint64_t> const& map_a);
@@ -166,18 +174,20 @@ namespace mcp
 		std::shared_ptr<mcp::block_processor> m_block_processor;
 		std::shared_ptr<mcp::async_task> m_async_task;
 		mcp::fast_steady_clock& m_steady_clock;
+		std::shared_ptr<TransactionQueue> m_tq;                  ///< Maintains a list of incoming transactions not yet in a block on the blockchain.
+		std::shared_ptr<ApproveQueue> m_aq;                  ///< Maintains a list of incoming approve not yet in a block on the blockchain.
 
 		static sync_info m_request_info;
 
 		std::map<uint64_t, mcp::sync_request_status> m_sync_requests;
 		std::atomic<uint64_t> m_sync_request_id = { 0 };
-		mcp::sync_request_hash m_current_request_id = 0;
+		mcp::sync_request_hash m_current_request_id = mcp::sync_request_hash(0);
 		mcp::catchup_request_message m_current_catchup_request;
 		std::unique_ptr<boost::asio::deadline_timer> m_sync_timer;
 		std::unique_ptr<boost::asio::deadline_timer> m_sync_request_timer;
 
 		//thread 
-		std::deque<mcp::joint_request_item> m_joint_request_pending;
+		std::deque<mcp::requesting_item> m_joint_request_pending;
 		std::mutex m_mutex_joint_request;
 		std::condition_variable m_condition;
 		std::thread m_request_joints_thread;

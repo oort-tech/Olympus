@@ -6,9 +6,12 @@
 #include <map>
 #include <utility>
 #include <mcp/common/numbers.hpp>
+#include <libdevcore/Address.h>
+#include <libdevcore/Guards.h>
 
 namespace mcp
 {
+using namespace dev;
 // Network variants with different genesis blocks and network parameters
 enum class mcp_networks
 {
@@ -20,8 +23,11 @@ enum class mcp_networks
 
 extern mcp::mcp_networks mcp_network;
 
-bool is_test_network();
+extern dev::u256 gas_price;
+extern uint64_t chain_id;
 
+bool is_test_network();
+mcp::uint256_t chainID();
 
 size_t const static max_data_size(32000); //32k
 size_t const static skiplist_divisor(10);
@@ -40,7 +46,7 @@ class witness_param
 public:
 	size_t witness_count;
 	size_t majority_of_witnesses;
-	std::set<mcp::account> witness_list;
+	std::set<dev::Address> witness_list;
 };
 
 class param
@@ -52,33 +58,47 @@ public:
 		init_witness_param();
 	}
 
-	static mcp::block_param const & block_param(uint64_t const & last_summary_mci_a)
+	static mcp::block_param const & block_param(uint64_t const & last_epoch_a)
 	{
 		mcp::block_param const & b_param
-			= find_by_last_summary_mci<mcp::block_param>(last_summary_mci_a, block_param_map);
+			= find_by_last_epoch<mcp::block_param>(last_epoch_a, block_param_map);
 		return b_param;
 	}
 
-	static mcp::witness_param const & witness_param(uint64_t const & last_summary_mci_a)
+	static mcp::witness_param const & witness_param(uint64_t const & epoch_a)
 	{
-		mcp::witness_param const & w_param
-			= find_by_last_summary_mci<mcp::witness_param>(last_summary_mci_a, witness_param_map);
-		return w_param;
+		DEV_READ_GUARDED(m_mutex_witness){
+			mcp::witness_param const & w_param
+				= find_by_last_epoch<mcp::witness_param>(epoch_a, witness_param_map);
+			return w_param;
+		}
 	}
 
-	static bool is_witness(uint64_t const & last_summary_mci_a, mcp::account const & account_a)
+	static bool is_witness(uint64_t const & epoch_a, dev::Address const & account_a)
 	{
-		mcp::witness_param const & w_param = witness_param(last_summary_mci_a);
-		if (w_param.witness_list.count(account_a))
-			return true;
-		return false;
+		DEV_READ_GUARDED(m_mutex_witness){
+			mcp::witness_param const & w_param = witness_param(epoch_a);
+			if (w_param.witness_list.count(account_a))
+				return true;
+			return false;
+		}
 	}
 
-	static mcp::witness_param const & curr_witness_param()
+	static std::set<dev::Address> to_witness_list(std::vector<std::string> const & witness_strs)
 	{
-		auto it(witness_param_map.rbegin());
-		assert_x(it != witness_param_map.rend());
-		return it->second;
+		std::set<dev::Address> witness_list;
+		for (std::string w_str : witness_strs)
+		{
+			dev::Address w_acc(w_str);
+			witness_list.insert(w_acc);
+		}
+		return witness_list;
+	}
+
+	static void add_witness_param(uint64_t const & epoch_a, mcp::witness_param &w_param){
+		DEV_WRITE_GUARDED(m_mutex_witness){
+			mcp::param::witness_param_map.insert({epoch_a, w_param });
+		}
 	}
 
 private:
@@ -89,22 +109,28 @@ private:
 		b_param_v0.max_link_size = 4096;
 		block_param_map.insert({ 0, b_param_v0 });
 
+		//chain_id = (uint64_t)mcp::mcp_network;
+		chain_id = (uint64_t)971;
 		switch (mcp::mcp_network)
 		{
 		case mcp::mcp_networks::mcp_mini_test_network:
 		{
+			gas_price = 10000000;
 			break;
 		}
 		case mcp::mcp_networks::mcp_test_network:
 		{
+			gas_price = 10000000;
 			break;
 		}
 		case mcp::mcp_networks::mcp_beta_network:
 		{
+			gas_price = 10000000;
 			break;
 		}
 		case mcp::mcp_networks::mcp_live_network:
 		{
+			gas_price = (uint256_t)5e13;
 			break;
 		}
 		default:
@@ -134,20 +160,20 @@ private:
 		case mcp::mcp_networks::mcp_test_network:
 		{
 			std::vector<std::string> test_witness_str_list_v0 = {
-				"0x3d8d441841880c414d1058a086d9eaa73eb8065c",
-				"0x3e7d22a76c48d70a50a7904da5e3164f41cb364b",
-				"0x6eca9f91be315bf7a62d06563e3b55b1d0754a9a",
-				"0x25d00bd210dd30e3cff40019e7195b3e91cceea5",
-				"0x42dacf7e05001e9671248a9bd616557fe209931d",
-				"0x86b44128420418ad07a3fec60327c22911f4825d",
-				"0x588b2f316a7f8680b406dbbbae128f28a72ff86e",
-				"0x0856a2d4a0cbb93d9b6d3dbe1af67fe2c4219cf7",
-				"0x1144B522F45265C2DFDBAEE8E324719E63A1694C",
-				"0xc086b09411e4c16b90e1b4b32a7f5d34f0f8eee4",
-				"0xc24760dd2def86397323ac048b7392fe71d92bcc",
-				"0xd11c69cf2a766bee0d7b5186687e70e0ca0530db",
-				"0xdb06ba6181c94d4b30ad8f3d8c29737e4222d7e7",
-				"0xde70e5bb7c626b34167f144efbe57fef09d6fc6d"
+				"0x49a1b41e8ccb704f5c069ef89b08cd33f764e9b3",
+				"0xf0821dc4ba9419b865aa412170377ca3b44cdb58",
+				"0x329e6b5b8e59fc73d892958b2ff6a89474e3d067",
+				"0x827cce78dc6ec7051f2d7bb9e7adaefba7ca3248",
+				"0x918d3fe1dbff02fc7521d4a04b50017ce1a7c2ea",
+				"0x929f336edb0a39ad5532a462d4a84e1546c5e5de",
+				"0x1895ac1edc15389b905bb19537eb0c5b33d8c77a",
+				"0x05174fa7ab39a36391b17850a2db9afdcf57190e",
+				"0xa11b98c54d4189adda8eda97e13c214fedaf0a0f",
+				"0xa65ec5c65031d668094cb1b81bb8253ea64a23d7",
+				"0xba618c1e3e90d16e6c15d92ed198780dc4ad39c2",
+				"0xc2cf7b9eb048c34c2b00175a884543366bbcd029",
+				"0xc543a3868f3613eecd109761f71e31832ecf51ba",
+				"0xdab8a5fb82eb24ad321751bb2dd8e4cc9a4e45e5"
 			};
 			mcp::witness_param w_param_v0;
 			w_param_v0.witness_count = 14;
@@ -217,25 +243,13 @@ private:
 		}
 	}
 
-	static std::set<mcp::account> to_witness_list(std::vector<std::string> const & witness_strs)
-	{
-		std::set<mcp::account> witness_list;
-		for (std::string w_str : witness_strs)
-		{
-			mcp::account w_acc;
-			w_acc.decode_account(w_str);
-			witness_list.insert(w_acc);
-		}
-		return witness_list;
-	}
-
 	template<class T>
-	static T const & find_by_last_summary_mci(uint64_t const & last_summary_mci_a, std::map<uint64_t, T> const & maps_a)
+	static T const & find_by_last_epoch(uint64_t const & epoch_a, std::map<uint64_t, T> const & maps_a)
 	{
 		for (auto it(maps_a.rbegin()); it != maps_a.rend(); it++)
 		{
-			uint64_t const & min_last_summary_mci(it->first);
-			if (last_summary_mci_a >= min_last_summary_mci)
+			uint64_t const & min_last_epoch(it->first);
+			if (epoch_a >= min_last_epoch)
 			{
 				T const & result(it->second);
 				return result;
@@ -249,6 +263,7 @@ private:
 
 	//min last summary mci -> witness param
 	static std::map<uint64_t, mcp::witness_param> witness_param_map;
+	static dev::SharedMutex m_mutex_witness;
 };
 
 }

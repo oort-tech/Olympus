@@ -75,6 +75,8 @@ namespace mcp
         static std::atomic_flag is_inited;
 		static void init(mcp::logging const& logging_a);
 	};
+
+	extern mcp::log g_log;
 }
 
 
