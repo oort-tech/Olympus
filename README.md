@@ -1,4 +1,9 @@
-# MCP (The Metaverse Computing Protocol)
+# Olympus (The blockchain layer in Computecoin)
+
+## Introduction
+Olympus is the blockchain layer in Computecoin that features high concurrency, high throughput, and low transaction fees. Olympus is now running in beta version as the testnet of CCN. 
+
+Read more at https://docs.computecoin.com/computecoin/for-developers/mainnet/
 
 ## Compilation
 
