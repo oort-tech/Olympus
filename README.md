@@ -1,11 +1,12 @@
-# Olympus (The blockchain layer in Computecoin)
+## Olympus (The blockchain layer in Computecoin)
+Official C++ implementation of the Olympus protocol.
 
-## Introduction
-Olympus is the blockchain layer in Computecoin that features high concurrency, high throughput, and low transaction fees. Olympus is now running in beta version as the testnet of CCN. 
+[![API Reference](
+https://camo.githubusercontent.com/915b7be44ada53c290eb157634330494ebe3e30a/68747470733a2f2f676f646f632e6f72672f6769746875622e636f6d2f676f6c616e672f6764646f3f7374617475732e737667
+)](https://docs.computecoin.com/computecoin/for-developers/mainnet/)
+[![Discord](https://img.shields.io/badge/discord-join%20chat-blue.svg)](https://discord.gg/f4Z2jJjtNp)
 
-Read more at https://docs.computecoin.com/computecoin/for-developers/mainnet/
-
-## Compilation
+## Building the source
 
 ### Linux
 
