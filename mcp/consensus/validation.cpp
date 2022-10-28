@@ -79,26 +79,9 @@ mcp::base_validate_result mcp::validation::base_validate(mcp::db::db_transaction
 		return result;
 	}
 
-	////check links
-	//auto links(block->links());
-	//std::unordered_set<dev::Address> link_accounts;
-	//mcp::block_hash pre_link_hash(0);
-	//for (auto it(links.begin()); it != links.end(); it++)
-	//{
-	//	h256 const & link(*it);
-	//	//check order
-	//	if (link <= pre_link_hash)
-	//	{
-	//		result.code = mcp::base_validate_result_codes::invalid_block;
-	//		result.err_msg = "link hash not ordered";
-	//		return result;
-	//	}
-	//	pre_link_hash = link;
-	//}
-
 	//validate signature
 	dev::Public pubkey = dev::recover(block->signature(), block_hash);
-	if (dev::toAddress(pubkey) != block->from())   //todo used eth sign----------------------------------------
+	if (dev::toAddress(pubkey) != block->from())
 	{
 		result.code = mcp::base_validate_result_codes::invalid_signature;
 		return result;

@@ -36,7 +36,7 @@ namespace mcp
 		/// @param _tx Trasnaction data.
 		/// @param _ik Set to Retry to force re-addinga transaction that was previously dropped.
 		/// @returns Import result code.
-		ImportApproveResult import(approve const& _tx, bool isLoccal, IfDropped _ik = IfDropped::Ignore);
+		ImportApproveResult import(approve const& _tx);
 
 		void importLocal(approve const& _tx);
 		
@@ -111,8 +111,8 @@ namespace mcp
 			//h512 nodeId;        ///< Network Id of the peer approve comes from
 			p2p::node_id nodeId;
 		};
-		ImportApproveResult check_WITH_LOCK(h256 const& _h, IfDropped _ik);
-		ImportApproveResult manageImport_WITH_LOCK(h256 const& _h, approve const& _approve, bool isLocal);
+		ImportApproveResult check_WITH_LOCK(h256 const& _h);
+		ImportApproveResult manageImport_WITH_LOCK(h256 const& _h, approve const& _approve);
 		bool remove_WITH_LOCK(h256 const& _txHash, uint64_t _epoch);
 
 		void verifierBody();

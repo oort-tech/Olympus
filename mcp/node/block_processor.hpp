@@ -97,7 +97,7 @@ namespace mcp
 		
 		void on_sync_completed(mcp::p2p::node_id const & remote_node_id_a);
 
-		void onTransactionImported(h256Hash const& _t);
+		void onTransactionReady(h256 const& _t);
 
 		void onApproveImported(h256 const& _t);
 
@@ -166,6 +166,14 @@ namespace mcp
 		std::deque<std::shared_ptr<mcp::block_processor_item>> m_local_blocks_pending;
 		std::deque<std::shared_ptr<mcp::block_processor_item>> m_blocks_pending;
 		std::deque<std::shared_ptr<mcp::block>> m_blocks_processing;
+
+		///transaction ready
+		std::mutex m_transaction_hashs_mutex;
+		std::condition_variable m_transaction_hashs_condition;
+		h256Hash m_transaction_hashs_pending;
+		h256Hash m_transaction_hashs_processing;
+		std::thread m_transaction_hashs_thread;
+		void process_ready_transaction();
 
         std::atomic<uint64_t> blocks_pending_sync_size = { 0 };
         std::atomic<uint64_t> blocks_missing_size = { 0 };

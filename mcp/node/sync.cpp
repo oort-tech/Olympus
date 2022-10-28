@@ -1529,7 +1529,7 @@ void mcp::node_sync::process_hash_tree(p2p::node_id const &id, mcp::hash_tree_re
 			{
 				for (auto t : s_item.transactions)
 				{
-					m_tq->import(*t, false);
+					m_tq->import(t, source::sync);
 				}
 			}
 			catch (const std::exception& e)
@@ -1543,7 +1543,7 @@ void mcp::node_sync::process_hash_tree(p2p::node_id const &id, mcp::hash_tree_re
 			{
 				for (auto a : s_item.approves)
 				{
-					m_aq->import(*a, false);
+					m_aq->import(*a);
 				}
 			}
 			catch (const std::exception& e)
@@ -2064,7 +2064,7 @@ void mcp::node_sync::process_request_joints()
 			{
 				mcp::joint_request_message message(item_a.m_request_id, item_a.m_request_hash);
 				send_joint_request(item_a.m_node_id, message);
-				//LOG(log_sync.info) << "process_request_joints hash:" << message.block_hash.to_string();
+				//LOG(log_sync.info) << "process_request_joints hash:" << message.block_hash.hex();
 			}
 
 			lock.lock();

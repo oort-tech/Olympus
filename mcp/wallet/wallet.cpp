@@ -51,7 +51,7 @@ h256 mcp::wallet::send_action(TransactionSkeleton t, boost::optional<std::string
 
 h256 mcp::wallet::importTransaction(Transaction const& _t)
 {
-	ImportResult res = m_tq->importLocal(_t);
+	ImportResult res = m_tq->importLocal(std::make_shared<Transaction>(_t));
 	switch (res)
 	{
 	case ImportResult::Success:
@@ -62,8 +62,10 @@ h256 mcp::wallet::importTransaction(Transaction const& _t)
 		BOOST_THROW_EXCEPTION(PendingTransactionAlreadyExists());
 	case ImportResult::AlreadyInChain:
 		BOOST_THROW_EXCEPTION(TransactionAlreadyInChain());
-	case ImportResult::FutureTimeKnown:
+	case ImportResult::FutureFull:
 		BOOST_THROW_EXCEPTION(PendingTransactionTooMuch());
+	case ImportResult::InvalidNonce:
+		BOOST_THROW_EXCEPTION(InvalidNonce());
 	default:
 		BOOST_THROW_EXCEPTION(UnknownTransactionValidationError());
 	}
@@ -71,15 +73,11 @@ h256 mcp::wallet::importTransaction(Transaction const& _t)
 	return _t.sha3();
 }
 
+
+/// return next transaction nonce
 u256 mcp::wallet::getTransactionCount(Address const& from, BlockNumber const blockTag)
 {
-	mcp::db::db_transaction transaction(m_block_store.create_transaction());
-	u256 tqNonce = m_tq->maxNonce(from, blockTag);
-	u256 accNonce = 0;
-	if (!m_cache->account_nonce_get(transaction, from, accNonce))
-		return tqNonce;
-	accNonce++; /// next nonce
-	return std::max<u256>(accNonce, tqNonce);
+	return m_tq->maxNonce(from, blockTag);
 }
 
 void mcp::wallet::populateTransactionWithDefaults(TransactionSkeleton& _t)

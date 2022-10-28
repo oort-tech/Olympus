@@ -23,7 +23,6 @@ mcp::composer::~composer()
 
 std::shared_ptr<mcp::block> mcp::composer::compose_block(dev::Address const & from_a, dev::Secret const& s)
 {
-	LOG(m_log.debug) << "[compose_block] in";
 	mcp::stopwatch_guard sw("compose:compose_block");
 
 	mcp::db::db_transaction transaction(m_store.create_transaction());
@@ -46,7 +45,6 @@ std::shared_ptr<mcp::block> mcp::composer::compose_block(dev::Address const & fr
 			<< errinfo_comment("compose error:block no links"));
 
 	uint64_t exec_timestamp(mcp::seconds_since_epoch());
-	LOG(m_log.debug) << "[compose_block] out";
 
     return std::make_shared<mcp::block>(from_a, previous, parents, links, approves, 
 		last_summary, last_summary_block, last_stable_block, exec_timestamp,s);

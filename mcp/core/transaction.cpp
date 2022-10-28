@@ -35,7 +35,6 @@ mcp::Transaction::Transaction(dev::RLP const & rlp, CheckTransaction _checkSig)
 		if (!rlp[3].isData())
 			BOOST_THROW_EXCEPTION(InvalidTransactionFormat()
 				<< errinfo_comment("recepient RLP must be a byte array"));
-		//m_type = rlp[3].isEmpty() ? ContractCreation : MessageCall;
 		m_receiveAddress = rlp[3].isEmpty() ? Address() : rlp[3].toHash<Address>(RLP::VeryStrict);
 		m_value = rlp[4].toInt<u256>();
 
@@ -44,36 +43,35 @@ mcp::Transaction::Transaction(dev::RLP const & rlp, CheckTransaction _checkSig)
 				<< errinfo_comment("transaction data RLP must be a byte array"));
 
 		m_data = rlp[5].toBytes();
-
 		u256 const v = rlp[6].toInt<u256>();
 		h256 const r = rlp[7].toInt<u256>();
 		h256 const s = rlp[8].toInt<u256>();
 
-		//if (isZeroSignature(r, s))
-		//{
-		//	m_chainId = static_cast<uint64_t>(v);
-		//	m_vrs = SignatureStruct{ r, s, 0 };
-		//}
-		//else
-		//{
-			if (v > 36)
-			{
-				auto const chainId = (v - 35) / 2;
-				if (chainId > std::numeric_limits<uint64_t>::max())
-					BOOST_THROW_EXCEPTION(InvalidSignature());
-				m_chainId = static_cast<uint64_t>(chainId);
-			}
-			// only values 27 and 28 are allowed for non-replay protected transactions
-			else if (v != 27 && v != 28)
+		if (v > 36)
+		{
+			auto const chainId = (v - 35) / 2;
+			if (chainId > std::numeric_limits<uint64_t>::max())
 				BOOST_THROW_EXCEPTION(InvalidSignature());
+			m_chainId = static_cast<uint64_t>(chainId);
+		}
+		// only values 27 and 28 are allowed for non-replay protected transactions
+		else if (v != 27 && v != 28)
+			BOOST_THROW_EXCEPTION(InvalidSignature());
 
-			auto const recoveryID =
-				m_chainId.is_initialized() ? byte(v - (u256( *m_chainId ) *2 + 35)) : byte( v - 27 );
-			m_vrs = SignatureStruct{ r, s, recoveryID };
+		auto const recoveryID =
+			m_chainId.is_initialized() ? byte(v - (u256(*m_chainId) * 2 + 35)) : byte(v - 27);
+		m_vrs = SignatureStruct{ r, s, recoveryID };
 
-			if (_checkSig >= CheckTransaction::Cheap && !m_vrs->isValid())
-				BOOST_THROW_EXCEPTION(InvalidSignature());
-		//}
+		//mcp::log m_log = { mcp::log("node") };
+		//LOG(m_log.info) << "v:" << toHex(bytes(recoveryID));
+		//LOG(m_log.info) << "r:" << r.hex();
+		//LOG(m_log.info) << "s:" << s.hex();
+		//auto aa = *m_vrs;
+		//LOG(m_log.info) << "sig:" << ((Signature)aa).hex();
+		
+
+		if (_checkSig >= CheckTransaction::Cheap && !m_vrs->isValid())
+			BOOST_THROW_EXCEPTION(InvalidSignature());
 
 		if (_checkSig == CheckTransaction::Everything)
 			m_sender = sender();
@@ -101,18 +99,13 @@ Address const& mcp::Transaction::sender() const
 {
 	if (!m_sender.is_initialized())
 	{
-		//if (hasZeroSignature())
-		//	m_sender = MaxAddress;
-		//else
-		//{
-			if (!m_vrs)
-				BOOST_THROW_EXCEPTION(TransactionIsUnsigned());
+		if (!m_vrs)
+			BOOST_THROW_EXCEPTION(TransactionIsUnsigned());
 
-			auto p = recover(*m_vrs, sha3(WithoutSignature));
-			if (!p)
-				BOOST_THROW_EXCEPTION(InvalidSignature());
-			m_sender = right160(dev::sha3(bytesConstRef(p.data(), sizeof(p))));
-		//}
+		auto p = recover(*m_vrs, sha3(WithoutSignature));
+		if (!p)
+			BOOST_THROW_EXCEPTION(InvalidSignature());
+		m_sender = right160(dev::sha3(bytesConstRef(p.data(), sizeof(p))));
 	}
 	return *m_sender;
 }
@@ -148,7 +141,7 @@ void mcp::Transaction::streamRLP(RLPStream& s, IncludeSignature sig) const
 {
 	s.appendList(9);
 	s << m_nonce << m_gasPrice << m_gas;
-	if (m_receiveAddress)//todo set zero
+	if (m_receiveAddress)
 		s << m_receiveAddress;
 	else
 		s << "";
@@ -159,12 +152,7 @@ void mcp::Transaction::streamRLP(RLPStream& s, IncludeSignature sig) const
 		if (!m_vrs)
 			BOOST_THROW_EXCEPTION(TransactionIsUnsigned());
 
-		//if (hasZeroSignature())
-		//	s << *m_chainId;
-		//else
-			s << rawV();
-
-		s << (u256)m_vrs->r << (u256)m_vrs->s;
+		s << rawV() << (u256)m_vrs->r << (u256)m_vrs->s;
 	}
 	else  ///rlp for hash and verify sinature
 		s << *m_chainId << 0 << 0;

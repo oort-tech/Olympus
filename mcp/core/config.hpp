@@ -109,7 +109,6 @@ private:
 		b_param_v0.max_link_size = 4096;
 		block_param_map.insert({ 0, b_param_v0 });
 
-		//chain_id = (uint64_t)mcp::mcp_network;
 		chain_id = (uint64_t)971;
 		switch (mcp::mcp_network)
 		{

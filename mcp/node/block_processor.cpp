@@ -105,11 +105,12 @@ mcp::block_processor::block_processor(bool & error_a,
 	if (error_a)
 		return;
 
-	m_tq->onImportProcessed([this](h256Hash const& _h) { onTransactionImported(_h); });
+	m_tq->onReady([this](h256 const& _h) { onTransactionReady(_h); });
 	m_aq->onImportProcessed([this](h256 const& _h) { onApproveImported(_h); });
 
 	m_mt_process_block_thread = std::thread([this]() { this->mt_process_blocks(); });
 	m_process_block_thread = std::thread([this]() { this->process_blocks(); });
+	m_transaction_hashs_thread = std::thread([this]() { this->process_ready_transaction(); });
 
 	ongoing_retry_late_message();
 }
@@ -137,10 +138,17 @@ void mcp::block_processor::stop()
 		m_process_condition.notify_all();
 	}
 
+	{
+		std::lock_guard<std::mutex> lock(m_transaction_hashs_mutex);
+		m_transaction_hashs_condition.notify_all();
+	}
+
 	if (m_mt_process_block_thread.joinable())
 		m_mt_process_block_thread.join();
 	if (m_process_block_thread.joinable())
 		m_process_block_thread.join();
+	if (m_transaction_hashs_thread.joinable())
+		m_transaction_hashs_thread.join();
 }
 
 bool mcp::block_processor::is_full()
@@ -670,12 +678,10 @@ void mcp::block_processor::do_process_dag_item(mcp::timeout_db_transaction & tim
 	assert_x(last_summary_block);
 	uint64_t elect_epoch = mcp::approve::calc_elect_epoch(*last_summary_block->main_chain_index);
 	m_chain->set_last_summary_mci(transaction, *last_summary_block->main_chain_index);
-	LOG(m_log.debug) << "[do_process_dag_item] m_last_summary_mci = " << last_summary_block->main_chain_index;
 
 	mcp::block_hash const & block_hash(block->hash());
 	for (auto const & link_hash : block->links())
 	{
-		//LOG(m_log.info) << "[do_process_dag_item] blockhash: " << block_hash.hexPrefixed() << " ,tshash:" << link_hash.hexPrefixed() << " ,nonce:" << t->nonce();
 		/// Unprocessed transactions cannot be discarded because the cache is full.  todo zhouyou
 		auto t = m_tq->get(link_hash);
 		if (t == nullptr || m_local_cache->transaction_exists(transaction, link_hash)) /// transaction maybe processed yet
@@ -827,14 +833,39 @@ void mcp::block_processor::on_sync_completed(mcp::p2p::node_id const & remote_no
 	process_existing_missing(remote_node_id_a);
 }
 
-void mcp::block_processor::onTransactionImported(h256Hash const& _t)
+void mcp::block_processor::onTransactionReady(h256 const& _t)
 {
-	std::unordered_set<std::shared_ptr<mcp::block_processor_item>> unhandle_items = unhandle->release_transaction_dependency(_t);
-	if (!unhandle_items.empty())
+	std::lock_guard<std::mutex> lock(m_transaction_hashs_mutex);
+	m_transaction_hashs_pending.insert(_t);
+	m_transaction_hashs_condition.notify_all();
+}
+
+void mcp::block_processor::process_ready_transaction()
+{
+	std::unique_lock<std::mutex> lock(m_transaction_hashs_mutex);
+	while (!m_stopped)
 	{
-		for (auto const & p : unhandle_items)
+		if (!m_transaction_hashs_pending.empty())
 		{
-			add_to_process(p);
+			mcp::stopwatch_guard sw("process_ready_transaction");
+
+			std::swap(m_transaction_hashs_processing, m_transaction_hashs_pending);
+			lock.unlock();
+
+			std::unordered_set<std::shared_ptr<mcp::block_processor_item>> unhandle_items = unhandle->release_transaction_dependency(m_transaction_hashs_processing);
+			if (!unhandle_items.empty())
+			{
+				for (auto const & p : unhandle_items)
+				{
+					add_to_process(p);
+				}
+			}
+			m_transaction_hashs_processing.clear();
+			lock.lock();
+		}
+		else
+		{
+			m_transaction_hashs_condition.wait(lock);
 		}
 	}
 }

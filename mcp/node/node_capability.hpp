@@ -154,6 +154,7 @@ namespace mcp
 		void broadcast_transaction(mcp::Transaction const & message);
 		void broadcast_approve(mcp::approve const & message);
 		void mark_as_known_block(p2p::node_id node_id_a, mcp::block_hash block_hash_a);
+		void mark_as_known_transaction(p2p::node_id node_id_a, h256 _h);
 
         bool check_remotenode_hello(mcp::block_hash const & block_hash_a);
         bool is_local_remote_ack_ok_hello(p2p::node_id node_id_a);
@@ -193,7 +194,7 @@ namespace mcp
 		std::atomic<uint64_t> receive_peer_info_count = { 0 };
     private:
 		/// transaction processed callback
-		void onTransactionImported(ImportResult _ir, h256 const& _h, p2p::node_id const& _nodeId);
+		void onTransactionImported(ImportResult _ir, p2p::node_id const& _nodeId);
 		void onApproveImported(ImportApproveResult _ir, h256 const& _h, p2p::node_id const& _nodeId);
 
 		std::unordered_map<p2p::node_id, mcp::peer_info> m_peers;

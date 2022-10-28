@@ -22,7 +22,7 @@ mcp::node_capability::node_capability(
 	m_requesting()
 {
 	m_request_timer = std::make_unique<ba::deadline_timer>(m_io_service);
-	m_tq->onImport([this](ImportResult _ir, h256 const& _h, p2p::node_id const& _nodeId) { onTransactionImported(_ir, _h, _nodeId); });
+	m_tq->onImport([this](ImportResult _ir, p2p::node_id const& _nodeId) { onTransactionImported(_ir, _nodeId); });
 	m_aq->onImport([this](ImportApproveResult _ir, h256 const& _h, p2p::node_id const& _nodeId) { onApproveImported(_ir, _h, _nodeId); });
 }
 
@@ -334,52 +334,30 @@ bool mcp::node_capability::read_packet(std::shared_ptr<p2p::peer> peer_a, unsign
         }
 		case mcp::sub_packet_type::transaction:
 		{
-			bool error(r.itemCount() != 1);
-			//Transaction joint(error, r[0]);
-
-			mcp::CapMetricsRecieved.transaction++;
-			if (error)
+			if (r.itemCount() != 1)
 			{
-				LOG(m_log.error) << "Invalid new transaction message rlp: " << r[0];
+				LOG(m_log.error) << "Invalid transaction message rlp: " << r[0];
 				peer_a->disconnect(p2p::disconnect_reason::bad_protocol);
 				return true;
 			}
-			/*
-			bool is_missing = false;
-			bool need_add = true;
-			mcp::block_hash block_hash(joint.block->hash());
-			if (!joint.request_id.is_zero())
+			try
 			{
-				need_add = false;
-				std::lock_guard<std::mutex> lock(m_requesting_lock);
-				if (m_requesting.exist_erase(joint.request_id)) //ours request && broadcast not arrived
+				Transaction t(r[0], CheckTransaction::Cheap);///Signature will be checked later
+				auto _f = source::broadcast;
 				{
-					need_add = true;
-					joint.level = mcp::joint_processor_level::request; //if block processor full also need add this block
+					std::lock_guard<std::mutex> lock(m_requesting_lock);
+					if (m_requesting.exist(mcp::block_hash(t.sha3())))///todo 
+						_f = source::request;
 				}
-				joint.request_id.clear(); //broadcast do not need id
-				is_missing = true;
+				mark_as_known_transaction(peer_a->remote_node_id(), t.sha3());
+				mcp::CapMetricsRecieved.transaction++;
+				m_tq->enqueue(std::make_shared<Transaction>(t), peer_a->remote_node_id(), _f);
 			}
-			else //broadcast try clear request hash
+			catch (...)///Malformed transaction
 			{
-				std::lock_guard<std::mutex> lock(m_requesting_lock);
-				m_requesting.erase(block_hash);
+				LOG(m_log.error) << "Bad transaction:" << boost::current_exception_diagnostic_information();
+				peer_a->disconnect(p2p::disconnect_reason::bad_protocol);
 			}
-
-			if (need_add)
-			{
-				std::shared_ptr<mcp::block_processor_item> block_item_l(std::make_shared<mcp::block_processor_item>(joint, peer_a->remote_node_id()));
-				if (is_missing)
-				{
-					block_item_l->set_missing();
-				}
-				m_block_processor->add_to_mt_process(block_item_l);
-			}
-
-			LOG(m_log.debug) << "Joint message, block hash: " << block_hash.to_string();
-			*/
-			m_tq->enqueue(r[0], peer_a->remote_node_id());
-
 			break;
 		}
 		case mcp::sub_packet_type::transaction_request:
@@ -849,6 +827,13 @@ void mcp::node_capability::mark_as_known_block(p2p::node_id node_id_a, mcp::bloc
         m_peers.at(node_id_a).mark_as_known_block(block_hash_a);
 }
 
+void mcp::node_capability::mark_as_known_transaction(p2p::node_id node_id_a, h256 _h)
+{
+	std::lock_guard<std::mutex> lock(m_peers_mutex);
+	if (m_peers.count(node_id_a))
+		m_peers.at(node_id_a).mark_as_known_transaction(_h);
+}
+
 uint64_t mcp::node_capability::num_peers()
 {
     std::lock_guard<std::mutex> lock(m_peers_mutex);
@@ -923,21 +908,24 @@ void mcp::node_capability::send_hello_info_ack(p2p::node_id const &id)
     }
 }
 
-void mcp::node_capability::onTransactionImported(ImportResult _ir, h256 const& _h, p2p::node_id const& _nodeId)
+void mcp::node_capability::onTransactionImported(ImportResult _ir, p2p::node_id const& _nodeId)
 {
 	///if used sync_async io service execute delay, maybe some transactions through the filter
-	if (_h != h256())
+	switch (_ir)
 	{
-		mcp::block_hash h(_h);
-		std::lock_guard<std::mutex> lock(m_peers_mutex);
-		if (m_peers.count(_nodeId))
-		{
-			m_peers.at(_nodeId).mark_as_known_transaction(_h);
-		}
-		std::lock_guard<std::mutex> rlock(m_requesting_lock);
-		m_requesting.erase(h);
-	}
-	else
+	case mcp::ImportResult::Success:
+		break;
+	case mcp::ImportResult::FutureFull:
+		break;
+	case mcp::ImportResult::AlreadyInChain:
+		break;
+	case mcp::ImportResult::AlreadyKnown:
+		break;
+	case mcp::ImportResult::Malformed:
+		break;
+	case mcp::ImportResult::OverbidGasPrice:
+		break;
+	case mcp::ImportResult::BadProcol:
 	{
 		std::shared_ptr<p2p::peer> p = nullptr;
 		{
@@ -951,8 +939,13 @@ void mcp::node_capability::onTransactionImported(ImportResult _ir, h256 const& _
 		/// todo:disconnect call drop.drop call on_disconnect.on_disconnect will used m_peers_mutex. So it locks twice. need modify logic.
 		if (p)
 			p->disconnect(p2p::disconnect_reason::bad_protocol);
+		break;
 	}
-	/// todo different import result add or reduce rating for the peer
+	case mcp::ImportResult::InvalidNonce:
+		break;
+	default:
+		break;
+	}
 }
 
 void mcp::node_capability::onApproveImported(ImportApproveResult _ir, h256 const& _h, p2p::node_id const& _nodeId)

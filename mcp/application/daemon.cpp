@@ -773,7 +773,7 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 		std::shared_ptr<mcp::chain> chain(std::make_shared<mcp::chain>(chain_store, ledger));
 
 		/// transaction queue
-		std::shared_ptr<mcp::TransactionQueue> TQ(std::make_shared<mcp::TransactionQueue>(chain_store, cache, chain, sync_async));
+		std::shared_ptr<mcp::TransactionQueue> TQ(std::make_shared<mcp::TransactionQueue>(io_service, chain_store, cache, chain, sync_async, steady_clock));
 		/// approve queue
 		std::shared_ptr<mcp::ApproveQueue> AQ(std::make_shared<mcp::ApproveQueue>(chain_store, cache, chain, sync_async));
 		chain->set_approve_queue(AQ);
