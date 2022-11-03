@@ -186,7 +186,7 @@ void mcp::block_processor::add_item(std::shared_ptr<mcp::block_processor_item> i
 
 		if (m_block_arrival->recent(block_hash) && item_a->joint.level != mcp::joint_processor_level::request)
 		{
-			//LOG(m_log.debug) << "Recent block:" << block_hash.to_string();
+			//LOG(m_log.debug) << "Recent block:" << block_hash.hex();
 
 			block_processor_recent_block_size++;
 			return;
@@ -195,7 +195,7 @@ void mcp::block_processor::add_item(std::shared_ptr<mcp::block_processor_item> i
 
 	if (!item_a->is_sync() && item_a->joint.summary_hash == mcp::summary_hash(0))
 	{
-		//LOG(m_log.debug) << "Add recent block:" << block_hash.to_string();
+		//LOG(m_log.debug) << "Add recent block:" << block_hash.hex();
 
 		m_block_arrival->add(block_hash);
 	}
@@ -548,6 +548,9 @@ void mcp::block_processor::do_process_one(std::shared_ptr<mcp::block_processor_i
 		mcp::db::db_transaction & transaction(timeout_tx.get_transaction());
 		//dag validate
 		mcp::validate_result result(m_validation->dag_validate(transaction, m_local_cache, joint));
+
+		//LOG(m_log.info) << "do_process_one, block:" << block_hash.hex() << " ,result:" << int(result.code);
+
 		switch (result.code)
 		{
 		case mcp::validate_result_codes::ok:
@@ -720,16 +723,19 @@ void mcp::block_processor::process_missing(std::shared_ptr<mcp::block_processor_
 		uint64_t now = m_steady_clock.now_since_epoch();
 		for (auto it = missings.begin(); it != missings.end(); it++)
 		{
+			//LOG(m_log.info) << "process_missing, block:" << item_a->block_hash.hex() << " ,parent:" << (*it).hex();
 			mcp::requesting_item request_item(item_a->remote_node_id(), *it, mcp::requesting_block_cause::new_unknown, now);
 			m_sync->request_new_missing_joints(request_item);
 		}
 		for (auto it = transactions.begin(); it != transactions.end(); it++)
 		{
+			//LOG(m_log.info) << "process_missing, block:" << item_a->block_hash.hex() << " ,transaction:" << (*it).hex();
 			mcp::requesting_item request_item(item_a->remote_node_id(), *it, mcp::requesting_block_cause::new_unknown, now);
 			m_sync->request_new_missing_transactions(request_item);
 		}
 		for (auto it = approves.begin(); it != approves.end(); it++)
 		{
+			//LOG(m_log.info) << "process_missing, block:" << item_a->block_hash.hex() << " ,approve:" << (*it).hex();
 			mcp::requesting_item request_item(item_a->remote_node_id(), *it, mcp::requesting_block_cause::new_unknown, now);
 			m_sync->request_new_missing_approves(request_item);
 		}
@@ -760,9 +766,11 @@ void mcp::block_processor::process_existing_missing(mcp::p2p::node_id const & re
 
 		if (!missings.empty())
 		{
+			//LOG(m_log.info) << "[process_existing_missing] missings.size=" << missings.size();
 			uint64_t now = m_steady_clock.now_since_epoch();
 			for (auto it = missings.begin(); it != missings.end(); it++)
 			{
+				//LOG(m_log.info) << "[process_existing_missing] parent:" << (*it).hex();
 				mcp::requesting_item request_item(remote_node_id, *it, mcp::requesting_block_cause::existing_unknown, now);
 				m_sync->request_new_missing_joints(request_item);
 			}
@@ -770,9 +778,11 @@ void mcp::block_processor::process_existing_missing(mcp::p2p::node_id const & re
 
 		if (!light_missings.empty())
 		{
+			//LOG(m_log.info) << "[process_existing_missing] transaction.size=" << light_missings.size();
 			uint64_t now = m_steady_clock.now_since_epoch();
 			for (auto it = light_missings.begin(); it != light_missings.end(); it++)
 			{
+				//LOG(m_log.info) << "[process_existing_missing] transaction:" << (*it).hex();
 				mcp::requesting_item request_item(remote_node_id, *it, mcp::requesting_block_cause::existing_unknown, now);
 				m_sync->request_new_missing_transactions(request_item);
 			}
@@ -780,7 +790,7 @@ void mcp::block_processor::process_existing_missing(mcp::p2p::node_id const & re
 
 		if (!approve_missings.empty())
 		{
-    		LOG(m_log.trace) << "[process_existing_missing] approve_missings.size="<<approve_missings.size();
+    		//LOG(m_log.info) << "[process_existing_missing] approve_missings.size="<<approve_missings.size();
 			uint64_t now = m_steady_clock.now_since_epoch();
 			for (auto it = approve_missings.begin(); it != approve_missings.end(); it++)
 			{
@@ -917,7 +927,7 @@ std::string mcp::block_processor::get_processor_info()
 		+ " ,m_mt_blocks_pending:" + std::to_string(m_mt_blocks_pending.size())
 		+ " ,m_mt_blocks_processing:" + std::to_string(m_mt_blocks_processing.size())
 		+ " ,m_ok_local_dag_promises:" + std::to_string(m_ok_local_promises.size())
-		+ "ok:" + std::to_string(block_processor_add)
+		+ " ,ok:" + std::to_string(block_processor_add)
 		+ ", recent block:" + std::to_string(block_processor_recent_block_size)
 		+ ", invalid:" + std::to_string(m_invalid_block_cache.size())
 		+ ", block arrival, " + std::to_string(m_block_arrival->arrival.size())
@@ -943,12 +953,4 @@ void mcp::block_processor::ongoing_retry_late_message()
 	});
 }
 
-std::string mcp::block_processor::get_clear_unlink_info()
-{
-	std::string ret = " ,m_head_clear_size:" + std::to_string(m_head_clear_size)
-		+ " ,m_clear_size:" + std::to_string(m_clear_size)
-		+ " ,m_head_successor_clear_size:" + std::to_string(m_head_successor_clear_size);
-	
-	return ret;
-}
 

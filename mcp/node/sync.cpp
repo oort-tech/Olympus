@@ -1,4 +1,5 @@
-#include <mcp/node/sync.hpp>
+#include "sync.hpp"
+#include "requesting.hpp"
 #include <libdevcore/TrieHash.h>
 
 mcp::sync_request_status::sync_request_status(mcp::p2p::node_id const & request_node_id_a,
@@ -1994,17 +1995,7 @@ void mcp::node_sync::request_new_missing_joints(mcp::requesting_item& item_a, bo
 		return;
 
 	{
-		std::lock_guard<std::mutex> lock(m_capability->m_requesting_lock);
-		if (item_a.m_cause == mcp::requesting_block_cause::request_peer_info)
-			m_request_info.peer_info_joint++;
-		else if (item_a.m_cause == mcp::requesting_block_cause::existing_unknown)
-			m_request_info.existing_unknown_joint++;
-		else if (item_a.m_cause == mcp::requesting_block_cause::new_unknown)
-			m_request_info.new_unknown_joint++;
-		else
-			assert_x(false);
-
-		if (!m_capability->m_requesting.add(item_a, is_timeout))
+		if (!RequestingMageger.add(item_a, is_timeout))
 		{
 			//LOG(log_sync.info) << "block already requested:" << item_a.block_hash->to_string();
 			return;
@@ -2085,21 +2076,9 @@ void mcp::node_sync::request_new_missing_transactions(mcp::requesting_item& item
 
 	item_a.m_type = mcp::sub_packet_type::transaction_request;
 	{
-		//std::lock_guard<std::mutex> lock(m_capability->m_requesting_lock);
-		//if (item_a.m_cause == mcp::requesting_block_cause::request_peer_info)
-		//	m_request_info.peer_info_joint++;
-		//else if (item_a.m_cause == mcp::requesting_block_cause::existing_unknown)
-		//	m_request_info.existing_unknown_joint++;
-		//else if (item_a.m_cause == mcp::requesting_block_cause::new_unknown)
-		//	m_request_info.new_unknown_joint++;
-		//else
-		//	assert_x(false);
-
-		std::lock_guard<std::mutex> lock(m_capability->m_requesting_lock);
-		if (!m_capability->m_requesting.add(item_a, is_timeout))
+		if (!RequestingMageger.add(item_a, is_timeout))
 		{
-			//h256 h(item_a.m_request_hash.number());
-			//LOG(log_sync.info) << "transaction already requested:" << h.hex();
+			//LOG(log_sync.info) << "transaction already requested:" << item_a.m_request_hash.hex();
 			return;
 		}
 	}
@@ -2119,18 +2098,7 @@ void mcp::node_sync::request_new_missing_approves(mcp::requesting_item& item_a, 
 
 	item_a.m_type = mcp::sub_packet_type::approve_request;
 	{
-		//std::lock_guard<std::mutex> lock(m_capability->m_requesting_lock);
-		//if (item_a.m_cause == mcp::requesting_block_cause::request_peer_info)
-		//	m_request_info.peer_info_joint++;
-		//else if (item_a.m_cause == mcp::requesting_block_cause::existing_unknown)
-		//	m_request_info.existing_unknown_joint++;
-		//else if (item_a.m_cause == mcp::requesting_block_cause::new_unknown)
-		//	m_request_info.new_unknown_joint++;
-		//else
-		//	assert_x(false);
-
-		std::lock_guard<std::mutex> lock(m_capability->m_requesting_lock);
-		if (!m_capability->m_requesting.add(item_a, is_timeout))
+		if (!RequestingMageger.add(item_a, is_timeout))
 		{
 			//LOG(log_sync.info) << "block already requested:" << item_a.m_request_hash.hex();
 			return;

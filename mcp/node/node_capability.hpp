@@ -83,52 +83,6 @@ namespace mcp
         bool l_r_result;
     };
 
-	//class node_capability;
-	class requesting_mageger
-	{
-	public:
-		requesting_mageger(){}
-		bool add(mcp::requesting_item& item_a, bool const& count_a = false);
-		bool exist_erase(mcp::sync_request_hash const& request_id_a);
-		void erase(mcp::block_hash const& hash_a);
-		bool exist(mcp::block_hash const& hash_a);
-		std::list<requesting_item> clear_by_time(uint64_t const& time_a);
-		uint64_t size() { return m_request_info.size(); }
-
-		std::string get_info();
-	private:
-		boost::multi_index_container<
-			mcp::requesting_item,
-			boost::multi_index::indexed_by<
-				boost::multi_index::hashed_unique<boost::multi_index::member<mcp::requesting_item, mcp::sync_request_hash, &mcp::requesting_item::m_request_id> >,
-				boost::multi_index::hashed_unique<boost::multi_index::member<mcp::requesting_item ,mcp::block_hash, &mcp::requesting_item::m_request_hash> >,
-				boost::multi_index::hashed_non_unique<boost::multi_index::member<mcp::requesting_item, uint64_t, &mcp::requesting_item::m_time> >
-			>
-		> m_request_info;
-		//uint64_t m_timeout;//internal used ,if retry 3 times not get response will be throw away
-		std::atomic<uint64_t> m_random_uint = { 0 };  //random number, create request id
-
-		static const int STALLED_TIMEOUT = 5000; //retry time,external used
-		static const int RETYR_TIMES = 3;
-
-		//info
-		uint64_t arrival_filter_count = 0;
-	};
-
-    class requesting_block_info
-    {
-    public:
-        requesting_block_info(mcp::p2p::node_id const & r_node_a, uint64_t const r_time_a, mcp::requesting_block_cause const & r_cause_a):
-            m_r_node(r_node_a), m_r_time(r_time_a), m_r_cause(r_cause_a), m_r_count(0)
-        {}
-        requesting_block_info() = default;
-        mcp::p2p::node_id m_r_node;
-        uint64_t m_r_time;
-        mcp::requesting_block_cause m_r_cause;
-        uint32_t m_r_count;
-        const static uint32_t  max_request_count = 2;
-    };
-
 	class block_processor;
 	class TransactionQueue;
 	class ApproveQueue;
@@ -177,10 +131,6 @@ namespace mcp
 		void stop();
 
 		uint64_t num_peers();
-
-        //std::unordered_map<p2p::node_id, std::shared_ptr<mcp::capability_metrics>> m_node_id_cap_metrics;
-		mcp::requesting_mageger m_requesting;
-		std::mutex m_requesting_lock;
 
         uint64_t del_joint_in_asso_count = 0;
         uint64_t add_joint_in_asso_count = 0;    

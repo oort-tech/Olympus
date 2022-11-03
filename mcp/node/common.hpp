@@ -54,7 +54,7 @@ namespace mcp
 		}
 
 		mcp::p2p::node_id		m_node_id;
-		mcp::block_hash			m_request_hash;
+		h256					m_request_hash;
 		mcp::requesting_block_cause m_cause;
 		mcp::sync_request_hash	m_request_id;
 

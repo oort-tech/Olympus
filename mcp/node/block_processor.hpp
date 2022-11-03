@@ -106,7 +106,6 @@ namespace mcp
 		std::shared_ptr<mcp::unhandle_cache> unhandle;
 
 		std::string get_processor_info();
-		std::string get_clear_unlink_info();
 		uint64_t dag_old_size = 0;
 		uint64_t light_old_size = 0;
 		uint64_t base_validate_old_size = 0;
@@ -187,9 +186,6 @@ namespace mcp
 		//info
 		std::atomic<uint64_t> block_processor_add = { 0 };
 		std::atomic<uint64_t> block_processor_recent_block_size = { 0 };
-		uint64_t	m_head_clear_size = 0;
-		uint64_t	m_clear_size = 0;
-		uint64_t	m_head_successor_clear_size = 0;
 
 		mcp::log m_log = { mcp::log("node") };
 	};

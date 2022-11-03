@@ -44,10 +44,6 @@ namespace mcp
 		void clear();
 		void set_info(mcp::summary_hash const & from_summary, mcp::summary_hash const & to_summary, uint64_t const & index_a);
 
-		uint64_t new_unknown_joint = 0;
-		uint64_t peer_info_joint = 0;
-		uint64_t existing_unknown_joint = 0;
-
 		mcp::summary_hash	request_hash_tree_from_summary = mcp::summary_hash(0);
 		mcp::summary_hash	request_hash_tree_to_summary = mcp::summary_hash(0);
 		uint64_t			request_hash_tree_start_index = 0;

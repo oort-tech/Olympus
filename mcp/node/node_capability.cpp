@@ -1,4 +1,5 @@
 #include "node_capability.hpp"
+#include "requesting.hpp"
 #include <fstream>
 
 mcp::node_capability::node_capability(
@@ -18,8 +19,7 @@ mcp::node_capability::node_capability(
 	m_tq(tq),
 	m_aq(aq),
     m_stopped(false),
-    m_genesis(0),
-	m_requesting()
+    m_genesis(0)
 {
 	m_request_timer = std::make_unique<ba::deadline_timer>(m_io_service);
 	m_tq->onImport([this](ImportResult _ir, p2p::node_id const& _nodeId) { onTransactionImported(_ir, _nodeId); });
@@ -102,8 +102,7 @@ void mcp::node_capability::request_block_timeout()
 
 	std::list<mcp::requesting_item> requests;
 	{
-		std::lock_guard<std::mutex> lock(m_requesting_lock);
-		requests = m_requesting.clear_by_time(now);
+		requests = RequestingMageger.clear_by_time(now);
 	}
 	mcp::db::db_transaction transaction(m_store.create_transaction());
 	for (auto const& it : requests)
@@ -117,7 +116,6 @@ void mcp::node_capability::request_block_timeout()
 		}
 		else if (it.m_type == mcp::sub_packet_type::approve_request) /// approve
 		{
-    		//LOG(m_log.info) << "[request_block_timeout] approve_request";
 			h256 h(it.m_request_hash);
 			if (m_aq->exist(h) || m_cache->approve_exists(transaction, h))
 				exist = true;
@@ -142,8 +140,7 @@ void mcp::node_capability::request_block_timeout()
 		}
 		else
 		{
-			std::lock_guard<std::mutex> lock(m_requesting_lock);
-			m_requesting.erase(it.m_request_hash);
+			RequestingMageger.try_erase(it.m_request_hash);
 		}
 	}
 
@@ -277,38 +274,21 @@ bool mcp::node_capability::read_packet(std::shared_ptr<p2p::peer> peer_a, unsign
                 return true;
             }
 
-            bool is_missing = false;
-			bool need_add = true;
+			std::shared_ptr<mcp::block_processor_item> block_item_l(std::make_shared<mcp::block_processor_item>(joint, peer_a->remote_node_id()));
 			mcp::block_hash block_hash(joint.block->hash());
-			if (joint.request_id != mcp::sync_request_hash(0))
 			{
-				need_add = false;
-				std::lock_guard<std::mutex> lock(m_requesting_lock);
-				if (m_requesting.exist_erase(joint.request_id)) //ours request && broadcast not arrived
+				if (RequestingMageger.try_erase(joint.request_id)) /// is missing blocks,it's doesn't matter whether it's broadcast or requested 
 				{
-					need_add = true;
-					joint.level = mcp::joint_processor_level::request; //if block processor full also need add this block
+					block_item_l->joint.level = mcp::joint_processor_level::request; ///if block processor full also need add this block
+					block_item_l->set_missing();
+					if (joint.request_id != mcp::sync_request_hash(0))
+						joint.request_id.clear(); ///broadcast do not need id
 				}
-				joint.request_id.clear(); //broadcast do not need id
-                is_missing = true;
 			}
-			else //broadcast try clear request hash
-			{
-				std::lock_guard<std::mutex> lock(m_requesting_lock);
-				m_requesting.erase(block_hash);
-			}
+			
+			m_block_processor->add_to_mt_process(block_item_l);
 
-			if (need_add)
-			{
-				std::shared_ptr<mcp::block_processor_item> block_item_l(std::make_shared<mcp::block_processor_item>(joint, peer_a->remote_node_id()));
-                if (is_missing)
-                {
-                    block_item_l->set_missing();
-                }
-                m_block_processor->add_to_mt_process(block_item_l);
-			}
-
-            //LOG(m_log.debug) << "Joint message, block hash: " << block_hash.to_string();
+            //LOG(m_log.info) << "Joint message, block hash: " << block_hash.hex();
             mark_as_known_block(peer_a->remote_node_id(), block_hash);
 
             break;
@@ -345,8 +325,7 @@ bool mcp::node_capability::read_packet(std::shared_ptr<p2p::peer> peer_a, unsign
 				Transaction t(r[0], CheckTransaction::Cheap);///Signature will be checked later
 				auto _f = source::broadcast;
 				{
-					std::lock_guard<std::mutex> lock(m_requesting_lock);
-					if (m_requesting.exist(mcp::block_hash(t.sha3())))///todo 
+					if (RequestingMageger.try_erase(mcp::block_hash(t.sha3())))
 						_f = source::request;
 				}
 				mark_as_known_transaction(peer_a->remote_node_id(), t.sha3());
@@ -959,8 +938,7 @@ void mcp::node_capability::onApproveImported(ImportApproveResult _ir, h256 const
 		{
 			m_peers.at(_nodeId).mark_as_known_approve(_h);
 		}
-		std::lock_guard<std::mutex> rlock(m_requesting_lock);
-		m_requesting.erase(h);
+		RequestingMageger.try_erase(h);
 	}
 	else
 	{
@@ -980,94 +958,6 @@ void mcp::node_capability::onApproveImported(ImportApproveResult _ir, h256 const
 	/// todo different import result add or reduce rating for the peer
 }
 
-
-//return: true:successed, false: requesting in the way
-bool mcp::requesting_mageger::add(mcp::requesting_item& item_a, bool const& count_a)
-{
-	bool ret = true;
-	auto it(m_request_info.get<1>().find(item_a.m_request_hash));
-	if (it != m_request_info.get<1>().end())
-	{
-		if (item_a.m_time > it->m_time + mcp::requesting_mageger::STALLED_TIMEOUT) //allow request again
-		{
-			item_a.m_request_id = it->m_request_id; //used same request id as before
-			//upgrade request time
-			mcp::requesting_item item(*it);
-			item.m_time = item_a.m_time;
-			if (count_a)
-				item.m_request_count++;
-			m_request_info.get<1>().replace(it, item);
-		}
-		else
-		{
-			ret = false;
-		}
-	}
-	else
-	{
-		item_a.m_request_id = mcp::gen_sync_request_hash(item_a.m_node_id, m_random_uint, item_a.m_type);
-		m_random_uint++;
-
-		m_request_info.insert(item_a);
-	}
-	return ret;
-}
-
-bool mcp::requesting_mageger::exist_erase(mcp::sync_request_hash const & request_id_a)
-{
-	auto it(m_request_info.get<0>().find(request_id_a));
-	if (it != m_request_info.get<0>().end())
-	{
-		m_request_info.get<0>().erase(it);
-		return true;
-	}
-	arrival_filter_count++;
-	return false;
-}
-
-void mcp::requesting_mageger::erase(mcp::block_hash const& hash_a)
-{
-	auto it(m_request_info.get<1>().find(hash_a));
-	if (it != m_request_info.get<1>().end())
-	{
-		m_request_info.get<1>().erase(it);
-	}
-}
-
-bool mcp::requesting_mageger::exist(mcp::block_hash const& hash_a)
-{
-	auto it(m_request_info.get<1>().find(hash_a));
-	return it != m_request_info.get<1>().end();
-}
-
-std::list<mcp::requesting_item> mcp::requesting_mageger::clear_by_time(uint64_t const& time_a)
-{
-	std::list<mcp::requesting_item> result;
-	for (auto it = m_request_info.get<2>().begin(); it != m_request_info.get<2>().end();)
-	{
-		if (time_a > it->m_time + STALLED_TIMEOUT)
-		{
-			if (it->m_request_count > RETYR_TIMES)
-			{
-				it = m_request_info.get<2>().erase(it);
-			}
-			else
-			{
-				result.push_back(*it);
-				it++;
-			}
-		}
-		else
-			break;
-	}
-	return result;
-}
-
-std::string mcp::requesting_mageger::get_info()
-{
-	std::string ret = "size:" + std::to_string(size()) + " ,arrival_filter_count:" + std::to_string(arrival_filter_count);
-	return ret;
-}
 
 
 

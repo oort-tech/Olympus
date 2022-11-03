@@ -172,7 +172,7 @@ void mcp::witness::do_witness()
 		}
 		m_last_witness_time = std::chrono::steady_clock::now();
 		m_is_witnessing.clear();
-		//LOG(m_log.info) << "-----------witness hash:" << block->hash().to_string() << " ,links:" << block->links().size();
+		//LOG(m_log.info) << "witness hash:" << block->hash().hex() << " ,links:" << block->links().size();
 	}
 	catch (Exception& _e)
 	{

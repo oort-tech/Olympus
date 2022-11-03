@@ -6,6 +6,7 @@
 #include <mcp/application/daemon.hpp>
 #include <mcp/common/pwd.hpp>
 #include <mcp/node/witness.hpp>
+#include <mcp/node/requesting.hpp>
 #include <mcp/common/log.hpp>
 
 mcp::thread_runner::thread_runner(boost::asio::io_service & service_a, unsigned service_threads_a, std::string const &service_name)
@@ -939,7 +940,7 @@ void mcp_daemon::ongoing_report(
 		<< " , light_old_size : " << processor->light_old_size
 		<< " , base_validate_old_size : " << processor->base_validate_old_size;
 
-	LOG(log.info) << "capability requesting_info: " << capability->m_requesting.get_info();
+	LOG(log.info) << "RequestingMageger info: " << mcp::RequestingMageger.get_info();
 
 	LOG(log.info) << "peer count:" << host->peers().size();
 
@@ -962,10 +963,6 @@ void mcp_daemon::ongoing_report(
 		<< ", transaction:" << transaction_count
 		<< ", unstable approve:" << approve_unstable_count
 		<< ", approve:" << approve_count
-		//<< ", unlink block:" << unlink_block_count
-		//<< ", unlink:" << unlink_count
-		//<< ", head:" << head_count
-		<< processor->get_clear_unlink_info()
 		<< ", dag free:" << dag_free_count
 		<< ", last_stable_mci:" << last_stable_mci
 		<< ", last_mci:" << last_mci;
