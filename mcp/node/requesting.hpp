@@ -29,7 +29,7 @@ namespace mcp
 
 		mutable SharedMutex m_lock;  ///< General lock.
 		///logs
-		std::unordered_map<mcp::sub_packet_type, std::unordered_map<mcp::requesting_block_cause, uint64_t>> counts;
+		std::map<mcp::sub_packet_type, std::map<mcp::requesting_block_cause, uint64_t>> counts;
 	};
 
 	extern requesting_mageger RequestingMageger;

@@ -7,17 +7,17 @@ namespace mcp
 
 mcp::requesting_mageger::requesting_mageger()
 {
-	counts[sub_packet_type::joint_request][requesting_block_cause::new_unknown] = { 0 };
-	counts[sub_packet_type::joint_request][requesting_block_cause::existing_unknown] = { 0 };
-	counts[sub_packet_type::joint_request][requesting_block_cause::request_peer_info] = { 0 };
+	counts[sub_packet_type::joint_request][requesting_block_cause::new_unknown] = 0;
+	counts[sub_packet_type::joint_request][requesting_block_cause::existing_unknown] = 0;
+	counts[sub_packet_type::joint_request][requesting_block_cause::request_peer_info] = 0;
 
-	counts[sub_packet_type::transaction_request][requesting_block_cause::new_unknown] = { 0 };
-	counts[sub_packet_type::transaction_request][requesting_block_cause::existing_unknown] = { 0 };
-	counts[sub_packet_type::transaction_request][requesting_block_cause::request_peer_info] = { 0 };
+	counts[sub_packet_type::transaction_request][requesting_block_cause::new_unknown] = 0;
+	counts[sub_packet_type::transaction_request][requesting_block_cause::existing_unknown] = 0;
+	counts[sub_packet_type::transaction_request][requesting_block_cause::request_peer_info] = 0;
 
-	counts[sub_packet_type::approve_request][requesting_block_cause::new_unknown] = { 0 };
-	counts[sub_packet_type::approve_request][requesting_block_cause::existing_unknown] = { 0 };
-	counts[sub_packet_type::approve_request][requesting_block_cause::request_peer_info] = { 0 };
+	counts[sub_packet_type::approve_request][requesting_block_cause::new_unknown] = 0;
+	counts[sub_packet_type::approve_request][requesting_block_cause::existing_unknown] = 0;
+	counts[sub_packet_type::approve_request][requesting_block_cause::request_peer_info] = 0;
 }
 
 ///return: true:successed, false: requesting in the way
@@ -105,7 +105,8 @@ std::string mcp::requesting_mageger::get_info()
 		+ " ,joint peer_info:" + std::to_string(counts[sub_packet_type::transaction_request][requesting_block_cause::request_peer_info])
 		+ " ,joint new_unknown:" + std::to_string(counts[sub_packet_type::approve_request][requesting_block_cause::new_unknown])
 		+ " ,joint existing_unknown:" + std::to_string(counts[sub_packet_type::approve_request][requesting_block_cause::existing_unknown])
-		+ " ,joint peer_info:" + std::to_string(counts[sub_packet_type::approve_request][requesting_block_cause::request_peer_info]);
+		+ " ,joint peer_info:" + std::to_string(counts[sub_packet_type::approve_request][requesting_block_cause::request_peer_info])
+		;
 	return ret;
 }
 
