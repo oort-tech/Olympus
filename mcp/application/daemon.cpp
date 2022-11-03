@@ -750,54 +750,44 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 			return;
 		}
 
-		///steady_clock
-		mcp::fast_steady_clock steady_clock;
 		///alarm
 		std::shared_ptr<mcp::alarm> alarm(std::make_shared<mcp::alarm>(bg_io_service));
 		std::shared_ptr<mcp::async_task> sync_async(std::make_shared<mcp::async_task>(sync_io_service));
 		std::shared_ptr<mcp::async_task> background(std::make_shared<mcp::async_task>(bg_io_service));
 
-
 		///key_manager
 		std::shared_ptr<mcp::key_manager> key_manager(std::make_shared<mcp::key_manager>(data_path, key_store));
 
-
-		///invalid block cache
-		mcp::mru_list<mcp::block_hash> invalid_block_cache(1000);
-		std::shared_ptr<mcp::block_arrival> block_arrival(std::make_shared<mcp::block_arrival>());
-
 		///cache
 		std::shared_ptr<mcp::block_cache> cache(std::make_shared<mcp::block_cache>(chain_store));
-		///leger
-		mcp::ledger ledger;
 		///chain
-		std::shared_ptr<mcp::chain> chain(std::make_shared<mcp::chain>(chain_store, ledger));
+		std::shared_ptr<mcp::chain> chain(std::make_shared<mcp::chain>(chain_store));
 
 		/// transaction queue
-		std::shared_ptr<mcp::TransactionQueue> TQ(std::make_shared<mcp::TransactionQueue>(io_service, chain_store, cache, chain, sync_async, steady_clock));
+		std::shared_ptr<mcp::TransactionQueue> TQ(std::make_shared<mcp::TransactionQueue>(io_service, chain_store, cache, chain, sync_async));
 		/// approve queue
 		std::shared_ptr<mcp::ApproveQueue> AQ(std::make_shared<mcp::ApproveQueue>(chain_store, cache, chain, sync_async));
 		chain->set_approve_queue(AQ);
 
 		///validation
-		std::shared_ptr<mcp::validation> validation(std::make_shared<mcp::validation>(chain_store, ledger, invalid_block_cache, cache, TQ, AQ));
+		std::shared_ptr<mcp::validation> validation(std::make_shared<mcp::validation>(chain_store, cache, TQ, AQ));
 		///node_capability
-		std::shared_ptr<mcp::node_capability> capability(std::make_shared<mcp::node_capability>(io_service, chain_store, steady_clock, cache, sync_async, block_arrival, TQ, AQ));
+		std::shared_ptr<mcp::node_capability> capability(std::make_shared<mcp::node_capability>(io_service, chain_store, cache, sync_async, TQ, AQ));
 		TQ->set_capability(capability);
 		AQ->set_capability(capability);
 
 		///composer
-		std::shared_ptr<mcp::composer> composer(std::make_shared<mcp::composer>(chain_store, cache, ledger, TQ, AQ));
+		std::shared_ptr<mcp::composer> composer(std::make_shared<mcp::composer>(chain_store, cache, TQ, AQ));
 
 		///sync
-		std::shared_ptr<mcp::node_sync> sync(std::make_shared<mcp::node_sync>(capability, chain_store, chain, cache, TQ, AQ, sync_async, steady_clock, bg_io_service));
+		std::shared_ptr<mcp::node_sync> sync(std::make_shared<mcp::node_sync>(capability, chain_store, chain, cache, TQ, AQ, sync_async, bg_io_service));
 		capability->set_sync(sync);
 		chain->set_complete_store_notice_func(
 			std::bind(&mcp::node_sync::put_hash_tree_summaries, sync, std::placeholders::_1)
 		);
 
 		/// block processor
-		std::shared_ptr<mcp::block_processor> processor(std::make_shared<mcp::block_processor>(error, chain_store, cache, chain, sync, capability, validation, sync_async, TQ, AQ, steady_clock, block_arrival, bg_io_service, invalid_block_cache, alarm));
+		std::shared_ptr<mcp::block_processor> processor(std::make_shared<mcp::block_processor>(error, chain_store, cache, chain, sync, capability, validation, sync_async, TQ, AQ, bg_io_service, alarm));
 		if (error)
 			return;
 		capability->set_processor(processor);
@@ -806,7 +796,7 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 		///wallet
 		std::shared_ptr<mcp::wallet> wallet(std::make_shared<mcp::wallet>(chain_store, cache, key_manager, TQ));
 		//host
-		std::shared_ptr<mcp::p2p::host> host(std::make_shared<mcp::p2p::host>(error, config.p2p, io_service, seed, steady_clock, data_path));
+		std::shared_ptr<mcp::p2p::host> host(std::make_shared<mcp::p2p::host>(error, config.p2p, io_service, seed, data_path));
 		if (error)
 		{
 			std::cerr << "host initializing error\n";
@@ -821,7 +811,7 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 		{
 			mcp::error_message error_msg;
 			witness = std::make_shared<mcp::witness>(error_msg,
-				ledger, key_manager, chain_store, alarm, composer, chain, processor, cache, TQ,
+				key_manager, chain_store, alarm, composer, chain, processor, cache, TQ,
 				config.witness.account_or_file, config.witness.password);
 
 			if (error_msg.error)

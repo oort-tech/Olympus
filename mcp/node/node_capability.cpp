@@ -1,21 +1,20 @@
 #include "node_capability.hpp"
 #include "requesting.hpp"
+#include "arrival.hpp"
 #include <fstream>
 
 mcp::node_capability::node_capability(
 	boost::asio::io_service& io_service_a, mcp::block_store& store_a,
-	mcp::fast_steady_clock& steady_clock_a, std::shared_ptr<mcp::block_cache> cache_a,
-	std::shared_ptr<mcp::async_task> async_task_a, std::shared_ptr<mcp::block_arrival> block_arrival_a,
+	std::shared_ptr<mcp::block_cache> cache_a,
+	std::shared_ptr<mcp::async_task> async_task_a,
 	std::shared_ptr<mcp::TransactionQueue> tq,
 	std::shared_ptr<mcp::ApproveQueue> aq
 	)
     :icapability(p2p::capability_desc("mcp", 0), (unsigned)mcp::sub_packet_type::packet_count),
 	m_io_service(io_service_a),
 	m_store(store_a),
-	m_steady_clock(steady_clock_a),
 	m_cache(cache_a),
 	m_async_task(async_task_a),
-	m_block_arrival(block_arrival_a),
 	m_tq(tq),
 	m_aq(aq),
     m_stopped(false),
@@ -98,7 +97,7 @@ void mcp::node_capability::on_disconnect(std::shared_ptr<p2p::peer> peer_a)
 
 void mcp::node_capability::request_block_timeout()
 {
-	uint64_t now = m_steady_clock.now_since_epoch();
+	uint64_t now = SteadyClock.now_since_epoch();
 
 	std::list<mcp::requesting_item> requests;
 	{
@@ -528,8 +527,8 @@ bool mcp::node_capability::read_packet(std::shared_ptr<p2p::peer> peer_a, unsign
 						mcp::db::db_transaction transaction(m_store.create_transaction());
 						if (!m_cache->block_exists(transaction, *hash))
 						{
-							m_block_arrival->remove(*hash);
-							uint64_t _time = m_steady_clock.now_since_epoch();
+							BlockArrival.remove(*hash);
+							uint64_t _time = SteadyClock.now_since_epoch();
 							mcp::requesting_item item(peer_a->remote_node_id(), *hash, mcp::requesting_block_cause::request_peer_info, _time);
 							m_sync->request_new_missing_joints(item);
 						}
@@ -554,8 +553,7 @@ bool mcp::node_capability::read_packet(std::shared_ptr<p2p::peer> peer_a, unsign
 						mcp::db::db_transaction transaction(m_store.create_transaction());
 						if (!m_cache->transaction_exists(transaction, *hash))
 						{
-							//m_block_arrival->remove(*hash);
-							uint64_t _time = m_steady_clock.now_since_epoch();
+							uint64_t _time = SteadyClock.now_since_epoch();
 
 							mcp::requesting_item item(peer_a->remote_node_id(), *hash, mcp::requesting_block_cause::request_peer_info, _time);
 							m_sync->request_new_missing_transactions(item);
@@ -581,8 +579,7 @@ bool mcp::node_capability::read_packet(std::shared_ptr<p2p::peer> peer_a, unsign
 						mcp::db::db_transaction transaction(m_store.create_transaction());
 						if (!m_cache->approve_exists(transaction, *hash))
 						{
-							//m_block_arrival->remove(*hash);
-							uint64_t _time = m_steady_clock.now_since_epoch();
+							uint64_t _time = SteadyClock.now_since_epoch();
 
 							mcp::requesting_item item(peer_a->remote_node_id(), *hash, mcp::requesting_block_cause::request_peer_info, _time);
 							m_sync->request_new_missing_approves(item);
@@ -614,7 +611,7 @@ bool mcp::node_capability::read_packet(std::shared_ptr<p2p::peer> peer_a, unsign
 							mcp::peer_info &pi(m_peers.at(id));
 							if (auto p = pi.try_lock_peer())
 							{
-								std::chrono::steady_clock::time_point now(m_steady_clock.now());
+								std::chrono::steady_clock::time_point now(SteadyClock.now());
 								if (now - pi.last_hanlde_peer_info_request_time > std::chrono::milliseconds(COLLECT_PEER_INFO_INTERVAL / 2))
 								{
 									pi.last_hanlde_peer_info_request_time = now;

@@ -70,7 +70,7 @@ namespace mcp
 			std::shared_ptr<mcp::node_capability> capability_a, mcp::block_store& store_a,
 			std::shared_ptr<mcp::chain> chain_a, std::shared_ptr<mcp::block_cache> cache_a,
 			std::shared_ptr<mcp::TransactionQueue> tq, std::shared_ptr<mcp::ApproveQueue> aq, std::shared_ptr<mcp::async_task> async_task_a,
-			mcp::fast_steady_clock& steady_clock_a, boost::asio::io_service & io_service_a
+			boost::asio::io_service & io_service_a
 		);
 		~node_sync() { stop(); }
 		void set_processor(std::shared_ptr<mcp::block_processor> block_processor_a) { m_block_processor = block_processor_a; }
@@ -169,7 +169,6 @@ namespace mcp
 		std::shared_ptr<mcp::block_cache> m_cache;
 		std::shared_ptr<mcp::block_processor> m_block_processor;
 		std::shared_ptr<mcp::async_task> m_async_task;
-		mcp::fast_steady_clock& m_steady_clock;
 		std::shared_ptr<TransactionQueue> m_tq;                  ///< Maintains a list of incoming transactions not yet in a block on the blockchain.
 		std::shared_ptr<ApproveQueue> m_aq;                  ///< Maintains a list of incoming approve not yet in a block on the blockchain.
 

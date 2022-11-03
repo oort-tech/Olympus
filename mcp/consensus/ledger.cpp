@@ -332,3 +332,8 @@ bool mcp::ledger::check_stable(mcp::db::db_transaction & transaction_a, std::sha
 	//	LOG(m_log.debug) << "check stable return true3, search count:" << search_count;
 	return true;
 }
+
+namespace mcp
+{
+	ledger Ledger;
+}

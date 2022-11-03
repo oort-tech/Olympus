@@ -1,6 +1,5 @@
 #pragma once
 
-#include <mcp/consensus/ledger.hpp>
 #include <mcp/common/alarm.hpp>
 #include <mcp/wallet/wallet.hpp>
 #include <mcp/node/chain.hpp>
@@ -25,7 +24,7 @@ namespace mcp
 	{
 	public:
 		witness(mcp::error_message & error_msg, 
-			mcp::ledger& ledger_a, std::shared_ptr<mcp::key_manager> key_manager_a,
+			std::shared_ptr<mcp::key_manager> key_manager_a,
 			mcp::block_store& store_a, std::shared_ptr<mcp::alarm> alarm_a,
 			std::shared_ptr<mcp::composer> composer_a, std::shared_ptr<mcp::chain> chain_a,
 			std::shared_ptr<mcp::block_processor> block_processor_a,
@@ -42,7 +41,6 @@ namespace mcp
 	private:
 		void do_witness();
 
-		mcp::ledger & m_ledger;
 		mcp::block_store m_store;
 		std::shared_ptr<mcp::alarm> m_alarm;
 		std::shared_ptr<mcp::chain> m_chain;

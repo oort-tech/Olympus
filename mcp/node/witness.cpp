@@ -1,15 +1,15 @@
 #include <mcp/node/witness.hpp>
 #include <mcp/core/genesis.hpp>
+#include <mcp/consensus/ledger.hpp>
 
 mcp::witness::witness(mcp::error_message & error_msg,
-	mcp::ledger& ledger_a, std::shared_ptr<mcp::key_manager> key_manager_a,
+	std::shared_ptr<mcp::key_manager> key_manager_a,
 	mcp::block_store& store_a, std::shared_ptr<mcp::alarm> alarm_a,
 	std::shared_ptr<mcp::composer> composer_a, std::shared_ptr<mcp::chain> chain_a,
 	std::shared_ptr<mcp::block_processor> block_processor_a,
 	std::shared_ptr<mcp::block_cache> cache_a, std::shared_ptr<TransactionQueue> tq,
 	std::string const & account_or_file_text, std::string const & password_a
 ) :
-	m_ledger(ledger_a),
 	m_store(store_a),
 	m_alarm(alarm_a),
 	m_composer(composer_a),
@@ -136,7 +136,7 @@ void mcp::witness::check_and_witness()
 	}	
 
 	//check majority different of witnesses
-	bool is_diff_majority(m_ledger.check_majority_witness(transaction, m_cache, mc_block_hash, m_account, w_param));
+	bool is_diff_majority(Ledger.check_majority_witness(transaction, m_cache, mc_block_hash, m_account, w_param));
 	if (!is_diff_majority)
 	{
 		witness_majority_count++;

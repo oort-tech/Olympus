@@ -27,7 +27,7 @@ namespace mcp
 	public:
 		TransactionQueue(
 			boost::asio::io_service& io_service_a, mcp::block_store& store_a, std::shared_ptr<mcp::block_cache> cache_a,std::shared_ptr<mcp::chain> chain_a,
-			std::shared_ptr<mcp::async_task> async_task_a, mcp::fast_steady_clock& steady_clock_a
+			std::shared_ptr<mcp::async_task> async_task_a
 		);
 		~TransactionQueue();
 
@@ -111,15 +111,6 @@ namespace mcp
 			std::map<u256, std::shared_ptr<Transaction>> txs;
 		};
 		txList newTxList() { return txList(); }
-		//struct redundancyList
-		//{
-		//	redundancyList() {}
-		//	bool add(std::shared_ptr<Transaction> _t);
-		//	u256 maxNonce() const { assert_x(txs.size()); return txs.rbegin()->first; }
-		//	u256 minNonce() const { assert_x(txs.size()); return txs.begin()->first; }
-		//	std::map<u256, std::unordered_set<std::shared_ptr<Transaction>>> txs;
-		//};
-		//redundancyList newRedundancyList() { return redundancyList(); }
 
 		/// Transaction pending verification
 		struct UnverifiedTransaction
@@ -172,7 +163,6 @@ namespace mcp
 		std::unordered_map<h256, std::shared_ptr<Transaction>> all;///All transactions to allow lookups
 		std::unordered_map<Address, txList> queue;///< ready Transactions grouped by account and nonce
 		std::unordered_map<Address, txList> pending;///< future Transactions grouped by account and nonce
-		//std::unordered_map<Address, txList> redundancy;///redundancy Transactions grouped by account and nonce.Each nonce may correspond to multiple transactions.
 
 		unsigned m_futureLimit;														///< Max number of future transactions
 		unsigned m_futureSize = 0;													///< Current number of future transactions
@@ -200,7 +190,6 @@ namespace mcp
 		std::shared_ptr<mcp::chain> m_chain;
 		std::shared_ptr<mcp::async_task> m_async_task;
 		std::shared_ptr<mcp::node_capability> m_capability;
-		mcp::fast_steady_clock& m_steady_clock;
 
 		mcp::log m_log = { mcp::log("node") };
 	};

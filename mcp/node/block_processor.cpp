@@ -1,4 +1,5 @@
 #include "block_processor.hpp"
+#include "arrival.hpp"
 #include <mcp/common/stopwatch.hpp>
 #include <mcp/core/genesis.hpp>
 #include <libdevcore/CommonJS.h>
@@ -52,9 +53,7 @@ mcp::block_processor::block_processor(bool & error_a,
 	std::shared_ptr<mcp::chain> chain_a, std::shared_ptr<mcp::node_sync> sync_a,
 	std::shared_ptr<mcp::node_capability> capability_a, std::shared_ptr<mcp::validation> validation_a,
 	std::shared_ptr<mcp::async_task> async_task_a, std::shared_ptr<TransactionQueue> tq, std::shared_ptr<ApproveQueue> aq,
-	mcp::fast_steady_clock& steady_clock_a, std::shared_ptr<mcp::block_arrival> block_arrival_a,
-	boost::asio::io_service &io_service_a,
-	mcp::mru_list<mcp::block_hash>& invalid_block_cache_a, std::shared_ptr<mcp::alarm> alarm_a
+	boost::asio::io_service &io_service_a, std::shared_ptr<mcp::alarm> alarm_a
 ):
 	m_store(store_a),
 	m_cache(cache_a),
@@ -65,14 +64,11 @@ mcp::block_processor::block_processor(bool & error_a,
 	m_async_task(async_task_a),
 	m_tq(tq),
 	m_aq(aq),
-	m_steady_clock(steady_clock_a),
-	m_block_arrival(block_arrival_a),
-	m_invalid_block_cache(invalid_block_cache_a),
 	m_alarm(alarm_a),
 	m_stopped(false),
 	m_local_cache(std::make_shared<process_block_cache>(cache_a, store_a, tq, aq)),
 	m_last_request_unknown_missing_time(std::chrono::steady_clock::now()),
-	unhandle(std::make_shared<mcp::unhandle_cache>(block_arrival_a, tq, aq))
+	unhandle(std::make_shared<mcp::unhandle_cache>(tq, aq))
 {
 	if (error_a)
 		return;
@@ -184,7 +180,7 @@ void mcp::block_processor::add_item(std::shared_ptr<mcp::block_processor_item> i
 		if (is_full() && item_a->joint.level != mcp::joint_processor_level::request)
 			return;
 
-		if (m_block_arrival->recent(block_hash) && item_a->joint.level != mcp::joint_processor_level::request)
+		if (BlockArrival.recent(block_hash) && item_a->joint.level != mcp::joint_processor_level::request)
 		{
 			//LOG(m_log.debug) << "Recent block:" << block_hash.hex();
 
@@ -197,7 +193,7 @@ void mcp::block_processor::add_item(std::shared_ptr<mcp::block_processor_item> i
 	{
 		//LOG(m_log.debug) << "Add recent block:" << block_hash.hex();
 
-		m_block_arrival->add(block_hash);
+		BlockArrival.add(block_hash);
 	}
 
 	if (item_a->is_local())
@@ -314,7 +310,7 @@ void mcp::block_processor::mt_process_blocks()
 									LOG(m_log.debug) << err_msg;
 
 									//cache invalid block
-									m_invalid_block_cache.add(block_hash);
+									InvalidBlockCache.add(block_hash);
 									break;
 								}
 								case base_validate_result_codes::known_invalid_block:
@@ -594,7 +590,7 @@ void mcp::block_processor::do_process_one(std::shared_ptr<mcp::block_processor_i
 			LOG(m_log.info) << boost::str(boost::format("Invalid block: %1%, error message: %2%") % block_hash.hex() % result.err_msg);
 			assert_x(!item->is_local());
 			//cache invalid block
-			m_invalid_block_cache.add(block_hash);
+			InvalidBlockCache.add(block_hash);
 			break;
 		}
 		case mcp::validate_result_codes::parents_and_previous_include_invalid_block:
@@ -602,7 +598,7 @@ void mcp::block_processor::do_process_one(std::shared_ptr<mcp::block_processor_i
 			LOG(m_log.info) << boost::str(boost::format("Invalid block: %1%, error message: %2%") % block_hash.hex() % result.err_msg);
 			assert_x(!item->is_local());
 			//cache invalid block
-			m_invalid_block_cache.add(block_hash);
+			InvalidBlockCache.add(block_hash);
 			break;
 		}
 		case mcp::validate_result_codes::known_invalid_block:
@@ -720,7 +716,7 @@ void mcp::block_processor::process_missing(std::shared_ptr<mcp::block_processor_
 	if (r == unhandle_add_result::Success)
 	{
 		//to request missing_parents_and_previous
-		uint64_t now = m_steady_clock.now_since_epoch();
+		uint64_t now = SteadyClock.now_since_epoch();
 		for (auto it = missings.begin(); it != missings.end(); it++)
 		{
 			//LOG(m_log.info) << "process_missing, block:" << item_a->block_hash.hex() << " ,parent:" << (*it).hex();
@@ -767,7 +763,7 @@ void mcp::block_processor::process_existing_missing(mcp::p2p::node_id const & re
 		if (!missings.empty())
 		{
 			//LOG(m_log.info) << "[process_existing_missing] missings.size=" << missings.size();
-			uint64_t now = m_steady_clock.now_since_epoch();
+			uint64_t now = SteadyClock.now_since_epoch();
 			for (auto it = missings.begin(); it != missings.end(); it++)
 			{
 				//LOG(m_log.info) << "[process_existing_missing] parent:" << (*it).hex();
@@ -779,7 +775,7 @@ void mcp::block_processor::process_existing_missing(mcp::p2p::node_id const & re
 		if (!light_missings.empty())
 		{
 			//LOG(m_log.info) << "[process_existing_missing] transaction.size=" << light_missings.size();
-			uint64_t now = m_steady_clock.now_since_epoch();
+			uint64_t now = SteadyClock.now_since_epoch();
 			for (auto it = light_missings.begin(); it != light_missings.end(); it++)
 			{
 				//LOG(m_log.info) << "[process_existing_missing] transaction:" << (*it).hex();
@@ -791,7 +787,7 @@ void mcp::block_processor::process_existing_missing(mcp::p2p::node_id const & re
 		if (!approve_missings.empty())
 		{
     		//LOG(m_log.info) << "[process_existing_missing] approve_missings.size="<<approve_missings.size();
-			uint64_t now = m_steady_clock.now_since_epoch();
+			uint64_t now = SteadyClock.now_since_epoch();
 			for (auto it = approve_missings.begin(); it != approve_missings.end(); it++)
 			{
 				mcp::requesting_item request_item(remote_node_id, *it, mcp::requesting_block_cause::existing_unknown, now);
@@ -826,7 +822,7 @@ void mcp::block_processor::try_remove_invalid_unhandle(mcp::block_hash const & b
 	{
 		mcp::block_hash const &invalid_hash(invalid_hashs.front());
 		invalid_hashs.pop();
-		m_invalid_block_cache.add(invalid_hash);
+		InvalidBlockCache.add(invalid_hash);
 		std::unordered_set<std::shared_ptr<mcp::block_processor_item>> unhandle_items = unhandle->release_dependency(invalid_hash);
 		for (auto const &p : unhandle_items)
 		{
@@ -929,8 +925,8 @@ std::string mcp::block_processor::get_processor_info()
 		+ " ,m_ok_local_dag_promises:" + std::to_string(m_ok_local_promises.size())
 		+ " ,ok:" + std::to_string(block_processor_add)
 		+ ", recent block:" + std::to_string(block_processor_recent_block_size)
-		+ ", invalid:" + std::to_string(m_invalid_block_cache.size())
-		+ ", block arrival, " + std::to_string(m_block_arrival->arrival.size())
+		+ ", invalid:" + std::to_string(InvalidBlockCache.size())
+		+ ", block arrival, " + std::to_string(BlockArrival.arrival.size())
 		;
 
     blocks_missing_size = 0;

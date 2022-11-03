@@ -57,7 +57,7 @@ mcp::node_sync::node_sync(
 	std::shared_ptr<mcp::node_capability> capability_a, mcp::block_store& store_a,
 	std::shared_ptr<mcp::chain> chain_a, std::shared_ptr<mcp::block_cache> cache_a,
 	std::shared_ptr<mcp::TransactionQueue> tq, std::shared_ptr<mcp::ApproveQueue> aq, std::shared_ptr<mcp::async_task> async_task_a,
-	mcp::fast_steady_clock& steady_clock_a, boost::asio::io_service & io_service_a
+	boost::asio::io_service & io_service_a
 ) :
 	m_capability(capability_a),
 	m_store(store_a),
@@ -66,7 +66,6 @@ mcp::node_sync::node_sync(
 	m_tq(tq),
 	m_aq(aq),
 	m_async_task(async_task_a),
-	m_steady_clock(steady_clock_a),
 	m_stoped(false),
 	m_task_clear_flag(false)
 {
@@ -2178,7 +2177,7 @@ void mcp::node_sync::send_peer_info_request(p2p::node_id id)
 			mcp::peer_info &pi(m_capability->m_peers.at(id));
 			if (auto p = pi.try_lock_peer())
 			{
-				std::chrono::steady_clock::time_point now(m_steady_clock.now());
+				std::chrono::steady_clock::time_point now(SteadyClock.now());
 				if (now - pi.last_peer_info_request_time > std::chrono::microseconds(node_capability::COLLECT_PEER_INFO_INTERVAL / 4))
 				{
 					pi.last_peer_info_request_time = now;

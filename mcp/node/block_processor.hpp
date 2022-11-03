@@ -13,7 +13,6 @@
 #include <mcp/consensus/validation.hpp>
 #include <mcp/common/async_task.hpp>
 #include <mcp/common/alarm.hpp>
-#include <mcp/node/arrival.hpp>
 
 #include <chrono>
 #include <queue>
@@ -84,9 +83,7 @@ namespace mcp
 			std::shared_ptr<mcp::chain> chain_a, std::shared_ptr<mcp::node_sync> sync_a,
 			std::shared_ptr<mcp::node_capability> capability_a, std::shared_ptr<mcp::validation> validation_a,
 			std::shared_ptr<mcp::async_task> async_task_a, std::shared_ptr<TransactionQueue> tq, std::shared_ptr<ApproveQueue> aq,
-			mcp::fast_steady_clock& steady_clock_a, std::shared_ptr<mcp::block_arrival> block_arrival_a,
-			boost::asio::io_service &io_service_a,
-			mcp::mru_list<mcp::block_hash>& invalid_block_cache_a, std::shared_ptr<mcp::alarm> alarm_a
+			boost::asio::io_service &io_service_a, std::shared_ptr<mcp::alarm> alarm_a
 		);
 		~block_processor();
 		void stop();
@@ -136,10 +133,7 @@ namespace mcp
 		std::shared_ptr<mcp::node_sync> m_sync;
 		std::shared_ptr<mcp::node_capability> m_capability;
 		std::shared_ptr<mcp::validation> m_validation;
-		mcp::fast_steady_clock& m_steady_clock;
 		std::shared_ptr<mcp::async_task> m_async_task;
-		std::shared_ptr<mcp::block_arrival> m_block_arrival;
-		mcp::mru_list<mcp::block_hash> m_invalid_block_cache;
 		std::shared_ptr<mcp::alarm> m_alarm;
 		std::shared_ptr<TransactionQueue> m_tq;                  ///< Maintains a list of incoming transactions not yet in a block on the blockchain.
 		std::shared_ptr<ApproveQueue> m_aq;                  ///< Maintains a list of incoming approves not yet in a block on the blockchain.

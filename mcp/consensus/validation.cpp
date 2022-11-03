@@ -1,19 +1,17 @@
 #include "validation.hpp"
+#include "ledger.hpp"
 #include <mcp/core/genesis.hpp>
 #include <mcp/common/stopwatch.hpp>
 #include <mcp/common/log.hpp>
 
 mcp::validation::validation(
-	mcp::block_store& store_a, mcp::ledger& ledger_a,
-	mcp::mru_list<mcp::block_hash>& invalid_block_cache_a,
+	mcp::block_store& store_a,
 	std::shared_ptr<mcp::block_cache> cache_a,
 	std::shared_ptr<mcp::iTransactionQueue> tq,
 	std::shared_ptr<mcp::iApproveQueue> aq
 ) :
 	m_store(store_a),
-	m_ledger(ledger_a),
 	m_graph(store_a),
-	m_invalid_block_cache(invalid_block_cache_a),
 	m_cache(cache_a),
 	m_tq(tq),
 	m_aq(aq)
@@ -36,7 +34,7 @@ mcp::base_validate_result mcp::validation::base_validate(mcp::db::db_transaction
 	mcp::base_validate_result result;
 
 	//check if block is in invalid block cache;
-	if (!item_a->is_local() && m_invalid_block_cache.contains(block_hash))
+	if (!item_a->is_local() && InvalidBlockCache.contains(block_hash))
 	{
 		result.code = mcp::base_validate_result_codes::known_invalid_block;
 		return result;
@@ -112,7 +110,7 @@ mcp::validate_result mcp::validation::dag_validate(mcp::db::db_transaction & tra
 		std::shared_ptr<mcp::block> previous_block = cache_a->block_get(transaction_a, previous);
 		if (!previous_block)
 		{
-			if (m_invalid_block_cache.contains(previous))
+			if (InvalidBlockCache.contains(previous))
 			{
 				result.code = mcp::validate_result_codes::parents_and_previous_include_invalid_block;
 				result.err_msg = boost::str(boost::format("Invalid missing previous, hash: %1%") % previous.hex());
@@ -148,7 +146,7 @@ mcp::validate_result mcp::validation::dag_validate(mcp::db::db_transaction & tra
 		std::shared_ptr<mcp::block> pblock(cache_a->block_get(transaction_a, pblock_hash));
 		if (!pblock)
 		{
-			if (m_invalid_block_cache.contains(previous))
+			if (InvalidBlockCache.contains(previous))
 			{
 				result.code = mcp::validate_result_codes::parents_and_previous_include_invalid_block;
 				result.err_msg = boost::str(boost::format("Invalid missing parent, hash: %1%") % pblock_hash.hex());
@@ -319,7 +317,7 @@ mcp::validate_result mcp::validation::dag_validate(mcp::db::db_transaction & tra
 	}
 
 	//check best parent
-	mcp::block_hash best_pblock_hash(m_ledger.determine_best_parent(transaction_a, cache_a, parents));
+	mcp::block_hash best_pblock_hash(Ledger.determine_best_parent(transaction_a, cache_a, parents));
 	if (best_pblock_hash == mcp::block_hash(0))
 	{
 		result.code = mcp::validate_result_codes::invalid_block;
@@ -330,7 +328,7 @@ mcp::validate_result mcp::validation::dag_validate(mcp::db::db_transaction & tra
 	mcp::witness_param const & w_param(mcp::param::witness_param(mcp::approve::calc_curr_epoch(last_summary_mci)));
 
 	//check majority different of witnesses
-	bool is_diff_majority(m_ledger.check_majority_witness(transaction_a, cache_a, best_pblock_hash, block->from(), w_param));
+	bool is_diff_majority(Ledger.check_majority_witness(transaction_a, cache_a, best_pblock_hash, block->from(), w_param));
 	if (!is_diff_majority)
 	{
 		result.code = mcp::validate_result_codes::invalid_block;
@@ -428,7 +426,7 @@ mcp::validate_result mcp::validation::dag_validate(mcp::db::db_transaction & tra
 		{
 			//mcp::stopwatch_guard sw("validate:last stable block stable1_1");
 
-			bool is_last_stable_stable = m_ledger.check_stable(transaction_a, cache_a, last_stable_block_hash, best_pblock_hash, parents, block->from(), max_p_last_stable_block_hash, w_param);
+			bool is_last_stable_stable = Ledger.check_stable(transaction_a, cache_a, last_stable_block_hash, best_pblock_hash, parents, block->from(), max_p_last_stable_block_hash, w_param);
 			if (!is_last_stable_stable)
 			{
 				auto bp_block_state = cache_a->block_state_get(transaction_a, best_pblock_hash);
@@ -450,7 +448,7 @@ mcp::validate_result mcp::validation::dag_validate(mcp::db::db_transaction & tra
 			bool exists(!m_store.main_chain_get(transaction_a, last_stable_block_mci + 1, next_mc_hash));
 			if (exists)
 			{
-				bool is_next_mc_block_stable(m_ledger.check_stable(transaction_a, cache_a, next_mc_hash, best_pblock_hash,
+				bool is_next_mc_block_stable(Ledger.check_stable(transaction_a, cache_a, next_mc_hash, best_pblock_hash,
 					parents, block->from(), last_stable_block_hash, w_param));
 				if (is_next_mc_block_stable)
 				{

@@ -9,12 +9,12 @@
 #include <mcp/core/config.hpp>
 #include <mcp/node/witness.hpp>
 #include <mcp/node/approve_queue.hpp>
+#include <mcp/consensus/ledger.hpp>
 
 #include <queue>
 
-mcp::chain::chain(mcp::block_store& store_a, mcp::ledger& ledger_a) :
+mcp::chain::chain(mcp::block_store& store_a) :
 	m_store(store_a),
-	m_ledger(ledger_a),
 	m_stopped(false)
 {
 }
@@ -497,11 +497,11 @@ void mcp::chain::write_dag_block(mcp::db::db_transaction & transaction_a, std::s
 	mcp::witness_param const & w_param(mcp::param::witness_param(mcp::approve::calc_curr_epoch(last_summary_mci)));
 
 	//best parent
-	mcp::block_hash best_pblock_hash(m_ledger.determine_best_parent(transaction_a, cache_a, block_a->parents()));
+	mcp::block_hash best_pblock_hash(Ledger.determine_best_parent(transaction_a, cache_a, block_a->parents()));
 	//level
-	level = m_ledger.calc_level(transaction_a, cache_a, best_pblock_hash);
+	level = Ledger.calc_level(transaction_a, cache_a, best_pblock_hash);
 	//witnessed level
-	uint64_t witnessed_level(m_ledger.calc_witnessed_level(w_param, level));
+	uint64_t witnessed_level(Ledger.calc_witnessed_level(w_param, level));
 
 	std::shared_ptr<mcp::block_state> state(std::make_shared<mcp::block_state>());
 	state->status = mcp::block_status::unknown;

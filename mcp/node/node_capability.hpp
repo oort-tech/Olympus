@@ -8,7 +8,6 @@
 #include <mcp/p2p/peer.hpp>
 #include <mcp/node/sync.hpp>
 #include <mcp/common/async_task.hpp>
-#include <mcp/node/arrival.hpp>
 
 #include <thread>
 
@@ -92,8 +91,8 @@ namespace mcp
 		friend class node_sync;
 	public:
 		node_capability(boost::asio::io_service &io_service_a, mcp::block_store& store_a,
-			mcp::fast_steady_clock& steady_clock_a, std::shared_ptr<mcp::block_cache> cache_a,
-			std::shared_ptr<mcp::async_task> async_task_a, std::shared_ptr<mcp::block_arrival> block_arrival_a,
+			std::shared_ptr<mcp::block_cache> cache_a,
+			std::shared_ptr<mcp::async_task> async_task_a,
 			std::shared_ptr<mcp::TransactionQueue> tq,
 			std::shared_ptr<mcp::ApproveQueue> aq
 		);
@@ -163,12 +162,10 @@ namespace mcp
 
 		boost::asio::io_service& m_io_service;
 		mcp::block_store m_store;
-		mcp::fast_steady_clock& m_steady_clock;
 		std::shared_ptr<mcp::block_cache> m_cache;
 		std::shared_ptr<mcp::node_sync> m_sync;
 		std::shared_ptr<mcp::block_processor> m_block_processor;
 		std::shared_ptr<mcp::async_task> m_async_task;
-		std::shared_ptr<mcp::block_arrival> m_block_arrival;
 		std::shared_ptr<TransactionQueue> m_tq;                  ///< Maintains a list of incoming transactions not yet in a block on the blockchain.
 		std::shared_ptr<ApproveQueue> m_aq;
 	};

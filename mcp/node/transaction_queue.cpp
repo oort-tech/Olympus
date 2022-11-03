@@ -15,13 +15,12 @@ namespace mcp
 
 	TransactionQueue::TransactionQueue(
 		boost::asio::io_service& io_service_a, mcp::block_store& store_a, std::shared_ptr<mcp::block_cache> cache_a, std::shared_ptr<mcp::chain> chain_a,
-		std::shared_ptr<mcp::async_task> async_task_a, mcp::fast_steady_clock& steady_clock_a
+		std::shared_ptr<mcp::async_task> async_task_a
 	):
 		m_store(store_a),
 		m_cache(cache_a),
 		m_chain(chain_a),
 		m_async_task(async_task_a),
-		m_steady_clock(steady_clock_a),
 		m_dropped(c_maxDroppedTransactionCount),
 		m_futureLimit(c_maxFutureTransactionCount)
 	{
@@ -306,7 +305,7 @@ namespace mcp
 			auto delt = queue[from].erase(nonce);
 			if (delt->sha3() != _txHash)/// not the hash,but deleted from queue,put it to delete queue,delete it 2 minutes later
 			{
-				auto now = m_steady_clock.now();
+				auto now = SteadyClock.now();
 				if (!m_superfluous.count(now))
 					m_superfluous.emplace(now, h256Set());
 				m_superfluous[now].emplace(delt->sha3());
@@ -498,7 +497,7 @@ namespace mcp
 			UpgradableGuard l(m_lock);
 			if (m_superfluous.size())
 			{
-				auto now = m_steady_clock.now();
+				auto now = SteadyClock.now();
 				UpgradeGuard ul(l);
 				auto ft = m_superfluous.begin();
 				while (ft != m_superfluous.end())

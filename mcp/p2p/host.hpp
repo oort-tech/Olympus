@@ -43,7 +43,7 @@ namespace mcp
         {
         public:
             host(bool & error_a, p2p_config const & config_a, boost::asio::io_service & io_service_a, dev::Secret const & node_key, 
-				mcp::fast_steady_clock& steady_clock_a, boost::filesystem::path const & application_path_a);
+				boost::filesystem::path const & application_path_a);
 			~host() { stop(); }
             void start();
             void stop();
@@ -120,7 +120,6 @@ namespace mcp
 
             boost::posix_time::milliseconds const handshake_timeout = boost::posix_time::milliseconds(5000);
 
-			mcp::fast_steady_clock& m_steady_clock;
 			std::shared_ptr<peer_manager> m_peer_manager;
             std::unique_ptr<upnp> up;
             mcp::log m_log = { mcp::log("p2p") };
