@@ -153,9 +153,6 @@ void mcp::node_sync::transaction_request_handler(p2p::node_id const &id, mcp::tr
 			if (nullptr == t) /// not existed
 				return;
 		}
-
-		//mcp::joint_message joint(block);
-		//joint.request_id = request.request_id;
 		send_transaction(id, *t);
 	}
 	catch (const std::exception& e)
@@ -2148,7 +2145,7 @@ void mcp::node_sync::send_transaction_request(p2p::node_id const & id, mcp::tran
 			message.stream_RLP(s);
 			p->send(s);
 
-			//LOG(log_sync.info) << "id:" << id .to_string() << " , send_transaction_request hash:" << message.hash.hex();
+			//LOG(log_sync.info) << "id:" << id.hex() << " , send_transaction_request hash:" << message.hash.hex();
 		}
 	}
 }

@@ -334,11 +334,11 @@ namespace mcp
 				if (!pending[_t->from()].size()) ///if have no transactions in pending delete it.
 					pending.erase(_t->from());
 				m_futureSize -= cur.size();
-				for (auto t : cur) ///move to queue
+				for (auto td : cur) ///move to queue
 				{
-					queue[_t->sender()].add(t);
-					all[t->sha3()] = t;
-					m_onReady(_t->sha3());
+					queue[_t->sender()].add(td);
+					all[td->sha3()] = td;
+					m_onReady(td->sha3());
 				}
 			}
 		}
