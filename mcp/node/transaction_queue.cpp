@@ -8,10 +8,10 @@ namespace mcp
 	using namespace std;
 	using namespace dev;
 
-	constexpr size_t c_maxAccountFuturePendingSize = 64;
+	constexpr size_t c_maxAccountPendingSize = 64;
 	constexpr size_t c_maxVerificationQueueSize = 40960;
 	constexpr size_t c_maxDroppedTransactionCount = 100000;
-	constexpr size_t c_maxFutureTransactionCount = 100000;
+	constexpr size_t c_maxPendingTransactionCount = 100000;
 
 	TransactionQueue::TransactionQueue(
 		boost::asio::io_service& io_service_a, mcp::block_store& store_a, std::shared_ptr<mcp::block_cache> cache_a, std::shared_ptr<mcp::chain> chain_a,
@@ -22,7 +22,7 @@ namespace mcp
 		m_chain(chain_a),
 		m_async_task(async_task_a),
 		m_dropped(c_maxDroppedTransactionCount),
-		m_futureLimit(c_maxFutureTransactionCount)
+		m_pendingLimit(c_maxPendingTransactionCount)
 	{
 		unsigned verifierThreads = std::max(thread::hardware_concurrency(), 3U) - 2U;
 		for (unsigned i = 0; i < verifierThreads; ++i)
@@ -135,30 +135,30 @@ namespace mcp
 			// Bomb out if there's a prior transaction with higher gas price.
 			
 			// If valid, append to transactions.
-			auto r = isFuture_WITH_LOCK(_t);
-			if (NonceRange::TooLow == r)///nonce too low, just request need insert.
+			auto r = isPending_WITH_LOCK(_t);
+			if (NonceRange::TooSmall == r)///nonce too low, just request need insert.
 			{
 				if (_in == source::request)
-					return insertCurrent_WITH_LOCK(_t, false);
+					return insertQueue_WITH_LOCK(_t, false);
 				else
 					return ImportResult::InvalidNonce;
 			}
 			if (NonceRange::TooBig == r)
 			{
 				if (_in == source::request)/// block liked.
-					r = NonceRange::Future;
+					r = NonceRange::Pending;
 				else
-					return ImportResult::FutureFull; ///account's transaction is full,the maximum cache size is c_maxAccountFuturePendingSize.
+					return ImportResult::FutureFull; ///account's transaction is full,the maximum cache size is c_maxAccountPendingSize.
 			}
-			if (NonceRange::Future == r)/// future
+			if (NonceRange::Pending == r)/// insert to pending
 			{
 				LOG(m_log.debug) << "Queued vaguely not legit-looking transaction " << _t->sha3().hex();
-				return insertFuture_WITH_LOCK(_t);
+				return insertPending_WITH_LOCK(_t);
 			}
-			else ///current
+			else ///insert to queue
 			{
 				LOG(m_log.debug) << "Queued vaguely legit-looking transaction " << _t->sha3().hex();
-				return insertCurrent_WITH_LOCK(_t);
+				return insertQueue_WITH_LOCK(_t);
 			}
 		}
 		catch (Exception const& _e)
@@ -179,7 +179,7 @@ namespace mcp
 		return maxNonce_WITH_LOCK(_a, blockTag);
 	}
 
-	/// return account's next nonce, not current nonce
+	/// return account's next nonce
 	u256 TransactionQueue::maxNonce_WITH_LOCK(Address const& _a, BlockNumber const blockTag) const
 	{
 		u256 ret = 0;
@@ -214,7 +214,7 @@ namespace mcp
 	}
 
 
-	ImportResult TransactionQueue::insertCurrent_WITH_LOCK(std::shared_ptr<Transaction> _t, bool includeQueue)
+	ImportResult TransactionQueue::insertQueue_WITH_LOCK(std::shared_ptr<Transaction> _t, bool includeQueue)
 	{
 		if (all.count(_t->sha3()))
 			assert_x(false);
@@ -238,13 +238,13 @@ namespace mcp
 		all[_t->sha3()] = _t;
 		m_known.insert(_t->sha3());
 		m_onReady(_t->sha3());
-		/// Move following transactions from future to current
-		makeCurrent_WITH_LOCK(_t);
+		/// Move following transactions from pending to queue
+		makeQueue_WITH_LOCK(_t);
 		
 		return ImportResult::Success;
 	}
 
-	ImportResult TransactionQueue::insertFuture_WITH_LOCK(std::shared_ptr<Transaction> _t)
+	ImportResult TransactionQueue::insertPending_WITH_LOCK(std::shared_ptr<Transaction> _t)
 	{
 		if (all.count(_t->sha3()))
 			assert_x(false);
@@ -257,18 +257,18 @@ namespace mcp
 			return ImportResult::OverbidGasPrice;
 		if (r.second)///replaced. remove replaced transaction from known.
 			m_known.erase(r.second->sha3());
-		else///not replaced, add future.
-			++m_futureSize;
+		else///not replaced, jsut insert.
+			++m_pendingSize;
 		m_known.insert(_t->sha3());
 
 		/// exceed the maximum limit, half of the pending will be deleted, delete from each account in turn, from back to front.
 		/// TODO: priority queue for future transactions
-		if (m_futureSize > m_futureLimit)
+		if (m_pendingSize > m_pendingLimit)
 		{
-			while (m_futureSize > m_futureLimit / 2)
+			while (m_pendingSize > m_pendingLimit / 2)
 			{
 				auto txl = pending.begin()->second;
-				m_futureSize -= txl.size();
+				m_pendingSize -= txl.size();
 				LOG(m_log.debug) << "Dropping out of bounds account transaction "
 					<< pending.begin()->first.hex();
 				for (auto t : txl.txs)
@@ -280,20 +280,12 @@ namespace mcp
 		return ImportResult::Success;
 	}
 
-
-	/// block A,B,C,D. A <-B <-D,A <-C <-D
-	/// processing sequence maybe A,B,C,D ands maybe A,C,B,D
-	/// there have two transaction,T1 and T2,used same from account and nonce. so that,one in m_currentByAddressAndNonce and another in m_sameCurrentByAddressAndNonce.
-	/// B links T1,C links T2. So both T1 and T2 could be saved first.However, if you delete according to the nonce, the second save may cause problems.
-	/// Therefore, if the first time in current then deleted it. 
-	/// if in sameCurrent not only delete it but also needs move the same account and nonce transaction in current to sameCurrent.because composer need get transaction hash from current queue.
-	/// todo: but if unlined transaction can not be removed. transaction stable can remove other same account and nonce?
 	bool TransactionQueue::remove_WITH_LOCK(h256 const& _txHash)
 	{
 		auto t = all.find(_txHash);
 		if (t == all.end())
 		{
-			LOG(m_log.debug) << "remove_WITH_LOCK Transaction hash" << _txHash.hex() << "already in current?!";
+			LOG(m_log.debug) << "remove_WITH_LOCK Transaction hash" << _txHash.hex() << "already in all?!";
 			return false;
 		}
 			
@@ -323,7 +315,7 @@ namespace mcp
 	}
 
 
-	void TransactionQueue::makeCurrent_WITH_LOCK(std::shared_ptr<Transaction> _t)
+	void TransactionQueue::makeQueue_WITH_LOCK(std::shared_ptr<Transaction> _t)
 	{
 		if (pending.count(_t->from()))
 		{
@@ -332,7 +324,7 @@ namespace mcp
 			{
 				if (!pending[_t->from()].size()) ///if have no transactions in pending delete it.
 					pending.erase(_t->from());
-				m_futureSize -= cur.size();
+				m_pendingSize -= cur.size();
 				for (auto td : cur) ///move to queue
 				{
 					queue[_t->sender()].add(td);
@@ -343,23 +335,23 @@ namespace mcp
 		}
 	}
 
-	NonceRange TransactionQueue::isFuture_WITH_LOCK(std::shared_ptr<Transaction> _t)
+	NonceRange TransactionQueue::isPending_WITH_LOCK(std::shared_ptr<Transaction> _t)
 	{
 		/// account's first transaction
 		if (_t->nonce() == 0)
-			return NonceRange::Current;
+			return NonceRange::Queue;
 
-		/// not include pending transactions,bigger than the current maximum number of consecutive nonce is the future.
+		/// not include pending transactions,larger than the largest nonce in the queue is the pending.
 		u256 next = maxNonce_WITH_LOCK(_t->sender(), LatestBlock);
 		if (_t->nonce() < next)
-			return NonceRange::TooLow;
+			return NonceRange::TooSmall;
 		if (_t->nonce() > next)
 		{
-			if (_t->nonce() > next + c_maxAccountFuturePendingSize - 1)
+			if (_t->nonce() > next + c_maxAccountPendingSize - 1)
 				return NonceRange::TooBig;
-			return NonceRange::Future;
+			return NonceRange::Pending;
 		}
-		return NonceRange::Current;
+		return NonceRange::Queue;
 	}
 
 	void TransactionQueue::drop(h256s const& _txHashs)
@@ -540,14 +532,14 @@ namespace mcp
 			pendingsize += it->second.size();
 		}
 
-		std::string str = "transactionQueue current txs:" + std::to_string(all.size())
+		std::string str = "transactionQueue all txs:" + std::to_string(all.size())
 			+ " ,queue  account:" + std::to_string(queue.size())
 			+ " ,pending account:" + std::to_string(pending.size())
 			+ " ,queue txs:" + std::to_string(queuesize)
 			+ " ,pending txs:" + std::to_string(pendingsize)
 			+ " ,m_known:" + std::to_string(m_known.size())
 			+ " ,m_dropped:" + std::to_string(m_dropped.size())
-			+ " ,m_futureSize:" + std::to_string(m_futureSize)
+			+ " ,m_pendingSize:" + std::to_string(m_pendingSize)
 			;
 
 		return str;

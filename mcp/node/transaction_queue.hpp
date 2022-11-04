@@ -14,10 +14,10 @@ namespace mcp
 {
 	enum NonceRange
 	{
-		TooLow = 0, ///Less than the account current nonce, cannot be linked.
-		Current = 1,///Eq next nonce.
-		Future = 2,///Greater than the current nonce, with missed transactions.
-		TooBig = 3,///Much larger than the current nonce .
+		TooSmall = 0, ///Less than the account stable nonce, cannot be linked.
+		Queue = 1,///Eq next nonce.
+		Pending = 2,///larger than the largest nonce in the queue, there are nonce smaller transactions missing.
+		TooBig = 3,///Much larger than the largest nonce in the queue.
 	};
 
 	class chain;
@@ -139,12 +139,12 @@ namespace mcp
 		ImportResult check_WITH_LOCK(h256 const& _h);
 		ImportResult manageImport_WITH_LOCK(std::shared_ptr<Transaction> _t, source _in);
 
-		ImportResult insertCurrent_WITH_LOCK(std::shared_ptr<Transaction> _t, bool includeQueue = true);
-		ImportResult insertFuture_WITH_LOCK(std::shared_ptr<Transaction>);
-		void makeCurrent_WITH_LOCK(std::shared_ptr<Transaction> _t);
+		ImportResult insertQueue_WITH_LOCK(std::shared_ptr<Transaction> _t, bool includeQueue = true);
+		ImportResult insertPending_WITH_LOCK(std::shared_ptr<Transaction>);
+		void makeQueue_WITH_LOCK(std::shared_ptr<Transaction> _t);
 		bool remove_WITH_LOCK(h256 const& _txHash);
 		u256 maxNonce_WITH_LOCK(Address const& _a, BlockNumber const blockTag = PendingBlock) const;
-		NonceRange isFuture_WITH_LOCK(std::shared_ptr<Transaction>);
+		NonceRange isPending_WITH_LOCK(std::shared_ptr<Transaction>);
 		void verifierBody();
 
 		void validateTx(std::shared_ptr<Transaction>);/// Base format check
@@ -162,10 +162,10 @@ namespace mcp
 
 		std::unordered_map<h256, std::shared_ptr<Transaction>> all;///All transactions to allow lookups
 		std::unordered_map<Address, txList> queue;///< ready Transactions grouped by account and nonce
-		std::unordered_map<Address, txList> pending;///< future Transactions grouped by account and nonce
+		std::unordered_map<Address, txList> pending;///< pending Transactions grouped by account and nonce,there are nonce smaller transactions missing its nonce.
 
-		unsigned m_futureLimit;														///< Max number of future transactions
-		unsigned m_futureSize = 0;													///< Current number of future transactions
+		unsigned m_pendingLimit;													///< Max number of pending transactions
+		unsigned m_pendingSize = 0;													///< number of pending transactions
 
 		/// verified broadcast incoming transaction
 		std::condition_variable m_queueReady;
