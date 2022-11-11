@@ -16,29 +16,9 @@ namespace mcp
 {
     namespace p2p
     {
-        class peers_content;
         class peer_metrics;
-
-		class peer_outbound
-		{
-			struct connect_info
-			{
-				int attempts;
-				int need_attempts;
-			};
-		public:
-			peer_outbound() :max_times(15), dynameter(2) {}
-			bool should_connect(node_id const& id);
-			void record(node_id const& id);
-			void attempt();
-		
-		private:
-			int dynameter;
-			int max_times;	//total retry time = max_times * dynameter * try_connect_interval
-			std::map<node_id, connect_info> outs;
-		};
-
 		class RLPXFrameCoder;
+		class hankshake;
         class host : public std::enable_shared_from_this<host>
         {
         public:
@@ -62,12 +42,13 @@ namespace mcp
             std::map<std::string,uint64_t> get_peers_write_queue_size();
             std::map<std::string, std::shared_ptr<mcp::p2p::peer_metrics> > get_peers_metrics();
 
-			std::mutex pending_conns_mutex;
-			std::unordered_set<node_id> pending_conns;
-			peer_outbound attempt_outs;
 			bool is_started() { return is_run; };
 			size_t get_peers_count() { return m_peers.size(); };
 			void replace_bootstrap(node_id const& old_a, node_id new_a);
+
+			/// Set a handshake failure reason for a peer
+			void onHandshakeFailed(node_id const& _n, HandshakeFailureReason _r);
+			std::shared_ptr<peer_manager> peerManager() { return m_peer_manager; }
         private:
             enum class peer_type
             {
@@ -76,6 +57,7 @@ namespace mcp
             };
 
             void run();
+			bool is_handshaking(node_id const& _id) const;
             bool resolve_host(std::string const & addr, bi::tcp::endpoint & ep);
             void connect(std::shared_ptr<node_info> const & ne);
             size_t avaliable_peer_count(peer_type const & type, bool b = true);
@@ -96,6 +78,11 @@ namespace mcp
             std::unique_ptr<bi::tcp::acceptor> acceptor;
             std::unordered_map<node_id, std::weak_ptr<peer>> m_peers;
             mutable std::mutex m_peers_mutex;
+
+			/// Pending connections. Completed handshakes are garbage-collected in run() (a handshake is
+			/// complete when there are no more shared_ptrs in handlers)
+			std::list<std::weak_ptr<hankshake>> m_connecting;
+			mutable Mutex x_connecting;													///< Mutex for m_connecting.
 
             std::shared_ptr<node_table> m_node_table;
 

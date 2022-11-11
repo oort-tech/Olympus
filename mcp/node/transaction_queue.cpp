@@ -131,10 +131,7 @@ namespace mcp
 	{
 		try
 		{
-			// Remove any prior transaction with the same nonce but a lower gas price.
-			// Bomb out if there's a prior transaction with higher gas price.
-			
-			// If valid, append to transactions.
+			/// If valid, append to transactions.
 			auto r = isPending_WITH_LOCK(_t);
 			if (NonceRange::TooSmall == r)///nonce too low, just request need insert.
 			{
@@ -402,8 +399,8 @@ namespace mcp
 			m_unverified.emplace_back(UnverifiedTransaction(_tx, _nodeId, _in));
 			queued = true;
 		}
-		
-		m_queueReady.notify_all();
+		if (queued)
+			m_queueReady.notify_all();
 	}
 
 	void TransactionQueue::verifierBody()
@@ -428,10 +425,18 @@ namespace mcp
 					auto ir = import(work.transaction, work.in);
 					m_onImport(ir, work.nodeId);
 				}
+				catch (InvalidNonce)
+				{
+					///remote network is not very good,Disconnect the peer.todo
+				}
+				catch (NotEnoughCash)
+				{
+					///remote network is not very good,Disconnect the peer.todo
+				}
 				catch (...)
 				{
 					LOG(m_log.error) << "verifierBody Bad transaction:" << boost::current_exception_diagnostic_information();
-					m_onImport(ImportResult::BadProcol, work.nodeId);///  Notify capability and P2P to process peer. diconnect peer if bad transaction  
+					m_onImport(ImportResult::Malformed, work.nodeId);///  Notify capability and P2P to process peer. diconnect peer if bad transaction  
 				}
 
 				works.pop_front();

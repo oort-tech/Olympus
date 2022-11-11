@@ -889,18 +889,17 @@ void mcp::node_capability::onTransactionImported(ImportResult _ir, p2p::node_id 
 	///if used sync_async io service execute delay, maybe some transactions through the filter
 	switch (_ir)
 	{
-	case mcp::ImportResult::Success:
-		break;
-	case mcp::ImportResult::FutureFull:
-		break;
-	case mcp::ImportResult::AlreadyInChain:
-		break;
-	case mcp::ImportResult::AlreadyKnown:
-		break;
+	//case mcp::ImportResult::Success:
+	//	break;
+	//case mcp::ImportResult::FutureFull:
+	//	break;
+	//case mcp::ImportResult::AlreadyInChain:
+	//	break;
+	//case mcp::ImportResult::AlreadyKnown:
+	//	break;
+	//case mcp::ImportResult::OverbidGasPrice:
+	//	break;
 	case mcp::ImportResult::Malformed:
-		break;
-	case mcp::ImportResult::OverbidGasPrice:
-		break;
 	case mcp::ImportResult::BadProcol:
 	{
 		std::shared_ptr<p2p::peer> p = nullptr;
@@ -917,8 +916,8 @@ void mcp::node_capability::onTransactionImported(ImportResult _ir, p2p::node_id 
 			p->disconnect(p2p::disconnect_reason::bad_protocol);
 		break;
 	}
-	case mcp::ImportResult::InvalidNonce:
-		break;
+	//case mcp::ImportResult::InvalidNonce:
+	//	break;
 	default:
 		break;
 	}

@@ -157,5 +157,19 @@ namespace mcp
 			too_large_packet_size = 8,
 			no_disconnect = 0xffff,
 		};
+
+		enum class HandshakeFailureReason
+		{
+			NoFailure = 0,
+			UnknownFailure,
+			Timeout,
+			TCPError,
+			FrameDecryptionFailure,
+			InternalError,
+			ProtocolError,
+			NetWorkError,
+			PunishmentPeriod,
+			DisconnectRequested
+		};
 	}
 }

@@ -41,7 +41,8 @@ namespace mcp
 				m_remote(_remote),
 				m_originated(_remote),
 				m_socket(_socket),
-				m_idleTimer(m_socket->get_io_service())
+				m_idleTimer(m_socket->get_io_service()),
+				m_failureReason{ HandshakeFailureReason::NoFailure }
 			{
 				crypto::Nonce::get().ref().copyTo(m_nonce.ref());
 			}
@@ -140,6 +141,9 @@ namespace mcp
 			std::shared_ptr<bi::tcp::socket> m_socket;
 
 			boost::asio::deadline_timer m_idleTimer;	///< Timer which enforces c_timeout.
+
+			HandshakeFailureReason m_failureReason;
+
             mcp::log m_log = { mcp::log("p2p") };
 		};
 	}

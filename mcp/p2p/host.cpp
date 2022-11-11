@@ -223,7 +223,7 @@ void host::accept_loop()
 			if (this_l->avaliable_peer_count(peer_type::ingress) == 0 && !exemption_node_flag)
 			{
                 LOG(this_l->m_log.debug) << "Dropping socket due to too many peers, peer count: " << this_l->m_peers.size()
-					<< ",pending peers: " << this_l->pending_conns.size() << ",remote endpoint: " << remote_ep
+					<< ",pending peers: " << this_l->m_connecting.size() << ",remote endpoint: " << remote_ep
 					<< ",max peers: " << this_l->max_peer_size(peer_type::ingress);
 				try
 				{
@@ -237,6 +237,7 @@ void host::accept_loop()
 			{
 				// incoming connection; we don't yet know nodeid
 				auto handshake = std::make_shared<hankshake>(this_l, socket);
+				m_connecting.push_back(handshake);
 				handshake->start();
 			}
 
@@ -252,6 +253,10 @@ void host::run()
 
 	m_node_table->process_events();
 
+	// cleanup zombies
+	DEV_GUARDED(x_connecting)
+		m_connecting.remove_if([](std::weak_ptr<hankshake> h) { return h.expired(); });
+
 	keep_alive_peers();
 
 	try_connect_nodes();
@@ -262,6 +267,19 @@ void host::run()
 		run();
 	});
 }
+
+bool host::is_handshaking(node_id const& _id) const
+{
+	Guard l(x_connecting);
+	for (auto const& cIter : m_connecting)
+	{
+		std::shared_ptr<hankshake> const connecting = cIter.lock();
+		if (connecting && connecting->remote() == _id)
+			return true;
+	}
+	return false;
+}
+
 
 bool host::resolve_host(std::string const & addr, bi::tcp::endpoint & ep)
 {
@@ -309,11 +327,17 @@ void host::connect(std::shared_ptr<node_info> const & ne)
 	if (!is_run)
 		return;
 
+	if (is_handshaking(ne->id))
+	{
+		//LOG(m_log.debug) << "Aborted connection. handshake with peer already in progress: " << ne->id.hex();
+		return;
+	}
+
 	{
 		std::lock_guard<std::mutex> lock(m_peers_mutex);
 		if (m_peers.count(ne->id))
 		{
-			//LOG(m_log.info) << "Aborted connect, node already connected, node id: " << ne->id.hex();
+			//LOG(m_log.debug) << "Aborted connect, node already connected, node id: " << ne->id.hex();
 			return;
 		}
 	}
@@ -323,14 +347,6 @@ void host::connect(std::shared_ptr<node_info> const & ne)
 		return;
 	}
 
-	{
-		std::lock_guard<std::mutex> lock(pending_conns_mutex);
-		// prevent concurrently connecting to a node
-		if (pending_conns.count(ne->id))
-			return;
-		pending_conns.insert(ne->id);
-	}
-
 	bi::tcp::endpoint ep(ne->endpoint);
 	std::shared_ptr<bi::tcp::socket> socket = std::make_shared<bi::tcp::socket>(io_service);
 	auto this_l(shared_from_this());
@@ -338,14 +354,17 @@ void host::connect(std::shared_ptr<node_info> const & ne)
 	{
 		if (ec)
 		{
-			//LOG(m_log.info) << "Connection refused to node " << ne->id.to_string() << "@" << ep << ", message: " << ec.message();
-			std::lock_guard<std::mutex> lock(pending_conns_mutex);
-			pending_conns.erase(ne->id);
+			//LOG(m_log.debug) << "Connection refused to node " << ne->id.hex() << "@" << ep << ", message: " << ec.message();
+			m_peer_manager->record_connect(ne->id, disconnect_reason::tcp_error);
 		}
 		else
 		{
-			//LOG(m_log.info) << "Connecting to " << ne->id.to_string() << "@" << ep;
+			//LOG(m_log.debug) << "Connecting to " << ne->id.hex() << "@" << ep;
 			auto handshake = std::make_shared<hankshake>(this_l, socket, ne->id);
+			{
+				Guard l(x_connecting);
+				m_connecting.push_back(handshake);
+			}
 			handshake->start();
 		}
 	});
@@ -417,7 +436,7 @@ void host::try_connect_nodes()
 		for (auto it = exemption_nodes.begin(); it != exemption_nodes.end(); it++)
 		{
 			auto info = *it;
-			if (!m_peers.count(info->id))
+			if (!m_peers.count(info->id) && m_peer_manager->should_reconnect(info->id, info->peer_type))
 			{
 				connect(info);
 				m_node_table->add_node(*info, true);/// mark as known peer
@@ -430,7 +449,7 @@ void host::try_connect_nodes()
 			//only random pick one
 			auto rindex(mcp::random_pool.GenerateWord32(0, bootstrap_nodes.size() - 1));
 			auto info = bootstrap_nodes[rindex];
-			if (!m_peers.count(info->id))
+			if (!m_peers.count(info->id) && m_peer_manager->should_reconnect(info->id, info->peer_type))
 			{
 				connect(info);
 				m_node_table->add_node(*info, true);/// mark as known peer
@@ -447,12 +466,13 @@ void host::try_connect_nodes()
 		auto node_infos(m_node_table->get_random_nodes(avaliable_count));
 		for (auto nf : node_infos)
 		{
-			if (attempt_outs.should_connect(nf->id))
+			if (!m_peers.count(nf->id) && m_peer_manager->should_reconnect(nf->id, nf->peer_type))
+			{
 				connect(nf);
+			}
 		}
 	}
 
-	attempt_outs.attempt();
 	last_try_connect = std::chrono::steady_clock::now();
 }
 
@@ -463,17 +483,7 @@ void host::start_peer(mcp::p2p::node_id const& _id, dev::RLP const& _rlp, std::u
 		return;
 
 	hankshake_msg handmsg(_rlp);
-	
 	node_id remote_node_id(_id);
-
-	if (remote_node_id != _id)
-	{
-        LOG(m_log.debug) << "Wrong ID: " << remote_node_id.hex() << " vs. " << _id.hex();
-		if (socket->is_open())
-			socket->close();
-		
-		return;
-	}
 
 	if (handmsg.network != mcp::mcp_network)
 	{
@@ -487,11 +497,10 @@ void host::start_peer(mcp::p2p::node_id const& _id, dev::RLP const& _rlp, std::u
 	try
 	{
 		node_info _node_info = node_info_from_node_table(remote_node_id);
-		disconnect_reason reason;
-		if ( !(m_peer_manager->should_reconnect(remote_node_id, _node_info.peer_type, reason)) )
+		if ( !(m_peer_manager->should_reconnect(remote_node_id, _node_info.peer_type)) )
 		{
             boost::system::error_code e;
-            LOG(m_log.info) << "peer: " <<socket->remote_endpoint(e) <<",node id:"<< remote_node_id.hex() << " is bad peer,be punished reason: " << (int)reason;
+            LOG(m_log.debug) << "peer: " <<socket->remote_endpoint(e) <<",node id:"<< remote_node_id.hex() << " is bad peer.";
 			try
 			{
 				if (socket->is_open())
@@ -500,11 +509,6 @@ void host::start_peer(mcp::p2p::node_id const& _id, dev::RLP const& _rlp, std::u
 			catch (...) {}
 
 			return;
-		}
-			
-		{
-			std::lock_guard<std::mutex> lock(pending_conns_mutex);
-			pending_conns.erase(remote_node_id);
 		}
 
 		std::shared_ptr<peer> new_peer(std::make_shared<peer>(socket, remote_node_id, m_peer_manager, move(_io)));
@@ -547,7 +551,7 @@ void host::start_peer(mcp::p2p::node_id const& _id, dev::RLP const& _rlp, std::u
 			if(avaliable_peer_count(peer_type::ingress,false) == 0 && _node_info.peer_type != PeerType::Required && !exemption_node_flag)
 			{
 				boost::system::error_code ec;
-                LOG(m_log.debug) << "Too many peers. peer count: " << m_peers.size() << ",pending peers: " << pending_conns.size()
+                LOG(m_log.debug) << "Too many peers. peer count: " << m_peers.size() << ",pending peers: " << m_connecting.size()
 					<< ",remote node id: " << remote_node_id.hex() << ",remote endpoint: " << socket->remote_endpoint(ec) 
 					<< ",max peers: " << max_peer_size(peer_type::ingress);
 
@@ -610,7 +614,9 @@ void host::on_node_table_event(node_id const & node_id_a, node_table_event_type 
 
 		if (std::shared_ptr<node_info> nf = m_node_table->get_node(node_id_a))
 		{
-			if (avaliable_peer_count(peer_type::egress) > 0 || nf->peer_type == PeerType::Required)
+			if (!m_peers.count(nf->id) && 
+				(avaliable_peer_count(peer_type::egress) > 0 || nf->peer_type == PeerType::Required)
+				)
 				connect(nf);
 		}
 	}
@@ -727,33 +733,9 @@ void host::replace_bootstrap(node_id const& old_a, node_id new_a)
 	}
 }
 
-bool mcp::p2p::peer_outbound::should_connect(node_id const & id)
+void host::onHandshakeFailed(node_id const& _n, HandshakeFailureReason _r)
 {
-	if (outs.count(id) && outs[id].need_attempts > 0)
-		return false;
-	else
-		return true;
+	m_peer_manager->onHandshakeFailed(_n, _r);
 }
 
-void mcp::p2p::peer_outbound::record(node_id const & id)
-{
-	auto it = outs.find(id);
-	if (it == outs.end())
-		outs[id] = { 1,dynameter };
-	else
-	{
-		it->second.attempts += 1;
-		if (it->second.attempts > max_times)
-			it->second.attempts = max_times;
-		it->second.need_attempts = dynameter * it->second.attempts;
-	}
-}
 
-void mcp::p2p::peer_outbound::attempt()
-{
-	for (auto it = outs.begin(); it != outs.end(); it++)
-	{
-		if (it->second.need_attempts > 0)
-			it->second.need_attempts--;
-	}
-}

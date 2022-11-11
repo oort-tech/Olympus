@@ -2,7 +2,6 @@
 
 mcp::p2p::peers_content::peers_content()
 {
-	m_score = 0;
 	m_last_connected = std::chrono::system_clock::now();
 	m_last_attempted = std::chrono::system_clock::now();
 	m_last_disconnect = disconnect_reason::no_disconnect;

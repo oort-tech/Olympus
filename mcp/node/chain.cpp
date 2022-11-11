@@ -1449,12 +1449,12 @@ void mcp::chain::check_need_send_approve(mcp::db::db_transaction& transaction_a,
 	{
 		std::shared_ptr<mcp::approve> ap = block_cache_a->approve_get(transaction_a, hash);
 		if(ap->sender() == account_a){
-    		LOG(m_log.info) << "[check_need_send_approve] not need send approve";
+    		LOG(m_log.debug) << "[check_need_send_approve] not need send approve";
 			m_need_send_approve = false;
 			return;
 		}
 	}
-    LOG(m_log.info) << "[check_need_send_approve] need send approve";
+    LOG(m_log.debug) << "[check_need_send_approve] need send approve";
 }
 
 uint64_t mcp::chain::last_summary_mci()

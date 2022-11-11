@@ -14,7 +14,7 @@ mcp::p2p::peer_manager::peer_manager(bool & error_a, boost::filesystem::path con
 		return;
 }
 
-bool peer_manager::should_reconnect(node_id const& id, PeerType type, disconnect_reason & reason)
+bool peer_manager::should_reconnect(node_id const& id, PeerType type)
 {
 	peers_content _peers_content;
 	mcp::db::db_transaction transaction(store.create_transaction());
@@ -22,13 +22,12 @@ bool peer_manager::should_reconnect(node_id const& id, PeerType type, disconnect
 	if (!ret)
 		return true;
 
-	if (std::chrono::system_clock::now() >= _peers_content.m_last_connected + std::chrono::seconds(fall_back_seconds(_peers_content, type)))
+	if (std::chrono::system_clock::now() >= _peers_content.m_last_attempted + std::chrono::seconds(fall_back_seconds(_peers_content, type)))
 	{
 		return true;
 	}
 	else
 	{
-		reason = _peers_content.m_last_disconnect;
 		return false;
 	}
 }
@@ -45,92 +44,96 @@ void peer_manager::record_connect(node_id const& id, disconnect_reason const& re
 	}
 }
 
+void peer_manager::onHandshakeFailed(node_id const& _n, HandshakeFailureReason _r)
+{
+	peers_content _peers_content;
+	mcp::db::db_transaction transaction(store.create_transaction());
+	bool ret = store.peer_get(transaction, _n, _peers_content);
+
+	//_peers_content.m_last_connected = std::chrono::system_clock::now();
+	_peers_content.m_last_attempted = std::chrono::system_clock::now();
+	_peers_content.m_fail_attempts++;
+	_peers_content.m_lastHandshakeFailure = _r;
+
+	store.peer_put(transaction, _n, _peers_content);
+}
+
 void peer_manager::clear_disconnect(node_id const& id)
 {
 	mcp::db::db_transaction transaction(store.create_transaction());
 	store.peer_del(transaction, id);
 }
 
+unsigned defaultFallbackSeconds(unsigned _failedAttempts)
+{
+	if (_failedAttempts < 5)
+		return _failedAttempts ? _failedAttempts * 5 : 5;
+	else if (_failedAttempts < 15)
+		return 25 + (_failedAttempts - 5) * 10;
+	else
+		return 25 + 100 + (_failedAttempts - 15) * 20;
+}
+
+
 unsigned peer_manager::fall_back_seconds(peers_content const& _p, PeerType type) const
 {
-	unsigned score = 0;
-	if (_p.m_fail_attempts < 3)
-		score = 0;
-	else if (_p.m_fail_attempts < 10)
-		score = _p.m_score * _p.m_fail_attempts * 5 / 10;
-	else if (_p.m_fail_attempts < 15)
-		score = _p.m_score * (50 + (_p.m_fail_attempts - 10) * 10) / 10;
-	else
-		score = _p.m_score * (100 + (_p.m_fail_attempts - 15) * 20 ) / 10;
+	constexpr unsigned oneMonthInSeconds{ 30 * 24 * 3600 };
+	constexpr unsigned oneDayInSeconds{ 1 * 24 * 3600 };
 
-	if (type == PeerType::Required && score > 0)
+	if (type == PeerType::Required)
+		return 5;
+
+	switch (_p.m_lastHandshakeFailure)
 	{
-		score = 30;
+	case HandshakeFailureReason::FrameDecryptionFailure:
+	case HandshakeFailureReason::ProtocolError:
+		return oneMonthInSeconds;
+	case HandshakeFailureReason::NetWorkError:
+		return oneDayInSeconds;
+	default:
+		break;
 	}
 
-	if (score > 6 * 60 * 60)//eq 1 day,then 1 day
+	switch (_p.m_last_disconnect)
 	{
-		score = 6 * 60 * 60;
+	case disconnect_reason::bad_protocol:
+	case disconnect_reason::too_large_packet_size:
+	case disconnect_reason::useless_peer:
+		return oneMonthInSeconds;
+	case disconnect_reason::tcp_error:
+	case disconnect_reason::too_many_peers:
+	case disconnect_reason::duplicate_peer:
+	{
+		if (_p.m_fail_attempts > 25)/// try to connect 25 times one day
+			return oneDayInSeconds;
+		return 15 * (_p.m_fail_attempts + 1);
 	}
-
-	return score;
+	case disconnect_reason::client_quit:
+	{
+		if (_p.m_fail_attempts > 10)
+			return oneDayInSeconds;
+		return 25 * (_p.m_fail_attempts + 1);
+	}
+	default:
+		if (_p.m_fail_attempts > 15)/// try to connect 15 times one day
+			return oneDayInSeconds;
+		return defaultFallbackSeconds(_p.m_fail_attempts);
+	}
 }
 
 void peer_manager::add_score(node_id const& id, disconnect_reason reason)
 {
 	peers_content _peers_content;
-	{
-		mcp::db::db_transaction transaction(store.create_transaction());
-		bool ret = store.peer_get(transaction, id, _peers_content);
-	}
-
-	unsigned ret = get_score_by_reason(reason);
-	_peers_content.m_score += ret;
-	_peers_content.m_last_connected = std::chrono::system_clock::now();
-	if (ret != 0)//malevolence action
-	{
-		_peers_content.m_last_attempted = std::chrono::system_clock::now();
-		_peers_content.m_fail_attempts++;
-		_peers_content.m_last_disconnect = reason;
-	}
-
 	mcp::db::db_transaction transaction(store.create_transaction());
+	bool ret = store.peer_get(transaction, id, _peers_content);
+
+	//_peers_content.m_last_connected = std::chrono::system_clock::now();
+	_peers_content.m_last_attempted = std::chrono::system_clock::now();
+	_peers_content.m_fail_attempts++;
+	_peers_content.m_last_disconnect = reason;
+
 	store.peer_put(transaction, id, _peers_content);
 }
 
-unsigned peer_manager::get_score_by_reason(disconnect_reason reason) const
-{
-	unsigned score = 0;
 
-	switch (reason)
-	{
-	case disconnect_reason::disconnect_requested:
-		break;
-	case disconnect_reason::tcp_error:
-		break;
-	case disconnect_reason::bad_protocol:
-		score = 30;
-		break;
-	case disconnect_reason::useless_peer:
-		break;
-	case disconnect_reason::too_many_peers:
-		//score = 25;
-		break;
-	case disconnect_reason::duplicate_peer:
-		break;
-	case disconnect_reason::self_connect:
-		break;
-	case disconnect_reason::client_quit:
-		break;
-	case disconnect_reason::too_large_packet_size:
-		score = 50;
-		break;
-	case disconnect_reason::no_disconnect:
-		break;
-	default:
-		score = 100;
-		break;
-	}
-	return score;
-}
 

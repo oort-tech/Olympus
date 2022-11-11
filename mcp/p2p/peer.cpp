@@ -16,7 +16,7 @@ peer::peer(std::shared_ptr<bi::tcp::socket> const & socket_a, node_id const & no
 
 peer::~peer()
 {
-    LOG(m_log.info) << "Peer deconstruction:" << m_node_id.hex();
+    LOG(m_log.debug) << "Peer deconstruction:" << m_node_id.hex();
 
     try {
         if (socket->is_open())
@@ -51,8 +51,6 @@ bool peer::is_connected()
 
 void peer::disconnect(disconnect_reason const & reason)
 {
-    LOG(m_log.info) << "Disconnecting (our reason: " << reason_of(reason) << ")";
-
     if (socket->is_open())
     {
         dev::RLPStream s;
@@ -551,13 +549,9 @@ void peer::drop(disconnect_reason const & reason)
 		pc->cap->on_disconnect(this_l);
 
     boost::system::error_code ec;
-    LOG(m_log.info) << "Peer dropped " << m_node_id.hex() << "@" << socket->remote_endpoint(ec);
+    LOG(m_log.info) << "Peer dropped reason of " << reason_of(reason) << " ,id:" << m_node_id.hex() << "@" << socket->remote_endpoint(ec);
 
-	if (reason != disconnect_reason::client_quit)
-	{
-		m_peer_manager->record_connect(remote_node_id(), reason);
-	}
-
+	m_peer_manager->record_connect(remote_node_id(), reason);
     if (socket->is_open())
     {
         try
