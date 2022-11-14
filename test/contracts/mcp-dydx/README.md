@@ -1,6 +1,9 @@
 ## MCP-DyDx
 
 ### Clone the repo
+#### Make sure you select the correct branch
+![branch](https://user-images.githubusercontent.com/41552663/201589355-ba4c1dec-2d79-40fe-bff5-45758dbb8cf9.png)
+
 ### npm install
 
 ![npm run build](https://user-images.githubusercontent.com/41552663/201587723-2891d83f-17a9-4a3b-a488-cdc21ca6651d.gif)
