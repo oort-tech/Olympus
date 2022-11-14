@@ -27,6 +27,10 @@
 
 ![docker_LInoNgx5Fm](https://user-images.githubusercontent.com/41552663/201590404-b9fb10d8-3733-400a-af0b-63b132a3a889.gif)
 
+### Trivial test-case original done by DyDx it includes addresses not yet available on MCP
+
+![docker_mGmc4t4ltw](https://user-images.githubusercontent.com/41552663/201595412-9a0ada53-3add-4dd8-a09c-d0f0eda403e4.gif)
+
 ## Known Bugs when testing due to original repo
 
 #### You will have to make sure you actually deploy the contract artifact when testing else you will get a JavaScript superficial error saying it can't find any contract address for this instance, this is a bug that resides under the original DyDx repo
