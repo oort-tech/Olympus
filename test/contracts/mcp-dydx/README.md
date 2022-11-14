@@ -18,6 +18,7 @@ npx truffle migrate --network dev
 
 ![evm_test](https://user-images.githubusercontent.com/41552663/201588233-70938bef-9fc1-42f5-83eb-6f78f06929d1.gif)
 
+[Solo.test.ts](https://github.com/molecula451/Olympus/blob/mcp-dydx/test/contracts/mcp-dydx/__tests__/Solo.test.ts)
 
 ![docker_ounCzRQxsY](https://user-images.githubusercontent.com/41552663/201589157-06808888-ea21-4631-b84c-c5160a8ea3b6.gif)
 
