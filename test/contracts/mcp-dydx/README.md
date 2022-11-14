@@ -26,3 +26,10 @@ npx truffle migrate --network dev
 
 ![docker_LInoNgx5Fm](https://user-images.githubusercontent.com/41552663/201590404-b9fb10d8-3733-400a-af0b-63b132a3a889.gif)
 
+## Known Bugs when testing due to original repo
+
+### You will have to make sure you actually deploy the contract artifact when testing else you will get a JavaScript superficial error saying it can't find any contract address for this instance, this is a bug that resides under the original DyDx repo
+
+![known bugs](https://user-images.githubusercontent.com/41552663/201593211-9a061a3e-7bbe-4e3a-9122-a74872c50935.png)
+
+
