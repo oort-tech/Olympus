@@ -1,4 +1,4 @@
-## MCP-DyDx
+# MCP-DyDx
 
 ### Clone the repo
 #### Make sure you select the correct branch
