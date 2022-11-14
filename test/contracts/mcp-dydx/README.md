@@ -22,6 +22,7 @@ npx truffle migrate --network dev
 
 ![docker_ounCzRQxsY](https://user-images.githubusercontent.com/41552663/201589157-06808888-ea21-4631-b84c-c5160a8ea3b6.gif)
 
+[PartiallyDelayedMultiSig.test.ts](https://github.com/molecula451/Olympus/blob/mcp-dydx/test/contracts/mcp-dydx/__tests__/multisig/PartiallyDelayedMultisig.test.ts)
 
 ![docker_LInoNgx5Fm](https://user-images.githubusercontent.com/41552663/201590404-b9fb10d8-3733-400a-af0b-63b132a3a889.gif)
 
