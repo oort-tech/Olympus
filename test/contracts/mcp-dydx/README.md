@@ -4,13 +4,13 @@
 #### Make sure you select the correct branch
 ![branch](https://user-images.githubusercontent.com/41552663/201589355-ba4c1dec-2d79-40fe-bff5-45758dbb8cf9.png)
 
-### npm install
+```npm install```
 
 ![npm run build](https://user-images.githubusercontent.com/41552663/201587723-2891d83f-17a9-4a3b-a488-cdc21ca6651d.gif)
 
 ### Deploy to local testnet
 
-### npx truffle migrate --network dev
+```npx truffle migrate --network dev```
 
 ### Run some tests
 
@@ -28,7 +28,7 @@
 
 ## Known Bugs when testing due to original repo
 
-### You will have to make sure you actually deploy the contract artifact when testing else you will get a JavaScript superficial error saying it can't find any contract address for this instance, this is a bug that resides under the original DyDx repo
+#### You will have to make sure you actually deploy the contract artifact when testing else you will get a JavaScript superficial error saying it can't find any contract address for this instance, this is a bug that resides under the original DyDx repo
 
 ![known bugs](https://user-images.githubusercontent.com/41552663/201593211-9a061a3e-7bbe-4e3a-9122-a74872c50935.png)
 
