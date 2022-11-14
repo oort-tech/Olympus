@@ -1,0 +1,18 @@
+{
+  "extends": ["tslint:latest"],
+  "rules": {
+    "encoding": true,
+    "indent": [true, "spaces", 2],
+    "no-implicit-dependencies": [true, "dev", "optional"],
+    "no-string-literal": false,
+    "object-literal-key-quotes": [true, "as-needed"],
+    "quotemark": [true, "single", "avoid-escape"],
+    "object-literal-sort-keys": false,
+    "no-unused-expression": true,
+    "member-ordering": false,
+    "max-line-length": [true, {
+      "ignore-pattern": "(`.+`|'.+')"
+    }],
+    "arrow-parens": [false]
+  }
+}
