@@ -10,7 +10,7 @@
 
 ### Deploy to local testnet
 
-npx truffle migrate --network dev
+### npx truffle migrate --network dev
 
 ### Run some tests
 
