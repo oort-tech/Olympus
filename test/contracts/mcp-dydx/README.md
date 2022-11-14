@@ -11,5 +11,7 @@ npx truffle migrate --network dev
 
 ### Run some tests
 
+[EVM.test.ts](https://github.com/molecula451/Olympus/blob/mcp-dydx/test/contracts/mcp-dydx/__tests__/EVM.test.ts)
+
 ![evm_test](https://user-images.githubusercontent.com/41552663/201588233-70938bef-9fc1-42f5-83eb-6f78f06929d1.gif)
 
