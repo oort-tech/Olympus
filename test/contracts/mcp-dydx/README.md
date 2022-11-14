@@ -29,6 +29,8 @@
 
 ### Trivial test-case original done by DyDx it includes addresses not yet available on MCP
 
+[Logs.test.ts](https://github.com/molecula451/Olympus/blob/mcp-dydx/test/contracts/mcp-dydx/__tests__/Logs.test.ts)
+
 ![docker_mGmc4t4ltw](https://user-images.githubusercontent.com/41552663/201595412-9a0ada53-3add-4dd8-a09c-d0f0eda403e4.gif)
 
 ## Known Bugs when testing due to original repo
