@@ -1,0 +1,1222 @@
+{
+    "contractName": "TestCurve",
+    "abi": [
+        {
+            "constant": true,
+            "inputs": [],
+            "name": "dy",
+            "outputs": [
+                {
+                    "name": "",
+                    "type": "uint256"
+                }
+            ],
+            "payable": false,
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "constant": true,
+            "inputs": [],
+            "name": "fee",
+            "outputs": [
+                {
+                    "name": "",
+                    "type": "uint256"
+                }
+            ],
+            "payable": false,
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "constant": true,
+            "inputs": [
+                {
+                    "name": "",
+                    "type": "int128"
+                },
+                {
+                    "name": "",
+                    "type": "int128"
+                },
+                {
+                    "name": "",
+                    "type": "uint256"
+                }
+            ],
+            "name": "get_dy",
+            "outputs": [
+                {
+                    "name": "",
+                    "type": "uint256"
+                }
+            ],
+            "payable": false,
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "constant": false,
+            "inputs": [
+                {
+                    "name": "newFee",
+                    "type": "uint112"
+                }
+            ],
+            "name": "setFee",
+            "outputs": [],
+            "payable": false,
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "constant": false,
+            "inputs": [
+                {
+                    "name": "newDy",
+                    "type": "uint112"
+                }
+            ],
+            "name": "setDy",
+            "outputs": [],
+            "payable": false,
+            "stateMutability": "nonpayable",
+            "type": "function"
+        }
+    ],
+    "metadata": "{\"compiler\":{\"version\":\"0.5.7+commit.6da8b019\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"constant\":true,\"inputs\":[],\"name\":\"dy\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"newFee\",\"type\":\"uint112\"}],\"name\":\"setFee\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"int128\"},{\"name\":\"\",\"type\":\"int128\"},{\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"get_dy\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"fee\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"newDy\",\"type\":\"uint112\"}],\"name\":\"setDy\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"author\":\"dYdX * Mock of the Curve contract.\",\"methods\":{},\"title\":\"TestCurve\"},\"userdoc\":{\"methods\":{}}},\"settings\":{\"compilationTarget\":{\"/home/dydx/app/contracts/testing/TestCurve.sol\":\"TestCurve\"},\"evmVersion\":\"byzantium\",\"libraries\":{},\"optimizer\":{\"enabled\":true,\"runs\":10000},\"remappings\":[]},\"sources\":{\"/home/dydx/app/contracts/external/interfaces/ICurve.sol\":{\"keccak256\":\"0xb0e8c2e96724b7aa497eec0b10063a89e71f934377b8f7bd4f2d22c9d70c6851\",\"urls\":[\"bzzr://f6bd5feef937c060ef90ca456072d569b333ba4a4cff7baff27e85784dd4007a\"]},\"/home/dydx/app/contracts/testing/TestCurve.sol\":{\"keccak256\":\"0x28c5d057926bff46d7c31c6f2e36e6f5c7c263172f26dfd748c8545cc0cfc6cb\",\"urls\":[\"bzzr://9eb7c77fddca51bde3b1faf7f30f84f4ede229e3d25b9cbd965d3073a37f09be\"]}},\"version\":1}",
+    "bytecode": "0x6080604052623d0900600055600060015534801561001c57600080fd5b506102418061002c6000396000f3fe608060405234801561001057600080fd5b5060043610610084576000357c0100000000000000000000000000000000000000000000000000000000900480635e0d443f1161006d5780635e0d443f146100bc578063ddca3f43146100cf578063ddf8c3c0146100d757610084565b80632a7b2ecb1461008957806336511ae1146100a7575b600080fd5b6100916100ea565b60405161009e91906101d7565b60405180910390f35b6100ba6100b53660046101a2565b6100f0565b005b6100916100ca366004610155565b610105565b61009161010f565b6100ba6100e53660046101a2565b610115565b60015481565b6dffffffffffffffffffffffffffff16600055565b6001549392505050565b60005481565b6dffffffffffffffffffffffffffff16600155565b600061013682356101ee565b9392505050565b600061013682356101f4565b600061013682356101eb565b60008060006060848603121561016a57600080fd5b6000610176868661012a565b93505060206101878682870161012a565b925050604061019886828701610149565b9150509250925092565b6000602082840312156101b457600080fd5b60006101c0848461013d565b949350505050565b6101d1816101eb565b82525050565b602081016101e582846101c8565b92915050565b90565b600f0b90565b6dffffffffffffffffffffffffffff169056fea265627a7a7230582073f8b8d5bf29b6d78f258e5608ecb6b0375c85d551dc066c4d6a252c4fc76f486c6578706572696d656e74616cf50037",
+    "deployedBytecode": "0x608060405234801561001057600080fd5b5060043610610084576000357c0100000000000000000000000000000000000000000000000000000000900480635e0d443f1161006d5780635e0d443f146100bc578063ddca3f43146100cf578063ddf8c3c0146100d757610084565b80632a7b2ecb1461008957806336511ae1146100a7575b600080fd5b6100916100ea565b60405161009e91906101d7565b60405180910390f35b6100ba6100b53660046101a2565b6100f0565b005b6100916100ca366004610155565b610105565b61009161010f565b6100ba6100e53660046101a2565b610115565b60015481565b6dffffffffffffffffffffffffffff16600055565b6001549392505050565b60005481565b6dffffffffffffffffffffffffffff16600155565b600061013682356101ee565b9392505050565b600061013682356101f4565b600061013682356101eb565b60008060006060848603121561016a57600080fd5b6000610176868661012a565b93505060206101878682870161012a565b925050604061019886828701610149565b9150509250925092565b6000602082840312156101b457600080fd5b60006101c0848461013d565b949350505050565b6101d1816101eb565b82525050565b602081016101e582846101c8565b92915050565b90565b600f0b90565b6dffffffffffffffffffffffffffff169056fea265627a7a7230582073f8b8d5bf29b6d78f258e5608ecb6b0375c85d551dc066c4d6a252c4fc76f486c6578706572696d656e74616cf50037",
+    "sourceMap": "801:597:59:-;;;861:7;840:28;;894:1;874:21;;801:597;8:9:-1;5:2;;;30:1;27;20:12;5:2;801:597:59;;;;;;;",
+    "deployedSourceMap": "801:597:59:-;;;;8:9:-1;5:2;;;30:1;27;20:12;5:2;801:597:59;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;874:21;;;:::i;:::-;;;;;;;;;;;;;;;;1202:96;;;;;;;;;:::i;:::-;;953:182;;;;;;;;;:::i;840:28::-;;;:::i;1304:92::-;;;;;;;;;:::i;874:21::-;;;;:::o;1202:96::-;1279:12;;:3;:12;1202:96::o;953:182::-;1126:2;;953:182;;;;;:::o;840:28::-;;;;:::o;1304:92::-;1379:10;;:2;:10;1304:92::o;5:116:-1:-;;71:45;108:6;95:20;71:45;;;62:54;56:65;-1:-1;;;56:65;128:118;;195:46;233:6;220:20;195:46;;253:118;;320:46;358:6;345:20;320:46;;378:487;;;;514:2;502:9;493:7;489:23;485:32;482:2;;;530:1;527;520:12;482:2;565:1;582:52;626:7;606:9;582:52;;;572:62;;544:96;671:2;689:52;733:7;724:6;713:9;709:22;689:52;;;679:62;;650:97;778:2;796:53;841:7;832:6;821:9;817:22;796:53;;;786:63;;757:98;476:389;;;;;;872:241;;976:2;964:9;955:7;951:23;947:32;944:2;;;992:1;989;982:12;944:2;1027:1;1044:53;1089:7;1069:9;1044:53;;;1034:63;938:175;-1:-1;;;;938:175;1120:120;1203:31;1228:5;1203:31;;;1198:3;1191:44;1185:55;;;1247:213;1365:2;1350:18;;1379:71;1354:9;1423:6;1379:71;;;1336:124;;;;;1467:79;1536:5;1519:27;1553:94;1632:2;1621:21;;1604:43;1654:116;1734:30;1723:42;;1706:64",
+    "source": "/*\n\n    Copyright 2019 dYdX Trading Inc.\n\n    Licensed under the Apache License, Version 2.0 (the \"License\");\n    you may not use this file except in compliance with the License.\n    You may obtain a copy of the License at\n\n    http://www.apache.org/licenses/LICENSE-2.0\n\n    Unless required by applicable law or agreed to in writing, software\n    distributed under the License is distributed on an \"AS IS\" BASIS,\n    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n    See the License for the specific language governing permissions and\n    limitations under the License.\n\n*/\n\npragma solidity 0.5.7;\npragma experimental ABIEncoderV2;\n\nimport { ICurve } from \"../external/interfaces/ICurve.sol\";\n\n\n/**\n * @title TestCurve\n * @author dYdX\n *\n * Mock of the Curve contract.\n */\ncontract TestCurve is\n    ICurve\n{\n    uint256 public fee = 4000000;\n    uint256 public dy = 0;\n\n    // ============ Getter Functions ============\n\n    function get_dy(\n        int128 /* i */,\n        int128 /* j */,\n        uint256 /* dx */\n    )\n        external\n        view\n        returns (uint256)\n    {\n        return dy;\n    }\n\n    // ============ Test Data Setter Functions ============\n\n    function setFee(\n        uint112 newFee\n    )\n        external\n    {\n        fee = newFee;\n    }\n\n    function setDy(\n        uint112 newDy\n    )\n        external\n    {\n        dy = newDy;\n    }\n}\n",
+    "sourcePath": "/home/dydx/app/contracts/testing/TestCurve.sol",
+    "ast": {
+        "absolutePath": "/home/dydx/app/contracts/testing/TestCurve.sol",
+        "exportedSymbols": {
+            "TestCurve": [
+                21994
+            ]
+        },
+        "id": 21995,
+        "nodeType": "SourceUnit",
+        "nodes": [
+            {
+                "id": 21948,
+                "literals": [
+                    "solidity",
+                    "0.5",
+                    ".7"
+                ],
+                "nodeType": "PragmaDirective",
+                "src": "603:22:59"
+            },
+            {
+                "id": 21949,
+                "literals": [
+                    "experimental",
+                    "ABIEncoderV2"
+                ],
+                "nodeType": "PragmaDirective",
+                "src": "626:33:59"
+            },
+            {
+                "absolutePath": "/home/dydx/app/contracts/external/interfaces/ICurve.sol",
+                "file": "../external/interfaces/ICurve.sol",
+                "id": 21951,
+                "nodeType": "ImportDirective",
+                "scope": 21995,
+                "sourceUnit": 647,
+                "src": "661:59:59",
+                "symbolAliases": [
+                    {
+                        "foreign": 21950,
+                        "local": null
+                    }
+                ],
+                "unitAlias": ""
+            },
+            {
+                "baseContracts": [
+                    {
+                        "arguments": null,
+                        "baseName": {
+                            "contractScope": null,
+                            "id": 21952,
+                            "name": "ICurve",
+                            "nodeType": "UserDefinedTypeName",
+                            "referencedDeclaration": 646,
+                            "src": "827:6:59",
+                            "typeDescriptions": {
+                                "typeIdentifier": "t_contract$_ICurve_$646",
+                                "typeString": "contract ICurve"
+                            }
+                        },
+                        "id": 21953,
+                        "nodeType": "InheritanceSpecifier",
+                        "src": "827:6:59"
+                    }
+                ],
+                "contractDependencies": [
+                    646
+                ],
+                "contractKind": "contract",
+                "documentation": "@title TestCurve\n@author dYdX\n * Mock of the Curve contract.",
+                "fullyImplemented": true,
+                "id": 21994,
+                "linearizedBaseContracts": [
+                    21994,
+                    646
+                ],
+                "name": "TestCurve",
+                "nodeType": "ContractDefinition",
+                "nodes": [
+                    {
+                        "constant": false,
+                        "id": 21956,
+                        "name": "fee",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 21994,
+                        "src": "840:28:59",
+                        "stateVariable": true,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                            "typeIdentifier": "t_uint256",
+                            "typeString": "uint256"
+                        },
+                        "typeName": {
+                            "id": 21954,
+                            "name": "uint256",
+                            "nodeType": "ElementaryTypeName",
+                            "src": "840:7:59",
+                            "typeDescriptions": {
+                                "typeIdentifier": "t_uint256",
+                                "typeString": "uint256"
+                            }
+                        },
+                        "value": {
+                            "argumentTypes": null,
+                            "hexValue": "34303030303030",
+                            "id": 21955,
+                            "isConstant": false,
+                            "isLValue": false,
+                            "isPure": true,
+                            "kind": "number",
+                            "lValueRequested": false,
+                            "nodeType": "Literal",
+                            "src": "861:7:59",
+                            "subdenomination": null,
+                            "typeDescriptions": {
+                                "typeIdentifier": "t_rational_4000000_by_1",
+                                "typeString": "int_const 4000000"
+                            },
+                            "value": "4000000"
+                        },
+                        "visibility": "public"
+                    },
+                    {
+                        "constant": false,
+                        "id": 21959,
+                        "name": "dy",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 21994,
+                        "src": "874:21:59",
+                        "stateVariable": true,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                            "typeIdentifier": "t_uint256",
+                            "typeString": "uint256"
+                        },
+                        "typeName": {
+                            "id": 21957,
+                            "name": "uint256",
+                            "nodeType": "ElementaryTypeName",
+                            "src": "874:7:59",
+                            "typeDescriptions": {
+                                "typeIdentifier": "t_uint256",
+                                "typeString": "uint256"
+                            }
+                        },
+                        "value": {
+                            "argumentTypes": null,
+                            "hexValue": "30",
+                            "id": 21958,
+                            "isConstant": false,
+                            "isLValue": false,
+                            "isPure": true,
+                            "kind": "number",
+                            "lValueRequested": false,
+                            "nodeType": "Literal",
+                            "src": "894:1:59",
+                            "subdenomination": null,
+                            "typeDescriptions": {
+                                "typeIdentifier": "t_rational_0_by_1",
+                                "typeString": "int_const 0"
+                            },
+                            "value": "0"
+                        },
+                        "visibility": "public"
+                    },
+                    {
+                        "body": {
+                            "id": 21972,
+                            "nodeType": "Block",
+                            "src": "1109:26:59",
+                            "statements": [
+                                {
+                                    "expression": {
+                                        "argumentTypes": null,
+                                        "id": 21970,
+                                        "name": "dy",
+                                        "nodeType": "Identifier",
+                                        "overloadedDeclarations": [],
+                                        "referencedDeclaration": 21959,
+                                        "src": "1126:2:59",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_uint256",
+                                            "typeString": "uint256"
+                                        }
+                                    },
+                                    "functionReturnParameters": 21969,
+                                    "id": 21971,
+                                    "nodeType": "Return",
+                                    "src": "1119:9:59"
+                                }
+                            ]
+                        },
+                        "documentation": null,
+                        "id": 21973,
+                        "implemented": true,
+                        "kind": "function",
+                        "modifiers": [],
+                        "name": "get_dy",
+                        "nodeType": "FunctionDefinition",
+                        "parameters": {
+                            "id": 21966,
+                            "nodeType": "ParameterList",
+                            "parameters": [
+                                {
+                                    "constant": false,
+                                    "id": 21961,
+                                    "name": "",
+                                    "nodeType": "VariableDeclaration",
+                                    "scope": 21973,
+                                    "src": "978:6:59",
+                                    "stateVariable": false,
+                                    "storageLocation": "default",
+                                    "typeDescriptions": {
+                                        "typeIdentifier": "t_int128",
+                                        "typeString": "int128"
+                                    },
+                                    "typeName": {
+                                        "id": 21960,
+                                        "name": "int128",
+                                        "nodeType": "ElementaryTypeName",
+                                        "src": "978:6:59",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_int128",
+                                            "typeString": "int128"
+                                        }
+                                    },
+                                    "value": null,
+                                    "visibility": "internal"
+                                },
+                                {
+                                    "constant": false,
+                                    "id": 21963,
+                                    "name": "",
+                                    "nodeType": "VariableDeclaration",
+                                    "scope": 21973,
+                                    "src": "1002:6:59",
+                                    "stateVariable": false,
+                                    "storageLocation": "default",
+                                    "typeDescriptions": {
+                                        "typeIdentifier": "t_int128",
+                                        "typeString": "int128"
+                                    },
+                                    "typeName": {
+                                        "id": 21962,
+                                        "name": "int128",
+                                        "nodeType": "ElementaryTypeName",
+                                        "src": "1002:6:59",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_int128",
+                                            "typeString": "int128"
+                                        }
+                                    },
+                                    "value": null,
+                                    "visibility": "internal"
+                                },
+                                {
+                                    "constant": false,
+                                    "id": 21965,
+                                    "name": "",
+                                    "nodeType": "VariableDeclaration",
+                                    "scope": 21973,
+                                    "src": "1026:7:59",
+                                    "stateVariable": false,
+                                    "storageLocation": "default",
+                                    "typeDescriptions": {
+                                        "typeIdentifier": "t_uint256",
+                                        "typeString": "uint256"
+                                    },
+                                    "typeName": {
+                                        "id": 21964,
+                                        "name": "uint256",
+                                        "nodeType": "ElementaryTypeName",
+                                        "src": "1026:7:59",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_uint256",
+                                            "typeString": "uint256"
+                                        }
+                                    },
+                                    "value": null,
+                                    "visibility": "internal"
+                                }
+                            ],
+                            "src": "968:80:59"
+                        },
+                        "returnParameters": {
+                            "id": 21969,
+                            "nodeType": "ParameterList",
+                            "parameters": [
+                                {
+                                    "constant": false,
+                                    "id": 21968,
+                                    "name": "",
+                                    "nodeType": "VariableDeclaration",
+                                    "scope": 21973,
+                                    "src": "1096:7:59",
+                                    "stateVariable": false,
+                                    "storageLocation": "default",
+                                    "typeDescriptions": {
+                                        "typeIdentifier": "t_uint256",
+                                        "typeString": "uint256"
+                                    },
+                                    "typeName": {
+                                        "id": 21967,
+                                        "name": "uint256",
+                                        "nodeType": "ElementaryTypeName",
+                                        "src": "1096:7:59",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_uint256",
+                                            "typeString": "uint256"
+                                        }
+                                    },
+                                    "value": null,
+                                    "visibility": "internal"
+                                }
+                            ],
+                            "src": "1095:9:59"
+                        },
+                        "scope": 21994,
+                        "src": "953:182:59",
+                        "stateMutability": "view",
+                        "superFunction": 645,
+                        "visibility": "external"
+                    },
+                    {
+                        "body": {
+                            "id": 21982,
+                            "nodeType": "Block",
+                            "src": "1269:29:59",
+                            "statements": [
+                                {
+                                    "expression": {
+                                        "argumentTypes": null,
+                                        "id": 21980,
+                                        "isConstant": false,
+                                        "isLValue": false,
+                                        "isPure": false,
+                                        "lValueRequested": false,
+                                        "leftHandSide": {
+                                            "argumentTypes": null,
+                                            "id": 21978,
+                                            "name": "fee",
+                                            "nodeType": "Identifier",
+                                            "overloadedDeclarations": [],
+                                            "referencedDeclaration": 21956,
+                                            "src": "1279:3:59",
+                                            "typeDescriptions": {
+                                                "typeIdentifier": "t_uint256",
+                                                "typeString": "uint256"
+                                            }
+                                        },
+                                        "nodeType": "Assignment",
+                                        "operator": "=",
+                                        "rightHandSide": {
+                                            "argumentTypes": null,
+                                            "id": 21979,
+                                            "name": "newFee",
+                                            "nodeType": "Identifier",
+                                            "overloadedDeclarations": [],
+                                            "referencedDeclaration": 21975,
+                                            "src": "1285:6:59",
+                                            "typeDescriptions": {
+                                                "typeIdentifier": "t_uint112",
+                                                "typeString": "uint112"
+                                            }
+                                        },
+                                        "src": "1279:12:59",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_uint256",
+                                            "typeString": "uint256"
+                                        }
+                                    },
+                                    "id": 21981,
+                                    "nodeType": "ExpressionStatement",
+                                    "src": "1279:12:59"
+                                }
+                            ]
+                        },
+                        "documentation": null,
+                        "id": 21983,
+                        "implemented": true,
+                        "kind": "function",
+                        "modifiers": [],
+                        "name": "setFee",
+                        "nodeType": "FunctionDefinition",
+                        "parameters": {
+                            "id": 21976,
+                            "nodeType": "ParameterList",
+                            "parameters": [
+                                {
+                                    "constant": false,
+                                    "id": 21975,
+                                    "name": "newFee",
+                                    "nodeType": "VariableDeclaration",
+                                    "scope": 21983,
+                                    "src": "1227:14:59",
+                                    "stateVariable": false,
+                                    "storageLocation": "default",
+                                    "typeDescriptions": {
+                                        "typeIdentifier": "t_uint112",
+                                        "typeString": "uint112"
+                                    },
+                                    "typeName": {
+                                        "id": 21974,
+                                        "name": "uint112",
+                                        "nodeType": "ElementaryTypeName",
+                                        "src": "1227:7:59",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_uint112",
+                                            "typeString": "uint112"
+                                        }
+                                    },
+                                    "value": null,
+                                    "visibility": "internal"
+                                }
+                            ],
+                            "src": "1217:30:59"
+                        },
+                        "returnParameters": {
+                            "id": 21977,
+                            "nodeType": "ParameterList",
+                            "parameters": [],
+                            "src": "1269:0:59"
+                        },
+                        "scope": 21994,
+                        "src": "1202:96:59",
+                        "stateMutability": "nonpayable",
+                        "superFunction": null,
+                        "visibility": "external"
+                    },
+                    {
+                        "body": {
+                            "id": 21992,
+                            "nodeType": "Block",
+                            "src": "1369:27:59",
+                            "statements": [
+                                {
+                                    "expression": {
+                                        "argumentTypes": null,
+                                        "id": 21990,
+                                        "isConstant": false,
+                                        "isLValue": false,
+                                        "isPure": false,
+                                        "lValueRequested": false,
+                                        "leftHandSide": {
+                                            "argumentTypes": null,
+                                            "id": 21988,
+                                            "name": "dy",
+                                            "nodeType": "Identifier",
+                                            "overloadedDeclarations": [],
+                                            "referencedDeclaration": 21959,
+                                            "src": "1379:2:59",
+                                            "typeDescriptions": {
+                                                "typeIdentifier": "t_uint256",
+                                                "typeString": "uint256"
+                                            }
+                                        },
+                                        "nodeType": "Assignment",
+                                        "operator": "=",
+                                        "rightHandSide": {
+                                            "argumentTypes": null,
+                                            "id": 21989,
+                                            "name": "newDy",
+                                            "nodeType": "Identifier",
+                                            "overloadedDeclarations": [],
+                                            "referencedDeclaration": 21985,
+                                            "src": "1384:5:59",
+                                            "typeDescriptions": {
+                                                "typeIdentifier": "t_uint112",
+                                                "typeString": "uint112"
+                                            }
+                                        },
+                                        "src": "1379:10:59",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_uint256",
+                                            "typeString": "uint256"
+                                        }
+                                    },
+                                    "id": 21991,
+                                    "nodeType": "ExpressionStatement",
+                                    "src": "1379:10:59"
+                                }
+                            ]
+                        },
+                        "documentation": null,
+                        "id": 21993,
+                        "implemented": true,
+                        "kind": "function",
+                        "modifiers": [],
+                        "name": "setDy",
+                        "nodeType": "FunctionDefinition",
+                        "parameters": {
+                            "id": 21986,
+                            "nodeType": "ParameterList",
+                            "parameters": [
+                                {
+                                    "constant": false,
+                                    "id": 21985,
+                                    "name": "newDy",
+                                    "nodeType": "VariableDeclaration",
+                                    "scope": 21993,
+                                    "src": "1328:13:59",
+                                    "stateVariable": false,
+                                    "storageLocation": "default",
+                                    "typeDescriptions": {
+                                        "typeIdentifier": "t_uint112",
+                                        "typeString": "uint112"
+                                    },
+                                    "typeName": {
+                                        "id": 21984,
+                                        "name": "uint112",
+                                        "nodeType": "ElementaryTypeName",
+                                        "src": "1328:7:59",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_uint112",
+                                            "typeString": "uint112"
+                                        }
+                                    },
+                                    "value": null,
+                                    "visibility": "internal"
+                                }
+                            ],
+                            "src": "1318:29:59"
+                        },
+                        "returnParameters": {
+                            "id": 21987,
+                            "nodeType": "ParameterList",
+                            "parameters": [],
+                            "src": "1369:0:59"
+                        },
+                        "scope": 21994,
+                        "src": "1304:92:59",
+                        "stateMutability": "nonpayable",
+                        "superFunction": null,
+                        "visibility": "external"
+                    }
+                ],
+                "scope": 21995,
+                "src": "801:597:59"
+            }
+        ],
+        "src": "603:796:59"
+    },
+    "legacyAST": {
+        "absolutePath": "/home/dydx/app/contracts/testing/TestCurve.sol",
+        "exportedSymbols": {
+            "TestCurve": [
+                21994
+            ]
+        },
+        "id": 21995,
+        "nodeType": "SourceUnit",
+        "nodes": [
+            {
+                "id": 21948,
+                "literals": [
+                    "solidity",
+                    "0.5",
+                    ".7"
+                ],
+                "nodeType": "PragmaDirective",
+                "src": "603:22:59"
+            },
+            {
+                "id": 21949,
+                "literals": [
+                    "experimental",
+                    "ABIEncoderV2"
+                ],
+                "nodeType": "PragmaDirective",
+                "src": "626:33:59"
+            },
+            {
+                "absolutePath": "/home/dydx/app/contracts/external/interfaces/ICurve.sol",
+                "file": "../external/interfaces/ICurve.sol",
+                "id": 21951,
+                "nodeType": "ImportDirective",
+                "scope": 21995,
+                "sourceUnit": 647,
+                "src": "661:59:59",
+                "symbolAliases": [
+                    {
+                        "foreign": 21950,
+                        "local": null
+                    }
+                ],
+                "unitAlias": ""
+            },
+            {
+                "baseContracts": [
+                    {
+                        "arguments": null,
+                        "baseName": {
+                            "contractScope": null,
+                            "id": 21952,
+                            "name": "ICurve",
+                            "nodeType": "UserDefinedTypeName",
+                            "referencedDeclaration": 646,
+                            "src": "827:6:59",
+                            "typeDescriptions": {
+                                "typeIdentifier": "t_contract$_ICurve_$646",
+                                "typeString": "contract ICurve"
+                            }
+                        },
+                        "id": 21953,
+                        "nodeType": "InheritanceSpecifier",
+                        "src": "827:6:59"
+                    }
+                ],
+                "contractDependencies": [
+                    646
+                ],
+                "contractKind": "contract",
+                "documentation": "@title TestCurve\n@author dYdX\n * Mock of the Curve contract.",
+                "fullyImplemented": true,
+                "id": 21994,
+                "linearizedBaseContracts": [
+                    21994,
+                    646
+                ],
+                "name": "TestCurve",
+                "nodeType": "ContractDefinition",
+                "nodes": [
+                    {
+                        "constant": false,
+                        "id": 21956,
+                        "name": "fee",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 21994,
+                        "src": "840:28:59",
+                        "stateVariable": true,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                            "typeIdentifier": "t_uint256",
+                            "typeString": "uint256"
+                        },
+                        "typeName": {
+                            "id": 21954,
+                            "name": "uint256",
+                            "nodeType": "ElementaryTypeName",
+                            "src": "840:7:59",
+                            "typeDescriptions": {
+                                "typeIdentifier": "t_uint256",
+                                "typeString": "uint256"
+                            }
+                        },
+                        "value": {
+                            "argumentTypes": null,
+                            "hexValue": "34303030303030",
+                            "id": 21955,
+                            "isConstant": false,
+                            "isLValue": false,
+                            "isPure": true,
+                            "kind": "number",
+                            "lValueRequested": false,
+                            "nodeType": "Literal",
+                            "src": "861:7:59",
+                            "subdenomination": null,
+                            "typeDescriptions": {
+                                "typeIdentifier": "t_rational_4000000_by_1",
+                                "typeString": "int_const 4000000"
+                            },
+                            "value": "4000000"
+                        },
+                        "visibility": "public"
+                    },
+                    {
+                        "constant": false,
+                        "id": 21959,
+                        "name": "dy",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 21994,
+                        "src": "874:21:59",
+                        "stateVariable": true,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                            "typeIdentifier": "t_uint256",
+                            "typeString": "uint256"
+                        },
+                        "typeName": {
+                            "id": 21957,
+                            "name": "uint256",
+                            "nodeType": "ElementaryTypeName",
+                            "src": "874:7:59",
+                            "typeDescriptions": {
+                                "typeIdentifier": "t_uint256",
+                                "typeString": "uint256"
+                            }
+                        },
+                        "value": {
+                            "argumentTypes": null,
+                            "hexValue": "30",
+                            "id": 21958,
+                            "isConstant": false,
+                            "isLValue": false,
+                            "isPure": true,
+                            "kind": "number",
+                            "lValueRequested": false,
+                            "nodeType": "Literal",
+                            "src": "894:1:59",
+                            "subdenomination": null,
+                            "typeDescriptions": {
+                                "typeIdentifier": "t_rational_0_by_1",
+                                "typeString": "int_const 0"
+                            },
+                            "value": "0"
+                        },
+                        "visibility": "public"
+                    },
+                    {
+                        "body": {
+                            "id": 21972,
+                            "nodeType": "Block",
+                            "src": "1109:26:59",
+                            "statements": [
+                                {
+                                    "expression": {
+                                        "argumentTypes": null,
+                                        "id": 21970,
+                                        "name": "dy",
+                                        "nodeType": "Identifier",
+                                        "overloadedDeclarations": [],
+                                        "referencedDeclaration": 21959,
+                                        "src": "1126:2:59",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_uint256",
+                                            "typeString": "uint256"
+                                        }
+                                    },
+                                    "functionReturnParameters": 21969,
+                                    "id": 21971,
+                                    "nodeType": "Return",
+                                    "src": "1119:9:59"
+                                }
+                            ]
+                        },
+                        "documentation": null,
+                        "id": 21973,
+                        "implemented": true,
+                        "kind": "function",
+                        "modifiers": [],
+                        "name": "get_dy",
+                        "nodeType": "FunctionDefinition",
+                        "parameters": {
+                            "id": 21966,
+                            "nodeType": "ParameterList",
+                            "parameters": [
+                                {
+                                    "constant": false,
+                                    "id": 21961,
+                                    "name": "",
+                                    "nodeType": "VariableDeclaration",
+                                    "scope": 21973,
+                                    "src": "978:6:59",
+                                    "stateVariable": false,
+                                    "storageLocation": "default",
+                                    "typeDescriptions": {
+                                        "typeIdentifier": "t_int128",
+                                        "typeString": "int128"
+                                    },
+                                    "typeName": {
+                                        "id": 21960,
+                                        "name": "int128",
+                                        "nodeType": "ElementaryTypeName",
+                                        "src": "978:6:59",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_int128",
+                                            "typeString": "int128"
+                                        }
+                                    },
+                                    "value": null,
+                                    "visibility": "internal"
+                                },
+                                {
+                                    "constant": false,
+                                    "id": 21963,
+                                    "name": "",
+                                    "nodeType": "VariableDeclaration",
+                                    "scope": 21973,
+                                    "src": "1002:6:59",
+                                    "stateVariable": false,
+                                    "storageLocation": "default",
+                                    "typeDescriptions": {
+                                        "typeIdentifier": "t_int128",
+                                        "typeString": "int128"
+                                    },
+                                    "typeName": {
+                                        "id": 21962,
+                                        "name": "int128",
+                                        "nodeType": "ElementaryTypeName",
+                                        "src": "1002:6:59",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_int128",
+                                            "typeString": "int128"
+                                        }
+                                    },
+                                    "value": null,
+                                    "visibility": "internal"
+                                },
+                                {
+                                    "constant": false,
+                                    "id": 21965,
+                                    "name": "",
+                                    "nodeType": "VariableDeclaration",
+                                    "scope": 21973,
+                                    "src": "1026:7:59",
+                                    "stateVariable": false,
+                                    "storageLocation": "default",
+                                    "typeDescriptions": {
+                                        "typeIdentifier": "t_uint256",
+                                        "typeString": "uint256"
+                                    },
+                                    "typeName": {
+                                        "id": 21964,
+                                        "name": "uint256",
+                                        "nodeType": "ElementaryTypeName",
+                                        "src": "1026:7:59",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_uint256",
+                                            "typeString": "uint256"
+                                        }
+                                    },
+                                    "value": null,
+                                    "visibility": "internal"
+                                }
+                            ],
+                            "src": "968:80:59"
+                        },
+                        "returnParameters": {
+                            "id": 21969,
+                            "nodeType": "ParameterList",
+                            "parameters": [
+                                {
+                                    "constant": false,
+                                    "id": 21968,
+                                    "name": "",
+                                    "nodeType": "VariableDeclaration",
+                                    "scope": 21973,
+                                    "src": "1096:7:59",
+                                    "stateVariable": false,
+                                    "storageLocation": "default",
+                                    "typeDescriptions": {
+                                        "typeIdentifier": "t_uint256",
+                                        "typeString": "uint256"
+                                    },
+                                    "typeName": {
+                                        "id": 21967,
+                                        "name": "uint256",
+                                        "nodeType": "ElementaryTypeName",
+                                        "src": "1096:7:59",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_uint256",
+                                            "typeString": "uint256"
+                                        }
+                                    },
+                                    "value": null,
+                                    "visibility": "internal"
+                                }
+                            ],
+                            "src": "1095:9:59"
+                        },
+                        "scope": 21994,
+                        "src": "953:182:59",
+                        "stateMutability": "view",
+                        "superFunction": 645,
+                        "visibility": "external"
+                    },
+                    {
+                        "body": {
+                            "id": 21982,
+                            "nodeType": "Block",
+                            "src": "1269:29:59",
+                            "statements": [
+                                {
+                                    "expression": {
+                                        "argumentTypes": null,
+                                        "id": 21980,
+                                        "isConstant": false,
+                                        "isLValue": false,
+                                        "isPure": false,
+                                        "lValueRequested": false,
+                                        "leftHandSide": {
+                                            "argumentTypes": null,
+                                            "id": 21978,
+                                            "name": "fee",
+                                            "nodeType": "Identifier",
+                                            "overloadedDeclarations": [],
+                                            "referencedDeclaration": 21956,
+                                            "src": "1279:3:59",
+                                            "typeDescriptions": {
+                                                "typeIdentifier": "t_uint256",
+                                                "typeString": "uint256"
+                                            }
+                                        },
+                                        "nodeType": "Assignment",
+                                        "operator": "=",
+                                        "rightHandSide": {
+                                            "argumentTypes": null,
+                                            "id": 21979,
+                                            "name": "newFee",
+                                            "nodeType": "Identifier",
+                                            "overloadedDeclarations": [],
+                                            "referencedDeclaration": 21975,
+                                            "src": "1285:6:59",
+                                            "typeDescriptions": {
+                                                "typeIdentifier": "t_uint112",
+                                                "typeString": "uint112"
+                                            }
+                                        },
+                                        "src": "1279:12:59",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_uint256",
+                                            "typeString": "uint256"
+                                        }
+                                    },
+                                    "id": 21981,
+                                    "nodeType": "ExpressionStatement",
+                                    "src": "1279:12:59"
+                                }
+                            ]
+                        },
+                        "documentation": null,
+                        "id": 21983,
+                        "implemented": true,
+                        "kind": "function",
+                        "modifiers": [],
+                        "name": "setFee",
+                        "nodeType": "FunctionDefinition",
+                        "parameters": {
+                            "id": 21976,
+                            "nodeType": "ParameterList",
+                            "parameters": [
+                                {
+                                    "constant": false,
+                                    "id": 21975,
+                                    "name": "newFee",
+                                    "nodeType": "VariableDeclaration",
+                                    "scope": 21983,
+                                    "src": "1227:14:59",
+                                    "stateVariable": false,
+                                    "storageLocation": "default",
+                                    "typeDescriptions": {
+                                        "typeIdentifier": "t_uint112",
+                                        "typeString": "uint112"
+                                    },
+                                    "typeName": {
+                                        "id": 21974,
+                                        "name": "uint112",
+                                        "nodeType": "ElementaryTypeName",
+                                        "src": "1227:7:59",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_uint112",
+                                            "typeString": "uint112"
+                                        }
+                                    },
+                                    "value": null,
+                                    "visibility": "internal"
+                                }
+                            ],
+                            "src": "1217:30:59"
+                        },
+                        "returnParameters": {
+                            "id": 21977,
+                            "nodeType": "ParameterList",
+                            "parameters": [],
+                            "src": "1269:0:59"
+                        },
+                        "scope": 21994,
+                        "src": "1202:96:59",
+                        "stateMutability": "nonpayable",
+                        "superFunction": null,
+                        "visibility": "external"
+                    },
+                    {
+                        "body": {
+                            "id": 21992,
+                            "nodeType": "Block",
+                            "src": "1369:27:59",
+                            "statements": [
+                                {
+                                    "expression": {
+                                        "argumentTypes": null,
+                                        "id": 21990,
+                                        "isConstant": false,
+                                        "isLValue": false,
+                                        "isPure": false,
+                                        "lValueRequested": false,
+                                        "leftHandSide": {
+                                            "argumentTypes": null,
+                                            "id": 21988,
+                                            "name": "dy",
+                                            "nodeType": "Identifier",
+                                            "overloadedDeclarations": [],
+                                            "referencedDeclaration": 21959,
+                                            "src": "1379:2:59",
+                                            "typeDescriptions": {
+                                                "typeIdentifier": "t_uint256",
+                                                "typeString": "uint256"
+                                            }
+                                        },
+                                        "nodeType": "Assignment",
+                                        "operator": "=",
+                                        "rightHandSide": {
+                                            "argumentTypes": null,
+                                            "id": 21989,
+                                            "name": "newDy",
+                                            "nodeType": "Identifier",
+                                            "overloadedDeclarations": [],
+                                            "referencedDeclaration": 21985,
+                                            "src": "1384:5:59",
+                                            "typeDescriptions": {
+                                                "typeIdentifier": "t_uint112",
+                                                "typeString": "uint112"
+                                            }
+                                        },
+                                        "src": "1379:10:59",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_uint256",
+                                            "typeString": "uint256"
+                                        }
+                                    },
+                                    "id": 21991,
+                                    "nodeType": "ExpressionStatement",
+                                    "src": "1379:10:59"
+                                }
+                            ]
+                        },
+                        "documentation": null,
+                        "id": 21993,
+                        "implemented": true,
+                        "kind": "function",
+                        "modifiers": [],
+                        "name": "setDy",
+                        "nodeType": "FunctionDefinition",
+                        "parameters": {
+                            "id": 21986,
+                            "nodeType": "ParameterList",
+                            "parameters": [
+                                {
+                                    "constant": false,
+                                    "id": 21985,
+                                    "name": "newDy",
+                                    "nodeType": "VariableDeclaration",
+                                    "scope": 21993,
+                                    "src": "1328:13:59",
+                                    "stateVariable": false,
+                                    "storageLocation": "default",
+                                    "typeDescriptions": {
+                                        "typeIdentifier": "t_uint112",
+                                        "typeString": "uint112"
+                                    },
+                                    "typeName": {
+                                        "id": 21984,
+                                        "name": "uint112",
+                                        "nodeType": "ElementaryTypeName",
+                                        "src": "1328:7:59",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_uint112",
+                                            "typeString": "uint112"
+                                        }
+                                    },
+                                    "value": null,
+                                    "visibility": "internal"
+                                }
+                            ],
+                            "src": "1318:29:59"
+                        },
+                        "returnParameters": {
+                            "id": 21987,
+                            "nodeType": "ParameterList",
+                            "parameters": [],
+                            "src": "1369:0:59"
+                        },
+                        "scope": 21994,
+                        "src": "1304:92:59",
+                        "stateMutability": "nonpayable",
+                        "superFunction": null,
+                        "visibility": "external"
+                    }
+                ],
+                "scope": 21995,
+                "src": "801:597:59"
+            }
+        ],
+        "src": "603:796:59"
+    },
+    "compiler": {
+        "name": "solc",
+        "version": "0.5.7+commit.6da8b019.Emscripten.clang"
+    },
+    "networks": {
+        "971": {
+            "events": {},
+            "links": {},
+            "address": "0xe7399CD685926cBe2D631Ec86feBe800AAE89Dca",
+            "transactionHash": "0x394336ca6cfeeacfbece195f3ee4f9cff57ff00a878816e7e0253439a95c9d57"
+        },
+        "1668017230626": {
+            "events": {},
+            "links": {},
+            "address": "0x26b4AFb60d6C903165150C6F0AA14F8016bE4aec",
+            "transactionHash": "0xdffb4e5d8274d423707599f186cc8d29549d3017601b528a9aa833ee6c83061d"
+        },
+        "1668030274040": {
+            "events": {},
+            "links": {},
+            "address": "0x26b4AFb60d6C903165150C6F0AA14F8016bE4aec",
+            "transactionHash": "0xdffb4e5d8274d423707599f186cc8d29549d3017601b528a9aa833ee6c83061d"
+        },
+        "1668138174137": {
+            "events": {},
+            "links": {},
+            "address": "0xA0206BAC6f135601EFc931e8c519bAc209C4a4a2",
+            "transactionHash": "0x60bfa74c9287b69bb97028940dc621df03cfd1179455281a0a149d6e53f74b3f"
+        }
+    },
+    "schemaVersion": "3.0.23",
+    "updatedAt": "2022-11-11T03:47:01.610Z",
+    "networkType": "ethereum",
+    "devdoc": {
+        "author": "dYdX * Mock of the Curve contract.",
+        "methods": {},
+        "title": "TestCurve"
+    },
+    "userdoc": {
+        "methods": {}
+    }
+}

@@ -1,0 +1,1181 @@
+{
+    "contractName": "TestUniswapV2Pair",
+    "abi": [
+        {
+            "constant": true,
+            "inputs": [],
+            "name": "RESERVE0",
+            "outputs": [
+                {
+                    "name": "",
+                    "type": "uint112"
+                }
+            ],
+            "payable": false,
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "constant": true,
+            "inputs": [],
+            "name": "RESERVE1",
+            "outputs": [
+                {
+                    "name": "",
+                    "type": "uint112"
+                }
+            ],
+            "payable": false,
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "constant": true,
+            "inputs": [],
+            "name": "getReserves",
+            "outputs": [
+                {
+                    "name": "reserve0",
+                    "type": "uint112"
+                },
+                {
+                    "name": "reserve1",
+                    "type": "uint112"
+                },
+                {
+                    "name": "blockTimestampLast",
+                    "type": "uint32"
+                }
+            ],
+            "payable": false,
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "constant": false,
+            "inputs": [
+                {
+                    "name": "reserve0",
+                    "type": "uint112"
+                },
+                {
+                    "name": "reserve1",
+                    "type": "uint112"
+                }
+            ],
+            "name": "setReserves",
+            "outputs": [],
+            "payable": false,
+            "stateMutability": "nonpayable",
+            "type": "function"
+        }
+    ],
+    "metadata": "{\"compiler\":{\"version\":\"0.5.7+commit.6da8b019\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"constant\":true,\"inputs\":[],\"name\":\"getReserves\",\"outputs\":[{\"name\":\"reserve0\",\"type\":\"uint112\"},{\"name\":\"reserve1\",\"type\":\"uint112\"},{\"name\":\"blockTimestampLast\",\"type\":\"uint32\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"RESERVE0\",\"outputs\":[{\"name\":\"\",\"type\":\"uint112\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"reserve0\",\"type\":\"uint112\"},{\"name\":\"reserve1\",\"type\":\"uint112\"}],\"name\":\"setReserves\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"RESERVE1\",\"outputs\":[{\"name\":\"\",\"type\":\"uint112\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"}],\"devdoc\":{\"author\":\"dYdX * Mock Uniswap V2 pair.\",\"methods\":{},\"title\":\"TestUniswapV2Pair\"},\"userdoc\":{\"methods\":{}}},\"settings\":{\"compilationTarget\":{\"/home/dydx/app/contracts/testing/TestUniswapV2Pair.sol\":\"TestUniswapV2Pair\"},\"evmVersion\":\"byzantium\",\"libraries\":{},\"optimizer\":{\"enabled\":true,\"runs\":10000},\"remappings\":[]},\"sources\":{\"/home/dydx/app/contracts/external/interfaces/IUniswapV2Pair.sol\":{\"keccak256\":\"0xaabb468ea4fbe3f503ecc0d172a5ad16f3cddd363b5df7c99b37c8aad978e501\",\"urls\":[\"bzzr://0af14b16179666b1ac8fcd608addab8a353afead2729e95c90697a0135c0de62\"]},\"/home/dydx/app/contracts/testing/TestUniswapV2Pair.sol\":{\"keccak256\":\"0xcd25d79bd9a651b2cbc13f1531c7deed06847cee44e12957edc33e3def1b037a\",\"urls\":[\"bzzr://943ce6fa894faf526311330c361da86312cdc9ffc7fe49045f38456fb0dada7a\"]}},\"version\":1}",
+    "bytecode": "0x6080604052600080547fffffffff0000000000000000000000000000000000000000000000000000000016905534801561003857600080fd5b506102a5806100486000396000f3fe608060405234801561001057600080fd5b5060043610610068577c010000000000000000000000000000000000000000000000000000000060003504630902f1ac811461006d5780631b7a38891461008d57806375ea5f2e146100a25780637ef44b96146100b7575b600080fd5b6100756100bf565b6040516100849392919061021f565b60405180910390f35b6100956100ee565b604051610084919061020b565b6100b56100b03660046101b9565b610104565b005b61009561017e565b600080546dffffffffffffffffffffffffffff808216926e010000000000000000000000000000909204169192565b6000546dffffffffffffffffffffffffffff1681565b600080546dffffffffffffffffffffffffffff9283166e010000000000000000000000000000027fffffffff0000000000000000000000000000ffffffffffffffffffffffffffff949093167fffffffffffffffffffffffffffffffffffff00000000000000000000000000009091161792909216179055565b6000546e01000000000000000000000000000090046dffffffffffffffffffffffffffff1681565b60006101b2823561024f565b9392505050565b600080604083850312156101cc57600080fd5b60006101d885856101a6565b92505060206101e9858286016101a6565b9150509250929050565b6101fc8161024f565b82525050565b6101fc81610262565b6020810161021982846101f3565b92915050565b6060810161022d82866101f3565b61023a60208301856101f3565b6102476040830184610202565b949350505050565b6dffffffffffffffffffffffffffff1690565b63ffffffff169056fea265627a7a72305820db7621553bd5b40b93183ccd6427b06dd15258c7a6379d2bb54132bc0c4253a66c6578706572696d656e74616cf50037",
+    "deployedBytecode": "0x608060405234801561001057600080fd5b5060043610610068577c010000000000000000000000000000000000000000000000000000000060003504630902f1ac811461006d5780631b7a38891461008d57806375ea5f2e146100a25780637ef44b96146100b7575b600080fd5b6100756100bf565b6040516100849392919061021f565b60405180910390f35b6100956100ee565b604051610084919061020b565b6100b56100b03660046101b9565b610104565b005b61009561017e565b600080546dffffffffffffffffffffffffffff808216926e010000000000000000000000000000909204169192565b6000546dffffffffffffffffffffffffffff1681565b600080546dffffffffffffffffffffffffffff9283166e010000000000000000000000000000027fffffffff0000000000000000000000000000ffffffffffffffffffffffffffff949093167fffffffffffffffffffffffffffffffffffff00000000000000000000000000009091161792909216179055565b6000546e01000000000000000000000000000090046dffffffffffffffffffffffffffff1681565b60006101b2823561024f565b9392505050565b600080604083850312156101cc57600080fd5b60006101d885856101a6565b92505060206101e9858286016101a6565b9150509250929050565b6101fc8161024f565b82525050565b6101fc81610262565b6020810161021982846101f3565b92915050565b6060810161022d82866101f3565b61023a60208301856101f3565b6102476040830184610202565b949350505050565b6dffffffffffffffffffffffffffff1690565b63ffffffff169056fea265627a7a72305820db7621553bd5b40b93183ccd6427b06dd15258c7a6379d2bb54132bc0c4253a66c6578706572696d656e74616cf50037",
+    "sourceMap": "819:591:69:-;;;900:1;874:27;;907;;;;819:591;5:2:-1;;;;30:1;27;20:12;5:2;819:591:69;;;;;;;",
+    "deployedSourceMap": "819:591:69:-;;;;8:9:-1;5:2;;;30:1;27;20:12;5:2;819:591:69;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;992:184;;;:::i;:::-;;;;;;;;;;;;;;;;;;874:27;;;:::i;:::-;;;;;;;;1243:165;;;;;;;;;:::i;:::-;;907:27;;;:::i;992:184::-;1062:16;1147:8;;;;;;;1157;;;;;992:184;;:::o;874:27::-;;;;;;:::o;1243:165::-;1353:8;:19;;;1382;;;;;;1353;;;;;;;;;1382;;;;;;;1243:165::o;907:27::-;;;;;;;;;:::o;5:118:-1:-;;72:46;110:6;97:20;72:46;;;63:55;57:66;-1:-1;;;57:66;130:366;;;251:2;239:9;230:7;226:23;222:32;219:2;;;267:1;264;257:12;219:2;302:1;319:53;364:7;344:9;319:53;;;309:63;;281:97;409:2;427:53;472:7;463:6;452:9;448:22;427:53;;;417:63;;388:98;213:283;;;;;;503:120;586:31;611:5;586:31;;;581:3;574:44;568:55;;;630:117;711:30;735:5;711:30;;754:213;872:2;857:18;;886:71;861:9;930:6;886:71;;;843:124;;;;;974:431;1146:2;1131:18;;1160:71;1135:9;1204:6;1160:71;;;1242:72;1310:2;1299:9;1295:18;1286:6;1242:72;;;1325:70;1391:2;1380:9;1376:18;1367:6;1325:70;;;1117:288;;;;;;;1412:116;1492:30;1481:42;;1464:64;1535:95;1614:10;1603:22;;1586:44",
+    "source": "/*\n\n    Copyright 2020 dYdX Trading Inc.\n\n    Licensed under the Apache License, Version 2.0 (the \"License\");\n    you may not use this file except in compliance with the License.\n    You may obtain a copy of the License at\n\n    http://www.apache.org/licenses/LICENSE-2.0\n\n    Unless required by applicable law or agreed to in writing, software\n    distributed under the License is distributed on an \"AS IS\" BASIS,\n    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n    See the License for the specific language governing permissions and\n    limitations under the License.\n\n*/\n\npragma solidity 0.5.7;\npragma experimental ABIEncoderV2;\n\nimport { IUniswapV2Pair } from \"../external/interfaces/IUniswapV2Pair.sol\";\n\n\n/**\n * @title TestUniswapV2Pair\n * @author dYdX\n *\n * Mock Uniswap V2 pair.\n */\ncontract TestUniswapV2Pair is\n    IUniswapV2Pair\n{\n    uint112 public RESERVE0 = 0;\n    uint112 public RESERVE1 = 0;\n\n    // ============ Getter Functions ============\n\n    function getReserves()\n        external\n        view\n        returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast)\n    {\n        return (RESERVE0, RESERVE1, 0);\n    }\n\n    // ============ Test Data Setter Functions ============\n\n    function setReserves(\n        uint112 reserve0,\n        uint112 reserve1\n    )\n        external\n    {\n        RESERVE0 = reserve0;\n        RESERVE1 = reserve1;\n    }\n}\n",
+    "sourcePath": "/home/dydx/app/contracts/testing/TestUniswapV2Pair.sol",
+    "ast": {
+        "absolutePath": "/home/dydx/app/contracts/testing/TestUniswapV2Pair.sol",
+        "exportedSymbols": {
+            "TestUniswapV2Pair": [
+                23489
+            ]
+        },
+        "id": 23490,
+        "nodeType": "SourceUnit",
+        "nodes": [
+            {
+                "id": 23446,
+                "literals": [
+                    "solidity",
+                    "0.5",
+                    ".7"
+                ],
+                "nodeType": "PragmaDirective",
+                "src": "603:22:69"
+            },
+            {
+                "id": 23447,
+                "literals": [
+                    "experimental",
+                    "ABIEncoderV2"
+                ],
+                "nodeType": "PragmaDirective",
+                "src": "626:33:69"
+            },
+            {
+                "absolutePath": "/home/dydx/app/contracts/external/interfaces/IUniswapV2Pair.sol",
+                "file": "../external/interfaces/IUniswapV2Pair.sol",
+                "id": 23449,
+                "nodeType": "ImportDirective",
+                "scope": 23490,
+                "sourceUnit": 690,
+                "src": "661:75:69",
+                "symbolAliases": [
+                    {
+                        "foreign": 23448,
+                        "local": null
+                    }
+                ],
+                "unitAlias": ""
+            },
+            {
+                "baseContracts": [
+                    {
+                        "arguments": null,
+                        "baseName": {
+                            "contractScope": null,
+                            "id": 23450,
+                            "name": "IUniswapV2Pair",
+                            "nodeType": "UserDefinedTypeName",
+                            "referencedDeclaration": 689,
+                            "src": "853:14:69",
+                            "typeDescriptions": {
+                                "typeIdentifier": "t_contract$_IUniswapV2Pair_$689",
+                                "typeString": "contract IUniswapV2Pair"
+                            }
+                        },
+                        "id": 23451,
+                        "nodeType": "InheritanceSpecifier",
+                        "src": "853:14:69"
+                    }
+                ],
+                "contractDependencies": [
+                    689
+                ],
+                "contractKind": "contract",
+                "documentation": "@title TestUniswapV2Pair\n@author dYdX\n * Mock Uniswap V2 pair.",
+                "fullyImplemented": true,
+                "id": 23489,
+                "linearizedBaseContracts": [
+                    23489,
+                    689
+                ],
+                "name": "TestUniswapV2Pair",
+                "nodeType": "ContractDefinition",
+                "nodes": [
+                    {
+                        "constant": false,
+                        "id": 23454,
+                        "name": "RESERVE0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 23489,
+                        "src": "874:27:69",
+                        "stateVariable": true,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                            "typeIdentifier": "t_uint112",
+                            "typeString": "uint112"
+                        },
+                        "typeName": {
+                            "id": 23452,
+                            "name": "uint112",
+                            "nodeType": "ElementaryTypeName",
+                            "src": "874:7:69",
+                            "typeDescriptions": {
+                                "typeIdentifier": "t_uint112",
+                                "typeString": "uint112"
+                            }
+                        },
+                        "value": {
+                            "argumentTypes": null,
+                            "hexValue": "30",
+                            "id": 23453,
+                            "isConstant": false,
+                            "isLValue": false,
+                            "isPure": true,
+                            "kind": "number",
+                            "lValueRequested": false,
+                            "nodeType": "Literal",
+                            "src": "900:1:69",
+                            "subdenomination": null,
+                            "typeDescriptions": {
+                                "typeIdentifier": "t_rational_0_by_1",
+                                "typeString": "int_const 0"
+                            },
+                            "value": "0"
+                        },
+                        "visibility": "public"
+                    },
+                    {
+                        "constant": false,
+                        "id": 23457,
+                        "name": "RESERVE1",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 23489,
+                        "src": "907:27:69",
+                        "stateVariable": true,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                            "typeIdentifier": "t_uint112",
+                            "typeString": "uint112"
+                        },
+                        "typeName": {
+                            "id": 23455,
+                            "name": "uint112",
+                            "nodeType": "ElementaryTypeName",
+                            "src": "907:7:69",
+                            "typeDescriptions": {
+                                "typeIdentifier": "t_uint112",
+                                "typeString": "uint112"
+                            }
+                        },
+                        "value": {
+                            "argumentTypes": null,
+                            "hexValue": "30",
+                            "id": 23456,
+                            "isConstant": false,
+                            "isLValue": false,
+                            "isPure": true,
+                            "kind": "number",
+                            "lValueRequested": false,
+                            "nodeType": "Literal",
+                            "src": "933:1:69",
+                            "subdenomination": null,
+                            "typeDescriptions": {
+                                "typeIdentifier": "t_rational_0_by_1",
+                                "typeString": "int_const 0"
+                            },
+                            "value": "0"
+                        },
+                        "visibility": "public"
+                    },
+                    {
+                        "body": {
+                            "id": 23471,
+                            "nodeType": "Block",
+                            "src": "1129:47:69",
+                            "statements": [
+                                {
+                                    "expression": {
+                                        "argumentTypes": null,
+                                        "components": [
+                                            {
+                                                "argumentTypes": null,
+                                                "id": 23466,
+                                                "name": "RESERVE0",
+                                                "nodeType": "Identifier",
+                                                "overloadedDeclarations": [],
+                                                "referencedDeclaration": 23454,
+                                                "src": "1147:8:69",
+                                                "typeDescriptions": {
+                                                    "typeIdentifier": "t_uint112",
+                                                    "typeString": "uint112"
+                                                }
+                                            },
+                                            {
+                                                "argumentTypes": null,
+                                                "id": 23467,
+                                                "name": "RESERVE1",
+                                                "nodeType": "Identifier",
+                                                "overloadedDeclarations": [],
+                                                "referencedDeclaration": 23457,
+                                                "src": "1157:8:69",
+                                                "typeDescriptions": {
+                                                    "typeIdentifier": "t_uint112",
+                                                    "typeString": "uint112"
+                                                }
+                                            },
+                                            {
+                                                "argumentTypes": null,
+                                                "hexValue": "30",
+                                                "id": 23468,
+                                                "isConstant": false,
+                                                "isLValue": false,
+                                                "isPure": true,
+                                                "kind": "number",
+                                                "lValueRequested": false,
+                                                "nodeType": "Literal",
+                                                "src": "1167:1:69",
+                                                "subdenomination": null,
+                                                "typeDescriptions": {
+                                                    "typeIdentifier": "t_rational_0_by_1",
+                                                    "typeString": "int_const 0"
+                                                },
+                                                "value": "0"
+                                            }
+                                        ],
+                                        "id": 23469,
+                                        "isConstant": false,
+                                        "isInlineArray": false,
+                                        "isLValue": false,
+                                        "isPure": false,
+                                        "lValueRequested": false,
+                                        "nodeType": "TupleExpression",
+                                        "src": "1146:23:69",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_tuple$_t_uint112_$_t_uint112_$_t_rational_0_by_1_$",
+                                            "typeString": "tuple(uint112,uint112,int_const 0)"
+                                        }
+                                    },
+                                    "functionReturnParameters": 23465,
+                                    "id": 23470,
+                                    "nodeType": "Return",
+                                    "src": "1139:30:69"
+                                }
+                            ]
+                        },
+                        "documentation": null,
+                        "id": 23472,
+                        "implemented": true,
+                        "kind": "function",
+                        "modifiers": [],
+                        "name": "getReserves",
+                        "nodeType": "FunctionDefinition",
+                        "parameters": {
+                            "id": 23458,
+                            "nodeType": "ParameterList",
+                            "parameters": [],
+                            "src": "1012:2:69"
+                        },
+                        "returnParameters": {
+                            "id": 23465,
+                            "nodeType": "ParameterList",
+                            "parameters": [
+                                {
+                                    "constant": false,
+                                    "id": 23460,
+                                    "name": "reserve0",
+                                    "nodeType": "VariableDeclaration",
+                                    "scope": 23472,
+                                    "src": "1062:16:69",
+                                    "stateVariable": false,
+                                    "storageLocation": "default",
+                                    "typeDescriptions": {
+                                        "typeIdentifier": "t_uint112",
+                                        "typeString": "uint112"
+                                    },
+                                    "typeName": {
+                                        "id": 23459,
+                                        "name": "uint112",
+                                        "nodeType": "ElementaryTypeName",
+                                        "src": "1062:7:69",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_uint112",
+                                            "typeString": "uint112"
+                                        }
+                                    },
+                                    "value": null,
+                                    "visibility": "internal"
+                                },
+                                {
+                                    "constant": false,
+                                    "id": 23462,
+                                    "name": "reserve1",
+                                    "nodeType": "VariableDeclaration",
+                                    "scope": 23472,
+                                    "src": "1080:16:69",
+                                    "stateVariable": false,
+                                    "storageLocation": "default",
+                                    "typeDescriptions": {
+                                        "typeIdentifier": "t_uint112",
+                                        "typeString": "uint112"
+                                    },
+                                    "typeName": {
+                                        "id": 23461,
+                                        "name": "uint112",
+                                        "nodeType": "ElementaryTypeName",
+                                        "src": "1080:7:69",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_uint112",
+                                            "typeString": "uint112"
+                                        }
+                                    },
+                                    "value": null,
+                                    "visibility": "internal"
+                                },
+                                {
+                                    "constant": false,
+                                    "id": 23464,
+                                    "name": "blockTimestampLast",
+                                    "nodeType": "VariableDeclaration",
+                                    "scope": 23472,
+                                    "src": "1098:25:69",
+                                    "stateVariable": false,
+                                    "storageLocation": "default",
+                                    "typeDescriptions": {
+                                        "typeIdentifier": "t_uint32",
+                                        "typeString": "uint32"
+                                    },
+                                    "typeName": {
+                                        "id": 23463,
+                                        "name": "uint32",
+                                        "nodeType": "ElementaryTypeName",
+                                        "src": "1098:6:69",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_uint32",
+                                            "typeString": "uint32"
+                                        }
+                                    },
+                                    "value": null,
+                                    "visibility": "internal"
+                                }
+                            ],
+                            "src": "1061:63:69"
+                        },
+                        "scope": 23489,
+                        "src": "992:184:69",
+                        "stateMutability": "view",
+                        "superFunction": 688,
+                        "visibility": "external"
+                    },
+                    {
+                        "body": {
+                            "id": 23487,
+                            "nodeType": "Block",
+                            "src": "1343:65:69",
+                            "statements": [
+                                {
+                                    "expression": {
+                                        "argumentTypes": null,
+                                        "id": 23481,
+                                        "isConstant": false,
+                                        "isLValue": false,
+                                        "isPure": false,
+                                        "lValueRequested": false,
+                                        "leftHandSide": {
+                                            "argumentTypes": null,
+                                            "id": 23479,
+                                            "name": "RESERVE0",
+                                            "nodeType": "Identifier",
+                                            "overloadedDeclarations": [],
+                                            "referencedDeclaration": 23454,
+                                            "src": "1353:8:69",
+                                            "typeDescriptions": {
+                                                "typeIdentifier": "t_uint112",
+                                                "typeString": "uint112"
+                                            }
+                                        },
+                                        "nodeType": "Assignment",
+                                        "operator": "=",
+                                        "rightHandSide": {
+                                            "argumentTypes": null,
+                                            "id": 23480,
+                                            "name": "reserve0",
+                                            "nodeType": "Identifier",
+                                            "overloadedDeclarations": [],
+                                            "referencedDeclaration": 23474,
+                                            "src": "1364:8:69",
+                                            "typeDescriptions": {
+                                                "typeIdentifier": "t_uint112",
+                                                "typeString": "uint112"
+                                            }
+                                        },
+                                        "src": "1353:19:69",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_uint112",
+                                            "typeString": "uint112"
+                                        }
+                                    },
+                                    "id": 23482,
+                                    "nodeType": "ExpressionStatement",
+                                    "src": "1353:19:69"
+                                },
+                                {
+                                    "expression": {
+                                        "argumentTypes": null,
+                                        "id": 23485,
+                                        "isConstant": false,
+                                        "isLValue": false,
+                                        "isPure": false,
+                                        "lValueRequested": false,
+                                        "leftHandSide": {
+                                            "argumentTypes": null,
+                                            "id": 23483,
+                                            "name": "RESERVE1",
+                                            "nodeType": "Identifier",
+                                            "overloadedDeclarations": [],
+                                            "referencedDeclaration": 23457,
+                                            "src": "1382:8:69",
+                                            "typeDescriptions": {
+                                                "typeIdentifier": "t_uint112",
+                                                "typeString": "uint112"
+                                            }
+                                        },
+                                        "nodeType": "Assignment",
+                                        "operator": "=",
+                                        "rightHandSide": {
+                                            "argumentTypes": null,
+                                            "id": 23484,
+                                            "name": "reserve1",
+                                            "nodeType": "Identifier",
+                                            "overloadedDeclarations": [],
+                                            "referencedDeclaration": 23476,
+                                            "src": "1393:8:69",
+                                            "typeDescriptions": {
+                                                "typeIdentifier": "t_uint112",
+                                                "typeString": "uint112"
+                                            }
+                                        },
+                                        "src": "1382:19:69",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_uint112",
+                                            "typeString": "uint112"
+                                        }
+                                    },
+                                    "id": 23486,
+                                    "nodeType": "ExpressionStatement",
+                                    "src": "1382:19:69"
+                                }
+                            ]
+                        },
+                        "documentation": null,
+                        "id": 23488,
+                        "implemented": true,
+                        "kind": "function",
+                        "modifiers": [],
+                        "name": "setReserves",
+                        "nodeType": "FunctionDefinition",
+                        "parameters": {
+                            "id": 23477,
+                            "nodeType": "ParameterList",
+                            "parameters": [
+                                {
+                                    "constant": false,
+                                    "id": 23474,
+                                    "name": "reserve0",
+                                    "nodeType": "VariableDeclaration",
+                                    "scope": 23488,
+                                    "src": "1273:16:69",
+                                    "stateVariable": false,
+                                    "storageLocation": "default",
+                                    "typeDescriptions": {
+                                        "typeIdentifier": "t_uint112",
+                                        "typeString": "uint112"
+                                    },
+                                    "typeName": {
+                                        "id": 23473,
+                                        "name": "uint112",
+                                        "nodeType": "ElementaryTypeName",
+                                        "src": "1273:7:69",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_uint112",
+                                            "typeString": "uint112"
+                                        }
+                                    },
+                                    "value": null,
+                                    "visibility": "internal"
+                                },
+                                {
+                                    "constant": false,
+                                    "id": 23476,
+                                    "name": "reserve1",
+                                    "nodeType": "VariableDeclaration",
+                                    "scope": 23488,
+                                    "src": "1299:16:69",
+                                    "stateVariable": false,
+                                    "storageLocation": "default",
+                                    "typeDescriptions": {
+                                        "typeIdentifier": "t_uint112",
+                                        "typeString": "uint112"
+                                    },
+                                    "typeName": {
+                                        "id": 23475,
+                                        "name": "uint112",
+                                        "nodeType": "ElementaryTypeName",
+                                        "src": "1299:7:69",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_uint112",
+                                            "typeString": "uint112"
+                                        }
+                                    },
+                                    "value": null,
+                                    "visibility": "internal"
+                                }
+                            ],
+                            "src": "1263:58:69"
+                        },
+                        "returnParameters": {
+                            "id": 23478,
+                            "nodeType": "ParameterList",
+                            "parameters": [],
+                            "src": "1343:0:69"
+                        },
+                        "scope": 23489,
+                        "src": "1243:165:69",
+                        "stateMutability": "nonpayable",
+                        "superFunction": null,
+                        "visibility": "external"
+                    }
+                ],
+                "scope": 23490,
+                "src": "819:591:69"
+            }
+        ],
+        "src": "603:808:69"
+    },
+    "legacyAST": {
+        "absolutePath": "/home/dydx/app/contracts/testing/TestUniswapV2Pair.sol",
+        "exportedSymbols": {
+            "TestUniswapV2Pair": [
+                23489
+            ]
+        },
+        "id": 23490,
+        "nodeType": "SourceUnit",
+        "nodes": [
+            {
+                "id": 23446,
+                "literals": [
+                    "solidity",
+                    "0.5",
+                    ".7"
+                ],
+                "nodeType": "PragmaDirective",
+                "src": "603:22:69"
+            },
+            {
+                "id": 23447,
+                "literals": [
+                    "experimental",
+                    "ABIEncoderV2"
+                ],
+                "nodeType": "PragmaDirective",
+                "src": "626:33:69"
+            },
+            {
+                "absolutePath": "/home/dydx/app/contracts/external/interfaces/IUniswapV2Pair.sol",
+                "file": "../external/interfaces/IUniswapV2Pair.sol",
+                "id": 23449,
+                "nodeType": "ImportDirective",
+                "scope": 23490,
+                "sourceUnit": 690,
+                "src": "661:75:69",
+                "symbolAliases": [
+                    {
+                        "foreign": 23448,
+                        "local": null
+                    }
+                ],
+                "unitAlias": ""
+            },
+            {
+                "baseContracts": [
+                    {
+                        "arguments": null,
+                        "baseName": {
+                            "contractScope": null,
+                            "id": 23450,
+                            "name": "IUniswapV2Pair",
+                            "nodeType": "UserDefinedTypeName",
+                            "referencedDeclaration": 689,
+                            "src": "853:14:69",
+                            "typeDescriptions": {
+                                "typeIdentifier": "t_contract$_IUniswapV2Pair_$689",
+                                "typeString": "contract IUniswapV2Pair"
+                            }
+                        },
+                        "id": 23451,
+                        "nodeType": "InheritanceSpecifier",
+                        "src": "853:14:69"
+                    }
+                ],
+                "contractDependencies": [
+                    689
+                ],
+                "contractKind": "contract",
+                "documentation": "@title TestUniswapV2Pair\n@author dYdX\n * Mock Uniswap V2 pair.",
+                "fullyImplemented": true,
+                "id": 23489,
+                "linearizedBaseContracts": [
+                    23489,
+                    689
+                ],
+                "name": "TestUniswapV2Pair",
+                "nodeType": "ContractDefinition",
+                "nodes": [
+                    {
+                        "constant": false,
+                        "id": 23454,
+                        "name": "RESERVE0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 23489,
+                        "src": "874:27:69",
+                        "stateVariable": true,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                            "typeIdentifier": "t_uint112",
+                            "typeString": "uint112"
+                        },
+                        "typeName": {
+                            "id": 23452,
+                            "name": "uint112",
+                            "nodeType": "ElementaryTypeName",
+                            "src": "874:7:69",
+                            "typeDescriptions": {
+                                "typeIdentifier": "t_uint112",
+                                "typeString": "uint112"
+                            }
+                        },
+                        "value": {
+                            "argumentTypes": null,
+                            "hexValue": "30",
+                            "id": 23453,
+                            "isConstant": false,
+                            "isLValue": false,
+                            "isPure": true,
+                            "kind": "number",
+                            "lValueRequested": false,
+                            "nodeType": "Literal",
+                            "src": "900:1:69",
+                            "subdenomination": null,
+                            "typeDescriptions": {
+                                "typeIdentifier": "t_rational_0_by_1",
+                                "typeString": "int_const 0"
+                            },
+                            "value": "0"
+                        },
+                        "visibility": "public"
+                    },
+                    {
+                        "constant": false,
+                        "id": 23457,
+                        "name": "RESERVE1",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 23489,
+                        "src": "907:27:69",
+                        "stateVariable": true,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                            "typeIdentifier": "t_uint112",
+                            "typeString": "uint112"
+                        },
+                        "typeName": {
+                            "id": 23455,
+                            "name": "uint112",
+                            "nodeType": "ElementaryTypeName",
+                            "src": "907:7:69",
+                            "typeDescriptions": {
+                                "typeIdentifier": "t_uint112",
+                                "typeString": "uint112"
+                            }
+                        },
+                        "value": {
+                            "argumentTypes": null,
+                            "hexValue": "30",
+                            "id": 23456,
+                            "isConstant": false,
+                            "isLValue": false,
+                            "isPure": true,
+                            "kind": "number",
+                            "lValueRequested": false,
+                            "nodeType": "Literal",
+                            "src": "933:1:69",
+                            "subdenomination": null,
+                            "typeDescriptions": {
+                                "typeIdentifier": "t_rational_0_by_1",
+                                "typeString": "int_const 0"
+                            },
+                            "value": "0"
+                        },
+                        "visibility": "public"
+                    },
+                    {
+                        "body": {
+                            "id": 23471,
+                            "nodeType": "Block",
+                            "src": "1129:47:69",
+                            "statements": [
+                                {
+                                    "expression": {
+                                        "argumentTypes": null,
+                                        "components": [
+                                            {
+                                                "argumentTypes": null,
+                                                "id": 23466,
+                                                "name": "RESERVE0",
+                                                "nodeType": "Identifier",
+                                                "overloadedDeclarations": [],
+                                                "referencedDeclaration": 23454,
+                                                "src": "1147:8:69",
+                                                "typeDescriptions": {
+                                                    "typeIdentifier": "t_uint112",
+                                                    "typeString": "uint112"
+                                                }
+                                            },
+                                            {
+                                                "argumentTypes": null,
+                                                "id": 23467,
+                                                "name": "RESERVE1",
+                                                "nodeType": "Identifier",
+                                                "overloadedDeclarations": [],
+                                                "referencedDeclaration": 23457,
+                                                "src": "1157:8:69",
+                                                "typeDescriptions": {
+                                                    "typeIdentifier": "t_uint112",
+                                                    "typeString": "uint112"
+                                                }
+                                            },
+                                            {
+                                                "argumentTypes": null,
+                                                "hexValue": "30",
+                                                "id": 23468,
+                                                "isConstant": false,
+                                                "isLValue": false,
+                                                "isPure": true,
+                                                "kind": "number",
+                                                "lValueRequested": false,
+                                                "nodeType": "Literal",
+                                                "src": "1167:1:69",
+                                                "subdenomination": null,
+                                                "typeDescriptions": {
+                                                    "typeIdentifier": "t_rational_0_by_1",
+                                                    "typeString": "int_const 0"
+                                                },
+                                                "value": "0"
+                                            }
+                                        ],
+                                        "id": 23469,
+                                        "isConstant": false,
+                                        "isInlineArray": false,
+                                        "isLValue": false,
+                                        "isPure": false,
+                                        "lValueRequested": false,
+                                        "nodeType": "TupleExpression",
+                                        "src": "1146:23:69",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_tuple$_t_uint112_$_t_uint112_$_t_rational_0_by_1_$",
+                                            "typeString": "tuple(uint112,uint112,int_const 0)"
+                                        }
+                                    },
+                                    "functionReturnParameters": 23465,
+                                    "id": 23470,
+                                    "nodeType": "Return",
+                                    "src": "1139:30:69"
+                                }
+                            ]
+                        },
+                        "documentation": null,
+                        "id": 23472,
+                        "implemented": true,
+                        "kind": "function",
+                        "modifiers": [],
+                        "name": "getReserves",
+                        "nodeType": "FunctionDefinition",
+                        "parameters": {
+                            "id": 23458,
+                            "nodeType": "ParameterList",
+                            "parameters": [],
+                            "src": "1012:2:69"
+                        },
+                        "returnParameters": {
+                            "id": 23465,
+                            "nodeType": "ParameterList",
+                            "parameters": [
+                                {
+                                    "constant": false,
+                                    "id": 23460,
+                                    "name": "reserve0",
+                                    "nodeType": "VariableDeclaration",
+                                    "scope": 23472,
+                                    "src": "1062:16:69",
+                                    "stateVariable": false,
+                                    "storageLocation": "default",
+                                    "typeDescriptions": {
+                                        "typeIdentifier": "t_uint112",
+                                        "typeString": "uint112"
+                                    },
+                                    "typeName": {
+                                        "id": 23459,
+                                        "name": "uint112",
+                                        "nodeType": "ElementaryTypeName",
+                                        "src": "1062:7:69",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_uint112",
+                                            "typeString": "uint112"
+                                        }
+                                    },
+                                    "value": null,
+                                    "visibility": "internal"
+                                },
+                                {
+                                    "constant": false,
+                                    "id": 23462,
+                                    "name": "reserve1",
+                                    "nodeType": "VariableDeclaration",
+                                    "scope": 23472,
+                                    "src": "1080:16:69",
+                                    "stateVariable": false,
+                                    "storageLocation": "default",
+                                    "typeDescriptions": {
+                                        "typeIdentifier": "t_uint112",
+                                        "typeString": "uint112"
+                                    },
+                                    "typeName": {
+                                        "id": 23461,
+                                        "name": "uint112",
+                                        "nodeType": "ElementaryTypeName",
+                                        "src": "1080:7:69",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_uint112",
+                                            "typeString": "uint112"
+                                        }
+                                    },
+                                    "value": null,
+                                    "visibility": "internal"
+                                },
+                                {
+                                    "constant": false,
+                                    "id": 23464,
+                                    "name": "blockTimestampLast",
+                                    "nodeType": "VariableDeclaration",
+                                    "scope": 23472,
+                                    "src": "1098:25:69",
+                                    "stateVariable": false,
+                                    "storageLocation": "default",
+                                    "typeDescriptions": {
+                                        "typeIdentifier": "t_uint32",
+                                        "typeString": "uint32"
+                                    },
+                                    "typeName": {
+                                        "id": 23463,
+                                        "name": "uint32",
+                                        "nodeType": "ElementaryTypeName",
+                                        "src": "1098:6:69",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_uint32",
+                                            "typeString": "uint32"
+                                        }
+                                    },
+                                    "value": null,
+                                    "visibility": "internal"
+                                }
+                            ],
+                            "src": "1061:63:69"
+                        },
+                        "scope": 23489,
+                        "src": "992:184:69",
+                        "stateMutability": "view",
+                        "superFunction": 688,
+                        "visibility": "external"
+                    },
+                    {
+                        "body": {
+                            "id": 23487,
+                            "nodeType": "Block",
+                            "src": "1343:65:69",
+                            "statements": [
+                                {
+                                    "expression": {
+                                        "argumentTypes": null,
+                                        "id": 23481,
+                                        "isConstant": false,
+                                        "isLValue": false,
+                                        "isPure": false,
+                                        "lValueRequested": false,
+                                        "leftHandSide": {
+                                            "argumentTypes": null,
+                                            "id": 23479,
+                                            "name": "RESERVE0",
+                                            "nodeType": "Identifier",
+                                            "overloadedDeclarations": [],
+                                            "referencedDeclaration": 23454,
+                                            "src": "1353:8:69",
+                                            "typeDescriptions": {
+                                                "typeIdentifier": "t_uint112",
+                                                "typeString": "uint112"
+                                            }
+                                        },
+                                        "nodeType": "Assignment",
+                                        "operator": "=",
+                                        "rightHandSide": {
+                                            "argumentTypes": null,
+                                            "id": 23480,
+                                            "name": "reserve0",
+                                            "nodeType": "Identifier",
+                                            "overloadedDeclarations": [],
+                                            "referencedDeclaration": 23474,
+                                            "src": "1364:8:69",
+                                            "typeDescriptions": {
+                                                "typeIdentifier": "t_uint112",
+                                                "typeString": "uint112"
+                                            }
+                                        },
+                                        "src": "1353:19:69",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_uint112",
+                                            "typeString": "uint112"
+                                        }
+                                    },
+                                    "id": 23482,
+                                    "nodeType": "ExpressionStatement",
+                                    "src": "1353:19:69"
+                                },
+                                {
+                                    "expression": {
+                                        "argumentTypes": null,
+                                        "id": 23485,
+                                        "isConstant": false,
+                                        "isLValue": false,
+                                        "isPure": false,
+                                        "lValueRequested": false,
+                                        "leftHandSide": {
+                                            "argumentTypes": null,
+                                            "id": 23483,
+                                            "name": "RESERVE1",
+                                            "nodeType": "Identifier",
+                                            "overloadedDeclarations": [],
+                                            "referencedDeclaration": 23457,
+                                            "src": "1382:8:69",
+                                            "typeDescriptions": {
+                                                "typeIdentifier": "t_uint112",
+                                                "typeString": "uint112"
+                                            }
+                                        },
+                                        "nodeType": "Assignment",
+                                        "operator": "=",
+                                        "rightHandSide": {
+                                            "argumentTypes": null,
+                                            "id": 23484,
+                                            "name": "reserve1",
+                                            "nodeType": "Identifier",
+                                            "overloadedDeclarations": [],
+                                            "referencedDeclaration": 23476,
+                                            "src": "1393:8:69",
+                                            "typeDescriptions": {
+                                                "typeIdentifier": "t_uint112",
+                                                "typeString": "uint112"
+                                            }
+                                        },
+                                        "src": "1382:19:69",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_uint112",
+                                            "typeString": "uint112"
+                                        }
+                                    },
+                                    "id": 23486,
+                                    "nodeType": "ExpressionStatement",
+                                    "src": "1382:19:69"
+                                }
+                            ]
+                        },
+                        "documentation": null,
+                        "id": 23488,
+                        "implemented": true,
+                        "kind": "function",
+                        "modifiers": [],
+                        "name": "setReserves",
+                        "nodeType": "FunctionDefinition",
+                        "parameters": {
+                            "id": 23477,
+                            "nodeType": "ParameterList",
+                            "parameters": [
+                                {
+                                    "constant": false,
+                                    "id": 23474,
+                                    "name": "reserve0",
+                                    "nodeType": "VariableDeclaration",
+                                    "scope": 23488,
+                                    "src": "1273:16:69",
+                                    "stateVariable": false,
+                                    "storageLocation": "default",
+                                    "typeDescriptions": {
+                                        "typeIdentifier": "t_uint112",
+                                        "typeString": "uint112"
+                                    },
+                                    "typeName": {
+                                        "id": 23473,
+                                        "name": "uint112",
+                                        "nodeType": "ElementaryTypeName",
+                                        "src": "1273:7:69",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_uint112",
+                                            "typeString": "uint112"
+                                        }
+                                    },
+                                    "value": null,
+                                    "visibility": "internal"
+                                },
+                                {
+                                    "constant": false,
+                                    "id": 23476,
+                                    "name": "reserve1",
+                                    "nodeType": "VariableDeclaration",
+                                    "scope": 23488,
+                                    "src": "1299:16:69",
+                                    "stateVariable": false,
+                                    "storageLocation": "default",
+                                    "typeDescriptions": {
+                                        "typeIdentifier": "t_uint112",
+                                        "typeString": "uint112"
+                                    },
+                                    "typeName": {
+                                        "id": 23475,
+                                        "name": "uint112",
+                                        "nodeType": "ElementaryTypeName",
+                                        "src": "1299:7:69",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_uint112",
+                                            "typeString": "uint112"
+                                        }
+                                    },
+                                    "value": null,
+                                    "visibility": "internal"
+                                }
+                            ],
+                            "src": "1263:58:69"
+                        },
+                        "returnParameters": {
+                            "id": 23478,
+                            "nodeType": "ParameterList",
+                            "parameters": [],
+                            "src": "1343:0:69"
+                        },
+                        "scope": 23489,
+                        "src": "1243:165:69",
+                        "stateMutability": "nonpayable",
+                        "superFunction": null,
+                        "visibility": "external"
+                    }
+                ],
+                "scope": 23490,
+                "src": "819:591:69"
+            }
+        ],
+        "src": "603:808:69"
+    },
+    "compiler": {
+        "name": "solc",
+        "version": "0.5.7+commit.6da8b019.Emscripten.clang"
+    },
+    "networks": {
+        "971": {
+            "events": {},
+            "links": {},
+            "address": "0x112D84B64741ff90AaED2Fc009CD1d29baA98aF6",
+            "transactionHash": "0x80e1c55e7e7b6cde15a42fef1bf4fb58f9d94f6d7dd089b325ef4742f4e19fd2"
+        },
+        "1668017230626": {
+            "events": {},
+            "links": {},
+            "address": "0x630589690929E9cdEFDeF0734717a9eF3Ec7Fcfe",
+            "transactionHash": "0x589f9c1db4c6eded38ef81b7ca423bd37227eca1fdb168f80a02c6931b6c1b44"
+        },
+        "1668030274040": {
+            "events": {},
+            "links": {},
+            "address": "0x630589690929E9cdEFDeF0734717a9eF3Ec7Fcfe",
+            "transactionHash": "0x589f9c1db4c6eded38ef81b7ca423bd37227eca1fdb168f80a02c6931b6c1b44"
+        },
+        "1668138174137": {
+            "events": {},
+            "links": {},
+            "address": "0x7908a3b819464B809464D0BF86A6FBF48705b897",
+            "transactionHash": "0xa69ac13541321a457061265d593d01f1e579f789eb2c7c5f4d9f256f36734c18"
+        }
+    },
+    "schemaVersion": "3.0.23",
+    "updatedAt": "2022-11-11T03:47:01.612Z",
+    "networkType": "ethereum",
+    "devdoc": {
+        "author": "dYdX * Mock Uniswap V2 pair.",
+        "methods": {},
+        "title": "TestUniswapV2Pair"
+    },
+    "userdoc": {
+        "methods": {}
+    }
+}

@@ -1,0 +1,1161 @@
+{
+    "contractName": "TestInterestSetter",
+    "abi": [
+        {
+            "constant": true,
+            "inputs": [
+                {
+                    "name": "",
+                    "type": "address"
+                }
+            ],
+            "name": "g_interestRates",
+            "outputs": [
+                {
+                    "name": "value",
+                    "type": "uint256"
+                }
+            ],
+            "payable": false,
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "constant": false,
+            "inputs": [
+                {
+                    "name": "token",
+                    "type": "address"
+                },
+                {
+                    "components": [
+                        {
+                            "name": "value",
+                            "type": "uint256"
+                        }
+                    ],
+                    "name": "rate",
+                    "type": "tuple"
+                }
+            ],
+            "name": "setInterestRate",
+            "outputs": [],
+            "payable": false,
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "constant": true,
+            "inputs": [
+                {
+                    "name": "token",
+                    "type": "address"
+                },
+                {
+                    "name": "",
+                    "type": "uint256"
+                },
+                {
+                    "name": "",
+                    "type": "uint256"
+                }
+            ],
+            "name": "getInterestRate",
+            "outputs": [
+                {
+                    "components": [
+                        {
+                            "name": "value",
+                            "type": "uint256"
+                        }
+                    ],
+                    "name": "",
+                    "type": "tuple"
+                }
+            ],
+            "payable": false,
+            "stateMutability": "view",
+            "type": "function"
+        }
+    ],
+    "metadata": "{\"compiler\":{\"version\":\"0.5.7+commit.6da8b019\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"address\"}],\"name\":\"g_interestRates\",\"outputs\":[{\"name\":\"value\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"token\",\"type\":\"address\"},{\"components\":[{\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"rate\",\"type\":\"tuple\"}],\"name\":\"setInterestRate\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"token\",\"type\":\"address\"},{\"name\":\"\",\"type\":\"uint256\"},{\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"getInterestRate\",\"outputs\":[{\"components\":[{\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"\",\"type\":\"tuple\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"}],\"devdoc\":{\"author\":\"dYdX * Interest setter used for testing that always returns a constant interest rate\",\"methods\":{},\"title\":\"TestInterestSetter\"},\"userdoc\":{\"methods\":{}}},\"settings\":{\"compilationTarget\":{\"/home/dydx/app/contracts/testing/TestInterestSetter.sol\":\"TestInterestSetter\"},\"evmVersion\":\"byzantium\",\"libraries\":{},\"optimizer\":{\"enabled\":true,\"runs\":10000},\"remappings\":[]},\"sources\":{\"/home/dydx/app/contracts/protocol/interfaces/IInterestSetter.sol\":{\"keccak256\":\"0xb675679876a8163f224dfc4f6598a168f8248400a49ab836fdd2a7f4d25a1683\",\"urls\":[\"bzzr://1597c0ec5015093d8d0a91af168e5e89c91ba615abc65048ed721195040ec0f8\"]},\"/home/dydx/app/contracts/protocol/lib/Decimal.sol\":{\"keccak256\":\"0xfddbafc617a77d1db59ddbc596f6aa22931a9a656c0755887648c09bb038ae8c\",\"urls\":[\"bzzr://40396a3a6ded6bb9fe5b5c4b0318f7518ce23c925b104f557310a3775e6e383d\"]},\"/home/dydx/app/contracts/protocol/lib/Interest.sol\":{\"keccak256\":\"0x657f152e3853377ea93d101e145c2f2969fb6fbde025cedd10e7ee17c8bd5c4c\",\"urls\":[\"bzzr://ec53ea6522f8a1ae4150e1c8718f6d7d20d1755b93f4ee6268fd67bd979fa0f9\"]},\"/home/dydx/app/contracts/protocol/lib/Math.sol\":{\"keccak256\":\"0x05162cffa6d5479b6555e03af67b75e63d85272a3c3d3d2630a127ffa811ba41\",\"urls\":[\"bzzr://0e784dccf35201ef16030ec531028252d590936d75f0200f368a7e5981046af4\"]},\"/home/dydx/app/contracts/protocol/lib/Require.sol\":{\"keccak256\":\"0x6ecb512d52bb5cb36ba26b98877240e0b23eb3310df5dc61f82c655dc974d04b\",\"urls\":[\"bzzr://826485117e00106f438a7e64ecc32b2c3705e02d9bd6035dbdc5f9faaa19482c\"]},\"/home/dydx/app/contracts/protocol/lib/Time.sol\":{\"keccak256\":\"0x6523f89764a33b986f6655b5a0fb5b375103153be606b07a9fa95ceb2b93c2f6\",\"urls\":[\"bzzr://61ff7be71d666649cf1b78c2d9950e0d58322932e7e5f6742adbe511e864cd51\"]},\"/home/dydx/app/contracts/protocol/lib/Types.sol\":{\"keccak256\":\"0x35c04c154e9ef818a3e1b59eb748565645864d5f8f2bc696c1f425a8ade9ab00\",\"urls\":[\"bzzr://8b2db9cb583f79fc2b74a70b270667f6a3bc54c3afef6a2d56e0d2ec5b8ca725\"]},\"/home/dydx/app/contracts/testing/TestInterestSetter.sol\":{\"keccak256\":\"0x9ab491353a073c46bad50eb3294ea1111be094cda4bfb6d4868dfd849e2e865f\",\"urls\":[\"bzzr://4a090583f6ff819a1cdeba3a543e2997936e3221e132ae7a07f68b1a483bc799\"]},\"openzeppelin-solidity/contracts/math/SafeMath.sol\":{\"keccak256\":\"0x965012d27b4262d7a41f5028cbb30c51ebd9ecd4be8fb30380aaa7a3c64fbc8b\",\"urls\":[\"bzzr://41ca38f6b0fa4b77b0feec43e422cfbec48b7eb38a41edf0b85c77e8d9a296b1\"]}},\"version\":1}",
+    "bytecode": "0x608060405234801561001057600080fd5b5061031a806100206000396000f3fe608060405234801561001057600080fd5b506004361061005d577c0100000000000000000000000000000000000000000000000000000000600035046301fb557c81146100625780638f8da8891461008b578063e8177dcf146100a0575b600080fd5b6100756100703660046101a3565b6100c0565b604051610082919061028a565b60405180910390f35b61009e6100993660046101c9565b6100d2565b005b6100b36100ae366004610203565b6100fe565b6040516100829190610276565b60006020819052908152604090205481565b73ffffffffffffffffffffffffffffffffffffffff909116600090815260208190526040902090519055565b61010661013e565b50505073ffffffffffffffffffffffffffffffffffffffff166000908152602081815260409182902082519182019092529054815290565b6040518060200160405280600081525090565b600061015d82356102c2565b9392505050565b60006020828403121561017657600080fd5b6101806020610298565b9050600061018e8484610197565b82525092915050565b600061015d82356102bf565b6000602082840312156101b557600080fd5b60006101c18484610151565b949350505050565b600080604083850312156101dc57600080fd5b60006101e88585610151565b92505060206101f985828601610164565b9150509250929050565b60008060006060848603121561021857600080fd5b60006102248686610151565b935050602061023586828701610197565b925050604061024686828701610197565b9150509250925092565b805160208301906102618482610267565b50505050565b610270816102bf565b82525050565b602081016102848284610250565b92915050565b602081016102848284610267565b60405181810167ffffffffffffffff811182821017156102b757600080fd5b604052919050565b90565b600073ffffffffffffffffffffffffffffffffffffffff821661028456fea265627a7a723058209a268f5351f9edf6331f61fc161b71c04435ab93bf6b7f4a1d2adcf7539590df6c6578706572696d656e74616cf50037",
+    "deployedBytecode": "0x608060405234801561001057600080fd5b506004361061005d577c0100000000000000000000000000000000000000000000000000000000600035046301fb557c81146100625780638f8da8891461008b578063e8177dcf146100a0575b600080fd5b6100756100703660046101a3565b6100c0565b604051610082919061028a565b60405180910390f35b61009e6100993660046101c9565b6100d2565b005b6100b36100ae366004610203565b6100fe565b6040516100829190610276565b60006020819052908152604090205481565b73ffffffffffffffffffffffffffffffffffffffff909116600090815260208190526040902090519055565b61010661013e565b50505073ffffffffffffffffffffffffffffffffffffffff166000908152602081815260409182902082519182019092529054815290565b6040518060200160405280600081525090565b600061015d82356102c2565b9392505050565b60006020828403121561017657600080fd5b6101806020610298565b9050600061018e8484610197565b82525092915050565b600061015d82356102bf565b6000602082840312156101b557600080fd5b60006101c18484610151565b949350505050565b600080604083850312156101dc57600080fd5b60006101e88585610151565b92505060206101f985828601610164565b9150509250929050565b60008060006060848603121561021857600080fd5b60006102248686610151565b935050602061023586828701610197565b925050604061024686828701610197565b9150509250925092565b805160208301906102618482610267565b50505050565b610270816102bf565b82525050565b602081016102848284610250565b92915050565b602081016102848284610267565b60405181810167ffffffffffffffff811182821017156102b757600080fd5b604052919050565b90565b600073ffffffffffffffffffffffffffffffffffffffff821661028456fea265627a7a723058209a268f5351f9edf6331f61fc161b71c04435ab93bf6b7f4a1d2adcf7539590df6c6578706572696d656e74616cf50037",
+    "sourceMap": "1013:520:61:-;;;;8:9:-1;5:2;;;30:1;27;20:12;5:2;1013:520:61;;;;;;;",
+    "deployedSourceMap": "1013:520:61:-;;;;8:9:-1;5:2;;;30:1;27;20:12;5:2;1013:520:61;;;;;;;;;;;;;;;;;;;;;;;;;;;;;1070:57;;;;;;;;;:::i;:::-;;;;;;;;;;;;;;;;1134:154;;;;;;;;;:::i;:::-;;1294:237;;;;;;;;;:::i;:::-;;;;;;;;1070:57;;;;;;;;;;;;;;:::o;1134:154::-;1252:22;;;;:15;:22;;;;;;;;;;:29;;;;1134:154::o;1294:237::-;1459:20;;:::i;:::-;-1:-1:-1;;;1502:22:61;;:15;:22;;;;;;;;;;;;1495:29;;;;;;;;;;;;;1294:237::o;1013:520::-;;;;;;;;;;;;;;:::o;5:118:-1:-;;72:46;110:6;97:20;72:46;;;63:55;57:66;-1:-1;;;57:66;157:321;;269:4;257:9;252:3;248:19;244:30;241:2;;;287:1;284;277:12;241:2;305:20;320:4;305:20;;;296:29;-1:-1;376:1;407:49;452:3;432:9;407:49;;;383:74;;-1:-1;394:5;235:243;-1:-1;;235:243;485:118;;552:46;590:6;577:20;552:46;;610:241;;714:2;702:9;693:7;689:23;685:32;682:2;;;730:1;727;720:12;682:2;765:1;782:53;827:7;807:9;782:53;;;772:63;676:175;-1:-1;;;;676:175;858:412;;;1002:2;990:9;981:7;977:23;973:32;970:2;;;1018:1;1015;1008:12;970:2;1053:1;1070:53;1115:7;1095:9;1070:53;;;1060:63;;1032:97;1160:2;1178:76;1246:7;1237:6;1226:9;1222:22;1178:76;;;1168:86;;1139:121;964:306;;;;;;1277:491;;;;1415:2;1403:9;1394:7;1390:23;1386:32;1383:2;;;1431:1;1428;1421:12;1383:2;1466:1;1483:53;1528:7;1508:9;1483:53;;;1473:63;;1445:97;1573:2;1591:53;1636:7;1627:6;1616:9;1612:22;1591:53;;;1581:63;;1552:98;1681:2;1699:53;1744:7;1735:6;1724:9;1720:22;1699:53;;;1689:63;;1660:98;1377:391;;;;;;1826:315;2031:22;;1965:4;1956:14;;;2059:61;1960:3;2031:22;2059:61;;;1985:141;1938:203;;;;2148:110;2221:31;2246:5;2221:31;;;2216:3;2209:44;2203:55;;;2392:305;2556:2;2541:18;;2570:117;2545:9;2660:6;2570:117;;;2527:170;;;;;2704:213;2822:2;2807:18;;2836:71;2811:9;2880:6;2836:71;;2924:256;2986:2;2980:9;3012:17;;;3087:18;3072:34;;3108:22;;;3069:62;3066:2;;;3144:1;3141;3134:12;3066:2;3160;3153:22;2964:216;;-1:-1;2964:216;3187:79;3256:5;3239:27;3273:105;;3465:42;3454:54;;3342:31;3437:76",
+    "source": "/*\n\n    Copyright 2019 dYdX Trading Inc.\n\n    Licensed under the Apache License, Version 2.0 (the \"License\");\n    you may not use this file except in compliance with the License.\n    You may obtain a copy of the License at\n\n    http://www.apache.org/licenses/LICENSE-2.0\n\n    Unless required by applicable law or agreed to in writing, software\n    distributed under the License is distributed on an \"AS IS\" BASIS,\n    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n    See the License for the specific language governing permissions and\n    limitations under the License.\n\n*/\n\npragma solidity 0.5.7;\npragma experimental ABIEncoderV2;\n\nimport { SafeMath } from \"openzeppelin-solidity/contracts/math/SafeMath.sol\";\nimport { IInterestSetter } from \"../protocol/interfaces/IInterestSetter.sol\";\nimport { Interest } from \"../protocol/lib/Interest.sol\";\n\n\n/**\n * @title TestInterestSetter\n * @author dYdX\n *\n * Interest setter used for testing that always returns a constant interest rate\n */\ncontract TestInterestSetter is\n    IInterestSetter\n{\n    mapping (address => Interest.Rate) public g_interestRates;\n\n    function setInterestRate(\n        address token,\n        Interest.Rate memory rate\n    )\n        public\n    {\n        g_interestRates[token] = rate;\n    }\n\n    function getInterestRate(\n        address token,\n        uint256 /* borrowWei */,\n        uint256 /* supplyWei */\n    )\n        public\n        view\n        returns (Interest.Rate memory)\n    {\n        return g_interestRates[token];\n    }\n}\n",
+    "sourcePath": "/home/dydx/app/contracts/testing/TestInterestSetter.sol",
+    "ast": {
+        "absolutePath": "/home/dydx/app/contracts/testing/TestInterestSetter.sol",
+        "exportedSymbols": {
+            "TestInterestSetter": [
+                22080
+            ]
+        },
+        "id": 22081,
+        "nodeType": "SourceUnit",
+        "nodes": [
+            {
+                "id": 22036,
+                "literals": [
+                    "solidity",
+                    "0.5",
+                    ".7"
+                ],
+                "nodeType": "PragmaDirective",
+                "src": "603:22:61"
+            },
+            {
+                "id": 22037,
+                "literals": [
+                    "experimental",
+                    "ABIEncoderV2"
+                ],
+                "nodeType": "PragmaDirective",
+                "src": "626:33:61"
+            },
+            {
+                "absolutePath": "openzeppelin-solidity/contracts/math/SafeMath.sol",
+                "file": "openzeppelin-solidity/contracts/math/SafeMath.sol",
+                "id": 22039,
+                "nodeType": "ImportDirective",
+                "scope": 22081,
+                "sourceUnit": 23968,
+                "src": "661:77:61",
+                "symbolAliases": [
+                    {
+                        "foreign": 22038,
+                        "local": null
+                    }
+                ],
+                "unitAlias": ""
+            },
+            {
+                "absolutePath": "/home/dydx/app/contracts/protocol/interfaces/IInterestSetter.sol",
+                "file": "../protocol/interfaces/IInterestSetter.sol",
+                "id": 22041,
+                "nodeType": "ImportDirective",
+                "scope": 22081,
+                "sourceUnit": 15858,
+                "src": "739:77:61",
+                "symbolAliases": [
+                    {
+                        "foreign": 22040,
+                        "local": null
+                    }
+                ],
+                "unitAlias": ""
+            },
+            {
+                "absolutePath": "/home/dydx/app/contracts/protocol/lib/Interest.sol",
+                "file": "../protocol/lib/Interest.sol",
+                "id": 22043,
+                "nodeType": "ImportDirective",
+                "scope": 22081,
+                "sourceUnit": 17941,
+                "src": "817:56:61",
+                "symbolAliases": [
+                    {
+                        "foreign": 22042,
+                        "local": null
+                    }
+                ],
+                "unitAlias": ""
+            },
+            {
+                "baseContracts": [
+                    {
+                        "arguments": null,
+                        "baseName": {
+                            "contractScope": null,
+                            "id": 22044,
+                            "name": "IInterestSetter",
+                            "nodeType": "UserDefinedTypeName",
+                            "referencedDeclaration": 15857,
+                            "src": "1048:15:61",
+                            "typeDescriptions": {
+                                "typeIdentifier": "t_contract$_IInterestSetter_$15857",
+                                "typeString": "contract IInterestSetter"
+                            }
+                        },
+                        "id": 22045,
+                        "nodeType": "InheritanceSpecifier",
+                        "src": "1048:15:61"
+                    }
+                ],
+                "contractDependencies": [
+                    15857
+                ],
+                "contractKind": "contract",
+                "documentation": "@title TestInterestSetter\n@author dYdX\n * Interest setter used for testing that always returns a constant interest rate",
+                "fullyImplemented": true,
+                "id": 22080,
+                "linearizedBaseContracts": [
+                    22080,
+                    15857
+                ],
+                "name": "TestInterestSetter",
+                "nodeType": "ContractDefinition",
+                "nodes": [
+                    {
+                        "constant": false,
+                        "id": 22049,
+                        "name": "g_interestRates",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 22080,
+                        "src": "1070:57:61",
+                        "stateVariable": true,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                            "typeIdentifier": "t_mapping$_t_address_$_t_struct$_Rate_$17654_storage_$",
+                            "typeString": "mapping(address => struct Interest.Rate)"
+                        },
+                        "typeName": {
+                            "id": 22048,
+                            "keyType": {
+                                "id": 22046,
+                                "name": "address",
+                                "nodeType": "ElementaryTypeName",
+                                "src": "1079:7:61",
+                                "typeDescriptions": {
+                                    "typeIdentifier": "t_address",
+                                    "typeString": "address"
+                                }
+                            },
+                            "nodeType": "Mapping",
+                            "src": "1070:34:61",
+                            "typeDescriptions": {
+                                "typeIdentifier": "t_mapping$_t_address_$_t_struct$_Rate_$17654_storage_$",
+                                "typeString": "mapping(address => struct Interest.Rate)"
+                            },
+                            "valueType": {
+                                "contractScope": null,
+                                "id": 22047,
+                                "name": "Interest.Rate",
+                                "nodeType": "UserDefinedTypeName",
+                                "referencedDeclaration": 17654,
+                                "src": "1090:13:61",
+                                "typeDescriptions": {
+                                    "typeIdentifier": "t_struct$_Rate_$17654_storage_ptr",
+                                    "typeString": "struct Interest.Rate"
+                                }
+                            }
+                        },
+                        "value": null,
+                        "visibility": "public"
+                    },
+                    {
+                        "body": {
+                            "id": 22062,
+                            "nodeType": "Block",
+                            "src": "1242:46:61",
+                            "statements": [
+                                {
+                                    "expression": {
+                                        "argumentTypes": null,
+                                        "id": 22060,
+                                        "isConstant": false,
+                                        "isLValue": false,
+                                        "isPure": false,
+                                        "lValueRequested": false,
+                                        "leftHandSide": {
+                                            "argumentTypes": null,
+                                            "baseExpression": {
+                                                "argumentTypes": null,
+                                                "id": 22056,
+                                                "name": "g_interestRates",
+                                                "nodeType": "Identifier",
+                                                "overloadedDeclarations": [],
+                                                "referencedDeclaration": 22049,
+                                                "src": "1252:15:61",
+                                                "typeDescriptions": {
+                                                    "typeIdentifier": "t_mapping$_t_address_$_t_struct$_Rate_$17654_storage_$",
+                                                    "typeString": "mapping(address => struct Interest.Rate storage ref)"
+                                                }
+                                            },
+                                            "id": 22058,
+                                            "indexExpression": {
+                                                "argumentTypes": null,
+                                                "id": 22057,
+                                                "name": "token",
+                                                "nodeType": "Identifier",
+                                                "overloadedDeclarations": [],
+                                                "referencedDeclaration": 22051,
+                                                "src": "1268:5:61",
+                                                "typeDescriptions": {
+                                                    "typeIdentifier": "t_address",
+                                                    "typeString": "address"
+                                                }
+                                            },
+                                            "isConstant": false,
+                                            "isLValue": true,
+                                            "isPure": false,
+                                            "lValueRequested": true,
+                                            "nodeType": "IndexAccess",
+                                            "src": "1252:22:61",
+                                            "typeDescriptions": {
+                                                "typeIdentifier": "t_struct$_Rate_$17654_storage",
+                                                "typeString": "struct Interest.Rate storage ref"
+                                            }
+                                        },
+                                        "nodeType": "Assignment",
+                                        "operator": "=",
+                                        "rightHandSide": {
+                                            "argumentTypes": null,
+                                            "id": 22059,
+                                            "name": "rate",
+                                            "nodeType": "Identifier",
+                                            "overloadedDeclarations": [],
+                                            "referencedDeclaration": 22053,
+                                            "src": "1277:4:61",
+                                            "typeDescriptions": {
+                                                "typeIdentifier": "t_struct$_Rate_$17654_memory_ptr",
+                                                "typeString": "struct Interest.Rate memory"
+                                            }
+                                        },
+                                        "src": "1252:29:61",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_struct$_Rate_$17654_storage",
+                                            "typeString": "struct Interest.Rate storage ref"
+                                        }
+                                    },
+                                    "id": 22061,
+                                    "nodeType": "ExpressionStatement",
+                                    "src": "1252:29:61"
+                                }
+                            ]
+                        },
+                        "documentation": null,
+                        "id": 22063,
+                        "implemented": true,
+                        "kind": "function",
+                        "modifiers": [],
+                        "name": "setInterestRate",
+                        "nodeType": "FunctionDefinition",
+                        "parameters": {
+                            "id": 22054,
+                            "nodeType": "ParameterList",
+                            "parameters": [
+                                {
+                                    "constant": false,
+                                    "id": 22051,
+                                    "name": "token",
+                                    "nodeType": "VariableDeclaration",
+                                    "scope": 22063,
+                                    "src": "1168:13:61",
+                                    "stateVariable": false,
+                                    "storageLocation": "default",
+                                    "typeDescriptions": {
+                                        "typeIdentifier": "t_address",
+                                        "typeString": "address"
+                                    },
+                                    "typeName": {
+                                        "id": 22050,
+                                        "name": "address",
+                                        "nodeType": "ElementaryTypeName",
+                                        "src": "1168:7:61",
+                                        "stateMutability": "nonpayable",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_address",
+                                            "typeString": "address"
+                                        }
+                                    },
+                                    "value": null,
+                                    "visibility": "internal"
+                                },
+                                {
+                                    "constant": false,
+                                    "id": 22053,
+                                    "name": "rate",
+                                    "nodeType": "VariableDeclaration",
+                                    "scope": 22063,
+                                    "src": "1191:25:61",
+                                    "stateVariable": false,
+                                    "storageLocation": "memory",
+                                    "typeDescriptions": {
+                                        "typeIdentifier": "t_struct$_Rate_$17654_memory_ptr",
+                                        "typeString": "struct Interest.Rate"
+                                    },
+                                    "typeName": {
+                                        "contractScope": null,
+                                        "id": 22052,
+                                        "name": "Interest.Rate",
+                                        "nodeType": "UserDefinedTypeName",
+                                        "referencedDeclaration": 17654,
+                                        "src": "1191:13:61",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_struct$_Rate_$17654_storage_ptr",
+                                            "typeString": "struct Interest.Rate"
+                                        }
+                                    },
+                                    "value": null,
+                                    "visibility": "internal"
+                                }
+                            ],
+                            "src": "1158:64:61"
+                        },
+                        "returnParameters": {
+                            "id": 22055,
+                            "nodeType": "ParameterList",
+                            "parameters": [],
+                            "src": "1242:0:61"
+                        },
+                        "scope": 22080,
+                        "src": "1134:154:61",
+                        "stateMutability": "nonpayable",
+                        "superFunction": null,
+                        "visibility": "public"
+                    },
+                    {
+                        "body": {
+                            "id": 22078,
+                            "nodeType": "Block",
+                            "src": "1485:46:61",
+                            "statements": [
+                                {
+                                    "expression": {
+                                        "argumentTypes": null,
+                                        "baseExpression": {
+                                            "argumentTypes": null,
+                                            "id": 22074,
+                                            "name": "g_interestRates",
+                                            "nodeType": "Identifier",
+                                            "overloadedDeclarations": [],
+                                            "referencedDeclaration": 22049,
+                                            "src": "1502:15:61",
+                                            "typeDescriptions": {
+                                                "typeIdentifier": "t_mapping$_t_address_$_t_struct$_Rate_$17654_storage_$",
+                                                "typeString": "mapping(address => struct Interest.Rate storage ref)"
+                                            }
+                                        },
+                                        "id": 22076,
+                                        "indexExpression": {
+                                            "argumentTypes": null,
+                                            "id": 22075,
+                                            "name": "token",
+                                            "nodeType": "Identifier",
+                                            "overloadedDeclarations": [],
+                                            "referencedDeclaration": 22065,
+                                            "src": "1518:5:61",
+                                            "typeDescriptions": {
+                                                "typeIdentifier": "t_address",
+                                                "typeString": "address"
+                                            }
+                                        },
+                                        "isConstant": false,
+                                        "isLValue": true,
+                                        "isPure": false,
+                                        "lValueRequested": false,
+                                        "nodeType": "IndexAccess",
+                                        "src": "1502:22:61",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_struct$_Rate_$17654_storage",
+                                            "typeString": "struct Interest.Rate storage ref"
+                                        }
+                                    },
+                                    "functionReturnParameters": 22073,
+                                    "id": 22077,
+                                    "nodeType": "Return",
+                                    "src": "1495:29:61"
+                                }
+                            ]
+                        },
+                        "documentation": null,
+                        "id": 22079,
+                        "implemented": true,
+                        "kind": "function",
+                        "modifiers": [],
+                        "name": "getInterestRate",
+                        "nodeType": "FunctionDefinition",
+                        "parameters": {
+                            "id": 22070,
+                            "nodeType": "ParameterList",
+                            "parameters": [
+                                {
+                                    "constant": false,
+                                    "id": 22065,
+                                    "name": "token",
+                                    "nodeType": "VariableDeclaration",
+                                    "scope": 22079,
+                                    "src": "1328:13:61",
+                                    "stateVariable": false,
+                                    "storageLocation": "default",
+                                    "typeDescriptions": {
+                                        "typeIdentifier": "t_address",
+                                        "typeString": "address"
+                                    },
+                                    "typeName": {
+                                        "id": 22064,
+                                        "name": "address",
+                                        "nodeType": "ElementaryTypeName",
+                                        "src": "1328:7:61",
+                                        "stateMutability": "nonpayable",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_address",
+                                            "typeString": "address"
+                                        }
+                                    },
+                                    "value": null,
+                                    "visibility": "internal"
+                                },
+                                {
+                                    "constant": false,
+                                    "id": 22067,
+                                    "name": "",
+                                    "nodeType": "VariableDeclaration",
+                                    "scope": 22079,
+                                    "src": "1351:7:61",
+                                    "stateVariable": false,
+                                    "storageLocation": "default",
+                                    "typeDescriptions": {
+                                        "typeIdentifier": "t_uint256",
+                                        "typeString": "uint256"
+                                    },
+                                    "typeName": {
+                                        "id": 22066,
+                                        "name": "uint256",
+                                        "nodeType": "ElementaryTypeName",
+                                        "src": "1351:7:61",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_uint256",
+                                            "typeString": "uint256"
+                                        }
+                                    },
+                                    "value": null,
+                                    "visibility": "internal"
+                                },
+                                {
+                                    "constant": false,
+                                    "id": 22069,
+                                    "name": "",
+                                    "nodeType": "VariableDeclaration",
+                                    "scope": 22079,
+                                    "src": "1384:7:61",
+                                    "stateVariable": false,
+                                    "storageLocation": "default",
+                                    "typeDescriptions": {
+                                        "typeIdentifier": "t_uint256",
+                                        "typeString": "uint256"
+                                    },
+                                    "typeName": {
+                                        "id": 22068,
+                                        "name": "uint256",
+                                        "nodeType": "ElementaryTypeName",
+                                        "src": "1384:7:61",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_uint256",
+                                            "typeString": "uint256"
+                                        }
+                                    },
+                                    "value": null,
+                                    "visibility": "internal"
+                                }
+                            ],
+                            "src": "1318:95:61"
+                        },
+                        "returnParameters": {
+                            "id": 22073,
+                            "nodeType": "ParameterList",
+                            "parameters": [
+                                {
+                                    "constant": false,
+                                    "id": 22072,
+                                    "name": "",
+                                    "nodeType": "VariableDeclaration",
+                                    "scope": 22079,
+                                    "src": "1459:20:61",
+                                    "stateVariable": false,
+                                    "storageLocation": "memory",
+                                    "typeDescriptions": {
+                                        "typeIdentifier": "t_struct$_Rate_$17654_memory_ptr",
+                                        "typeString": "struct Interest.Rate"
+                                    },
+                                    "typeName": {
+                                        "contractScope": null,
+                                        "id": 22071,
+                                        "name": "Interest.Rate",
+                                        "nodeType": "UserDefinedTypeName",
+                                        "referencedDeclaration": 17654,
+                                        "src": "1459:13:61",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_struct$_Rate_$17654_storage_ptr",
+                                            "typeString": "struct Interest.Rate"
+                                        }
+                                    },
+                                    "value": null,
+                                    "visibility": "internal"
+                                }
+                            ],
+                            "src": "1458:22:61"
+                        },
+                        "scope": 22080,
+                        "src": "1294:237:61",
+                        "stateMutability": "view",
+                        "superFunction": 15856,
+                        "visibility": "public"
+                    }
+                ],
+                "scope": 22081,
+                "src": "1013:520:61"
+            }
+        ],
+        "src": "603:931:61"
+    },
+    "legacyAST": {
+        "absolutePath": "/home/dydx/app/contracts/testing/TestInterestSetter.sol",
+        "exportedSymbols": {
+            "TestInterestSetter": [
+                22080
+            ]
+        },
+        "id": 22081,
+        "nodeType": "SourceUnit",
+        "nodes": [
+            {
+                "id": 22036,
+                "literals": [
+                    "solidity",
+                    "0.5",
+                    ".7"
+                ],
+                "nodeType": "PragmaDirective",
+                "src": "603:22:61"
+            },
+            {
+                "id": 22037,
+                "literals": [
+                    "experimental",
+                    "ABIEncoderV2"
+                ],
+                "nodeType": "PragmaDirective",
+                "src": "626:33:61"
+            },
+            {
+                "absolutePath": "openzeppelin-solidity/contracts/math/SafeMath.sol",
+                "file": "openzeppelin-solidity/contracts/math/SafeMath.sol",
+                "id": 22039,
+                "nodeType": "ImportDirective",
+                "scope": 22081,
+                "sourceUnit": 23968,
+                "src": "661:77:61",
+                "symbolAliases": [
+                    {
+                        "foreign": 22038,
+                        "local": null
+                    }
+                ],
+                "unitAlias": ""
+            },
+            {
+                "absolutePath": "/home/dydx/app/contracts/protocol/interfaces/IInterestSetter.sol",
+                "file": "../protocol/interfaces/IInterestSetter.sol",
+                "id": 22041,
+                "nodeType": "ImportDirective",
+                "scope": 22081,
+                "sourceUnit": 15858,
+                "src": "739:77:61",
+                "symbolAliases": [
+                    {
+                        "foreign": 22040,
+                        "local": null
+                    }
+                ],
+                "unitAlias": ""
+            },
+            {
+                "absolutePath": "/home/dydx/app/contracts/protocol/lib/Interest.sol",
+                "file": "../protocol/lib/Interest.sol",
+                "id": 22043,
+                "nodeType": "ImportDirective",
+                "scope": 22081,
+                "sourceUnit": 17941,
+                "src": "817:56:61",
+                "symbolAliases": [
+                    {
+                        "foreign": 22042,
+                        "local": null
+                    }
+                ],
+                "unitAlias": ""
+            },
+            {
+                "baseContracts": [
+                    {
+                        "arguments": null,
+                        "baseName": {
+                            "contractScope": null,
+                            "id": 22044,
+                            "name": "IInterestSetter",
+                            "nodeType": "UserDefinedTypeName",
+                            "referencedDeclaration": 15857,
+                            "src": "1048:15:61",
+                            "typeDescriptions": {
+                                "typeIdentifier": "t_contract$_IInterestSetter_$15857",
+                                "typeString": "contract IInterestSetter"
+                            }
+                        },
+                        "id": 22045,
+                        "nodeType": "InheritanceSpecifier",
+                        "src": "1048:15:61"
+                    }
+                ],
+                "contractDependencies": [
+                    15857
+                ],
+                "contractKind": "contract",
+                "documentation": "@title TestInterestSetter\n@author dYdX\n * Interest setter used for testing that always returns a constant interest rate",
+                "fullyImplemented": true,
+                "id": 22080,
+                "linearizedBaseContracts": [
+                    22080,
+                    15857
+                ],
+                "name": "TestInterestSetter",
+                "nodeType": "ContractDefinition",
+                "nodes": [
+                    {
+                        "constant": false,
+                        "id": 22049,
+                        "name": "g_interestRates",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 22080,
+                        "src": "1070:57:61",
+                        "stateVariable": true,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                            "typeIdentifier": "t_mapping$_t_address_$_t_struct$_Rate_$17654_storage_$",
+                            "typeString": "mapping(address => struct Interest.Rate)"
+                        },
+                        "typeName": {
+                            "id": 22048,
+                            "keyType": {
+                                "id": 22046,
+                                "name": "address",
+                                "nodeType": "ElementaryTypeName",
+                                "src": "1079:7:61",
+                                "typeDescriptions": {
+                                    "typeIdentifier": "t_address",
+                                    "typeString": "address"
+                                }
+                            },
+                            "nodeType": "Mapping",
+                            "src": "1070:34:61",
+                            "typeDescriptions": {
+                                "typeIdentifier": "t_mapping$_t_address_$_t_struct$_Rate_$17654_storage_$",
+                                "typeString": "mapping(address => struct Interest.Rate)"
+                            },
+                            "valueType": {
+                                "contractScope": null,
+                                "id": 22047,
+                                "name": "Interest.Rate",
+                                "nodeType": "UserDefinedTypeName",
+                                "referencedDeclaration": 17654,
+                                "src": "1090:13:61",
+                                "typeDescriptions": {
+                                    "typeIdentifier": "t_struct$_Rate_$17654_storage_ptr",
+                                    "typeString": "struct Interest.Rate"
+                                }
+                            }
+                        },
+                        "value": null,
+                        "visibility": "public"
+                    },
+                    {
+                        "body": {
+                            "id": 22062,
+                            "nodeType": "Block",
+                            "src": "1242:46:61",
+                            "statements": [
+                                {
+                                    "expression": {
+                                        "argumentTypes": null,
+                                        "id": 22060,
+                                        "isConstant": false,
+                                        "isLValue": false,
+                                        "isPure": false,
+                                        "lValueRequested": false,
+                                        "leftHandSide": {
+                                            "argumentTypes": null,
+                                            "baseExpression": {
+                                                "argumentTypes": null,
+                                                "id": 22056,
+                                                "name": "g_interestRates",
+                                                "nodeType": "Identifier",
+                                                "overloadedDeclarations": [],
+                                                "referencedDeclaration": 22049,
+                                                "src": "1252:15:61",
+                                                "typeDescriptions": {
+                                                    "typeIdentifier": "t_mapping$_t_address_$_t_struct$_Rate_$17654_storage_$",
+                                                    "typeString": "mapping(address => struct Interest.Rate storage ref)"
+                                                }
+                                            },
+                                            "id": 22058,
+                                            "indexExpression": {
+                                                "argumentTypes": null,
+                                                "id": 22057,
+                                                "name": "token",
+                                                "nodeType": "Identifier",
+                                                "overloadedDeclarations": [],
+                                                "referencedDeclaration": 22051,
+                                                "src": "1268:5:61",
+                                                "typeDescriptions": {
+                                                    "typeIdentifier": "t_address",
+                                                    "typeString": "address"
+                                                }
+                                            },
+                                            "isConstant": false,
+                                            "isLValue": true,
+                                            "isPure": false,
+                                            "lValueRequested": true,
+                                            "nodeType": "IndexAccess",
+                                            "src": "1252:22:61",
+                                            "typeDescriptions": {
+                                                "typeIdentifier": "t_struct$_Rate_$17654_storage",
+                                                "typeString": "struct Interest.Rate storage ref"
+                                            }
+                                        },
+                                        "nodeType": "Assignment",
+                                        "operator": "=",
+                                        "rightHandSide": {
+                                            "argumentTypes": null,
+                                            "id": 22059,
+                                            "name": "rate",
+                                            "nodeType": "Identifier",
+                                            "overloadedDeclarations": [],
+                                            "referencedDeclaration": 22053,
+                                            "src": "1277:4:61",
+                                            "typeDescriptions": {
+                                                "typeIdentifier": "t_struct$_Rate_$17654_memory_ptr",
+                                                "typeString": "struct Interest.Rate memory"
+                                            }
+                                        },
+                                        "src": "1252:29:61",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_struct$_Rate_$17654_storage",
+                                            "typeString": "struct Interest.Rate storage ref"
+                                        }
+                                    },
+                                    "id": 22061,
+                                    "nodeType": "ExpressionStatement",
+                                    "src": "1252:29:61"
+                                }
+                            ]
+                        },
+                        "documentation": null,
+                        "id": 22063,
+                        "implemented": true,
+                        "kind": "function",
+                        "modifiers": [],
+                        "name": "setInterestRate",
+                        "nodeType": "FunctionDefinition",
+                        "parameters": {
+                            "id": 22054,
+                            "nodeType": "ParameterList",
+                            "parameters": [
+                                {
+                                    "constant": false,
+                                    "id": 22051,
+                                    "name": "token",
+                                    "nodeType": "VariableDeclaration",
+                                    "scope": 22063,
+                                    "src": "1168:13:61",
+                                    "stateVariable": false,
+                                    "storageLocation": "default",
+                                    "typeDescriptions": {
+                                        "typeIdentifier": "t_address",
+                                        "typeString": "address"
+                                    },
+                                    "typeName": {
+                                        "id": 22050,
+                                        "name": "address",
+                                        "nodeType": "ElementaryTypeName",
+                                        "src": "1168:7:61",
+                                        "stateMutability": "nonpayable",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_address",
+                                            "typeString": "address"
+                                        }
+                                    },
+                                    "value": null,
+                                    "visibility": "internal"
+                                },
+                                {
+                                    "constant": false,
+                                    "id": 22053,
+                                    "name": "rate",
+                                    "nodeType": "VariableDeclaration",
+                                    "scope": 22063,
+                                    "src": "1191:25:61",
+                                    "stateVariable": false,
+                                    "storageLocation": "memory",
+                                    "typeDescriptions": {
+                                        "typeIdentifier": "t_struct$_Rate_$17654_memory_ptr",
+                                        "typeString": "struct Interest.Rate"
+                                    },
+                                    "typeName": {
+                                        "contractScope": null,
+                                        "id": 22052,
+                                        "name": "Interest.Rate",
+                                        "nodeType": "UserDefinedTypeName",
+                                        "referencedDeclaration": 17654,
+                                        "src": "1191:13:61",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_struct$_Rate_$17654_storage_ptr",
+                                            "typeString": "struct Interest.Rate"
+                                        }
+                                    },
+                                    "value": null,
+                                    "visibility": "internal"
+                                }
+                            ],
+                            "src": "1158:64:61"
+                        },
+                        "returnParameters": {
+                            "id": 22055,
+                            "nodeType": "ParameterList",
+                            "parameters": [],
+                            "src": "1242:0:61"
+                        },
+                        "scope": 22080,
+                        "src": "1134:154:61",
+                        "stateMutability": "nonpayable",
+                        "superFunction": null,
+                        "visibility": "public"
+                    },
+                    {
+                        "body": {
+                            "id": 22078,
+                            "nodeType": "Block",
+                            "src": "1485:46:61",
+                            "statements": [
+                                {
+                                    "expression": {
+                                        "argumentTypes": null,
+                                        "baseExpression": {
+                                            "argumentTypes": null,
+                                            "id": 22074,
+                                            "name": "g_interestRates",
+                                            "nodeType": "Identifier",
+                                            "overloadedDeclarations": [],
+                                            "referencedDeclaration": 22049,
+                                            "src": "1502:15:61",
+                                            "typeDescriptions": {
+                                                "typeIdentifier": "t_mapping$_t_address_$_t_struct$_Rate_$17654_storage_$",
+                                                "typeString": "mapping(address => struct Interest.Rate storage ref)"
+                                            }
+                                        },
+                                        "id": 22076,
+                                        "indexExpression": {
+                                            "argumentTypes": null,
+                                            "id": 22075,
+                                            "name": "token",
+                                            "nodeType": "Identifier",
+                                            "overloadedDeclarations": [],
+                                            "referencedDeclaration": 22065,
+                                            "src": "1518:5:61",
+                                            "typeDescriptions": {
+                                                "typeIdentifier": "t_address",
+                                                "typeString": "address"
+                                            }
+                                        },
+                                        "isConstant": false,
+                                        "isLValue": true,
+                                        "isPure": false,
+                                        "lValueRequested": false,
+                                        "nodeType": "IndexAccess",
+                                        "src": "1502:22:61",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_struct$_Rate_$17654_storage",
+                                            "typeString": "struct Interest.Rate storage ref"
+                                        }
+                                    },
+                                    "functionReturnParameters": 22073,
+                                    "id": 22077,
+                                    "nodeType": "Return",
+                                    "src": "1495:29:61"
+                                }
+                            ]
+                        },
+                        "documentation": null,
+                        "id": 22079,
+                        "implemented": true,
+                        "kind": "function",
+                        "modifiers": [],
+                        "name": "getInterestRate",
+                        "nodeType": "FunctionDefinition",
+                        "parameters": {
+                            "id": 22070,
+                            "nodeType": "ParameterList",
+                            "parameters": [
+                                {
+                                    "constant": false,
+                                    "id": 22065,
+                                    "name": "token",
+                                    "nodeType": "VariableDeclaration",
+                                    "scope": 22079,
+                                    "src": "1328:13:61",
+                                    "stateVariable": false,
+                                    "storageLocation": "default",
+                                    "typeDescriptions": {
+                                        "typeIdentifier": "t_address",
+                                        "typeString": "address"
+                                    },
+                                    "typeName": {
+                                        "id": 22064,
+                                        "name": "address",
+                                        "nodeType": "ElementaryTypeName",
+                                        "src": "1328:7:61",
+                                        "stateMutability": "nonpayable",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_address",
+                                            "typeString": "address"
+                                        }
+                                    },
+                                    "value": null,
+                                    "visibility": "internal"
+                                },
+                                {
+                                    "constant": false,
+                                    "id": 22067,
+                                    "name": "",
+                                    "nodeType": "VariableDeclaration",
+                                    "scope": 22079,
+                                    "src": "1351:7:61",
+                                    "stateVariable": false,
+                                    "storageLocation": "default",
+                                    "typeDescriptions": {
+                                        "typeIdentifier": "t_uint256",
+                                        "typeString": "uint256"
+                                    },
+                                    "typeName": {
+                                        "id": 22066,
+                                        "name": "uint256",
+                                        "nodeType": "ElementaryTypeName",
+                                        "src": "1351:7:61",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_uint256",
+                                            "typeString": "uint256"
+                                        }
+                                    },
+                                    "value": null,
+                                    "visibility": "internal"
+                                },
+                                {
+                                    "constant": false,
+                                    "id": 22069,
+                                    "name": "",
+                                    "nodeType": "VariableDeclaration",
+                                    "scope": 22079,
+                                    "src": "1384:7:61",
+                                    "stateVariable": false,
+                                    "storageLocation": "default",
+                                    "typeDescriptions": {
+                                        "typeIdentifier": "t_uint256",
+                                        "typeString": "uint256"
+                                    },
+                                    "typeName": {
+                                        "id": 22068,
+                                        "name": "uint256",
+                                        "nodeType": "ElementaryTypeName",
+                                        "src": "1384:7:61",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_uint256",
+                                            "typeString": "uint256"
+                                        }
+                                    },
+                                    "value": null,
+                                    "visibility": "internal"
+                                }
+                            ],
+                            "src": "1318:95:61"
+                        },
+                        "returnParameters": {
+                            "id": 22073,
+                            "nodeType": "ParameterList",
+                            "parameters": [
+                                {
+                                    "constant": false,
+                                    "id": 22072,
+                                    "name": "",
+                                    "nodeType": "VariableDeclaration",
+                                    "scope": 22079,
+                                    "src": "1459:20:61",
+                                    "stateVariable": false,
+                                    "storageLocation": "memory",
+                                    "typeDescriptions": {
+                                        "typeIdentifier": "t_struct$_Rate_$17654_memory_ptr",
+                                        "typeString": "struct Interest.Rate"
+                                    },
+                                    "typeName": {
+                                        "contractScope": null,
+                                        "id": 22071,
+                                        "name": "Interest.Rate",
+                                        "nodeType": "UserDefinedTypeName",
+                                        "referencedDeclaration": 17654,
+                                        "src": "1459:13:61",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_struct$_Rate_$17654_storage_ptr",
+                                            "typeString": "struct Interest.Rate"
+                                        }
+                                    },
+                                    "value": null,
+                                    "visibility": "internal"
+                                }
+                            ],
+                            "src": "1458:22:61"
+                        },
+                        "scope": 22080,
+                        "src": "1294:237:61",
+                        "stateMutability": "view",
+                        "superFunction": 15856,
+                        "visibility": "public"
+                    }
+                ],
+                "scope": 22081,
+                "src": "1013:520:61"
+            }
+        ],
+        "src": "603:931:61"
+    },
+    "compiler": {
+        "name": "solc",
+        "version": "0.5.7+commit.6da8b019.Emscripten.clang"
+    },
+    "networks": {
+        "971": {
+            "events": {},
+            "links": {},
+            "address": "0xf9E39Db8f4ABdeD9e8ec318ca24E7b572295d555",
+            "transactionHash": "0x06c59b773c394be996391c4911e7f767ce415bd315eb741651381fc90bb6ad47"
+        },
+        "1668017230626": {
+            "events": {},
+            "links": {},
+            "address": "0xb09bCc172050fBd4562da8b229Cf3E45Dc3045A6",
+            "transactionHash": "0xc88ccf2840e7137d26e21ffdf2e688ddc7fae3e1dbc77b12fd8c55bddef58866"
+        },
+        "1668030274040": {
+            "events": {},
+            "links": {},
+            "address": "0xb09bCc172050fBd4562da8b229Cf3E45Dc3045A6",
+            "transactionHash": "0xc88ccf2840e7137d26e21ffdf2e688ddc7fae3e1dbc77b12fd8c55bddef58866"
+        },
+        "1668138174137": {
+            "events": {},
+            "links": {},
+            "address": "0xD1AD5bBd760e7d075B839B03d578Cf9BcB4490E5",
+            "transactionHash": "0x26b05100809f462c78b955da9e4c3c014c8d519c09de23920745e68020933f18"
+        }
+    },
+    "schemaVersion": "3.0.23",
+    "updatedAt": "2022-11-11T03:47:01.614Z",
+    "networkType": "ethereum",
+    "devdoc": {
+        "author": "dYdX * Interest setter used for testing that always returns a constant interest rate",
+        "methods": {},
+        "title": "TestInterestSetter"
+    },
+    "userdoc": {
+        "methods": {}
+    }
+}

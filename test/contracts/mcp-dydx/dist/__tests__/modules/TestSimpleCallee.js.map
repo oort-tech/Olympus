@@ -1,0 +1,1 @@
+{"version":3,"file":"TestSimpleCallee.js","sourceRoot":"","sources":["../../../__tests__/modules/TestSimpleCallee.ts"],"names":[],"mappings":";;AAEA;IAGE,0BACE,SAAwB;QAExB,IAAI,CAAC,SAAS,GAAG,SAAS,CAAC;IAC7B,CAAC;IAEM,qCAAU,GAAjB;QACE,OAAO,IAAI,CAAC,SAAS,CAAC,gBAAgB,CAAC,OAAO,CAAC,OAAO,CAAC;IACzD,CAAC;IACH,uBAAC;AAAD,CAAC,AAZD,IAYC;AAZY,4CAAgB"}
