@@ -1,6 +1,6 @@
 require('ts-node/register'); // eslint-disable-line
 require('dotenv-flow').config(); // eslint-disable-line
-const HDWalletProvider = require('truffle-hdwallet-provider'); // eslint-disable-line
+const HDWalletProvider = require('truffle-hdwallet-provider'); //eslint-disable-line
 const path = require('path');
 
 const covContractsDir = path.join(process.cwd(), '.coverage_contracts');
@@ -65,24 +65,23 @@ module.exports = {
     goerli: {
       network_id: '5',
       provider: () => new HDWalletProvider (
-        "9f0a799c62c08997e4cb937c0f4d056cbc2b633bb515bbee18dff72dae4ab877",
-        "https://eth-goerli.g.alchemy.com/v2/mYzncHCHVGbCenE8TImcwUluG1sXAus8"
+        "",
+        ""
       ),
       gasPrice: 25000000000,
       gas: 6900000,
-      from: "0x39Fe75363BbbCF64B8cC2E151CC9EC4386A16a73",
+      from: "",
       timeoutBlocks: 100,
       skipDryRun: true
     },
     huygens_dev: {
       network_id: '828',
       provider: new HDWalletProvider (
-        "9d3f3c6464eb14edbc05d4bdcc7a51c22ab7be1aa6e7c2fba4455b00733e162d",
-        //"https://beta-rpc.mainnet.computecoin.com/"
-        "http://18.182.45.18:8765"
+        "",
+        ""
       ),
       gasPrice: 10000, // 0.01 gwei
-      //from: "0xE884FA0EB45955889fa3A5700d6CB49b1A428F72",
+      //from: "",
     },
     dev: {
       host: 'localhost',
