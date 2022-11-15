@@ -155,6 +155,7 @@ namespace mcp
 			self_connect = 6,
 			client_quit = 7,
 			too_large_packet_size = 8,
+			network_error = 9,
 			no_disconnect = 0xffff,
 		};
 
@@ -167,7 +168,6 @@ namespace mcp
 			FrameDecryptionFailure,
 			InternalError,
 			ProtocolError,
-			NetWorkError,
 			PunishmentPeriod,
 			DisconnectRequested
 		};

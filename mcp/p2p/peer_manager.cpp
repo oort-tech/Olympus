@@ -88,8 +88,6 @@ unsigned peer_manager::fall_back_seconds(peers_content const& _p, PeerType type)
 	case HandshakeFailureReason::FrameDecryptionFailure:
 	case HandshakeFailureReason::ProtocolError:
 		return oneMonthInSeconds;
-	case HandshakeFailureReason::NetWorkError:
-		return oneDayInSeconds;
 	default:
 		break;
 	}
@@ -100,6 +98,8 @@ unsigned peer_manager::fall_back_seconds(peers_content const& _p, PeerType type)
 	case disconnect_reason::too_large_packet_size:
 	case disconnect_reason::useless_peer:
 		return oneMonthInSeconds;
+	case disconnect_reason::network_error:
+		return oneDayInSeconds;
 	case disconnect_reason::tcp_error:
 	case disconnect_reason::too_many_peers:
 	case disconnect_reason::duplicate_peer:

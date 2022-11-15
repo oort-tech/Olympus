@@ -270,7 +270,6 @@ void host::run()
 
 bool host::is_handshaking(node_id const& _id) const
 {
-	Guard l(x_connecting);
 	for (auto const& cIter : m_connecting)
 	{
 		std::shared_ptr<hankshake> const connecting = cIter.lock();
@@ -278,6 +277,12 @@ bool host::is_handshaking(node_id const& _id) const
 			return true;
 	}
 	return false;
+}
+
+bool mcp::p2p::host::have_peer(node_id const & _id) const
+{
+	std::lock_guard<std::mutex> lock(m_peers_mutex);
+	return m_peers.count(_id);
 }
 
 
@@ -326,31 +331,28 @@ void host::connect(std::shared_ptr<node_info> const & ne)
 {
 	if (!is_run)
 		return;
-
-	if (is_handshaking(ne->id))
-	{
-		//LOG(m_log.debug) << "Aborted connection. handshake with peer already in progress: " << ne->id.hex();
-		return;
-	}
-
-	{
-		std::lock_guard<std::mutex> lock(m_peers_mutex);
-		if (m_peers.count(ne->id))
-		{
-			//LOG(m_log.debug) << "Aborted connect, node already connected, node id: " << ne->id.hex();
-			return;
-		}
-	}
-
 	if (ne->id == id())//self
+		return;
+
+	if (have_peer(ne->id))
 	{
+		//LOG(m_log.debug) << "Aborted connect, node already connected, node id: " << ne->id.hex();
 		return;
 	}
 
 	bi::tcp::endpoint ep(ne->endpoint);
 	std::shared_ptr<bi::tcp::socket> socket = std::make_shared<bi::tcp::socket>(io_service);
-	auto this_l(shared_from_this());
-	socket->async_connect(ep, [ne, ep, socket, this_l, this](boost::system::error_code const& ec)
+	auto handshake = std::make_shared<hankshake>(shared_from_this(), socket, ne->id);
+	{
+		Guard l(x_connecting);
+		if (is_handshaking(ne->id))
+		{
+			//LOG(m_log.debug) << "Aborted connection. handshake with peer already in progress: " << ne->id.hex();
+			return;
+		}
+		m_connecting.push_back(handshake);
+	}
+	socket->async_connect(ep, [ne, ep, handshake, this](boost::system::error_code const& ec)
 	{
 		if (ec)
 		{
@@ -360,11 +362,6 @@ void host::connect(std::shared_ptr<node_info> const & ne)
 		else
 		{
 			//LOG(m_log.debug) << "Connecting to " << ne->id.hex() << "@" << ep;
-			auto handshake = std::make_shared<hankshake>(this_l, socket, ne->id);
-			{
-				Guard l(x_connecting);
-				m_connecting.push_back(handshake);
-			}
 			handshake->start();
 		}
 	});
@@ -484,15 +481,6 @@ void host::start_peer(mcp::p2p::node_id const& _id, dev::RLP const& _rlp, std::u
 
 	hankshake_msg handmsg(_rlp);
 	node_id remote_node_id(_id);
-
-	if (handmsg.network != mcp::mcp_network)
-	{
-        LOG(m_log.info) << "p2p mcp_network error,remote mcp_network: " << (int)handmsg.network << " local mcp_network " << (int)mcp::mcp_network;
-		if (socket->is_open())
-			socket->close();
-
-		return;
-	}
 	
 	try
 	{
@@ -510,27 +498,55 @@ void host::start_peer(mcp::p2p::node_id const& _id, dev::RLP const& _rlp, std::u
 
 			return;
 		}
-
-		std::shared_ptr<peer> new_peer(std::make_shared<peer>(socket, remote_node_id, m_peer_manager, move(_io)));
-		//check self connect
-		if (remote_node_id == id())
-		{
-			new_peer->disconnect(disconnect_reason::self_connect);
-			return;
-		}
-
+		
 		{
 			std::lock_guard<std::mutex> lock(m_peers_mutex);
-
+			std::shared_ptr<peer> new_peer(std::make_shared<peer>(socket, remote_node_id, m_peer_manager, move(_io)));
+			//check self connect
+			if (remote_node_id == id())
+			{
+				new_peer->disconnect(disconnect_reason::self_connect);
+				return;
+			}
+			if (handmsg.network != mcp::mcp_network)
+			{
+				LOG(m_log.info) << "p2p mcp_network error,remote mcp_network: " << (int)handmsg.network << " local mcp_network " << (int)mcp::mcp_network;
+				if (socket->is_open())
+					socket->close();
+				new_peer->disconnect(disconnect_reason::network_error);
+				return;
+			}
 			//check duplicate
 			if (m_peers.count(remote_node_id) && !!m_peers[remote_node_id].lock())
 			{
 				auto exist_peer(m_peers[remote_node_id].lock());
 				if (exist_peer->is_connected())
 				{
-                    LOG(m_log.debug) << boost::str(boost::format("Peer already exists, node id: %1%") % remote_node_id.hex());
-					new_peer->disconnect(disconnect_reason::duplicate_peer);
-					return;
+					/// maybe A connect B and B connect A at the same time.
+					/// A connect B, B as the receiver does not know the id of A, So it can't judge the repetition that it initiated.
+					/// A and B are both the initiator and the receiver. have two connections. need to negotiate the use of one of the two connections.
+					/// every connect have encrypted nonce. A and B see the same thing for each of these channels.
+					/// A and B both choose the connection with the larger nonce and close the connection with the smaller nonce.
+					if (std::chrono::steady_clock::now() < exist_peer->create_time() + std::chrono::seconds(2))
+					{
+						if (*exist_peer > *new_peer)
+						{
+							new_peer->disconnect(disconnect_reason::duplicate_peer);
+							return;
+						}
+						else
+						{
+							exist_peer->disconnect(disconnect_reason::duplicate_peer);
+							m_peers.erase(remote_node_id);
+						}
+					}
+					else
+					{
+						boost::system::error_code ec;
+						LOG(m_log.debug) << "Peer already exists, node id: " << remote_node_id.hex() << "@" << socket->remote_endpoint(ec);
+						new_peer->disconnect(disconnect_reason::duplicate_peer);
+						return;
+					}
 				}
 			}
 			//check max peers

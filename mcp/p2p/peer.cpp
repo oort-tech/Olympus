@@ -11,6 +11,7 @@ peer::peer(std::shared_ptr<bi::tcp::socket> const & socket_a, node_id const & no
 	m_io(move(_io))
 {
 	_last_received = std::chrono::steady_clock::now();
+	_create = std::chrono::steady_clock::now();
 	read_header_buffer.resize(mcp::p2p::tcp_header_size);
 }
 
@@ -88,6 +89,11 @@ std::shared_ptr<mcp::p2p::peer_metrics> mcp::p2p::peer::get_peer_metrics()
 	m_pmetrics->read_read_queue_size = read_queue.size();
 	m_pmetrics->write_queue_buffer_size = surplus_size;
     return m_pmetrics;
+}
+
+bool mcp::p2p::peer::operator>(peer const & _p) const
+{
+	return *m_io > *_p.m_io;
 }
 
 void peer::read_loop()

@@ -50,10 +50,13 @@ namespace mcp
             bool is_connected();
             void disconnect(disconnect_reason const & reason);
             std::chrono::steady_clock::time_point last_received();
+			std::chrono::steady_clock::time_point create_time() { return _create; }
             node_id remote_node_id() const;
             bi::tcp::endpoint remote_endpoint() const;
             uint64_t get_write_queue_size() { return write_queue.size(); }
             std::shared_ptr<mcp::p2p::peer_metrics> get_peer_metrics();
+
+			bool operator>(peer const& _p) const;
         private:
             void read_loop();
             bool check_packet(dev::bytesConstRef msg);
@@ -95,6 +98,7 @@ namespace mcp
 			std::deque<dev::bytes> read_queue;
 			std::mutex read_queue_mutex;
             std::chrono::steady_clock::time_point _last_received;
+			std::chrono::steady_clock::time_point _create;
 			std::atomic<bool> is_dropped;
             std::shared_ptr <mcp::p2p::peer_metrics> m_pmetrics;
 			dev::bytes write_bufs;

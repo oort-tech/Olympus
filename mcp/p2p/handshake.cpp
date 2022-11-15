@@ -63,13 +63,13 @@ void mcp::p2p::hankshake::send(dev::bytes const& data)
 	});
 }
 
-void mcp::p2p::hankshake::read()
+void mcp::p2p::hankshake::read(State _s)
 {
 	m_handshakeInBuffer.clear();
 	auto self(shared_from_this());
 	m_handshakeInBuffer.resize(mcp::p2p::handshake_header_size);
 	//read header
-	ba::async_read(*m_socket, ba::buffer(m_handshakeInBuffer, m_handshakeInBuffer.size()), [this, self](boost::system::error_code ec, std::size_t)
+	ba::async_read(*m_socket, ba::buffer(m_handshakeInBuffer, m_handshakeInBuffer.size()), [this, self, _s](boost::system::error_code ec, std::size_t)
 	{
 		if (ec)
 		{
@@ -77,7 +77,7 @@ void mcp::p2p::hankshake::read()
 			return;
 		}
 		uint32_t len = (uint32_t)(m_handshakeInBuffer[2]) | (uint32_t)(m_handshakeInBuffer[1]) << 8 | (uint32_t)(m_handshakeInBuffer[0]) << 16;
-		if (len == 0 || len != packet_size())
+		if (len == 0 || len != packet_size(_s))
 		{
 			m_failureReason = HandshakeFailureReason::ProtocolError;
 			m_nextState = Error;
@@ -86,39 +86,32 @@ void mcp::p2p::hankshake::read()
 		}
 		//read body
 		m_handshakeInBuffer.resize(len);
-		ba::async_read(*m_socket, ba::buffer(m_handshakeInBuffer, m_handshakeInBuffer.size()), [this, self](boost::system::error_code ec, std::size_t)
+		ba::async_read(*m_socket, ba::buffer(m_handshakeInBuffer, m_handshakeInBuffer.size()), [this, self, _s](boost::system::error_code ec, std::size_t)
 		{
 			if (ec)
 			{
 				transition(ec);
 				return;
 			}
-			do_process();
+			do_process(_s);
 		});
 	});
 }
 
-uint32_t mcp::p2p::hankshake::packet_size()
+uint32_t mcp::p2p::hankshake::packet_size(State _s)
 {
-	uint32_t size = 0;
-	if (State::ExchgPublic == m_curState || State::AckExchgPublic == m_curState)
-		size = 71;
-	else if (State::New == m_curState)
-		size = 307;
-	else if (State::AckAuth == m_curState)
-		size = 210;
+	if (State::New == _s)
+		return 307;
+	else if (State::AckAuth == _s)
+		return 210;
 
-	return size;
+	return 0;
 }
 
-void mcp::p2p::hankshake::do_process()
+void mcp::p2p::hankshake::do_process(State _s)
 {
-	switch (m_curState)
+	switch (_s)
 	{
-	case State::ExchgPublic:
-	case State::AckExchgPublic:
-		readInfo();
-		break;
 	case State::New:
 		readAuth();
 		break;
@@ -129,19 +122,6 @@ void mcp::p2p::hankshake::do_process()
 		break;
 	}
 	transition();
-}
-
-void mcp::p2p::hankshake::writeInfo()
-{
-	std::list<capability_desc> caps;
-	hankshake_msg handmsg(m_host->id(), mcp::p2p::version, mcp::mcp_network, caps);
-	RLPStream s;
-
-	handmsg.stream_RLP(s);
-	dev::bytes buf;
-	s.swapOut(buf);
-
-	send(buf);
 }
 
 void hankshake::writeAuth()
@@ -187,29 +167,6 @@ void hankshake::setAuthValues(dev::Signature const& _sig, Public const& _remoteP
 	m_ecdheRemote = recover(_sig, sharedSecret.makeInsecure() ^ _remoteNonce);
 }
 
-void mcp::p2p::hankshake::readInfo()
-{
-	bytesRef frame(&m_handshakeInBuffer);
-	dev::RLP rlp(frame);
-	hankshake_msg msg(rlp);
-
-	if (m_originated && m_remote != msg.id)	//remote id modify, bootstrap need clear this id
-	{
-		m_host->replace_bootstrap(m_remote, msg.id);
-	}
-
-	m_remoteVersion = msg.version;
-	m_remote = msg.id;
-
-	if (msg.network != mcp::mcp_network)
-	{
-		LOG(m_log.info) << "p2p mcp_network error,remote mcp_network: " << (int)msg.network << " local mcp_network " << (int)mcp::mcp_network;
-		m_failureReason = HandshakeFailureReason::NetWorkError;
-		m_nextState = Error;
-		return;
-	}
-}
-
 void hankshake::readAuth()
 {
 	m_authCipher = std::move(m_handshakeInBuffer);
@@ -226,13 +183,7 @@ void hankshake::readAuth()
 			m_failureReason = HandshakeFailureReason::PunishmentPeriod;
 			m_nextState = Error;
 		}
-		if (m_remote != pubk)
-		{
-			m_failureReason = HandshakeFailureReason::ProtocolError;
-			m_nextState = Error;
-		}
-		else
-			setAuthValues(sig, pubk, nonce);
+		setAuthValues(sig, pubk, nonce);
 	}
 	else
 	{
@@ -327,39 +278,19 @@ void hankshake::transition(boost::system::error_code _ech)
 		}
 	});
 
-	if (m_nextState == ExchgPublic)
-	{
-		m_nextState = AckExchgPublic;
-		m_curState = ExchgPublic;
-		if (m_originated)
-			writeInfo();
-		else
-			read();
-	}
-	else if (m_nextState == AckExchgPublic)
-	{
-		m_nextState = New;
-		m_curState = AckExchgPublic;
-		if (m_originated)
-			read();
-		else
-			writeInfo();
-	}
-	else if (m_nextState == New)
+	if (m_nextState == New)
 	{
 		m_nextState = AckAuth;
-		m_curState = New;
 		if (m_originated)
 			writeAuth();
 		else
-			read();
+			read(New);
 	}
 	else if (m_nextState == AckAuth)
 	{
 		m_nextState = WriteHello;
-		m_curState = AckAuth;
 		if (m_originated)
-			read();
+			read(AckAuth);
 		else
 			writeAck();
 	}

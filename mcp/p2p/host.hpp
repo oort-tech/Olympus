@@ -58,6 +58,7 @@ namespace mcp
 
             void run();
 			bool is_handshaking(node_id const& _id) const;
+			bool have_peer(node_id const& _id) const;
             bool resolve_host(std::string const & addr, bi::tcp::endpoint & ep);
             void connect(std::shared_ptr<node_info> const & ne);
             size_t avaliable_peer_count(peer_type const & type, bool b = true);
