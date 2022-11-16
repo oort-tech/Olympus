@@ -413,6 +413,13 @@ Address deployed at: 0xe4F41ae0C18C738fce88ac051AfEC15139f83fd9
 
 ![tokenA](https://user-images.githubusercontent.com/41552663/202072705-a7636522-ac0d-41a2-a30e-4b7974786ff3.gif)
 
+[OmiseToken](https://github.com/molecula451/Olympus/blob/mcp-dydx/test/contracts/mcp-dydx/contracts/testing/OmiseToken.sol)
+
+#### OmiseToken raw testing
+#### Deployed at: 0x9aE552C62c73dDD264Da5F5c32252470b45BBE87
+
+![omiseToken](https://user-images.githubusercontent.com/41552663/202074507-307de2cb-6223-4d2a-9a4b-d5986efe19f4.gif)
+
 
 Original Apache License
 
