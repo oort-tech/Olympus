@@ -33,11 +33,6 @@
 
 ![docker_mGmc4t4ltw](https://user-images.githubusercontent.com/41552663/201595412-9a0ada53-3add-4dd8-a09c-d0f0eda403e4.gif)
 
-## Known Bugs when testing due to original repo
-
-#### You will have to make sure you actually deploy the contract artifact when testing else you will get a JavaScript superficial error saying it can't find any contract address for this instance, this is a bug that resides under the original DyDx repo
-
-![known bugs](https://user-images.githubusercontent.com/41552663/201593211-9a061a3e-7bbe-4e3a-9122-a74872c50935.png)
 
 ```
 //Testing Protocol
@@ -419,6 +414,16 @@ Address deployed at: [0xe4F41ae0C18C738fce88ac051AfEC15139f83fd9](https://ccnsca
 #### Deployed at: 0x9aE552C62c73dDD264Da5F5c32252470b45BBE87
 
 ![omiseToken](https://user-images.githubusercontent.com/41552663/202074507-307de2cb-6223-4d2a-9a4b-d5986efe19f4.gif)
+
+
+### Unit testing
+
+
+## Known Bugs when testing due to original repo
+
+#### You will have to make sure you actually deploy the contract artifact when testing else you will get a JavaScript superficial error saying it can't find any contract address for this instance, this is a bug that resides under the original DyDx repo
+
+![known bugs](https://user-images.githubusercontent.com/41552663/201593211-9a061a3e-7bbe-4e3a-9122-a74872c50935.png)
 
 
 Original Apache License
