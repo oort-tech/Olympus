@@ -135,8 +135,11 @@ Summary
 
 ### SoloMargin Testing
 
-SoloMargin WithdrawingUnsupportedToken
-### methodId:  
+## SoloMargin WithdrawingUnsupportedToken
+### MethodId: 2a560845
+
+
+
 
 ![sendingAndWithdraw](https://user-images.githubusercontent.com/41552663/202572039-89bf574c-0c2e-4701-a065-a0e03576c2c5.gif)
 
