@@ -133,6 +133,15 @@ Summary
 ### AdminImpl deployed at = [0x38b1a854aA2739FEC7bfc6F141b51b844fB2A777](https://ccnscan.computecoin.com/address/0x38b1a854aA2739FEC7bfc6F141b51b844fB2A777)
 ### OperationImpl deployed at = [0xFeC3D836AE3F2c1727b00F99D086a851C41758e0](https://ccnscan.computecoin.com/address/0xFeC3D836AE3F2c1727b00F99D086a851C41758e0)
 
+### SoloMargin Testing
+
+SoloMargin WithdrawingUnsupportedToken
+### methodId:  
+
+![sendingAndWithdraw](https://user-images.githubusercontent.com/41552663/202572039-89bf574c-0c2e-4701-a065-a0e03576c2c5.gif)
+
+![ownerWithdrawUnsupported](https://user-images.githubusercontent.com/41552663/202570650-e81d5377-7573-4f03-a253-db50be08abb6.gif)
+
 
 ```
 //Testing Protocol
