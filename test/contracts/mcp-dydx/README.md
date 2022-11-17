@@ -140,6 +140,7 @@ Summary
 
 ## Using Python
 
+![ownerWithdrawUnsupported](https://s1.gifyu.com/images/SoloWithdraw.gif)
 
 
 ## Using Remix
