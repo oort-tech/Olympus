@@ -129,9 +129,9 @@ Summary
 
 ## Base Protocols addresses
 
-### SoloMargin deployed at = [0xabd5632C841B0A39454519DD38Fb6a37DA420F64](https://ccnscan.computecoin.com/address/0xabd5632C841B0A39454519DD38Fb6a37DA420F64)
-### AdminImpl deployed at = [0x38b1a854aA2739FEC7bfc6F141b51b844fB2A777](https://ccnscan.computecoin.com/address/0x38b1a854aA2739FEC7bfc6F141b51b844fB2A777)
-### OperationImpl deployed at = [0xFeC3D836AE3F2c1727b00F99D086a851C41758e0](https://ccnscan.computecoin.com/address/0xFeC3D836AE3F2c1727b00F99D086a851C41758e0)
+### SoloMargin deployed at: [0xabd5632C841B0A39454519DD38Fb6a37DA420F64](https://ccnscan.computecoin.com/address/0xabd5632C841B0A39454519DD38Fb6a37DA420F64)
+### AdminImpl deployed at: [0x38b1a854aA2739FEC7bfc6F141b51b844fB2A777](https://ccnscan.computecoin.com/address/0x38b1a854aA2739FEC7bfc6F141b51b844fB2A777)
+### OperationImpl deployed at: [0xFeC3D836AE3F2c1727b00F99D086a851C41758e0](https://ccnscan.computecoin.com/address/0xFeC3D836AE3F2c1727b00F99D086a851C41758e0)
 
 ### SoloMargin Testing
 
