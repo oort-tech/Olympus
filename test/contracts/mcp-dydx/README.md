@@ -33,6 +33,56 @@
 
 ![docker_mGmc4t4ltw](https://user-images.githubusercontent.com/41552663/201595412-9a0ada53-3add-4dd8-a09c-d0f0eda403e4.gif)
 
+```
+// Base Protocol
+
+1_deploy.js
+===========
+
+   Deploying 'AdminImpl'
+   ---------------------
+   > transaction hash:    0x129da4c3ee04070b41dc8dc97a825a2042d023ffcef82e6e3520d75feecde89a
+   > Blocks: 29           Seconds: 14
+   > contract address:    0x38b1a854aA2739FEC7bfc6F141b51b844fB2A777
+   > block number:        2209962
+   > block timestamp:     1668701578
+   > account:             0xE884FA0EB45955889fa3A5700d6CB49b1A428F72
+   > balance:             49.99851655994
+   > gas used:            2900369 (0x2c4191)
+   > gas price:           0.01 gwei
+   > value sent:          0 ETH
+   > total cost:          0.00002900369 ETH
+
+   > Saving migration to chain.
+   > Saving artifacts
+   -------------------------------------
+   > Total cost:       0.00002900369 ETH
+   
+   
+   Starting migrations...
+======================
+> Network name:    'huygens'
+> Network id:      971
+> Block gas limit: 8000000 (0x7a1200)
+
+
+1_deploy.js
+===========
+
+   Deploying 'SoloMargin'
+   ----------------------
+   > transaction hash:    0x70c028a8ae6c8de7137dde216bbed4e9bf540a41936045378e5998edb7c2a422
+   > Blocks: 27           Seconds: 18
+   > contract address:    0xabd5632C841B0A39454519DD38Fb6a37DA420F64
+   > block number:        2210198
+   > block timestamp:     1668706718
+   > account:             0xE884FA0EB45955889fa3A5700d6CB49b1A428F72
+   > balance:             46.99525263556
+   > gas used:            6761926 (0x672dc6)
+   > gas price:           0.01 gwei
+   > value sent:          0 ETH
+   > total cost:          0.00006761926 ETH
+```
 
 ```
 //Testing Protocol
