@@ -82,6 +82,48 @@
    > gas price:           0.01 gwei
    > value sent:          0 ETH
    > total cost:          0.00006761926 ETH
+   
+   1_deploy.js
+===========
+
+   Deploying 'PolynomialInterestSetter'
+   ------------------------------------
+   > transaction hash:    0x8c5dd85c0b6f20a0f1bc19fa2bcdcc18fcaf3eca615bbac580d439615af47a67
+   > Blocks: 28           Seconds: 18
+   > contract address:    0x0F0De227d73FFEbCf53dD501c55a27f8DE7B739d
+   > block number:        2210254
+   > block timestamp:     1668708156
+   > account:             0xE884FA0EB45955889fa3A5700d6CB49b1A428F72
+   > balance:             46.99524694893
+   > gas used:            545114 (0x8515a)
+   > gas price:           0.01 gwei
+   > value sent:          0 ETH
+   > total cost:          0.00000545114 ETH
+
+
+   Deploying 'DoubleExponentInterestSetter'
+   ----------------------------------------
+   > transaction hash:    0x95897791d3b77e7ee6bb5850d68e4233f1c5324ad49b3f8c4dcb523821e9ad79
+   > Blocks: 30           Seconds: 14
+   > contract address:    0x6cFA2180289f33212E74e3efe38061012c2573FD
+   > block number:        2210284
+   > block timestamp:     1668708181
+   > account:             0xE884FA0EB45955889fa3A5700d6CB49b1A428F72
+   > balance:             46.99524141927
+   > gas used:            552966 (0x87006)
+   > gas price:           0.01 gwei
+   > value sent:          0 ETH
+   > total cost:          0.00000552966 ETH
+
+   > Saving migration to chain.
+   > Saving artifacts
+   -------------------------------------
+   > Total cost:        0.0000109808 ETH
+
+Summary
+=======
+> Total deployments:   2
+> Final cost:          0.0000109808 ETH
 ```
 
 ```
