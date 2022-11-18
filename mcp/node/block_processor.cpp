@@ -300,7 +300,9 @@ void mcp::block_processor::mt_process_blocks()
 									ok = false;
 									err_msg = "Invalid signature, hash:" + block_hash.hex() + ",from:" + block->from().hexPrefixed() + ",signature:" + ((Signature)block->signature()).hex();
 									LOG(m_log.debug) << err_msg;
-
+									if (!item->is_local())
+										m_onImport(ImportResult::Malformed, item->remote_node_id());///  Notify capability and P2P to process peer. diconnect peer.  
+									
 									break;
 								}
 								case base_validate_result_codes::invalid_block:
@@ -311,6 +313,8 @@ void mcp::block_processor::mt_process_blocks()
 
 									//cache invalid block
 									InvalidBlockCache.add(block_hash);
+									if (!item->is_local())
+										m_onImport(ImportResult::Malformed, item->remote_node_id());///  Notify capability and P2P to process peer. diconnect peer.  
 									break;
 								}
 								case base_validate_result_codes::known_invalid_block:
@@ -318,7 +322,8 @@ void mcp::block_processor::mt_process_blocks()
 									ok = false;
 									err_msg = boost::str(boost::format("Know invalid block: %1%") % block->hash().hex());
 									LOG(m_log.trace) << err_msg;
-
+									if (!item->is_local())
+										m_onImport(ImportResult::Malformed, item->remote_node_id());///  Notify capability and P2P to process peer. diconnect peer.  
 									break;
 								}
 								}
@@ -646,6 +651,10 @@ void mcp::block_processor::do_process_one(std::shared_ptr<mcp::block_processor_i
 		case mcp::validate_result_codes::known_invalid_block:
 		{
 			try_remove_invalid_unhandle(item->block_hash);
+
+			/// Notify capability and P2P to process peer. diconnect peer.  
+			/// must not a local block.remote node id existed.
+			m_onImport(ImportResult::Malformed, item->remote_node_id());
 			break;
 		}
 		default:

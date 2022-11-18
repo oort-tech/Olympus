@@ -97,6 +97,7 @@ unsigned peer_manager::fall_back_seconds(peers_content const& _p, PeerType type)
 	case disconnect_reason::bad_protocol:
 	case disconnect_reason::too_large_packet_size:
 	case disconnect_reason::useless_peer:
+	case disconnect_reason::malformed:
 		return oneMonthInSeconds;
 	case disconnect_reason::network_error:
 		return oneDayInSeconds;

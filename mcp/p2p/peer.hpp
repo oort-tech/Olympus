@@ -80,6 +80,8 @@ namespace mcp
                 case disconnect_reason::client_quit: return "Peer is exiting.";
                 case disconnect_reason::self_connect: return "Connected to ourselves.";
                 case disconnect_reason::too_large_packet_size: return "Too large packet size.";
+				case disconnect_reason::network_error: return "NetWork error.";
+				case disconnect_reason::malformed: return "Malformed block or transaction.";
                 case disconnect_reason::no_disconnect: return "(No disconnect has happened.)";
                 default: return "Unknown reason.";
                 }

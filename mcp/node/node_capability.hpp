@@ -97,7 +97,7 @@ namespace mcp
 			std::shared_ptr<mcp::ApproveQueue> aq
 		);
 		void set_sync(std::shared_ptr<mcp::node_sync> sync_a) { m_sync = sync_a; }
-		void set_processor(std::shared_ptr<mcp::block_processor> block_processor_a) { m_block_processor = block_processor_a; }
+		void set_processor(std::shared_ptr<mcp::block_processor> block_processor_a);
 
 		~node_capability() { stop(); }
 		void on_connect(std::shared_ptr<p2p::peer> peer_a, unsigned const & offset);

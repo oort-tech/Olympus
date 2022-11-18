@@ -25,6 +25,12 @@ mcp::node_capability::node_capability(
 	m_aq->onImport([this](ImportApproveResult _ir, h256 const& _h, p2p::node_id const& _nodeId) { onApproveImported(_ir, _h, _nodeId); });
 }
 
+void mcp::node_capability::set_processor(std::shared_ptr<mcp::block_processor> block_processor_a)
+{
+	m_block_processor = block_processor_a;
+	m_block_processor->onImport([this](ImportResult _ir, p2p::node_id const& _nodeId) { onTransactionImported(_ir, _nodeId); });
+}
+
 void mcp::node_capability::stop()
 {
 	boost::system::error_code ec;
@@ -272,6 +278,12 @@ bool mcp::node_capability::read_packet(std::shared_ptr<p2p::peer> peer_a, unsign
                 peer_a->disconnect(p2p::disconnect_reason::bad_protocol);
                 return true;
             }
+			if (!joint.block->signature().isValid())
+			{
+				LOG(m_log.error) << "Invalid new block sinature rlp: " << r[0];
+				peer_a->disconnect(p2p::disconnect_reason::malformed);
+				return true;
+			}
 
 			std::shared_ptr<mcp::block_processor_item> block_item_l(std::make_shared<mcp::block_processor_item>(joint, peer_a->remote_node_id()));
 			mcp::block_hash block_hash(joint.block->hash());
@@ -911,9 +923,13 @@ void mcp::node_capability::onTransactionImported(ImportResult _ir, p2p::node_id 
 			mcp::peer_info &pi(m_peers.at(_nodeId));
 			p = pi.try_lock_peer();
 		}
+
+		auto _r = p2p::disconnect_reason::bad_protocol;
+		if (_ir == mcp::ImportResult::Malformed)
+			_r = p2p::disconnect_reason::malformed;
 		/// todo:disconnect call drop.drop call on_disconnect.on_disconnect will used m_peers_mutex. So it locks twice. need modify logic.
 		if (p)
-			p->disconnect(p2p::disconnect_reason::bad_protocol);
+			p->disconnect(_r);
 		break;
 	}
 	//case mcp::ImportResult::InvalidNonce:

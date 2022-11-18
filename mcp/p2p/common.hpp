@@ -156,6 +156,7 @@ namespace mcp
 			client_quit = 7,
 			too_large_packet_size = 8,
 			network_error = 9,
+			malformed = 10,
 			no_disconnect = 0xffff,
 		};
 

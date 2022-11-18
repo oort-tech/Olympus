@@ -94,6 +94,9 @@ namespace mcp
 		
 		void on_sync_completed(mcp::p2p::node_id const & remote_node_id_a);
 
+		/// Register a handler that will be called once asynchronous verification is comeplte an block has been imported
+		void onImport(std::function<void(ImportResult, p2p::node_id const&)> const& _t) { m_onImport.add(_t); }
+
 		void onTransactionReady(h256 const& _t);
 
 		void onApproveImported(h256 const& _t);
@@ -167,6 +170,8 @@ namespace mcp
 		h256Hash m_transaction_hashs_processing;
 		std::thread m_transaction_hashs_thread;
 		void process_ready_transaction();
+
+		Signal<ImportResult, p2p::node_id const&> m_onImport;			///< Called for each import attempt. Arguments are result.
 
         std::atomic<uint64_t> blocks_pending_sync_size = { 0 };
         std::atomic<uint64_t> blocks_missing_size = { 0 };
