@@ -357,7 +357,7 @@ void host::connect(std::shared_ptr<node_info> const & ne)
 		if (ec)
 		{
 			//LOG(m_log.debug) << "Connection refused to node " << ne->id.hex() << "@" << ep << ", message: " << ec.message();
-			m_peer_manager->record_connect(ne->id, disconnect_reason::tcp_error);
+			//m_peer_manager->record_connect(ne->id, disconnect_reason::tcp_error);
 		}
 		else
 		{

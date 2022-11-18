@@ -107,7 +107,7 @@ unsigned peer_manager::fall_back_seconds(peers_content const& _p, PeerType type)
 	{
 		if (_p.m_fail_attempts > 25)/// try to connect 25 times one day
 			return oneDayInSeconds;
-		return 15 * (_p.m_fail_attempts + 1);
+		return 10 * (_p.m_fail_attempts + 1);
 	}
 	case disconnect_reason::client_quit:
 	{
