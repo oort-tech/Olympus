@@ -908,6 +908,7 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 					cache_a->transaction_address_put(transaction_a, link_hash, td);
 					/// exec transaction can reduce, if two or more block linked a transaction,reduce once.
 					m_store.transaction_unstable_count_reduce(transaction_a);
+					index++;
 				}
 
 				///handle approve stable block 
@@ -922,8 +923,6 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 						RLPStream receiptRLP;
 						receipt->streamRLP(receiptRLP);
 						receipts.push_back(receiptRLP.out());
-
-						index++;
 						continue;
 					}
 
