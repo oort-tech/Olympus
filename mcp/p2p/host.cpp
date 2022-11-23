@@ -531,12 +531,12 @@ void host::start_peer(mcp::p2p::node_id const& _id, dev::RLP const& _rlp, std::u
 					{
 						if (*exist_peer > *new_peer)
 						{
-							new_peer->disconnect(disconnect_reason::duplicate_peer);
+							new_peer->drop(disconnect_reason::duplicate_peer, false);
 							return;
 						}
 						else
 						{
-							exist_peer->disconnect(disconnect_reason::duplicate_peer);
+							exist_peer->drop(disconnect_reason::duplicate_peer, false);
 							m_peers.erase(remote_node_id);
 						}
 					}

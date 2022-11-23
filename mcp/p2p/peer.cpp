@@ -544,7 +544,7 @@ void peer::lz4(bytes& o_bytes)
 	o_bytes = std::move(compressed_bufs);
 }
 
-void peer::drop(disconnect_reason const & reason)
+void peer::drop(disconnect_reason const & reason, bool record)
 {
 	bool st = false;
     if (!is_dropped.compare_exchange_strong(st, true))
@@ -557,7 +557,8 @@ void peer::drop(disconnect_reason const & reason)
     boost::system::error_code ec;
     LOG(m_log.info) << "Peer dropped reason of " << reason_of(reason) << " ,id:" << m_node_id.hex() << "@" << socket->remote_endpoint(ec);
 
-	m_peer_manager->record_connect(remote_node_id(), reason);
+	if (record)
+		m_peer_manager->record_connect(remote_node_id(), reason);
     if (socket->is_open())
     {
         try

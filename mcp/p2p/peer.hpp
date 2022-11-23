@@ -39,6 +39,7 @@ namespace mcp
 
         class peer : public std::enable_shared_from_this<peer>
         {
+			friend class host;
         public:
 			peer(std::shared_ptr<bi::tcp::socket> const & socket_a, node_id const & node_id_a, std::shared_ptr<peer_manager> peer_manager_a, std::unique_ptr<RLPXFrameCoder>&& _io);
             ~peer();
@@ -63,7 +64,7 @@ namespace mcp
             bool read_packet(unsigned const & type, std::shared_ptr<dev::RLP> r);
             void do_write();
 			void do_read();
-            void drop(disconnect_reason const & reason);
+			void drop(disconnect_reason const & reason, bool record = true);
 			void lz4(bytes& o_bytes);
 			/// Check error code after reading and drop peer if error code.
 			bool checkRead(std::size_t _expected, boost::system::error_code _ec, std::size_t _length);
