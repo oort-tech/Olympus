@@ -419,7 +419,6 @@ bool mcp::node_capability::read_packet(std::shared_ptr<p2p::peer> peer_a, unsign
 		}
 		case mcp::sub_packet_type::approve_request:
 		{
-			LOG(m_log.trace) << "[read_packet] approve_request";
 			bool error(r.itemCount() != 1);
 			mcp::approve_request_message request(error, r[0]);
 
