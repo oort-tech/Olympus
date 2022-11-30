@@ -1000,7 +1000,7 @@ void mcp::rpc_handler::debug_trace_transaction(mcp::json &j_response, bool &)
 	}
 
 	std::string hash_text = request["hash"];
-	mcp::block_hash hash;
+	mcp::link_hash hash;
 	try
 	{
 		hash = jsToHash(hash_text);
@@ -1011,12 +1011,17 @@ void mcp::rpc_handler::debug_trace_transaction(mcp::json &j_response, bool &)
 	}
 
 	mcp::db::db_transaction transaction(m_store.create_transaction());
+	auto _t = m_cache->transaction_get(transaction, hash);
+	auto td = m_cache->transaction_address_get(transaction, hash);
+
+	if (_t == nullptr || td == nullptr)
+		throw "";
+
 	dev::eth::McInfo mc_info;
-	if (!m_chain->get_mc_info_from_block_hash(transaction, m_cache, hash, mc_info))
+	if (!m_chain->get_mc_info_from_block_hash(transaction, m_cache, td->blockHash, mc_info))
 	{
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidMci());
 	}
-
 	mcp::json options;
 	options["disable_storage"] = true;
 	options["disable_memory"] = false;
@@ -1038,7 +1043,7 @@ void mcp::rpc_handler::debug_trace_transaction(mcp::json &j_response, bool &)
 	try
 	{
 		dev::eth::EnvInfo env(transaction, m_store, m_cache, mc_info, mcp::chain_id);
-		auto block(m_cache->block_get(transaction, hash));
+		auto block(m_cache->block_get(transaction, td->blockHash));
 		assert_x(block);
 		chain_state c_state(transaction, 0, m_store, m_chain, m_cache);
 		mcp::ExecutionResult er;
@@ -1046,12 +1051,12 @@ void mcp::rpc_handler::debug_trace_transaction(mcp::json &j_response, bool &)
 		mcp::Executive e(c_state, env, traces);
 		e.setResultRecipient(er);
 
-		//	mcp::json trace = m_chain->traceTransaction(e, options);
-		//	//response_l["gas"] = block->hashables->gas.str();
-		//	response_l["return_value"] = er.output.hexPrefixed();
-		//	response_l["struct_logs"] = trace;
-		//	error_code_l = mcp::rpc_debug_trace_transaction_error_code::ok;
-		//	rpc_response(response, (int)error_code_l, err.msg(error_code_l), response_l);
+		mcp::json trace = m_chain->traceTransaction(e, *_t, options);
+		//j_response["gas"] = block->hashables->gas.str();
+		j_response["return_value"] = toHexPrefixed(er.output);
+		j_response["struct_logs"] = trace;
+		//error_code_l = mcp::rpc_debug_trace_transaction_error_code::ok;
+		//rpc_response(response, (int)error_code_l, err.msg(error_code_l), response_l);
 	}
 	catch (Exception const &_e)
 	{
