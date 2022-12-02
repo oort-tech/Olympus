@@ -173,10 +173,10 @@ int mcp::approve::vrf_verify(std::vector<uint8_t>& output, std::string msg) cons
 	);
 
 	if(secp256k1_vrf_verify(output.data(), m_proof.data(), serializedPubkey.data(), msg.data(), msg.size()) == 1){
-		LOG(g_log.debug) << "[vrf_verify] secp256k1_vrf_verify ok";
+		//LOG(g_log.debug) << "[vrf_verify] secp256k1_vrf_verify ok";
 	}
 	else{
-		LOG(g_log.debug) << "[vrf_verify] secp256k1_vrf_verify fail ";
+		//LOG(g_log.debug) << "[vrf_verify] secp256k1_vrf_verify fail ";
 		BOOST_THROW_EXCEPTION(ZeroSignatureTransaction());
 	}
 }

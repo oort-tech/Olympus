@@ -125,7 +125,7 @@ void mcp::witness::check_and_witness()
 		last_summary_mci = *last_summary_block_state->main_chain_index;
 	}
 
-	mcp::witness_param const & w_param(mcp::param::witness_param(mcp::approve::calc_curr_epoch(last_summary_mci + 1)));
+	mcp::witness_param const & w_param(mcp::param::witness_param(mcp::approve::calc_curr_epoch(last_summary_mci)));
 
 	if (!mcp::param::is_witness(mcp::approve::calc_curr_epoch(last_summary_mci), m_account))
 	{

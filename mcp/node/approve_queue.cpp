@@ -118,13 +118,13 @@ namespace mcp
 			m_onImportProcessed(h);
 		}
 
-		LOG(m_log.debug) << "[import] out";
+		//LOG(m_log.debug) << "[import] out";
 		return ret;
 	}
 
 	void ApproveQueue::importLocal(approve const& _approve)
 	{
-		LOG(m_log.trace) << "[importLocal] in";
+		//LOG(m_log.trace) << "[importLocal] in";
 		auto ret = import(_approve);
 		if(ret != ImportApproveResult::Success)
 		{

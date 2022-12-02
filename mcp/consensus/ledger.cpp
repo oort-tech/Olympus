@@ -9,7 +9,7 @@ mcp::ledger::ledger()
 {
 }
 
-//best parent:compatible parent, witnessed_level DESC, level ASC, block hash ASC
+//best parent:compatible parent, witnessed_level DESC, level DESC, block hash ASC
 mcp::block_hash mcp::ledger::determine_best_parent(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::iblock_cache> cache_a, 
 	std::vector<mcp::block_hash> const &pblock_hashs)
 {

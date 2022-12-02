@@ -149,12 +149,12 @@ namespace mcp
 			}
 			if (NonceRange::Pending == r)/// insert to pending
 			{
-				LOG(m_log.debug) << "Queued vaguely not legit-looking transaction " << _t->sha3().hex();
+				//LOG(m_log.debug) << "Queued vaguely not legit-looking transaction " << _t->sha3().hex();
 				return insertPending_WITH_LOCK(_t);
 			}
 			else ///insert to queue
 			{
-				LOG(m_log.debug) << "Queued vaguely legit-looking transaction " << _t->sha3().hex();
+				//LOG(m_log.debug) << "Queued vaguely legit-looking transaction " << _t->sha3().hex();
 				return insertQueue_WITH_LOCK(_t);
 			}
 		}
