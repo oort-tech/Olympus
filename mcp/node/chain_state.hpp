@@ -199,6 +199,7 @@ public:
 
 	std::pair<bool, bytes> execute_precompiled(Address const& account_a, bytesConstRef in_a) const;
 
+    void set_defalut_account_state(std::vector<h256>& accout_state_hashs);
 
     /// transaction
     mcp::db::db_transaction & transaction;
@@ -227,6 +228,9 @@ private:
     /// @returns true when normally halted; false when exceptionally halted; throws when internal VM
     /// exception occurred.
 	bool executeTransaction(Executive& _e, dev::eth::OnOpFunc const& _onOp);
+
+    //Save the account status before transaction execution for debug_trace_transaction
+    void save_previous_account_state();
 
     /// Our overlay for the state tree.
     mcp::overlay_db m_db;
