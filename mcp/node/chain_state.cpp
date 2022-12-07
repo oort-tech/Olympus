@@ -71,7 +71,9 @@ std::shared_ptr<mcp::account_state> mcp::chain_state::account(Address const& _ad
 	if (it != m_cache.end())
 	{
 		return it->second;
-	}        
+	}    
+    
+    //LOG(m_log.debug) << "[account] debug_trace should not in ";    
 
     // If the account doesn't exist, return nullptr
     if (m_nonExistingAccountsCache.count(_addr))
@@ -233,6 +235,7 @@ void mcp::chain_state::save_previous_account_state()
     std::vector<h256> hs;
     for(auto& address : m_unchangedCacheEntries)
     {
+        //LOG(m_log.debug) << "[save_previous_account_state]" << toHexPrefixed(address);
         h256 hash;
         bool exists = !store.latest_account_state_get(transaction, address, hash);
         if (exists)
@@ -240,7 +243,7 @@ void mcp::chain_state::save_previous_account_state()
             hs.emplace_back(hash);
         }
     }
-    store.transaction_account_state_put(transaction, ts.sha3(), hs);
+    store.transaction_previous_account_state_put(transaction, ts.sha3(), hs);
 }
 
 
@@ -540,6 +543,7 @@ void mcp::chain_state::set_defalut_account_state(std::vector<h256>& accout_state
         std::shared_ptr<mcp::account_state> acc_state(store.account_state_get(transaction, hash));
         if (acc_state)
         {
+            LOG(m_log.debug) << "[set_defalut_account_state] "<<toHexPrefixed(acc_state->account());
             m_cache.insert(std::make_pair(acc_state->account(), acc_state));
         }
     }

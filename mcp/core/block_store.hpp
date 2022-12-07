@@ -178,8 +178,8 @@ namespace mcp
 		uint64_t last_epoch_get(mcp::db::db_transaction & transaction_a);
 		void last_epoch_put(mcp::db::db_transaction & transaction_a, uint64_t const & last_epoch_a);
 
-		bool transaction_account_state_get(mcp::db::db_transaction & transaction_a, mcp::link_hash const & link_a, std::vector<h256> & hashs_a);
-		void transaction_account_state_put(mcp::db::db_transaction & transaction_a, mcp::link_hash const & link_a, std::vector<h256> & hashs_a);
+		bool transaction_previous_account_state_get(mcp::db::db_transaction & transaction_a, mcp::link_hash const & link_a, std::vector<h256> & hashs_a);
+		void transaction_previous_account_state_put(mcp::db::db_transaction & transaction_a, mcp::link_hash const & link_a, std::vector<h256> & hashs_a);
 
 		mcp::db::db_transaction create_transaction(std::shared_ptr<rocksdb::WriteOptions> write_options_a = nullptr,
 			std::shared_ptr<rocksdb::TransactionOptions> txn_ops_a = nullptr)

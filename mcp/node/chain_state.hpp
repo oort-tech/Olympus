@@ -9,6 +9,7 @@
 #include <mcp/node/chain.hpp>
 #include <mcp/core/transaction.hpp>
 #include <mcp/core/approve.hpp>
+#include <mcp/common/log.hpp>
 
 #include <set>
 #include <unordered_set>
@@ -248,6 +249,7 @@ private:
     u256 m_accountStartNonce;
 
     ChangeLog m_changeLog;
+    mcp::log m_log = { mcp::log("node") };
 };
 
 template <class DB>

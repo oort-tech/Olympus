@@ -1048,23 +1048,19 @@ void mcp::rpc_handler::debug_trace_transaction(mcp::json &j_response, bool &)
 		auto block(m_cache->block_get(transaction, td->blockHash));
 		assert_x(block);
 		chain_state c_state(transaction, 0, m_store, m_chain, m_cache);
-		LOG(m_log.info) << "[debug_trace_transaction]" << __LINE__;
+		std::vector<h256> accout_state_hashs;
+		if(!m_store.transaction_previous_account_state_get(transaction, hash, accout_state_hashs))
+		{
+			BOOST_THROW_EXCEPTION(RPC_Error_InvalidHash());
+		}
+		c_state.set_defalut_account_state(accout_state_hashs);
 
+		//c_state should be used after set_defalut_account_state. Otherwise, account_state will be abnormal.
 		if (!_t->isCreation() && !c_state.addressHasCode(_t->receiveAddress()))
 		{
 			j_response["return_value"] = "Only contract transcation can debug.";
 			return;
 		}
-		LOG(m_log.info) << "[debug_trace_transaction]" << __LINE__;
-		LOG(m_log.info) << "[debug_trace_transaction]" << __LINE__;
-		std::vector<h256> accout_state_hashs;
-		if(!m_store.transaction_account_state_get(transaction, hash, accout_state_hashs))
-		{
-			LOG(m_log.info) << "[debug_trace_transaction]" << __LINE__;
-			BOOST_THROW_EXCEPTION(RPC_Error_InvalidHash());
-		}
-		LOG(m_log.info) << "[debug_trace_transaction]" << __LINE__;
-		c_state.set_defalut_account_state(accout_state_hashs);
 		mcp::ExecutionResult er;
 		std::list<std::shared_ptr<mcp::trace>> traces;
 		mcp::Executive e(c_state, env, traces);
