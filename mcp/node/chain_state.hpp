@@ -230,7 +230,7 @@ private:
     /// exception occurred.
 	bool executeTransaction(Executive& _e, dev::eth::OnOpFunc const& _onOp);
 
-    //Save the account status before transaction execution for debug_trace_transaction
+    //Save the account status before transaction execution for debug_traceTransaction
     void save_previous_account_state();
 
     /// Our overlay for the state tree.
