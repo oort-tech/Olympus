@@ -3,7 +3,6 @@
 #include <mcp/node/message.hpp>
 #include <mcp/core/timeout_db_transaction.hpp>
 #include <mcp/node/process_block_cache.hpp>
-#include <mcp/consensus/ledger.hpp>
 #include <mcp/node/evm/Precompiled.h>
 #include <memory>
 #include <set>
@@ -26,7 +25,7 @@ namespace mcp
 	class chain : public std::enable_shared_from_this<mcp::chain>
 	{
 	public:
-		chain(mcp::block_store& store_a, mcp::ledger& ledger_a);
+		chain(mcp::block_store& store_a);
 		~chain();
 		void init(bool & error_a, mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a, std::shared_ptr<mcp::block_cache> block_cache_a);
 		void stop();
@@ -108,7 +107,6 @@ namespace mcp
 		void init_vrf_outputs(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a);
 		void init_witness(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a);
 		mcp::block_store m_store;
-		mcp::ledger m_ledger;
 		//std::list<std::function<void(std::shared_ptr<mcp::block>)> > m_new_block_observer;
 		//std::queue<std::shared_ptr<mcp::block>> m_new_blocks;
 		//std::list<std::function<void(std::shared_ptr<mcp::block>)> > m_stable_block_observer;

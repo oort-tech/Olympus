@@ -1,15 +1,15 @@
 #include <mcp/node/composer.hpp>
 #include <mcp/core/genesis.hpp>
 #include <mcp/common/stopwatch.hpp>
+#include <mcp/consensus/ledger.hpp>
 
 #include <unordered_set>
 
 mcp::composer::composer(
 	mcp::block_store& store_a, std::shared_ptr<mcp::block_cache> cache_a,
-	mcp::ledger& ledger_a, std::shared_ptr<mcp::TransactionQueue> tq, 
+	std::shared_ptr<mcp::TransactionQueue> tq, 
 	std::shared_ptr<mcp::ApproveQueue> aq
 ) :
-	m_ledger(ledger_a),
 	m_store(store_a),
 	m_cache(cache_a),
 	m_tq(tq),
@@ -23,7 +23,6 @@ mcp::composer::~composer()
 
 std::shared_ptr<mcp::block> mcp::composer::compose_block(dev::Address const & from_a, dev::Secret const& s)
 {
-	LOG(m_log.debug) << "[compose_block] in";
 	mcp::stopwatch_guard sw("compose:compose_block");
 
 	mcp::db::db_transaction transaction(m_store.create_transaction());
@@ -46,7 +45,6 @@ std::shared_ptr<mcp::block> mcp::composer::compose_block(dev::Address const & fr
 			<< errinfo_comment("compose error:block no links"));
 
 	uint64_t exec_timestamp(mcp::seconds_since_epoch());
-	LOG(m_log.debug) << "[compose_block] out";
 
     return std::make_shared<mcp::block>(from_a, previous, parents, links, approves, 
 		last_summary, last_summary_block, last_stable_block, exec_timestamp,s);
@@ -186,7 +184,7 @@ void mcp::composer::pick_parents_and_last_summary_and_wl_block(mcp::db::db_trans
 	{
 		mcp::stopwatch_guard sw("compose:pick_parents3");
 
-		assert_x(best_pblock_hash == m_ledger.determine_best_parent(transaction_a, m_cache, parents));
+		assert_x(best_pblock_hash == Ledger.determine_best_parent(transaction_a, m_cache, parents));
 
 		if (!mcp::param::is_witness(mcp::approve::calc_curr_epoch(last_summary_mci), from_a))
 			BOOST_THROW_EXCEPTION(BadComposeBlock()
@@ -196,7 +194,7 @@ void mcp::composer::pick_parents_and_last_summary_and_wl_block(mcp::db::db_trans
 		mcp::witness_param const & w_param(mcp::param::witness_param(mcp::approve::calc_curr_epoch(last_summary_mci)));
 
 		//check majority different of witnesses
-		bool is_diff_majority(m_ledger.check_majority_witness(transaction_a, m_cache, best_pblock_hash, from_a, w_param));
+		bool is_diff_majority(Ledger.check_majority_witness(transaction_a, m_cache, best_pblock_hash, from_a, w_param));
 		if (!is_diff_majority)
 		{
 			BOOST_THROW_EXCEPTION(BadComposeBlock()
@@ -231,7 +229,7 @@ void mcp::composer::pick_parents_and_last_summary_and_wl_block(mcp::db::db_trans
 		bool next_mc_exists(!m_store.main_chain_get(transaction_a, next_check_mci, next_mc_hash));
 		if (next_mc_exists)
 		{
-			bool is_next_mc_stable(m_ledger.check_stable(transaction_a, m_cache, next_mc_hash, best_pblock_hash, parents, from_a, last_stable_block, w_param));
+			bool is_next_mc_stable(Ledger.check_stable(transaction_a, m_cache, next_mc_hash, best_pblock_hash, parents, from_a, last_stable_block, w_param));
 			if (is_next_mc_stable)
 			{
 				last_stable_block = next_mc_hash;
@@ -253,7 +251,7 @@ void mcp::composer::pick_parents_and_last_summary_and_wl_block(mcp::db::db_trans
 						continue;
 					}
 
-					bool is_stable = m_ledger.check_stable(transaction_a, m_cache, skip_mc_hash, best_pblock_hash, parents, from_a, last_stable_block, w_param);
+					bool is_stable = Ledger.check_stable(transaction_a, m_cache, skip_mc_hash, best_pblock_hash, parents, from_a, last_stable_block, w_param);
 					if (is_stable)
 						last_stable_block = skip_mc_hash;
 

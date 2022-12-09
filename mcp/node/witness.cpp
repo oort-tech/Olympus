@@ -1,15 +1,15 @@
 #include <mcp/node/witness.hpp>
 #include <mcp/core/genesis.hpp>
+#include <mcp/consensus/ledger.hpp>
 
 mcp::witness::witness(mcp::error_message & error_msg,
-	mcp::ledger& ledger_a, std::shared_ptr<mcp::key_manager> key_manager_a,
+	std::shared_ptr<mcp::key_manager> key_manager_a,
 	mcp::block_store& store_a, std::shared_ptr<mcp::alarm> alarm_a,
 	std::shared_ptr<mcp::composer> composer_a, std::shared_ptr<mcp::chain> chain_a,
 	std::shared_ptr<mcp::block_processor> block_processor_a,
 	std::shared_ptr<mcp::block_cache> cache_a, std::shared_ptr<TransactionQueue> tq,
 	std::string const & account_or_file_text, std::string const & password_a
 ) :
-	m_ledger(ledger_a),
 	m_store(store_a),
 	m_alarm(alarm_a),
 	m_composer(composer_a),
@@ -125,7 +125,7 @@ void mcp::witness::check_and_witness()
 		last_summary_mci = *last_summary_block_state->main_chain_index;
 	}
 
-	mcp::witness_param const & w_param(mcp::param::witness_param(mcp::approve::calc_curr_epoch(last_summary_mci + 1)));
+	mcp::witness_param const & w_param(mcp::param::witness_param(mcp::approve::calc_curr_epoch(last_summary_mci)));
 
 	if (!mcp::param::is_witness(mcp::approve::calc_curr_epoch(last_summary_mci), m_account))
 	{
@@ -136,7 +136,7 @@ void mcp::witness::check_and_witness()
 	}	
 
 	//check majority different of witnesses
-	bool is_diff_majority(m_ledger.check_majority_witness(transaction, m_cache, mc_block_hash, m_account, w_param));
+	bool is_diff_majority(Ledger.check_majority_witness(transaction, m_cache, mc_block_hash, m_account, w_param));
 	if (!is_diff_majority)
 	{
 		witness_majority_count++;
@@ -172,7 +172,7 @@ void mcp::witness::do_witness()
 		}
 		m_last_witness_time = std::chrono::steady_clock::now();
 		m_is_witnessing.clear();
-		//LOG(m_log.info) << "-----------witness hash:" << block->hash().to_string() << " ,links:" << block->links().size();
+		//LOG(m_log.info) << "witness hash:" << block->hash().hex() << " ,links:" << block->links().size();
 	}
 	catch (Exception& _e)
 	{

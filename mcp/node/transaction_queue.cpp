@@ -3,25 +3,26 @@
 
 namespace mcp
 {
-	int FutureTimeUnknownSize = 64;
+	
 
 	using namespace std;
 	using namespace dev;
 
-	constexpr size_t c_maxVerificationQueueSize = 81920;
-	constexpr size_t c_maxDroppedTransactionCount = 1024;
+	constexpr size_t c_maxAccountPendingSize = 64;
+	constexpr size_t c_maxVerificationQueueSize = 40960;
+	constexpr size_t c_maxDroppedTransactionCount = 100000;
+	constexpr size_t c_maxPendingTransactionCount = 100000;
 
 	TransactionQueue::TransactionQueue(
-		mcp::block_store& store_a, std::shared_ptr<mcp::block_cache> cache_a, std::shared_ptr<mcp::chain> chain_a,
+		boost::asio::io_service& io_service_a, mcp::block_store& store_a, std::shared_ptr<mcp::block_cache> cache_a, std::shared_ptr<mcp::chain> chain_a,
 		std::shared_ptr<mcp::async_task> async_task_a
 	):
 		m_store(store_a),
 		m_cache(cache_a),
 		m_chain(chain_a),
 		m_async_task(async_task_a),
-		m_current{ PriorityCompare{ *this } },
-		m_dropped(100000),
-		m_futureLimit(100000)
+		m_dropped(c_maxDroppedTransactionCount),
+		m_pendingLimit(c_maxPendingTransactionCount)
 	{
 		unsigned verifierThreads = std::max(thread::hardware_concurrency(), 3U) - 2U;
 		for (unsigned i = 0; i < verifierThreads; ++i)
@@ -29,6 +30,9 @@ namespace mcp
 			setThreadName("txcheck" + toString(i));
 			this->verifierBody();
 		});
+
+		m_clearTimer = std::make_unique<ba::deadline_timer>(io_service_a);
+		m_processSuperfluousThread = std::thread([this]() { this->processSuperfluous(); });
 	}
 
 	TransactionQueue::~TransactionQueue()
@@ -38,143 +42,82 @@ namespace mcp
 		m_queueReady.notify_all();
 		for (auto& i : m_verifiers)
 			i.join();
+
+		if (m_clearTimer)
+			m_clearTimer->cancel();
 	}
 
-	ImportResult TransactionQueue::check_WITH_LOCK(h256 const& _h, IfDropped _ik)
+	ImportResult TransactionQueue::check_WITH_LOCK(h256 const& _h)
 	{
 		if (m_known.count(_h) )
 			return ImportResult::AlreadyKnown;
 
+		if (m_dropped.contains(_h))
+			return ImportResult::AlreadyInChain;
 		mcp::db::db_transaction t(m_store.create_transaction());
-		if (_ik == IfDropped::Ignore && (m_dropped.contains(_h) || m_cache->transaction_exists(t, _h)))
+		if (m_cache->transaction_exists(t, _h))
 			return ImportResult::AlreadyInChain;
 
 		return ImportResult::Success;
 	}
 
-	ImportResult TransactionQueue::import(Transaction const& _transaction, bool isLoccal, bool ignoreFuture, IfDropped _ik)
+	ImportResult TransactionQueue::import(std::shared_ptr<Transaction> _transaction, source _in)
 	{
 		validateTx(_transaction);
-		//if (_transaction.hasZeroSignature())
-		//	return ImportResult::ZeroSignature;
 		// Check if we already know this transaction.
-		h256 h = _transaction.sha3();
+		h256 h = _transaction->sha3();
+		//LOG(m_log.debug) << "import transaction:" << h.hex();
 
-		std::pair<ImportResult, h256Hash> ret;
+		ImportResult ret;
 		{
 			UpgradableGuard l(m_lock);
-			auto ir = check_WITH_LOCK(h, _ik);
+			auto ir = check_WITH_LOCK(h);
 			if (ir != ImportResult::Success)
 				return ir;
 
-			{
-				_transaction.safeSender();  /// Perform EC recovery outside of the write lock
-				UpgradeGuard ul(l);
-				ret = manageImport_WITH_LOCK(h, _transaction, isLoccal, ignoreFuture);
+			_transaction->sender();
+			if (_in != source::request)///block lined,do not checkout balance and nonce
+				checkTx(*_transaction); ///check balance and nonce
+			UpgradeGuard ul(l);
+			ret = manageImport_WITH_LOCK(_transaction, _in);
 
-#if 0	///////////////////////////////test
-				LOG(m_log.debug) << getInfo();
-				LOG(m_log.debug) << "--------------m_currentByHash-------------";
-				for (auto it = m_currentByHash.begin(); it != m_currentByHash.end(); it++)
-				{
-					LOG(m_log.debug) << it->first.hex() << " , " << (*it->second).transaction.sha3().hex() << " ,nonce:" << (*it->second).transaction.nonce();
-				}
-				LOG(m_log.debug) << "--------------m_currentByHash end-------------";
-
-				LOG(m_log.debug) << "--------------m_currentByAddressAndNonce-------------";
-				for (auto it = m_currentByAddressAndNonce.begin(); it != m_currentByAddressAndNonce.end(); it++)
-				{
-					LOG(m_log.debug) << "address:" << it->first.hex();
-					auto m = it->second;
-					for (auto at = m.begin(); at != m.end(); at++)
-					{
-						LOG(m_log.debug) << "--nonce:" << at->first << " ,hash:"  << (*at->second).transaction.sha3().hex();
-					}
-				}
-				LOG(m_log.debug) << "--------------m_currentByAddressAndNonce end-------------";
-
-				LOG(m_log.debug) << "--------------m_sameCurrentByAddressAndNonce-------------";
-				for (auto it = m_sameCurrentByAddressAndNonce.begin(); it != m_sameCurrentByAddressAndNonce.end(); it++)
-				{
-					LOG(m_log.debug) << "address:" << it->first.hex();
-					auto m = it->second;
-					for (auto at = m.begin(); at != m.end(); at++)
-					{
-						LOG(m_log.debug) << "--nonce:" << at->first;
-						auto mm = at->second;
-						for (auto mt = mm.begin(); mt != mm.end(); mt++)
-						{
-							LOG(m_log.debug) << "----hash:" << mt->first.hex() << " ,it:" << (*mt->second).transaction.sha3().hex();
-						}
-					}
-				}
-				LOG(m_log.debug) << "--------------m_sameCurrentByAddressAndNonce end-------------";
-
-				LOG(m_log.debug) << "--------------m_future-------------";
-				for (auto it = m_future.begin(); it != m_future.end(); it++)
-				{
-					LOG(m_log.debug) << "address:" << it->first.hex();
-					for (auto at = it->second.begin(); at != it->second.end(); at++)
-					{
-						LOG(m_log.debug) << "--nonce:" << at->first << " ,hash:" << at->second.transaction.sha3().hex();
-					}
-				}
-				LOG(m_log.debug) << "--------------m_future end-------------";
-
-#endif // 1
-			}
+			//LOG(m_log.debug) << "import.......";
+			//prinf();
 		}
 
-		//LOG(m_log.info) << "importLocal transaction,hash: " << _transaction.sha3().hexPrefixed() << " ,nonce:" << _transaction.nonce();
-
-		///Notify unHandle to handle dependencies,block process block missing links,but before add to unhandle transaction come in.
-		if (ImportResult::Success == ret.first)/// first import && successed,broadcast it
-		{
-			if (ret.second.size() > 0)
-				m_onImportProcessed(ret.second);
-			
-		}
-		return ret.first;
-	}
-
-	ImportResult TransactionQueue::importLocal(Transaction const& _transaction)
-	{
-		checkTx(_transaction); ///check balance and nonce
-		auto ret = import(_transaction,true);
 		if (ImportResult::Success == ret)/// first import && successed,broadcast it
 		{
 			m_async_task->sync_async([this, _transaction]() {
-				m_capability->broadcast_transaction(_transaction);
+				m_capability->broadcast_transaction(*_transaction);
 			});
 		}
 		return ret;
 	}
 
-	h256s TransactionQueue::topTransactions(unsigned _limit, h256Hash const& _avoid) const
+	ImportResult TransactionQueue::importLocal(std::shared_ptr<Transaction> _transaction)
 	{
+		return import(_transaction, source::local);
+	}
+
+	h256s TransactionQueue::topTransactions(unsigned _limit) const
+	{
+		/// todo: link accounts randomly and limit the maximum number of transactions in a single block links 
 		ReadGuard l(m_lock);
 		h256s ret;
-		for (auto cs = m_currentByAddressAndNonce.begin(); cs != m_currentByAddressAndNonce.end(); ++cs)
+		for (auto cs = queue.begin(); cs != queue.end(); ++cs)
 		{
-			for (auto t = cs->second.begin(); t != cs->second.end(); t++)
-			{
-				auto hash = (*t->second).transaction.sha3();
-				if (!_avoid.count(hash))
-				{
-					ret.push_back(hash);
-					if (ret.size() == _limit)
-						return ret;
-				}
-			}
+			auto r = cs->second.transactionHashs(_limit - ret.size());
+			ret.insert(ret.end(), r.begin(), r.end());
+			if (ret.size() == _limit)
+				break;
 		}
-			
 		return ret;
 	}
 
 	bool TransactionQueue::exist(h256 const& _hash)
 	{
 		ReadGuard l(m_lock);
-		return m_currentByHash.count(_hash);
+		return all.count(_hash);
 	}
 
 	h256Hash TransactionQueue::knownTransactions() const
@@ -184,48 +127,46 @@ namespace mcp
 	}
 
 
-	std::pair<ImportResult, h256Hash> TransactionQueue::manageImport_WITH_LOCK(h256 const& _h, Transaction const& _transaction, bool isLocal, bool ignoreFuture)
+	ImportResult TransactionQueue::manageImport_WITH_LOCK(std::shared_ptr<Transaction> _t, source _in)
 	{
 		try
 		{
-			assert(_h == _transaction.sha3());
-			// Remove any prior transaction with the same nonce but a lower gas price.
-			// Bomb out if there's a prior transaction with higher gas price.
-			
-			// If valid, append to transactions.
-			auto r = isFuture_WITH_LOCK(_transaction);
-			if (NonceRange::FutureTooBig == r && ignoreFuture)/// request block
-				r = NonceRange::Future;
-
-			if (NonceRange::FutureTooBig == r)
+			/// If valid, append to transactions.
+			auto r = isPending_WITH_LOCK(_t);
+			if (NonceRange::TooSmall == r)///nonce too low, just request need insert.
 			{
-				return make_pair(ImportResult::FutureTimeKnown, h256Hash()); ///if local throw error,if broadcast punish remote node.
+				if (_in == source::request)
+					return insertQueue_WITH_LOCK(_t, false);
+				else
+					return ImportResult::InvalidNonce;
 			}
-			else if (NonceRange::Future == r)/// future
+			if (NonceRange::TooBig == r)
 			{
-				auto r = insertFuture_WITH_LOCK(make_pair(_h, _transaction), isLocal);
-				LOG(m_log.debug) << "Queued vaguely not legit-looking transaction " << _h.hex();
-				return make_pair(r, h256Hash());
+				if (_in == source::request)/// block liked.
+					r = NonceRange::Pending;
+				else
+					return ImportResult::FutureFull; ///account's transaction is full,the maximum cache size is c_maxAccountPendingSize.
 			}
-			else ///current
+			if (NonceRange::Pending == r)/// insert to pending
 			{
-				auto r = insertCurrent_WITH_LOCK(make_pair(_h, _transaction), isLocal);
-				r.second.insert(_h);
-				LOG(m_log.debug) << "Queued vaguely legit-looking transaction " << _h.hex();
-				return r;
+				//LOG(m_log.debug) << "Queued vaguely not legit-looking transaction " << _t->sha3().hex();
+				return insertPending_WITH_LOCK(_t);
 			}
-
-			//m_onReady();
+			else ///insert to queue
+			{
+				//LOG(m_log.debug) << "Queued vaguely legit-looking transaction " << _t->sha3().hex();
+				return insertQueue_WITH_LOCK(_t);
+			}
 		}
 		catch (Exception const& _e)
 		{
 			LOG(m_log.debug) << "Ignoring invalid transaction: " << diagnostic_information(_e);
-			return make_pair(ImportResult::Malformed, h256Hash());
+			return ImportResult::Malformed;
 		}
 		catch (std::exception const& _e)
 		{
 			LOG(m_log.debug) << "Ignoring invalid transaction: " << _e.what();
-			return make_pair(ImportResult::Malformed, h256Hash());
+			return ImportResult::Malformed;
 		}
 	}
 
@@ -235,311 +176,179 @@ namespace mcp
 		return maxNonce_WITH_LOCK(_a, blockTag);
 	}
 
+	/// return account's next nonce
 	u256 TransactionQueue::maxNonce_WITH_LOCK(Address const& _a, BlockNumber const blockTag) const
 	{
 		u256 ret = 0;
-		auto cs = m_currentByAddressAndNonce.find(_a);
-		if (cs != m_currentByAddressAndNonce.end() && !cs->second.empty())
-			ret = cs->second.rbegin()->first + 1;
+		bool tqExist = false;
+		if (blockTag == PendingBlock || blockTag == LatestBlock)
+		{
+			auto cs = queue.find(_a);
+			if (cs != queue.end())
+			{
+				tqExist = true;
+				ret = cs->second.maxNonce() + 1; ///next nonce
+			}
 
-		if (blockTag == PendingBlock) {
-			auto fs = m_future.find(_a);
-			if (fs != m_future.end() && !fs->second.empty())
-				ret = std::max(ret, fs->second.rbegin()->first + 1);
+			if (blockTag == PendingBlock) {
+				auto fs = pending.find(_a);
+				if (fs != pending.end())
+				{
+					tqExist = true;
+					ret = std::max(ret, fs->second.maxNonce() + 1);
+				}
+			}
 		}
 
+		///stable nonce
+		if (!tqExist)
+		{
+			mcp::db::db_transaction t(m_store.create_transaction());
+			if (m_cache->account_nonce_get(t, _a, ret))
+				ret++;
+		}
 		return ret;
 	}
 
 
-	std::pair<ImportResult, h256Hash> TransactionQueue::insertCurrent_WITH_LOCK(std::pair<h256, Transaction> const& _p, bool isLocal)
+	ImportResult TransactionQueue::insertQueue_WITH_LOCK(std::shared_ptr<Transaction> _t, bool includeQueue)
 	{
-		if (m_currentByHash.count(_p.first))
-		{
-			LOG(m_log.debug) << "Transaction hash" << _p.first.hex() << "already in current?!";
-			return make_pair(ImportResult::Success, h256Hash());
-		}
-		Transaction const& ts = _p.second;
-		auto from = ts.sender();
-		auto fs = m_currentByAddressAndNonce.find(ts.from());
-		if (fs != m_currentByAddressAndNonce.end()) /// have transaction used nonce,replace it
-		{
-			auto t = fs->second.find(ts.nonce());
-			if (t != fs->second.end()) /// have same nonce
-			{
-				if (ts.gasPrice() <= (*t->second).transaction.gasPrice())
-				{
-					if (isLocal) /// if local return error
-						return make_pair(ImportResult::OverbidGasPrice, h256Hash());
-
-					/// insert into parallel queue
-					PriorityQueue::iterator handle = m_current.emplace(VerifiedTransaction(ts));
-					m_currentByHash[_p.first] = handle;
-					if (!m_sameCurrentByAddressAndNonce.count(from) || !m_sameCurrentByAddressAndNonce[from].count(ts.nonce()))
-					{
-						std::map<h256, PriorityQueue::iterator> m;
-						m.insert(std::make_pair(_p.first, handle));
-						m_sameCurrentByAddressAndNonce[from].insert(std::make_pair(ts.nonce(), m));
-					}
-					else /// account and nonce existed
-					{
-						m_sameCurrentByAddressAndNonce[from][ts.nonce()].emplace(std::make_pair(_p.first, handle));
-					}
-				}
-				else
-				{
-					/// move to parallel queue from currentByAddressAndNonce.
-					PriorityQueue::iterator oldhandle = t->second;
-					if (!m_sameCurrentByAddressAndNonce.count(from) || !m_sameCurrentByAddressAndNonce[from].count(ts.nonce()))
-					{
-						std::map<h256, PriorityQueue::iterator> m;
-						m.emplace(std::make_pair((*oldhandle).transaction.sha3(), oldhandle));
-						m_sameCurrentByAddressAndNonce[from].insert(std::make_pair(ts.nonce(), m));
-					}
-					else /// account and nonce existed
-					{
-						m_sameCurrentByAddressAndNonce[from][ts.nonce()].emplace(std::make_pair((*oldhandle).transaction.sha3(), oldhandle));
-					}
-
-					/// Insert into current,and replace m_currentByAddressAndNonce with new transaction
-					PriorityQueue::iterator handle = m_current.emplace(VerifiedTransaction(ts));
-					m_currentByHash[_p.first] = handle;
-					t->second = handle;
-				}
-				m_known.insert(_p.first);
-				return make_pair(ImportResult::Success, h256Hash());
-			}
-		}
-		else
-		{
-			u256 pNonce = 0;
-			mcp::db::db_transaction t(m_store.create_transaction());
-			/// exist && and it's not equal to the last transaction plus 1
-			auto exist = m_cache->account_nonce_get(t, ts.sender(), pNonce);
-			if (exist && ts.nonce() <= pNonce)
-			{
-				if (isLocal) /// if local return error
-					return make_pair(ImportResult::OverbidGasPrice, h256Hash());
-				else
-				{
-					/// insert into parallel queue
-					PriorityQueue::iterator handle = m_current.emplace(VerifiedTransaction(ts));
-					m_currentByHash[_p.first] = handle;
-					if (!m_sameCurrentByAddressAndNonce.count(from) || !m_sameCurrentByAddressAndNonce[from].count(ts.nonce()))
-					{
-						std::map<h256, PriorityQueue::iterator> m;
-						m.insert(std::make_pair(_p.first, handle));
-						m_sameCurrentByAddressAndNonce[from].insert(std::make_pair(ts.nonce(), m));
-					}
-					else /// account and nonce existed
-					{
-						m_sameCurrentByAddressAndNonce[from][ts.nonce()].emplace(std::make_pair(_p.first, handle));
-					}
-				}
-				m_known.insert(_p.first);
-				return make_pair(ImportResult::Success, h256Hash());
-			}
-		}
-
+		if (all.count(_t->sha3()))
+			assert_x(false);
 		
-		/// Insert into current
-		auto inserted = m_currentByAddressAndNonce[ts.from()].insert(std::make_pair(ts.nonce(), PriorityQueue::iterator()));
-		PriorityQueue::iterator handle = m_current.emplace(VerifiedTransaction(ts));
-		inserted.first->second = handle;
-		m_currentByHash[_p.first] = handle;
-
-		/// Move following transactions from future to current
-		auto hashs = makeCurrent_WITH_LOCK(ts);
-		m_known.insert(_p.first);
-		return make_pair(ImportResult::Success, hashs);
+		///If the nonce is too small, it is not inserted into the queue.just insert all, must be linked by a block.
+		if (includeQueue)
+		{
+			auto from = _t->sender();
+			if (!queue.count(from)) 
+				queue[_t->sender()] = newTxList();
+			auto r = queue[_t->sender()].add(_t);/// have transaction used nonce,replace it
+			if (!r.first)///OverbidGasPrice
+				return ImportResult::OverbidGasPrice;
+			if (r.second)///replaced. remove replaced transaction from known and all.
+			{
+				all.erase(r.second->sha3());
+				m_known.erase(r.second->sha3());
+			}
+		}
+		
+		all[_t->sha3()] = _t;
+		m_known.insert(_t->sha3());
+		m_onReady(_t->sha3());
+		/// Move following transactions from pending to queue
+		makeQueue_WITH_LOCK(_t);
+		
+		return ImportResult::Success;
 	}
 
-	ImportResult TransactionQueue::insertFuture_WITH_LOCK(std::pair<h256, Transaction> const& _p, bool isLocal)
+	ImportResult TransactionQueue::insertPending_WITH_LOCK(std::shared_ptr<Transaction> _t)
 	{
-		if (m_currentByHash.count(_p.first))
+		if (all.count(_t->sha3()))
 			assert_x(false);
 
-		auto fs = m_future.find(_p.second.from());
-		if (fs != m_future.end()) /// have transaction used nonce,replace it
+		/// find from pending. if nonce exist and it is not the same transaction,try to replaced it.
+		if (!pending.count(_t->sender())) 
+			pending[_t->sender()] = newTxList();
+		auto r = pending[_t->sender()].add(_t);/// have transaction used nonce,replace it
+		if (!r.first)///OverbidGasPrice
+			return ImportResult::OverbidGasPrice;
+		if (r.second)///replaced. remove replaced transaction from known.
+			m_known.erase(r.second->sha3());
+		else///not replaced, jsut insert.
+			++m_pendingSize;
+		m_known.insert(_t->sha3());
+
+		/// exceed the maximum limit, half of the pending will be deleted, delete from each account in turn, from back to front.
+		/// TODO: priority queue for future transactions
+		if (m_pendingSize > m_pendingLimit)
 		{
-			auto t = fs->second.find(_p.second.nonce());
-			if (t != fs->second.end())
+			while (m_pendingSize > m_pendingLimit / 2)
 			{
-				if (_p.second.gasPrice() < t->second.transaction.gasPrice())
-				{
-					if (isLocal) /// if local return error
-						return ImportResult::OverbidGasPrice;
-				}
-				else
-				{
-					m_known.erase(t->second.transaction.sha3());
-					fs->second.erase(t);
-					fs->second.emplace(_p.second.nonce(), _p.second);
-					m_known.insert(_p.first);
-				}
-				return ImportResult::Success;
+				auto txl = pending.begin()->second;
+				m_pendingSize -= txl.size();
+				LOG(m_log.debug) << "Dropping out of bounds account transaction "
+					<< pending.begin()->first.hex();
+				for (auto t : txl.txs)
+					m_known.erase(t.second->sha3());
+				pending.erase(pending.begin());
 			}
-		}
-
-		/// insert with new object
-		auto& target = m_future[_p.second.from()];
-		// Insert into current
-		target.emplace(_p.second.nonce(), move(VerifiedTransaction(_p.second)));
-		++m_futureSize;
-		m_known.insert(_p.first);
-
-		while (m_futureSize > m_futureLimit)
-		{
-			// TODO: priority queue for future transactions
-			// For now just drop random chain end
-			--m_futureSize;
-			LOG(m_log.debug) << "Dropping out of bounds future transaction "
-				<< m_future.begin()->second.rbegin()->second.transaction.sha3();
-			m_future.begin()->second.erase(--m_future.begin()->second.end());
-			if (m_future.begin()->second.empty())
-				m_future.erase(m_future.begin());
 		}
 
 		return ImportResult::Success;
 	}
 
-
-	/// block A,B,C,D. A <-B <-D,A <-C <-D
-	/// processing sequence maybe A,B,C,D ands maybe A,C,B,D
-	/// there have two transaction,T1 and T2,used same from account and nonce. so that,one in m_currentByAddressAndNonce and another in m_sameCurrentByAddressAndNonce.
-	/// B links T1,C links T2. So both T1 and T2 could be saved first.However, if you delete according to the nonce, the second save may cause problems.
-	/// Therefore, if the first time in current then deleted it. 
-	/// if in sameCurrent not only delete it but also needs move the same account and nonce transaction in current to sameCurrent.because composer need get transaction hash from current queue.
-	/// todo: but if unlined transaction can not be removed. transaction stable can remove other same account and nonce?
 	bool TransactionQueue::remove_WITH_LOCK(h256 const& _txHash)
 	{
-		auto t = m_currentByHash.find(_txHash);
-		if (t == m_currentByHash.end())
+		auto t = all.find(_txHash);
+		if (t == all.end())
 		{
-			LOG(m_log.debug) << "remove_WITH_LOCK Transaction hash" << _txHash.hex() << "already in current?!";
+			LOG(m_log.debug) << "remove_WITH_LOCK Transaction hash" << _txHash.hex() << "already in all?!";
 			return false;
 		}
 			
-		Address from = (*t->second).transaction.from();
-		u256 nonce = (*t->second).transaction.nonce();
+		Address from = t->second->sender();
+		u256 nonce = t->second->nonce();
 
-		
-		if (m_currentByAddressAndNonce.count(from) && m_currentByAddressAndNonce[from].count(nonce))
+		if (queue.count(from))
 		{
-			/// Not the same transaction needs move it to the sameCurrent queue
-			if (m_currentByAddressAndNonce[from][nonce]->transaction.sha3() != _txHash)
+			auto delt = queue[from].erase(nonce);
+			if (delt->sha3() != _txHash)/// not the hash,but deleted from queue,put it to delete queue,delete it 2 minutes later
 			{
-				auto handle = m_currentByAddressAndNonce[from][nonce];
-				if (!m_sameCurrentByAddressAndNonce.count(from) || !m_sameCurrentByAddressAndNonce[from].count(nonce))
-				{
-					std::map<h256, PriorityQueue::iterator> m;
-					m.insert(std::make_pair(handle->transaction.sha3(), handle));
-					m_sameCurrentByAddressAndNonce[from].insert(std::make_pair(nonce, m));
-				}
-				else /// account and nonce existed
-				{
-					m_sameCurrentByAddressAndNonce[from][nonce].emplace(std::make_pair(handle->transaction.sha3(), handle));
-				}
+				auto now = SteadyClock.now();
+				if (!m_superfluous.count(now))
+					m_superfluous.emplace(now, h256Set());
+				m_superfluous[now].emplace(delt->sha3());
 			}
-
-			m_currentByAddressAndNonce[from].erase(nonce);
-			if (m_currentByAddressAndNonce[from].empty())
-				m_currentByAddressAndNonce.erase(from);
-			
+			if (queue[from].empty())
+				queue.erase(from);
 		}
-
-		if (m_sameCurrentByAddressAndNonce.count(from) && m_sameCurrentByAddressAndNonce[from].count(nonce))
-		{
-			auto& target = m_sameCurrentByAddressAndNonce[from][nonce];
-			if (m_sameCurrentByAddressAndNonce[from][nonce].count(_txHash))
-			{
-				m_sameCurrentByAddressAndNonce[from][nonce].erase(_txHash);
-				if (m_sameCurrentByAddressAndNonce[from][nonce].empty())
-				{
-					m_sameCurrentByAddressAndNonce[from].erase(nonce);
-					if (m_sameCurrentByAddressAndNonce[from].empty())
-					{
-						m_sameCurrentByAddressAndNonce.erase(from);
-					}
-				}
-			}
-		}
-
-		m_current.erase(t->second);
-		m_currentByHash.erase(t);
+		all.erase(_txHash);
 		m_known.erase(_txHash);
+
+		//LOG(m_log.debug) << "remove.......";
+		//prinf();
 		
 		return true;
 	}
 
 
-	h256Hash TransactionQueue::makeCurrent_WITH_LOCK(Transaction const& _t)
+	void TransactionQueue::makeQueue_WITH_LOCK(std::shared_ptr<Transaction> _t)
 	{
-		h256Hash ret;
-		//bool newCurrent = false;
-		auto fs = m_future.find(_t.from());
-		if (fs != m_future.end())
+		if (pending.count(_t->from()))
 		{
-			u256 nonce = _t.nonce() + 1;
-			auto fb = fs->second.find(nonce);
-			if (fb != fs->second.end())
+			auto cur = pending[_t->from()].release(_t->nonce() + 1);
+			if (cur.size()) ///release all consecutive and compliant transactions from pending.
 			{
-				auto ft = fb;
-				while (ft != fs->second.end() && ft->second.transaction.nonce() == nonce)
+				if (!pending[_t->from()].size()) ///if have no transactions in pending delete it.
+					pending.erase(_t->from());
+				m_pendingSize -= cur.size();
+				for (auto td : cur) ///move to queue
 				{
-					auto inserted = m_currentByAddressAndNonce[_t.from()].insert(std::make_pair(ft->second.transaction.nonce(), PriorityQueue::iterator()));
-					PriorityQueue::iterator handle = m_current.emplace(move(ft->second));
-					inserted.first->second = handle;
-					m_currentByHash[(*handle).transaction.sha3()] = handle;
-					ret.insert((*handle).transaction.sha3());
-					--m_futureSize;
-					++ft;
-					++nonce;
-					//newCurrent = true;
+					queue[_t->sender()].add(td);
+					all[td->sha3()] = td;
+					m_onReady(td->sha3());
 				}
-				fs->second.erase(fb, ft);
-				if (fs->second.empty())
-					m_future.erase(_t.from());
 			}
 		}
-
-		return ret;
-		/// todo used 
-		//if (newCurrent)
-		//	m_onReady();
 	}
 
-	NonceRange TransactionQueue::isFuture_WITH_LOCK(Transaction const& _transaction)
+	NonceRange TransactionQueue::isPending_WITH_LOCK(std::shared_ptr<Transaction> _t)
 	{
 		/// account's first transaction
-		if (_transaction.nonce() == 0) 
-			return NonceRange::Current;
+		if (_t->nonce() == 0)
+			return NonceRange::Queue;
 
-		/// have transactions in queue,but not equal to the last transaction plus 1, it is future
-		auto cs = m_currentByAddressAndNonce.find(_transaction.from());
-		if (cs != m_currentByAddressAndNonce.end())
+		/// not include pending transactions,larger than the largest nonce in the queue is the pending.
+		u256 next = maxNonce_WITH_LOCK(_t->sender(), LatestBlock);
+		if (_t->nonce() < next)
+			return NonceRange::TooSmall;
+		if (_t->nonce() > next)
 		{
-			assert_x(cs->second.size());/// 
-			auto it = cs->second.rbegin(); ///last nonce
-			auto nonce = (*it->second).transaction.nonce();
-			/// Future transactions exceed the limit
-			if (_transaction.nonce() > nonce + FutureTimeUnknownSize)
-				return NonceRange::FutureTooBig;
-			if (_transaction.nonce() > nonce + 1)
-				return NonceRange::Future;
+			if (_t->nonce() > next + c_maxAccountPendingSize - 1)
+				return NonceRange::TooBig;
+			return NonceRange::Pending;
 		}
-		else /// if queue have no transaction of this account,need query the nonce of the last transaction in the database
-		{
-			u256 pNonce = 0;
-			mcp::db::db_transaction t(m_store.create_transaction());
-			/// exist && and it's not equal to the last transaction plus 1
-			m_cache->account_nonce_get(t, _transaction.sender(), pNonce);
-			if (_transaction.nonce() > pNonce + FutureTimeUnknownSize)
-				return NonceRange::FutureTooBig;
-			if (_transaction.nonce() > pNonce + 1)
-				return NonceRange::Future;
-		}
-		return NonceRange::Current;
+		return NonceRange::Queue;
 	}
 
 	void TransactionQueue::drop(h256s const& _txHashs)
@@ -550,6 +359,7 @@ namespace mcp
 		{
 			//LOG(m_log.info) << "drop transaction,hash: " << h.hexPrefixed();
 
+			///if not known,must be deleted
 			if (m_known.count(h))
 			{
 				dels.push_back(h);
@@ -568,15 +378,15 @@ namespace mcp
 	{
 		UpgradableGuard l(m_lock);
 
-		auto t = m_currentByHash.find(_txHash);
-		if (t == m_currentByHash.end())
+		auto t = all.find(_txHash);
+		if (t == all.end())
 			return nullptr;
 
-		return std::make_shared<Transaction>((*t->second).transaction);
+		return t->second;
 	}
 
 
-	void TransactionQueue::enqueue(RLP const& _data, p2p::node_id const& _nodeId)
+	void TransactionQueue::enqueue(std::shared_ptr<Transaction> _tx, p2p::node_id const& _nodeId, source _in)
 	{
 		bool queued = false;
 		{
@@ -586,76 +396,77 @@ namespace mcp
 				LOG(m_log.debug) << "Transaction verification queue is full. Dropping transactions";
 				return;
 			}
-			m_unverified.emplace_back(UnverifiedTransaction(_data.data(), _nodeId));
+			m_unverified.emplace_back(UnverifiedTransaction(_tx, _nodeId, _in));
 			queued = true;
 		}
-		
-		m_queueReady.notify_all();
+		if (queued)
+			m_queueReady.notify_all();
 	}
 
 	void TransactionQueue::verifierBody()
 	{
 		while (!m_aborting)
 		{
-			UnverifiedTransaction work;
+			std::deque<UnverifiedTransaction> works;
 
 			{
 				unique_lock<Mutex> l(x_queue);
 				m_queueReady.wait(l, [&]() { return !m_unverified.empty() || m_aborting; });
 				if (m_aborting)
 					return;
-				work = move(m_unverified.front());
-				m_unverified.pop_front();
+				std::swap(works, m_unverified);
 			}
 
-			try
+			while (!works.empty())
 			{
-				Transaction t(work.transaction, CheckTransaction::Everything);
-				bool ignoreFuture = false;
-				if (m_capability->m_requesting.exist(mcp::block_hash(t.sha3())))
-					ignoreFuture = true;
-				auto ir = import(t,false, ignoreFuture);
-				m_onImport(ir, t.sha3(), work.nodeId);
-
-				if (ImportResult::Success == ir)/// first import && successed,broadcast it
+				UnverifiedTransaction work = std::move(works.front());
+				try
 				{
-					m_async_task->sync_async([this, t]() {
-						m_capability->broadcast_transaction(t);
-					});
+					auto ir = import(work.transaction, work.in);
+					m_onImport(ir, work.nodeId);
 				}
-			}
-			catch (...)
-			{
-				m_onImport(ImportResult::BadChain, h256(0), work.nodeId);///  Notify capability and P2P to process peer. diconnect peer if bad transaction  
-				// should not happen as exceptions are handled in import.
-				LOG(m_log.error) << "Bad transaction:" << boost::current_exception_diagnostic_information();
+				catch (InvalidNonce)
+				{
+					///remote network is not very good,Disconnect the peer.todo
+				}
+				catch (NotEnoughCash)
+				{
+					///remote network is not very good,Disconnect the peer.todo
+				}
+				catch (...)
+				{
+					LOG(m_log.error) << "verifierBody Bad transaction:" << boost::current_exception_diagnostic_information();
+					m_onImport(ImportResult::Malformed, work.nodeId);///  Notify capability and P2P to process peer. diconnect peer if bad transaction  
+				}
+
+				works.pop_front();
 			}
 		}
 	}
 
-	void TransactionQueue::validateTx(Transaction const& _t)
+	void TransactionQueue::validateTx(std::shared_ptr<Transaction> _t)
 	{
-		if (_t.hasZeroSignature())
+		if (_t->hasZeroSignature())
 			BOOST_THROW_EXCEPTION(ZeroSignatureTransaction());
-		_t.checkChainId(mcp::chain_id);
-		_t.checkLowS();
+		_t->checkChainId(mcp::chain_id);
+		_t->checkLowS();
 
 		eth::EVMSchedule const& schedule = dev::eth::EVMSchedule();
 		/// Pre calculate the gas needed for execution
-		if (_t.baseGasRequired(schedule) > _t.gas())
+		if (_t->baseGasRequired(schedule) > _t->gas())
 			BOOST_THROW_EXCEPTION(OutOfGasIntrinsic() << RequirementError(
-			(bigint)(_t.baseGasRequired(schedule)), (bigint)_t.gas()));
+			(bigint)(_t->baseGasRequired(schedule)), (bigint)_t->gas()));
 
 		/// Avoid transactions that would take us beyond the block gas limit.
-		if ((uint256_t)_t.gas() > mcp::uint256_t(mcp::block_max_gas))
+		if ((uint256_t)_t->gas() > mcp::uint256_t(mcp::block_max_gas))
 			BOOST_THROW_EXCEPTION(BlockGasLimitReached() << RequirementErrorComment(
-			(bigint)(mcp::block_max_gas), (bigint)_t.gas(),
+			(bigint)(mcp::block_max_gas), (bigint)_t->gas(),
 				std::string("_gasUsed + (bigint)_t.gas() > _header.gasLimit()")));
 
 		/// Avoid transactions that are less than the lower gas price limit.
-		if ((uint256_t)_t.gasPrice() < mcp::uint256_t(mcp::gas_price))
-			BOOST_THROW_EXCEPTION(BlockGasLimitReached() << RequirementErrorComment(
-			(bigint)(mcp::block_max_gas), (bigint)_t.gas(),
+		if ((uint256_t)_t->gasPrice() < mcp::uint256_t(mcp::gas_price))
+			BOOST_THROW_EXCEPTION(OutOfGasPriceIntrinsic() << RequirementErrorComment(
+			(bigint)(mcp::block_max_gas), (bigint)_t->gas(),
 				std::string("_gasUsed + (bigint)_t.gas() < lower.gasLimit()")));
 	}
 
@@ -677,22 +488,179 @@ namespace mcp
 				NotEnoughCash() << RequirementError(totalCost, (bigint)c_state.balance(_t.sender())) << errinfo_comment(_t.sender().hex()));
 	}
 
+	void TransactionQueue::processSuperfluous()
+	{
+		{
+			UpgradableGuard l(m_lock);
+			if (m_superfluous.size())
+			{
+				auto now = SteadyClock.now();
+				UpgradeGuard ul(l);
+				auto ft = m_superfluous.begin();
+				while (ft != m_superfluous.end())
+				{
+					if (now - ft->first < m_clear_time)
+						break;
+					for (auto h : ft->second)
+					{
+						all.erase(h);
+						m_known.erase(h);
+					}
+					ft++;
+				}
+				if (ft != m_superfluous.begin())
+				{
+					m_superfluous.erase(m_superfluous.begin(), ft);
+				}
+			}
+			//LOG(m_log.debug) << "processSuperfluous.......";
+			//prinf();
+		}
+
+		m_clearTimer->expires_from_now(boost::posix_time::seconds(180));
+		m_clearTimer->async_wait([this](boost::system::error_code const & error)
+		{
+			processSuperfluous();
+		});
+	}
+
 	std::string TransactionQueue::getInfo()
 	{
-		int size = 0;
-		for (auto it = m_future.begin(); it != m_future.end(); it++)
+		int queuesize = 0;
+		for (auto it = queue.begin(); it != queue.end(); it++)
 		{
-			size += it->second.size();
+			queuesize += it->second.size();
 		}
-		std::string str = "transactionQueue current:" + std::to_string(m_current.size())
-			+ " ,currentByHash:" + std::to_string(m_currentByHash.size())
-			+ " ,currentByAddressAndNonce:" + std::to_string(m_currentByAddressAndNonce.size())
-			+ " ,sameCurrentByAddressAndNonce:" + std::to_string(m_sameCurrentByAddressAndNonce.size())
-			+ " ,future:" + std::to_string(m_future.size())
-			+ " ,future transaction:" + std::to_string(size)
-			+ " ,m_unverified:" + std::to_string(m_unverified.size());
+		int pendingsize = 0;
+		for (auto it = pending.begin(); it != pending.end(); it++)
+		{
+			pendingsize += it->second.size();
+		}
+
+		std::string str = "transactionQueue all txs:" + std::to_string(all.size())
+			+ " ,queue  account:" + std::to_string(queue.size())
+			+ " ,pending account:" + std::to_string(pending.size())
+			+ " ,queue txs:" + std::to_string(queuesize)
+			+ " ,pending txs:" + std::to_string(pendingsize)
+			+ " ,m_known:" + std::to_string(m_known.size())
+			+ " ,m_dropped:" + std::to_string(m_dropped.size())
+			+ " ,m_pendingSize:" + std::to_string(m_pendingSize)
+			;
 
 		return str;
+	}
+
+	void TransactionQueue::prinf()
+	{
+		LOG(m_log.debug) << getInfo();
+		LOG(m_log.debug) << "--------------all-------------";
+		for (auto it = all.begin(); it != all.end(); it++)
+		{
+			LOG(m_log.debug) << it->first.hex() << " ,nonce:" << it->second->nonce();
+		}
+		LOG(m_log.debug) << "--------------all end-------------";
+
+		LOG(m_log.debug) << "--------------queue-------------";
+		for (auto it = queue.begin(); it != queue.end(); it++)
+		{
+			LOG(m_log.debug) << "address:" << it->first.hex();
+			auto m = it->second;
+			for (auto at = m.txs.begin(); at != m.txs.end(); at++)
+			{
+				LOG(m_log.debug) << "--nonce:" << at->first << " ,hash:" << at->second->sha3().hex();
+			}
+		}
+		LOG(m_log.debug) << "--------------queue end-------------";
+
+		LOG(m_log.debug) << "--------------pending-------------";
+		for (auto it = pending.begin(); it != pending.end(); it++)
+		{
+			LOG(m_log.debug) << "address:" << it->first.hex();
+			auto m = it->second;
+			for (auto at = m.txs.begin(); at != m.txs.end(); at++)
+			{
+				LOG(m_log.debug) << "--nonce:" << at->first << " ,hash:" << at->second->sha3().hex();
+			}
+		}
+		LOG(m_log.debug) << "--------------pending end-------------";
+
+		LOG(m_log.debug) << "--------------known-------------";
+		for (auto it = m_known.begin(); it != m_known.end(); it++)
+		{
+			LOG(m_log.debug) << "hash:" << (*it).hex();
+		}
+		LOG(m_log.debug) << "--------------known end-------------";
+		LOG(m_log.debug) << "--------------superfluous-------------";
+		for (auto it = m_superfluous.begin(); it != m_superfluous.end(); it++)
+		{
+			for (auto h : it->second)
+			{
+				LOG(m_log.debug) << "hash:" << h.hex();
+			}
+		}
+		LOG(m_log.debug) << "--------------superfluous end-------------";
+		LOG(m_log.debug) << "-------------------------------------------------------";
+	}
+
+	std::pair<bool, std::shared_ptr<Transaction>> TransactionQueue::txList::add(std::shared_ptr<Transaction> _t)
+	{
+		if (txs.count(_t->nonce()))
+		{
+			auto old = txs[_t->nonce()];
+			if (_t->gasPrice() <= old->gasPrice())
+			{
+				return std::make_pair(false, nullptr);
+			}
+			/// replace
+			txs[_t->nonce()] = _t;
+			return std::make_pair(true, old);
+		}
+		///insert
+		txs[_t->nonce()] = _t;
+		return std::make_pair(true, nullptr);
+	}
+
+	std::deque<std::shared_ptr<Transaction>> TransactionQueue::txList::release(u256 const& nonce)
+	{
+		std::deque<std::shared_ptr<Transaction>> ret;
+		u256 _n = nonce;
+		auto ft = txs.find(_n);
+		if (ft != txs.end())
+		{
+			while (ft != txs.end() && ft->second->nonce() == _n)
+			{
+				ret.push_back(ft->second);
+				++ft;
+				++_n;
+			}
+			if (ret.size())
+				txs.erase(txs.begin(), ft);
+		}
+
+		return ret;
+	}
+
+	std::shared_ptr<Transaction> TransactionQueue::txList::erase(u256 const & _n)
+	{
+		std::shared_ptr<Transaction> t = nullptr;
+		if (txs.count(_n))
+		{
+			t = txs[_n];
+			txs.erase(_n);
+		}
+		return t;
+	}
+
+	h256s TransactionQueue::txList::transactionHashs(int _limit) const
+	{
+		h256s ret;
+		auto it = txs.begin();
+		while (it != txs.end() && ret.size() < _limit)
+		{
+			ret.push_back(it->second->sha3());
+			it++;
+		}
+		return ret;
 	}
 
 }

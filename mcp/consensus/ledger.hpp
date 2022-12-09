@@ -22,4 +22,6 @@ namespace mcp
 	private:
         mcp::log m_log = { mcp::log("node") };
 	};
+
+	extern ledger Ledger;
 }; // namespace mcp

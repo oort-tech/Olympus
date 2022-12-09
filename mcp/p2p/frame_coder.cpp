@@ -75,7 +75,6 @@ void RLPXFrameCoder::setup(bool _originated, h512 const& _remoteEphemeral, h256 
 		BOOST_THROW_EXCEPTION(ECDHEError{});
 
 	ephemeralShared.ref().copyTo(keyMaterial.cropped(0, h256::size));
-	h512 nonceMaterial;
 	h256 const& leftNonce = _originated ? _remoteNonce : _nonce;
 	h256 const& rightNonce = _originated ? _nonce : _remoteNonce;
 	leftNonce.ref().copyTo(nonceMaterial.ref().cropped(0, h256::size));
@@ -273,6 +272,11 @@ uint32_t RLPXFrameCoder::deserializePacketSize(bytes const & data)
 {
 	uint32_t size((data[0] << 24) + (data[1] << 16) + (data[2] << 8) + data[3]);
 	return size;
+}
+
+bool mcp::p2p::RLPXFrameCoder::operator>(RLPXFrameCoder const & _f) const
+{
+	return nonceMaterial > _f.nonceMaterial;
 }
 
 void RLPXFrameCoderImpl::updateMAC(CryptoPP::Keccak_256& _mac, bytesConstRef _seed)

@@ -284,6 +284,8 @@ add_library (node
 	mcp/node/common.hpp
 	mcp/node/approve_queue.cpp
 	mcp/node/approve_queue.hpp
+	mcp/node/requesting.cpp
+	mcp/node/requesting.hpp
     )
 
 add_library (p2p

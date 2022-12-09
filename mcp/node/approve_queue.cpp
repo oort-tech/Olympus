@@ -35,19 +35,19 @@ namespace mcp
 			i.join();
 	}
 
-	ImportApproveResult ApproveQueue::check_WITH_LOCK(h256 const& _h, IfDropped _ik)
+	ImportApproveResult ApproveQueue::check_WITH_LOCK(h256 const& _h)
 	{
 		if (m_known.count(_h) )
 			return ImportApproveResult::AlreadyKnown;
 
 		mcp::db::db_transaction t(m_store.create_transaction());
-		if (_ik == IfDropped::Ignore && (m_dropped.contains(_h) || m_cache->approve_exists(t, _h)))
+		if (m_dropped.contains(_h) || m_cache->approve_exists(t, _h))
 			return ImportApproveResult::AlreadyInChain;
 
 		return ImportApproveResult::Success;
 	}
 
-	ImportApproveResult ApproveQueue::manageImport_WITH_LOCK(h256 const& _h, approve const& _approve, bool isLocal)
+	ImportApproveResult ApproveQueue::manageImport_WITH_LOCK(h256 const& _h, approve const& _approve)
 	{
 		try
 		{
@@ -93,7 +93,7 @@ namespace mcp
 	}
 
 
-	ImportApproveResult ApproveQueue::import(approve const& _approve, bool isLoccal, IfDropped _ik)
+	ImportApproveResult ApproveQueue::import(approve const& _approve)
 	{
 		LOG(m_log.trace) << "[import] in";
 
@@ -103,13 +103,13 @@ namespace mcp
 		ImportApproveResult ret;
 		{
 			UpgradableGuard l(m_lock);
-			auto ir = check_WITH_LOCK(h, _ik);
+			auto ir = check_WITH_LOCK(h);
 			if (ir != ImportApproveResult::Success)
 				return ir;
 
 			{
 				UpgradeGuard ul(l);
-				ret = manageImport_WITH_LOCK(h, _approve, isLoccal);
+				ret = manageImport_WITH_LOCK(h, _approve);
 			}
 		}
 
@@ -118,14 +118,14 @@ namespace mcp
 			m_onImportProcessed(h);
 		}
 
-		LOG(m_log.debug) << "[import] out";
+		//LOG(m_log.debug) << "[import] out";
 		return ret;
 	}
 
 	void ApproveQueue::importLocal(approve const& _approve)
 	{
-		LOG(m_log.trace) << "[importLocal] in";
-		auto ret = import(_approve,true);
+		//LOG(m_log.trace) << "[importLocal] in";
+		auto ret = import(_approve);
 		if(ret != ImportApproveResult::Success)
 		{
 			LOG(m_log.info) << "[importLocal] fail with ret = " << (uint32_t)ret;
@@ -334,7 +334,7 @@ namespace mcp
 					continue;
 				}
 
-				ImportApproveResult ir = import(t,false);
+				ImportApproveResult ir = import(t);
 				m_onImport(ir, t.sha3(), work.nodeId);
 
 				if (ImportApproveResult::Success == ir)/// first import && successed,broadcast it

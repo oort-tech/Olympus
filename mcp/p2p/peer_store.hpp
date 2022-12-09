@@ -14,15 +14,11 @@ namespace mcp
 
 			dev::Slice val() const;
 
-			//node_id get_node_id() const { return m_node_id; }
-
-
-			//node_id m_node_id;
-			int m_score;
 			std::chrono::system_clock::time_point m_last_connected;
 			std::chrono::system_clock::time_point m_last_attempted;
 			int m_fail_attempts;
-			disconnect_reason m_last_disconnect;
+			disconnect_reason m_last_disconnect = disconnect_reason::no_disconnect;
+			HandshakeFailureReason m_lastHandshakeFailure = HandshakeFailureReason::NoFailure;  ///< Reason for most recent handshake failure
 		};
 
 		class peer_store

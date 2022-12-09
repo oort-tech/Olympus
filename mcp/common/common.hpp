@@ -143,6 +143,9 @@ namespace mcp
 		std::thread thread;
 	};
 
+	extern mru_list<mcp::block_hash> InvalidBlockCache;
+	extern fast_steady_clock SteadyClock;
+
 	namespace encry
 	{
 		int encryption(unsigned char *c, const unsigned char *m,

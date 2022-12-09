@@ -1,4 +1,5 @@
 #include "unhandle.hpp"
+#include "arrival.hpp"
 #include <queue>
 mcp::unhandle_item::unhandle_item(
 	mcp::block_hash const &unhandle_hash_a,
@@ -15,8 +16,7 @@ mcp::unhandle_item::unhandle_item(
 {
 }
 
-mcp::unhandle_cache::unhandle_cache(std::shared_ptr<mcp::block_arrival> block_arrival_a, std::shared_ptr<TransactionQueue> tq, std::shared_ptr<ApproveQueue> aq, size_t const &capacity_a) :
-	m_block_arrival(block_arrival_a),
+mcp::unhandle_cache::unhandle_cache(std::shared_ptr<TransactionQueue> tq, std::shared_ptr<ApproveQueue> aq, size_t const &capacity_a) :
 	m_tq(tq),
 	m_aq(aq),
 	m_capacity(capacity_a)
@@ -76,6 +76,7 @@ mcp::unhandle_add_result mcp::unhandle_cache::add(mcp::block_hash const &hash_a,
 	if (!m_dependencies.count(hash_a))
 		m_tips.insert(hash_a);
 
+	bool allExist = true;
 	for (mcp::block_hash const &dependency_hash : u_item.dependency_hashs)
 	{
 		std::shared_ptr<std::unordered_set<mcp::block_hash>> unhandle_hashs;
@@ -93,7 +94,10 @@ mcp::unhandle_add_result mcp::unhandle_cache::add(mcp::block_hash const &hash_a,
 
 		/// add unknown dependency
 		if (!m_unhandles.count(dependency_hash))
+		{
 			m_missings.insert(dependency_hash);
+			allExist = false;
+		}
 
 		/// delete tip
 		if (m_tips.count(dependency_hash))
@@ -193,9 +197,14 @@ mcp::unhandle_add_result mcp::unhandle_cache::add(mcp::block_hash const &hash_a,
              del_unhandle_in_dependencies(delete_hash);
 			 m_unhandles.erase(delete_hash);
              m_tips.erase(delete_hash);
-			 m_block_arrival->remove(delete_hash);
+			 BlockArrival.remove(delete_hash);
              break;
 		}
+	}
+	///dependice block,transaction,approves exist,need request existed missings.
+	if (allExist && !u_item.transactions.size()&& !u_item.approves.size())
+	{
+		return unhandle_add_result::Exist;
 	}
     return unhandle_add_result::Success;
 }

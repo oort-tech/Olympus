@@ -39,6 +39,7 @@ namespace mcp
 
         class peer : public std::enable_shared_from_this<peer>
         {
+			friend class host;
         public:
 			peer(std::shared_ptr<bi::tcp::socket> const & socket_a, node_id const & node_id_a, std::shared_ptr<peer_manager> peer_manager_a, std::unique_ptr<RLPXFrameCoder>&& _io);
             ~peer();
@@ -50,17 +51,20 @@ namespace mcp
             bool is_connected();
             void disconnect(disconnect_reason const & reason);
             std::chrono::steady_clock::time_point last_received();
+			std::chrono::steady_clock::time_point create_time() { return _create; }
             node_id remote_node_id() const;
             bi::tcp::endpoint remote_endpoint() const;
             uint64_t get_write_queue_size() { return write_queue.size(); }
             std::shared_ptr<mcp::p2p::peer_metrics> get_peer_metrics();
+
+			bool operator>(peer const& _p) const;
         private:
             void read_loop();
             bool check_packet(dev::bytesConstRef msg);
             bool read_packet(unsigned const & type, std::shared_ptr<dev::RLP> r);
             void do_write();
 			void do_read();
-            void drop(disconnect_reason const & reason);
+			void drop(disconnect_reason const & reason, bool record = true);
 			void lz4(bytes& o_bytes);
 			/// Check error code after reading and drop peer if error code.
 			bool checkRead(std::size_t _expected, boost::system::error_code _ec, std::size_t _length);
@@ -77,6 +81,8 @@ namespace mcp
                 case disconnect_reason::client_quit: return "Peer is exiting.";
                 case disconnect_reason::self_connect: return "Connected to ourselves.";
                 case disconnect_reason::too_large_packet_size: return "Too large packet size.";
+				case disconnect_reason::network_error: return "NetWork error.";
+				case disconnect_reason::malformed: return "Malformed block or transaction.";
                 case disconnect_reason::no_disconnect: return "(No disconnect has happened.)";
                 default: return "Unknown reason.";
                 }
@@ -95,6 +101,7 @@ namespace mcp
 			std::deque<dev::bytes> read_queue;
 			std::mutex read_queue_mutex;
             std::chrono::steady_clock::time_point _last_received;
+			std::chrono::steady_clock::time_point _create;
 			std::atomic<bool> is_dropped;
             std::shared_ptr <mcp::p2p::peer_metrics> m_pmetrics;
 			dev::bytes write_bufs;

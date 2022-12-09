@@ -11,12 +11,13 @@ peer::peer(std::shared_ptr<bi::tcp::socket> const & socket_a, node_id const & no
 	m_io(move(_io))
 {
 	_last_received = std::chrono::steady_clock::now();
+	_create = std::chrono::steady_clock::now();
 	read_header_buffer.resize(mcp::p2p::tcp_header_size);
 }
 
 peer::~peer()
 {
-    LOG(m_log.info) << "Peer deconstruction:" << m_node_id.hex();
+    LOG(m_log.debug) << "Peer deconstruction:" << m_node_id.hex();
 
     try {
         if (socket->is_open())
@@ -51,8 +52,6 @@ bool peer::is_connected()
 
 void peer::disconnect(disconnect_reason const & reason)
 {
-    LOG(m_log.info) << "Disconnecting (our reason: " << reason_of(reason) << ")";
-
     if (socket->is_open())
     {
         dev::RLPStream s;
@@ -90,6 +89,11 @@ std::shared_ptr<mcp::p2p::peer_metrics> mcp::p2p::peer::get_peer_metrics()
 	m_pmetrics->read_read_queue_size = read_queue.size();
 	m_pmetrics->write_queue_buffer_size = surplus_size;
     return m_pmetrics;
+}
+
+bool mcp::p2p::peer::operator>(peer const & _p) const
+{
+	return *m_io > *_p.m_io;
 }
 
 void peer::read_loop()
@@ -540,7 +544,7 @@ void peer::lz4(bytes& o_bytes)
 	o_bytes = std::move(compressed_bufs);
 }
 
-void peer::drop(disconnect_reason const & reason)
+void peer::drop(disconnect_reason const & reason, bool record)
 {
 	bool st = false;
     if (!is_dropped.compare_exchange_strong(st, true))
@@ -551,13 +555,10 @@ void peer::drop(disconnect_reason const & reason)
 		pc->cap->on_disconnect(this_l);
 
     boost::system::error_code ec;
-    LOG(m_log.info) << "Peer dropped " << m_node_id.hex() << "@" << socket->remote_endpoint(ec);
+    LOG(m_log.info) << "Peer dropped reason of " << reason_of(reason) << " ,id:" << m_node_id.hex() << "@" << socket->remote_endpoint(ec);
 
-	if (reason != disconnect_reason::client_quit)
-	{
+	if (record)
 		m_peer_manager->record_connect(remote_node_id(), reason);
-	}
-
     if (socket->is_open())
     {
         try

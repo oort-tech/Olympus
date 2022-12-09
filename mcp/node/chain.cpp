@@ -9,12 +9,12 @@
 #include <mcp/core/config.hpp>
 #include <mcp/node/witness.hpp>
 #include <mcp/node/approve_queue.hpp>
+#include <mcp/consensus/ledger.hpp>
 
 #include <queue>
 
-mcp::chain::chain(mcp::block_store& store_a, mcp::ledger& ledger_a) :
+mcp::chain::chain(mcp::block_store& store_a) :
 	m_store(store_a),
-	m_ledger(ledger_a),
 	m_stopped(false)
 {
 }
@@ -242,7 +242,7 @@ void mcp::chain::save_approve(mcp::timeout_db_transaction & timeout_tx_a, std::s
 				cache_a->approve_put(transaction, t_a);
 				m_store.epoch_approves_put(transaction, mcp::epoch_approves_key(t_a->m_epoch, t_a->sha3()));
 				m_store.approve_unstable_count_add(transaction);
-				LOG(m_log.debug) << "approve_unstable: add " << m_store.approve_unstable_count(transaction);
+				//LOG(m_log.debug) << "approve_unstable: add " << m_store.approve_unstable_count(transaction);
 				m_store.approve_count_add(transaction);
 				cache_a->approve_del_from_queue(hash, t_a->m_epoch);///mark as clear,It will be really cleaned up after commit event
 			}
@@ -350,7 +350,8 @@ void mcp::chain::add_new_witness_list(mcp::db::db_transaction & transaction_a, u
 	for(int i=0; i<w_param.witness_count; i++){
 		Address a = it->second.from();
 		uint32_t output = it->first;
-		test_witness.emplace_back(std::string("0x")+a.hex());
+
+		test_witness.emplace_back(a.hexPrefixed());
 		elected_list.hashs.emplace_back(it->second.approve_hash());
 		LOG(m_log.debug) << "elect " << a.hexPrefixed() << " output:" << output << " hash:" << it->second.approve_hash().hexPrefixed();
 		it++;
@@ -455,9 +456,7 @@ void mcp::chain::write_dag_block(mcp::db::db_transaction & transaction_a, std::s
 	//save block, need put first
 	cache_a->block_put(transaction_a, block_hash, block_a);
 
-	mcp::block_hash const & previous(block_a->previous());
 	mcp::block_hash const & root(block_a->root());
-
 	uint64_t level;
 	
 	mcp::block_hash successor;
@@ -497,11 +496,11 @@ void mcp::chain::write_dag_block(mcp::db::db_transaction & transaction_a, std::s
 	mcp::witness_param const & w_param(mcp::param::witness_param(mcp::approve::calc_curr_epoch(last_summary_mci)));
 
 	//best parent
-	mcp::block_hash best_pblock_hash(m_ledger.determine_best_parent(transaction_a, cache_a, block_a->parents()));
+	mcp::block_hash best_pblock_hash(Ledger.determine_best_parent(transaction_a, cache_a, block_a->parents()));
 	//level
-	level = m_ledger.calc_level(transaction_a, cache_a, best_pblock_hash);
+	level = Ledger.calc_level(transaction_a, cache_a, best_pblock_hash);
 	//witnessed level
-	uint64_t witnessed_level(m_ledger.calc_witnessed_level(w_param, level));
+	uint64_t witnessed_level(Ledger.calc_witnessed_level(w_param, level));
 
 	std::shared_ptr<mcp::block_state> state(std::make_shared<mcp::block_state>());
 	state->status = mcp::block_status::unknown;
@@ -908,6 +907,7 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 					cache_a->transaction_address_put(transaction_a, link_hash, td);
 					/// exec transaction can reduce, if two or more block linked a transaction,reduce once.
 					m_store.transaction_unstable_count_reduce(transaction_a);
+					index++;
 				}
 
 				///handle approve stable block 
@@ -922,8 +922,6 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 						RLPStream receiptRLP;
 						receipt->streamRLP(receiptRLP);
 						receipts.push_back(receiptRLP.out());
-
-						index++;
 						continue;
 					}
 
@@ -950,7 +948,7 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 
 						/// exec approve can reduce, if two or more block linked a approve,reduce once.
 						m_store.approve_unstable_count_reduce(transaction_a);
-						LOG(m_log.debug) << "approve_unstable: reduce " << m_store.approve_unstable_count(transaction_a);
+						//LOG(m_log.debug) << "approve_unstable: reduce " << m_store.approve_unstable_count(transaction_a);
 
 						std::shared_ptr<dev::ApproveReceipt> preceipt = std::make_shared<dev::ApproveReceipt>(ap->sender(), ap->m_epoch, output, approve_hash);
 						cache_a->approve_receipt_put(transaction_a, approve_hash, preceipt);
@@ -1449,12 +1447,12 @@ void mcp::chain::check_need_send_approve(mcp::db::db_transaction& transaction_a,
 	{
 		std::shared_ptr<mcp::approve> ap = block_cache_a->approve_get(transaction_a, hash);
 		if(ap->sender() == account_a){
-    		LOG(m_log.info) << "[check_need_send_approve] not need send approve";
+    		LOG(m_log.debug) << "[check_need_send_approve] not need send approve";
 			m_need_send_approve = false;
 			return;
 		}
 	}
-    LOG(m_log.info) << "[check_need_send_approve] need send approve";
+    LOG(m_log.debug) << "[check_need_send_approve] need send approve";
 }
 
 uint64_t mcp::chain::last_summary_mci()
@@ -1496,7 +1494,7 @@ bool mcp::chain::need_approve(){
 	
 	if(elect_epoch != last_epoch_num){
 		if(m_witness != nullptr && m_last_summary_mci%mcp::epoch_period > *(uint64_t *)m_witness->witness_account().data()%mcp::epoch_period/10){
-			LOG(m_log.debug) << "[need_approve] send in m_last_summary_mci=" << m_last_summary_mci << " epoch" << elect_epoch;
+			//LOG(m_log.debug) << "[need_approve] send in m_last_summary_mci=" << m_last_summary_mci << " epoch" << elect_epoch;
 			last_epoch_num = elect_epoch;
 			return true;
 		}
@@ -1546,10 +1544,10 @@ void mcp::chain::send_approve(std::shared_ptr<ApproveQueue> aq_a)
 		SECP256K1_EC_COMPRESSED
 	);
     if(secp256k1_vrf_prove(as.proof.data(),w_secret.data(),&rawPubkey,msg.data(),msg.size()) == 1){
-        LOG(m_log.debug) << "[send_approve] secp256k1_vrf_prove ok";
+        //LOG(m_log.debug) << "[send_approve] secp256k1_vrf_prove ok";
     }
     else{
-        LOG(m_log.debug) << "[send_approve] secp256k1_vrf_prove fail";
+        //LOG(m_log.debug) << "[send_approve] secp256k1_vrf_prove fail";
     }
 	
     // if(secp256k1_vrf_verify(output, as.proof.data(), serializedPubkey.data(),msg.data(),msg.size()) == 1){
@@ -1560,7 +1558,7 @@ void mcp::chain::send_approve(std::shared_ptr<ApproveQueue> aq_a)
     // }
 
 	auto a = mcp::approve(as, w_secret);
-	a.show();
+	//a.show();
 	aq_a->importLocal(a);
 	return;
 }

@@ -102,10 +102,14 @@ namespace mcp
 	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_LockedAccount, -32602, "Locked account");
 	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_InvalidSignature, -32602, "Invalid signature");
 	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_InvalidValue, -32602, "Invalid value");
-	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_InvalidGas, -32602, "Invalid gas amount");
+	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_OutOfGasIntrinsic, -32602, "Transaction gas amount is less than the intrinsic gas amount for this transaction type.");
+	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_OutOfGasPriceIntrinsic, -32602, "Transaction gas price is less than the intrinsic gas price for this transaction type.");
+	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_BlockGasLimitReached, -32602, "Block gas limit reached!");
+	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_GasPriceTooLow, -32602, "Pending transaction with same nonce but higher gas price exists.");
 	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_InvalidGasPrice, -32602, "Invalid gas price");
 	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_InvalidData, -32602, "Invalid data");
 	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_InvalidNonce, -32602, "Invalid nonce");
+	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_ZeroSignatureTransaction, -32602, "Zero signature transaction.");
 	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_InvalidBlock, -32602, "Invalid block number");
 	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_InvalidAccountFrom, -32602, "Invalid sender account");
 	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_InvalidAccountTo, -32602, "Invalid receiver account");
@@ -114,6 +118,7 @@ namespace mcp
 	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_DataTooLarge, -32602, "Data size is too large");
 	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_Validation, -32603, "Validation error");
 	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_PendingTransactionAlreadyExists, -32603, "Pending transaction already exists");
+	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_PendingTransactionTooMuch, -32603, "Account's Pending transaction is full");
 	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_TransactionAlreadyInChain, -32603, "Transaction already exists in chain");
 
 	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_ParseError, -32700, "Parse error");
@@ -160,16 +165,29 @@ namespace mcp
 	}
 
 	inline void toRpcExceptionEthJson(Exception const & e, json & j_response) {
-		if (instanceof<dev::OutOfGasIntrinsic>(&e) ||
-			instanceof<dev::BlockGasLimitReached>(&e) ||
-			instanceof<dev::GasPriceTooLow>(&e)) {
-			RPC_Error_Eth_InvalidGas().toJson(j_response);
+		if (instanceof<dev::OutOfGasIntrinsic>(&e)) {
+			RPC_Error_Eth_OutOfGasIntrinsic().toJson(j_response);
+		}
+		else if (instanceof<dev::OutOfGasPriceIntrinsic>(&e)) {
+			RPC_Error_Eth_OutOfGasPriceIntrinsic().toJson(j_response);
+		}
+		else if (instanceof<dev::BlockGasLimitReached>(&e)) {
+			RPC_Error_Eth_BlockGasLimitReached().toJson(j_response);
+		}
+		else if (instanceof<dev::GasPriceTooLow>(&e)) {
+			RPC_Error_Eth_GasPriceTooLow().toJson(j_response);
+		}
+		else if (instanceof<dev::ZeroSignatureTransaction>(&e)) {
+			RPC_Error_Eth_ZeroSignatureTransaction().toJson(j_response);
 		}
 		else if (instanceof<dev::InvalidNonce>(&e)) {
 			RPC_Error_Eth_InvalidNonce().toJson(j_response);
 		}
 		else if (instanceof<dev::NotEnoughCash>(&e)) {
 			RPC_Error_Eth_InsufficientBalance().toJson(j_response);
+		}
+		else if (instanceof<dev::InvalidSignature>(&e)) {
+			RPC_Error_Eth_InvalidSignature().toJson(j_response);
 		}
 		else if (instanceof<dev::PendingTransactionAlreadyExists>(&e)) {
 			RPC_Error_Eth_PendingTransactionAlreadyExists().toJson(j_response);
@@ -182,6 +200,9 @@ namespace mcp
 		}
 		else if (instanceof<dev::AccountLocked>(&e)) {
 			RPC_Error_Eth_LockedAccount().toJson(j_response);
+		}
+		else if (instanceof<dev::PendingTransactionTooMuch>(&e)) {
+			RPC_Error_Eth_PendingTransactionTooMuch().toJson(j_response);
 		}
 		else if (instanceof<dev::UnknownAccount>(&e)) {
 			RPC_Error_Eth_InvalidAccount().toJson(j_response);

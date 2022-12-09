@@ -2,14 +2,13 @@
 
 using namespace mcp::p2p;
 
-node_table::node_table(mcp::p2p::peer_store& store_a, KeyPair const & alias_a, node_endpoint const & endpoint_a, mcp::fast_steady_clock& steady_clock_a) :
+node_table::node_table(mcp::p2p::peer_store& store_a, KeyPair const & alias_a, node_endpoint const & endpoint_a) :
 	m_store(store_a),
 	my_node_info((node_id) alias_a.pub(), endpoint_a),
 	m_hostNodeIDHash{ sha3(my_node_info.id) },
 	secret(alias_a.secret()),
 	socket(std::make_unique<bi::udp::socket>(io_service)),
 	my_endpoint(endpoint_a),
-	m_steady_clock(steady_clock_a),
 	is_cancel(false)
 {
 	for (unsigned i = 0; i < s_bins; i++)
@@ -130,7 +129,7 @@ void node_table::do_discover(node_id const & rand_node_id, unsigned const & roun
 
 			// Avoid sending FindNode, if we have not sent a valid PONG lately.
 			// This prevents being considered invalid node and FindNode being ignored.
-			if (!n->hasValidEndpointProof(m_steady_clock.now()))
+			if (!n->hasValidEndpointProof(SteadyClock.now()))
 			{
 				ping(n->endpoint);
 				continue;
@@ -254,7 +253,7 @@ void node_table::handle_receive(bi::udp::endpoint const & from, dev::bytesConstR
 				if (auto n = get_node(evicted_node_id))
 				{
 					n->pending = false;
-					n->lastPongReceivedTime = m_steady_clock.now();
+					n->lastPongReceivedTime = SteadyClock.now();
 				}
 			}
 			else
@@ -263,7 +262,7 @@ void node_table::handle_receive(bi::udp::endpoint const & from, dev::bytesConstR
 				if (auto n = get_node(packet->source_id))
 				{
 					n->pending = false;
-					n->lastPongReceivedTime = m_steady_clock.now();
+					n->lastPongReceivedTime = SteadyClock.now();
 				}
 				else
 					add_node(node_info(packet->source_id, node_endpoint(from.address(), from.port(), from.port())));
@@ -274,7 +273,7 @@ void node_table::handle_receive(bi::udp::endpoint const & from, dev::bytesConstR
 		case discover_packet_type::find_node:
 		{
 			auto np = get_node(packet->source_id);
-			if (!np || !np->hasValidEndpointProof(m_steady_clock.now()))
+			if (!np || !np->hasValidEndpointProof(SteadyClock.now()))
 			{
 				LOG(m_log.debug) << "Unexpected FindNode packet! Endpoint proof has expired.";
 				ping(node_endpoint(from.address(), from.port(), from.port()));

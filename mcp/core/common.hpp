@@ -537,15 +537,13 @@ namespace mcp
 	enum class ImportResult
 	{
 		Success = 0,
-		UnknownParent,
-		FutureTimeKnown,
-		FutureTimeUnknown,
+		FutureFull,
 		AlreadyInChain,
 		AlreadyKnown,
 		Malformed,
 		OverbidGasPrice,
-		BadChain/*,
-		ZeroSignature*/
+		BadProcol,
+		InvalidNonce
 	};
 	
 	// approve queue import
@@ -559,16 +557,10 @@ namespace mcp
 		BadChain/*,
 		ZeroSignature*/
 	};
-
-	/// Import transaction policy
-	enum class IfDropped
-	{
-		Ignore, ///< Don't import transaction that was previously dropped.
-		Retry 	///< Import transaction even if it was dropped before.
-	};
 	
 	using BlockNumber = uint64_t;
 
+	static const BlockNumber StableBlock = (BlockNumber)-2;
 	static const BlockNumber LatestBlock = (BlockNumber)-2;
 	static const BlockNumber PendingBlock = (BlockNumber)-1;
 

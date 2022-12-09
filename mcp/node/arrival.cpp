@@ -24,3 +24,8 @@ bool mcp::block_arrival::recent(mcp::block_hash const & hash_a)
 	bool exists = arrival.get<1>().find(hash_a) != arrival.get<1>().end();
 	return exists;
 }
+
+namespace mcp
+{
+	block_arrival BlockArrival;
+}

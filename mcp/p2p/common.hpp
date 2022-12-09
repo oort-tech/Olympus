@@ -155,7 +155,22 @@ namespace mcp
 			self_connect = 6,
 			client_quit = 7,
 			too_large_packet_size = 8,
+			network_error = 9,
+			malformed = 10,
 			no_disconnect = 0xffff,
+		};
+
+		enum class HandshakeFailureReason
+		{
+			NoFailure = 0,
+			UnknownFailure,
+			Timeout,
+			TCPError,
+			FrameDecryptionFailure,
+			InternalError,
+			ProtocolError,
+			PunishmentPeriod,
+			DisconnectRequested
 		};
 	}
 }
