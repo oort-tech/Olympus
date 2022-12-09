@@ -9,7 +9,7 @@ mcp::ledger::ledger()
 {
 }
 
-//best parent:compatible parent, witnessed_level DESC, level ASC, block hash ASC
+//best parent:compatible parent, witnessed_level DESC, level DESC, block hash ASC
 mcp::block_hash mcp::ledger::determine_best_parent(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::iblock_cache> cache_a, 
 	std::vector<mcp::block_hash> const &pblock_hashs)
 {
@@ -331,4 +331,9 @@ bool mcp::ledger::check_stable(mcp::db::db_transaction & transaction_a, std::sha
 	//if (search_count > 1000)
 	//	LOG(m_log.debug) << "check stable return true3, search count:" << search_count;
 	return true;
+}
+
+namespace mcp
+{
+	ledger Ledger;
 }

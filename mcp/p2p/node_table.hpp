@@ -126,7 +126,7 @@ namespace mcp
 		class node_table : public std::enable_shared_from_this<node_table>
 		{
 		public:
-			node_table(mcp::p2p::peer_store& store_a, KeyPair const & alias_a, node_endpoint const & endpoint_a, mcp::fast_steady_clock& steady_clock_a);
+			node_table(mcp::p2p::peer_store& store_a, KeyPair const & alias_a, node_endpoint const & endpoint_a);
 			~node_table();
 
 			void start();
@@ -219,8 +219,6 @@ namespace mcp
 			bool is_cancel;
 			std::thread io_service_thread;
 			mcp::p2p::peer_store& m_store;
-
-			mcp::fast_steady_clock& m_steady_clock;
 		};
 	}
 }

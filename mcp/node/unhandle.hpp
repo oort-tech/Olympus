@@ -9,7 +9,6 @@
 #include <boost/multi_index/hashed_index.hpp>
 #include <boost/multi_index/member.hpp>
 #include <boost/multi_index_container.hpp>
-#include <mcp/node/arrival.hpp>
 #include "transaction_queue.hpp"
 #include "approve_queue.hpp"
 
@@ -42,7 +41,7 @@ class unhandle_item
 class unhandle_cache
 {
   public:
-	unhandle_cache(std::shared_ptr<mcp::block_arrival> block_arrival_a, std::shared_ptr<TransactionQueue> tq, std::shared_ptr<ApproveQueue> aq, size_t const &capacity_a = 1000);
+	unhandle_cache(std::shared_ptr<TransactionQueue> tq, std::shared_ptr<ApproveQueue> aq, size_t const &capacity_a = 1000);
 
 	unhandle_add_result add(mcp::block_hash const &hash_a, std::unordered_set<mcp::block_hash> const &dependency_hashs_a, h256Hash const &transactions, h256Hash const &approves, std::shared_ptr<mcp::block_processor_item> item_a);
 	std::unordered_set<std::shared_ptr<mcp::block_processor_item>> release_dependency(mcp::block_hash const &dependency_hash_a);
@@ -86,7 +85,6 @@ class unhandle_cache
 	size_t m_capacity;
     const int m_max_search_count = 100;
 	std::mutex m_mutux;
-	std::shared_ptr<mcp::block_arrival> m_block_arrival;
 	std::shared_ptr<TransactionQueue> m_tq;                  ///< Maintains a list of incoming transactions not yet in a block on the blockchain.
 	std::shared_ptr<ApproveQueue> m_aq;                  ///< Maintains a list of incoming approves not yet in a block on the blockchain.
 

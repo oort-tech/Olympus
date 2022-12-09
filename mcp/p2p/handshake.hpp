@@ -41,7 +41,8 @@ namespace mcp
 				m_remote(_remote),
 				m_originated(_remote),
 				m_socket(_socket),
-				m_idleTimer(m_socket->get_io_service())
+				m_idleTimer(m_socket->get_io_service()),
+				m_failureReason{ HandshakeFailureReason::NoFailure }
 			{
 				crypto::Nonce::get().ref().copyTo(m_nonce.ref());
 			}
@@ -60,11 +61,8 @@ namespace mcp
 			enum State
 			{
 				Error = -1,
-				ExchgPublic,
-				AckExchgPublic,
 				New,
 				AckAuth,
-				AckAuthEIP8,
 				WriteHello,
 				ReadHello,
 				StartSession
@@ -77,19 +75,13 @@ namespace mcp
 			void send(dev::bytes const& data);
 
 			/// read from socket
-			void read();
+			void read(State _s);
 
 			///get packet size
-			uint32_t packet_size();
+			uint32_t packet_size(State _s);
 
 			///process read packet
-			void do_process();
-
-			///write p2p info message to socket, version, public key, transaction to readPublic.
-			void writeInfo();
-
-			///reads info message from socket and transitions to writePublic.
-			void readInfo();
+			void do_process(State _s);
 
 			/// Write Auth message to socket and transitions to AckAuth.
 			void writeAuth();
@@ -115,8 +107,7 @@ namespace mcp
 			/// Timeout for remote to respond to transition events. Enforced by m_idleTimer and refreshed by transition().
 			boost::posix_time::milliseconds const c_timeout = boost::posix_time::milliseconds(1800);
 
-			State m_curState = ExchgPublic;
-			State m_nextState = ExchgPublic;	///Current or expected state of transition.
+			State m_nextState = New;	///Current or expected state of transition.
 			bool m_cancel = false;	///true if error occured
 
 			std::shared_ptr<host> m_host;
@@ -140,6 +131,9 @@ namespace mcp
 			std::shared_ptr<bi::tcp::socket> m_socket;
 
 			boost::asio::deadline_timer m_idleTimer;	///< Timer which enforces c_timeout.
+
+			HandshakeFailureReason m_failureReason;
+
             mcp::log m_log = { mcp::log("p2p") };
 		};
 	}

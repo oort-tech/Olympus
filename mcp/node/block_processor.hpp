@@ -13,7 +13,6 @@
 #include <mcp/consensus/validation.hpp>
 #include <mcp/common/async_task.hpp>
 #include <mcp/common/alarm.hpp>
-#include <mcp/node/arrival.hpp>
 
 #include <chrono>
 #include <queue>
@@ -84,9 +83,7 @@ namespace mcp
 			std::shared_ptr<mcp::chain> chain_a, std::shared_ptr<mcp::node_sync> sync_a,
 			std::shared_ptr<mcp::node_capability> capability_a, std::shared_ptr<mcp::validation> validation_a,
 			std::shared_ptr<mcp::async_task> async_task_a, std::shared_ptr<TransactionQueue> tq, std::shared_ptr<ApproveQueue> aq,
-			mcp::fast_steady_clock& steady_clock_a, std::shared_ptr<mcp::block_arrival> block_arrival_a,
-			boost::asio::io_service &io_service_a,
-			mcp::mru_list<mcp::block_hash>& invalid_block_cache_a, std::shared_ptr<mcp::alarm> alarm_a
+			boost::asio::io_service &io_service_a, std::shared_ptr<mcp::alarm> alarm_a
 		);
 		~block_processor();
 		void stop();
@@ -97,7 +94,10 @@ namespace mcp
 		
 		void on_sync_completed(mcp::p2p::node_id const & remote_node_id_a);
 
-		void onTransactionImported(h256Hash const& _t);
+		/// Register a handler that will be called once asynchronous verification is comeplte an block has been imported
+		void onImport(std::function<void(ImportResult, p2p::node_id const&)> const& _t) { m_onImport.add(_t); }
+
+		void onTransactionReady(h256 const& _t);
 
 		void onApproveImported(h256 const& _t);
 
@@ -106,7 +106,6 @@ namespace mcp
 		std::shared_ptr<mcp::unhandle_cache> unhandle;
 
 		std::string get_processor_info();
-		std::string get_clear_unlink_info();
 		uint64_t dag_old_size = 0;
 		uint64_t light_old_size = 0;
 		uint64_t base_validate_old_size = 0;
@@ -137,10 +136,7 @@ namespace mcp
 		std::shared_ptr<mcp::node_sync> m_sync;
 		std::shared_ptr<mcp::node_capability> m_capability;
 		std::shared_ptr<mcp::validation> m_validation;
-		mcp::fast_steady_clock& m_steady_clock;
 		std::shared_ptr<mcp::async_task> m_async_task;
-		std::shared_ptr<mcp::block_arrival> m_block_arrival;
-		mcp::mru_list<mcp::block_hash> m_invalid_block_cache;
 		std::shared_ptr<mcp::alarm> m_alarm;
 		std::shared_ptr<TransactionQueue> m_tq;                  ///< Maintains a list of incoming transactions not yet in a block on the blockchain.
 		std::shared_ptr<ApproveQueue> m_aq;                  ///< Maintains a list of incoming approves not yet in a block on the blockchain.
@@ -167,6 +163,16 @@ namespace mcp
 		std::deque<std::shared_ptr<mcp::block_processor_item>> m_blocks_pending;
 		std::deque<std::shared_ptr<mcp::block>> m_blocks_processing;
 
+		///transaction ready
+		std::mutex m_transaction_hashs_mutex;
+		std::condition_variable m_transaction_hashs_condition;
+		h256Hash m_transaction_hashs_pending;
+		h256Hash m_transaction_hashs_processing;
+		std::thread m_transaction_hashs_thread;
+		void process_ready_transaction();
+
+		Signal<ImportResult, p2p::node_id const&> m_onImport;			///< Called for each import attempt. Arguments are result.
+
         std::atomic<uint64_t> blocks_pending_sync_size = { 0 };
         std::atomic<uint64_t> blocks_missing_size = { 0 };
         std::atomic<uint64_t> blocks_missing_throw_size = { 0 };
@@ -179,9 +185,6 @@ namespace mcp
 		//info
 		std::atomic<uint64_t> block_processor_add = { 0 };
 		std::atomic<uint64_t> block_processor_recent_block_size = { 0 };
-		uint64_t	m_head_clear_size = 0;
-		uint64_t	m_clear_size = 0;
-		uint64_t	m_head_successor_clear_size = 0;
 
 		mcp::log m_log = { mcp::log("node") };
 	};

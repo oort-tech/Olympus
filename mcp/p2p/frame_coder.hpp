@@ -47,8 +47,6 @@ namespace mcp
 		*/
 		class RLPXFrameCoder
 		{
-			friend class Session;
-
 		public:
 			/// Construct; requires instance of RLPXHandshake which has encrypted ECDH key exchange
 			/// (first two phases of handshake).
@@ -98,6 +96,7 @@ namespace mcp
 			bytes serializePacketSize(uint32_t const & size);
 			uint32_t deserializePacketSize(bytes const & data);
 
+			bool operator>(RLPXFrameCoder const& _f) const;
 		protected:
 			void writeFrame(RLPStream const& _header, bytesConstRef _payload, bytes& o_bytes);
 
@@ -115,6 +114,8 @@ namespace mcp
 
 		private:
 			std::unique_ptr<class RLPXFrameCoderImpl> m_impl;
+
+			h512 nonceMaterial; /// for compare handshake.
 		};
 	}
 }

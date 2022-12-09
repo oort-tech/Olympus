@@ -9,6 +9,12 @@
 #include <cryptopp/aes.h>
 #include <cryptopp/modes.h>
 
+namespace mcp
+{
+	mcp::mru_list<mcp::block_hash> InvalidBlockCache(1000);
+	fast_steady_clock SteadyClock;
+}
+
 secp256k1_context const* mcp::encry::get_secp256k1_ctx()
 {
 	static std::unique_ptr<secp256k1_context, decltype(&secp256k1_context_destroy)> s_ctx{

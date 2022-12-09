@@ -63,13 +63,13 @@ void mcp::p2p::hankshake::send(dev::bytes const& data)
 	});
 }
 
-void mcp::p2p::hankshake::read()
+void mcp::p2p::hankshake::read(State _s)
 {
 	m_handshakeInBuffer.clear();
 	auto self(shared_from_this());
 	m_handshakeInBuffer.resize(mcp::p2p::handshake_header_size);
 	//read header
-	ba::async_read(*m_socket, ba::buffer(m_handshakeInBuffer, m_handshakeInBuffer.size()), [this, self](boost::system::error_code ec, std::size_t)
+	ba::async_read(*m_socket, ba::buffer(m_handshakeInBuffer, m_handshakeInBuffer.size()), [this, self, _s](boost::system::error_code ec, std::size_t)
 	{
 		if (ec)
 		{
@@ -77,47 +77,41 @@ void mcp::p2p::hankshake::read()
 			return;
 		}
 		uint32_t len = (uint32_t)(m_handshakeInBuffer[2]) | (uint32_t)(m_handshakeInBuffer[1]) << 8 | (uint32_t)(m_handshakeInBuffer[0]) << 16;
-		if (len == 0 || len != packet_size())
+		if (len == 0 || len != packet_size(_s))
 		{
+			m_failureReason = HandshakeFailureReason::ProtocolError;
 			m_nextState = Error;
 			transition(ec);
 			return;
 		}
 		//read body
 		m_handshakeInBuffer.resize(len);
-		ba::async_read(*m_socket, ba::buffer(m_handshakeInBuffer, m_handshakeInBuffer.size()), [this, self](boost::system::error_code ec, std::size_t)
+		ba::async_read(*m_socket, ba::buffer(m_handshakeInBuffer, m_handshakeInBuffer.size()), [this, self, _s](boost::system::error_code ec, std::size_t)
 		{
 			if (ec)
 			{
 				transition(ec);
 				return;
 			}
-			do_process();
+			do_process(_s);
 		});
 	});
 }
 
-uint32_t mcp::p2p::hankshake::packet_size()
+uint32_t mcp::p2p::hankshake::packet_size(State _s)
 {
-	uint32_t size = 0;
-	if (State::ExchgPublic == m_curState || State::AckExchgPublic == m_curState)
-		size = 71;
-	else if (State::New == m_curState)
-		size = 307;
-	else if (State::AckAuth == m_curState)
-		size = 210;
+	if (State::New == _s)
+		return 307;
+	else if (State::AckAuth == _s)
+		return 210;
 
-	return size;
+	return 0;
 }
 
-void mcp::p2p::hankshake::do_process()
+void mcp::p2p::hankshake::do_process(State _s)
 {
-	switch (m_curState)
+	switch (_s)
 	{
-	case State::ExchgPublic:
-	case State::AckExchgPublic:
-		readInfo();
-		break;
 	case State::New:
 		readAuth();
 		break;
@@ -128,19 +122,6 @@ void mcp::p2p::hankshake::do_process()
 		break;
 	}
 	transition();
-}
-
-void mcp::p2p::hankshake::writeInfo()
-{
-	std::list<capability_desc> caps;
-	hankshake_msg handmsg(m_host->id(), mcp::p2p::version, mcp::mcp_network, caps);
-	RLPStream s;
-
-	handmsg.stream_RLP(s);
-	dev::bytes buf;
-	s.swapOut(buf);
-
-	send(buf);
 }
 
 void hankshake::writeAuth()
@@ -186,28 +167,6 @@ void hankshake::setAuthValues(dev::Signature const& _sig, Public const& _remoteP
 	m_ecdheRemote = recover(_sig, sharedSecret.makeInsecure() ^ _remoteNonce);
 }
 
-void mcp::p2p::hankshake::readInfo()
-{
-	bytesRef frame(&m_handshakeInBuffer);
-	dev::RLP rlp(frame);
-	hankshake_msg msg(rlp);
-
-	if (m_originated && m_remote != msg.id)	//remote id modify, bootstrap need clear this id
-	{
-		m_host->replace_bootstrap(m_remote, msg.id);
-	}
-
-	m_remoteVersion = msg.version;
-	m_remote = msg.id;
-
-	if (msg.network != mcp::mcp_network)
-	{
-		LOG(m_log.info) << "p2p mcp_network error,remote mcp_network: " << (int)msg.network << " local mcp_network " << (int)mcp::mcp_network;
-		m_nextState = Error;
-		return;
-	}
-}
-
 void hankshake::readAuth()
 {
 	m_authCipher = std::move(m_handshakeInBuffer);
@@ -219,12 +178,18 @@ void hankshake::readAuth()
 		Signature sig(data.cropped(0, Signature::size));
 		Public pubk(data.cropped(Signature::size + h256::size, Public::size));
 		h256 nonce(data.cropped(Signature::size + h256::size + Public::size, h256::size));
+		if (!m_host->peerManager()->should_reconnect(pubk, PeerType::Optional))
+		{
+			m_failureReason = HandshakeFailureReason::PunishmentPeriod;
+			m_nextState = Error;
+		}
 		setAuthValues(sig, pubk, nonce);
 	}
 	else
 	{
 		boost::system::error_code ec;
 		LOG(m_log.info) << "p2p.connect.ingress readAuth decryptECIES error. " << m_socket->remote_endpoint(ec);
+		m_failureReason = HandshakeFailureReason::FrameDecryptionFailure;
 		m_nextState = Error;
 	}
 }
@@ -242,6 +207,7 @@ void hankshake::readAck()
 	{
 		boost::system::error_code ec;
 		LOG(m_log.info) << "p2p.connect.ingress readAck decryptECIES error. " << m_socket->remote_endpoint(ec);
+		m_failureReason = HandshakeFailureReason::FrameDecryptionFailure;
 		m_nextState = Error;
 	}
 }
@@ -251,11 +217,6 @@ void hankshake::cancel()
 	m_cancel = true;
 	m_idleTimer.cancel();
 
-	if (m_originated)
-	{
-		std::lock_guard<std::mutex> lock(m_host->pending_conns_mutex);
-		m_host->pending_conns.erase(m_remote);
-	}
 	try
 	{
 		m_io.reset();
@@ -271,6 +232,9 @@ void hankshake::cancel()
 
 void hankshake::error()
 {
+	if (m_remote && m_failureReason != HandshakeFailureReason::PunishmentPeriod)
+		m_host->onHandshakeFailed(m_remote, m_failureReason);
+	
 	auto connected = m_socket->is_open();
 	boost::system::error_code ec;
 	if (connected && !m_socket->remote_endpoint(ec).address().is_unspecified())
@@ -288,16 +252,12 @@ void hankshake::transition(boost::system::error_code _ech)
 
 	if (_ech || m_nextState == Error || m_cancel)
 	{
-		if (m_originated && _ech)
-			m_host->attempt_outs.record(m_remote);
+		if (_ech)
+		{
+			LOG(m_log.debug) << "Handshake Failed (I/O Error: " << _ech.message() << ")";
+			m_failureReason = HandshakeFailureReason::TCPError;
+		}
 
-        LOG(m_log.info) << "Handshake Failed (I/O Error: " << _ech.message() << ")";
-		return error();
-	}
-
-	if (m_nextState == StartSession)
-	{
-		LOG(m_log.info) << "Handshake Failed remote probability aggressor.";
 		return error();
 	}
 
@@ -311,43 +271,26 @@ void hankshake::transition(boost::system::error_code _ech)
 			if (!m_socket->remote_endpoint(e).address().is_unspecified())
                 LOG(m_log.info) << "Disconnecting " << m_socket->remote_endpoint(e)
 				<< " (Handshake Timeout)";
-			cancel();
+
+			m_failureReason = HandshakeFailureReason::Timeout;
+			m_nextState = Error;
+			transition();
 		}
 	});
 
-	if (m_nextState == ExchgPublic)
-	{
-		m_nextState = AckExchgPublic;
-		m_curState = ExchgPublic;
-		if (m_originated)
-			writeInfo();
-		else
-			read();
-	}
-	else if (m_nextState == AckExchgPublic)
-	{
-		m_nextState = New;
-		m_curState = AckExchgPublic;
-		if (m_originated)
-			read();
-		else
-			writeInfo();
-	}
-	else if (m_nextState == New)
+	if (m_nextState == New)
 	{
 		m_nextState = AckAuth;
-		m_curState = New;
 		if (m_originated)
 			writeAuth();
 		else
-			read();
+			read(New);
 	}
 	else if (m_nextState == AckAuth)
 	{
 		m_nextState = WriteHello;
-		m_curState = AckAuth;
 		if (m_originated)
-			read();
+			read(AckAuth);
 		else
 			writeAck();
 	}
@@ -392,6 +335,7 @@ void hankshake::transition(boost::system::error_code _ech)
 				if (!m_io)
 				{
                     LOG(m_log.info) << "Internal error in handshake: frame coder disappeared.";
+					m_failureReason = HandshakeFailureReason::InternalError;
 					m_nextState = Error;
 					transition();
 					return;
@@ -401,6 +345,7 @@ void hankshake::transition(boost::system::error_code _ech)
 				/// authenticate and decrypt header
 				if (!m_io->authAndDecryptHeader(bytesRef(m_handshakeInBuffer.data(), m_handshakeInBuffer.size())))
 				{
+					m_failureReason = HandshakeFailureReason::FrameDecryptionFailure;
 					m_nextState = Error;
 					transition();
 					return;
@@ -417,6 +362,7 @@ void hankshake::transition(boost::system::error_code _ech)
                     LOG(m_log.info)
 						<< (m_originated ? "p2p.connect.egress" : "p2p.connect.ingress")
 						<< " hello frame is too large " << frameSize;
+					m_failureReason = HandshakeFailureReason::ProtocolError;
 					m_nextState = Error;
 					transition();
 					return;
@@ -437,6 +383,7 @@ void hankshake::transition(boost::system::error_code _ech)
 						if (!m_io)
 						{
                             LOG(m_log.info) << "Internal error in handshake: frame coder disappeared.";
+							m_failureReason = HandshakeFailureReason::InternalError;
 							m_nextState = Error;
 							transition();
 							return;
@@ -448,6 +395,7 @@ void hankshake::transition(boost::system::error_code _ech)
                             LOG(m_log.info)
 								<< (m_originated ? "p2p.connect.egress" : "p2p.connect.ingress")
 								<< " hello frame: decrypt failed";
+							m_failureReason = HandshakeFailureReason::FrameDecryptionFailure;
 							m_nextState = Error;
 							transition();
 							return;
@@ -460,6 +408,7 @@ void hankshake::transition(boost::system::error_code _ech)
                             LOG(m_log.info)
 								<< (m_originated ? "p2p.connect.egress" : "p2p.connect.ingress")
 								<< " hello frame: invalid packet type";
+							m_failureReason = HandshakeFailureReason::DisconnectRequested;
 							m_nextState = Error;
 							transition();
 							return;
@@ -474,6 +423,7 @@ void hankshake::transition(boost::system::error_code _ech)
 						catch (std::exception const& _e)
 						{
                             LOG(m_log.info) << "Handshake causing an exception: " << _e.what();
+							m_failureReason = HandshakeFailureReason::UnknownFailure;
 							m_nextState = Error;
 							transition();
 						}

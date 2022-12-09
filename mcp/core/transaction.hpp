@@ -144,9 +144,6 @@ namespace mcp
 		/// @returns true if the transaction was signed with zero signature
 		bool hasZeroSignature() const { return m_vrs && isZeroSignature(m_vrs->r, m_vrs->s); }
 
-		///// @returns true if the transaction uses EIP155 replay protection
-		//bool isReplayProtected() const { return m_chainId.is_initialized(); }
-
 		//test
 		uint64_t chainID() const { return *m_chainId; }
 

@@ -8,6 +8,15 @@
 
 namespace mcp
 {
+	/// data source
+	enum class source
+	{
+		local = 0,
+		broadcast,
+		request,
+		sync
+	};
+
 	enum class sub_packet_type
 	{
 		joint = 0,
@@ -32,8 +41,6 @@ namespace mcp
 	{
 	public:
 		requesting_item() = default;
-		/// for transaction
-		/// Manager can only use one, so H256 does the conversion
 		requesting_item(mcp::p2p::node_id const & node_id_a, h256 const& hash_a, mcp::requesting_block_cause const& cause_a,
 			uint64_t const& time_a, mcp::sub_packet_type const& type_a = mcp::sub_packet_type::joint_request) :
 			m_node_id(node_id_a),
@@ -47,7 +54,7 @@ namespace mcp
 		}
 
 		mcp::p2p::node_id		m_node_id;
-		mcp::block_hash			m_request_hash;
+		h256					m_request_hash;
 		mcp::requesting_block_cause m_cause;
 		mcp::sync_request_hash	m_request_id;
 

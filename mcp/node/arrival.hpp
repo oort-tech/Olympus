@@ -31,4 +31,6 @@ namespace mcp
 			arrival;
 		std::mutex mutex;
 	};
+
+	extern block_arrival BlockArrival;
 }

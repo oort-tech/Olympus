@@ -1395,7 +1395,7 @@ void mcp::rpc_handler::eth_estimateGas(mcp::json &j_response, bool &)
 	/// this error is reported if the gas less than 21000, the logic has not been confirmed, response other code ?
 	if (!result.second)
 	{
-		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidGas());
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_GasPriceTooLow());
 	}
 
 	j_response["result"] = toJS(result.first);
