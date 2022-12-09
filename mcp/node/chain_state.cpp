@@ -73,8 +73,6 @@ std::shared_ptr<mcp::account_state> mcp::chain_state::account(Address const& _ad
 		return it->second;
 	}    
     
-    //LOG(m_log.debug) << "[account] debug_trace should not in ";    
-
     // If the account doesn't exist, return nullptr
     if (m_nonExistingAccountsCache.count(_addr))
         return nullptr;
@@ -235,7 +233,6 @@ void mcp::chain_state::save_previous_account_state()
     std::vector<h256> hs;
     for(auto& address : m_unchangedCacheEntries)
     {
-        //LOG(m_log.debug) << "[save_previous_account_state]" << toHexPrefixed(address);
         h256 hash;
         bool exists = !store.latest_account_state_get(transaction, address, hash);
         if (exists)

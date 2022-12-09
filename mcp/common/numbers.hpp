@@ -39,7 +39,6 @@ void write(mcp::stream & stream_a, T const & value)
 // All keys and hashes are 256 bit.
 using amount = dev::u256;
 using block_hash = dev::h256;
-using link_hash = dev::h256;
 using summary_hash = dev::h256;
 using data_hash = dev::h256;
 using code_hash = dev::h256;

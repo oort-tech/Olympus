@@ -2141,7 +2141,7 @@ void mcp::rpc_handler::debug_traceTransaction(mcp::json &j_response, bool &)
 	}
 
 	std::string hash_text = params[0];
-	mcp::link_hash hash;
+	dev::h256 hash;
 	try
 	{
 		hash = jsToHash(hash_text);

@@ -1172,7 +1172,7 @@ void mcp::block_store::last_epoch_put(mcp::db::db_transaction & transaction_a, u
 	transaction_a.put(prop, mcp::h256_to_slice(last_epoch_key), mcp::h64_to_slice(last_epoch));
 }
 
-bool mcp::block_store::transaction_previous_account_state_get(mcp::db::db_transaction & transaction_a, mcp::link_hash const & link_a, std::vector<h256> & hashs_a)
+bool mcp::block_store::transaction_previous_account_state_get(mcp::db::db_transaction & transaction_a, dev::h256 const & link_a, std::vector<h256> & hashs_a)
 {
 	std::string value;
 	bool exists(transaction_a.get(transaction_account_state, mcp::h256_to_slice(link_a), value));
@@ -1186,7 +1186,7 @@ bool mcp::block_store::transaction_previous_account_state_get(mcp::db::db_transa
 	return exists;
 }
 
-void mcp::block_store::transaction_previous_account_state_put(mcp::db::db_transaction & transaction_a, mcp::link_hash const & link_a, std::vector<h256> & hashs_a)
+void mcp::block_store::transaction_previous_account_state_put(mcp::db::db_transaction & transaction_a, dev::h256 const & link_a, std::vector<h256> & hashs_a)
 {
 	dev::bytes b_value;
     dev::RLPStream s;
