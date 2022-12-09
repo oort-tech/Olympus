@@ -158,6 +158,7 @@ public:
 	void eth_accounts(mcp::json & j_response, bool & async);
 	void eth_sign(mcp::json & j_response, bool & async);
 	void eth_signTransaction(mcp::json & j_response, bool & async);
+	void debug_traceTransaction(mcp::json & j_response, bool & async);
 	// related to personal
 	void personal_importRawKey(mcp::json & j_response, bool & async);
 	void personal_listAccounts(mcp::json & j_response, bool & async);

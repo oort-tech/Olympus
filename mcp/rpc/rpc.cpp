@@ -258,6 +258,7 @@ mcp::rpc_handler::rpc_handler(mcp::rpc &rpc_a, std::string const &body_a, std::f
 	m_ethRpcMethods["eth_accounts"] = &mcp::rpc_handler::eth_accounts;
 	m_ethRpcMethods["eth_sign"] = &mcp::rpc_handler::eth_sign;
 	m_ethRpcMethods["eth_signTransaction"] = &mcp::rpc_handler::eth_signTransaction;
+	m_ethRpcMethods["debug_traceTransaction"] = &mcp::rpc_handler::debug_traceTransaction;
 
 	m_ethRpcMethods["personal_importRawKey"] = &mcp::rpc_handler::personal_importRawKey;
 	m_ethRpcMethods["personal_listAccounts"] = &mcp::rpc_handler::personal_listAccounts;
@@ -1025,19 +1026,19 @@ void mcp::rpc_handler::debug_trace_transaction(mcp::json &j_response, bool &)
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidMci());
 	}
 	mcp::json options;
-	options["disable_storage"] = true;
-	options["disable_memory"] = false;
-	options["disable_stack"] = false;
+	options["disableStorage"] = true;
+	options["disableMemory"] = false;
+	options["disableStack"] = false;
 	options["full_storage"] = false;
 	if (request.count("options"))
 	{
 		mcp::json options_json = request["options"];
-		if (options_json.count("disable_storage"))
-			options["disable_storage"] = options_json["disable_storage"];
-		if (options_json.count("disable_memory"))
-			options["disable_memory"] = options_json["disable_memory"];
-		if (options_json.count("disable_stack"))
-			options["disable_stack"] = options_json["disable_stack"];
+		if (options_json.count("disableStorage"))
+			options["disableStorage"] = options_json["disableStorage"];
+		if (options_json.count("disableMemory"))
+			options["disableMemory"] = options_json["disableMemory"];
+		if (options_json.count("disableStack"))
+			options["disableStack"] = options_json["disableStack"];
 		if (options_json.count("full_storage"))
 			options["full_storage"] = options_json["full_storage"];
 	}
@@ -2220,6 +2221,93 @@ void mcp::rpc_handler::eth_getLogs(mcp::json &j_response, bool &)
 	catch (...)
 	{
 		j_response["result"] = mcp::json::array();
+	}
+}
+
+void mcp::rpc_handler::debug_traceTransaction(mcp::json &j_response, bool &)
+{
+	mcp::json params = request["params"];
+	if (params.size() < 2 || !params[0].is_string() || !params[1].is_object())
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
+	}
+
+	std::string hash_text = params[0];
+	mcp::link_hash hash;
+	try
+	{
+		hash = jsToHash(hash_text);
+	}
+	catch (...)
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidHash());
+	}
+
+	mcp::db::db_transaction transaction(m_store.create_transaction());
+	auto _t = m_cache->transaction_get(transaction, hash);
+	auto td = m_cache->transaction_address_get(transaction, hash);
+
+	if (_t == nullptr || td == nullptr)
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidHash());
+	}
+
+	dev::eth::McInfo mc_info;
+	if (!m_chain->get_mc_info_from_block_hash(transaction, m_cache, td->blockHash, mc_info))
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidMci());
+	}
+	mcp::json options;
+	options["disableStorage"] = true;
+	options["disableMemory"] = false;
+	options["disableStack"] = false;
+	options["full_storage"] = false;
+
+	mcp::json options_json = params[1];
+	if (options_json.count("disableStorage"))
+		options["disableStorage"] = options_json["disableStorage"];
+	if (options_json.count("disableMemory"))
+		options["disableMemory"] = options_json["disableMemory"];
+	if (options_json.count("disableStack"))
+		options["disableStack"] = options_json["disableStack"];
+	if (options_json.count("full_storage"))
+		options["full_storage"] = options_json["full_storage"];
+
+	try
+	{
+		dev::eth::EnvInfo env(transaction, m_store, m_cache, mc_info, mcp::chain_id);
+		auto block(m_cache->block_get(transaction, td->blockHash));
+		assert_x(block);
+		chain_state c_state(transaction, 0, m_store, m_chain, m_cache);
+		std::vector<h256> accout_state_hashs;
+		if(!m_store.transaction_previous_account_state_get(transaction, hash, accout_state_hashs))
+		{
+			BOOST_THROW_EXCEPTION(RPC_Error_InvalidHash());
+		}
+		c_state.set_defalut_account_state(accout_state_hashs);
+
+		//c_state should be used after set_defalut_account_state. Otherwise, account_state will be abnormal.
+		if (!_t->isCreation() && !c_state.addressHasCode(_t->receiveAddress()))
+		{
+			j_response["return_value"] = "Only contract transcation can debug.";
+			return;
+		}
+		mcp::ExecutionResult er;
+		std::list<std::shared_ptr<mcp::trace>> traces;
+		mcp::Executive e(c_state, env, traces);
+		e.setResultRecipient(er);
+
+		mcp::json trace = m_chain->traceTransaction(e, *_t, options);
+		j_response["return_value"] = toHexPrefixed(er.output);
+		j_response["struct_logs"] = trace;
+	}
+	catch (Exception const &_e)
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_VMException());
+	}
+	catch (std::exception const &_e)
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_UnknowError());
 	}
 }
 
