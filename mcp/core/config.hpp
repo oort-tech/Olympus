@@ -31,7 +31,7 @@ mcp::uint256_t chainID();
 
 size_t const static max_data_size(32000); //32k
 size_t const static skiplist_divisor(10);
-uint64_t const static block_max_gas(8000000);
+uint64_t const static block_max_gas(80000000);
 uint64_t const static max_link_block_size(2048);
 
 class block_param

@@ -468,6 +468,13 @@ namespace mcp
 			BOOST_THROW_EXCEPTION(OutOfGasPriceIntrinsic() << RequirementErrorComment(
 			(bigint)(mcp::block_max_gas), (bigint)_t->gas(),
 				std::string("_gasUsed + (bigint)_t.gas() < lower.gasLimit()")));
+		
+		LOG(m_log.debug) << "data().size()=" << _t->data().size() <<" max_data_size=" <<mcp::max_data_size;
+		/// Avoid transactions that are large than the data size limit.
+		if (_t->data().size() > mcp::max_data_size)
+			BOOST_THROW_EXCEPTION(eth::ExtraDataTooBig() << RequirementErrorComment(
+			(bigint)(_t->data().size()), (bigint)(mcp::max_data_size),
+				std::string("data().size() > mcp::max_data_size")));
 	}
 
 	void TransactionQueue::checkTx(Transaction const& _t)
