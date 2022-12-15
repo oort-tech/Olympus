@@ -168,6 +168,25 @@ namespace mcp
 		return res;
 	}
 
+	mcp::json toJson(mcp::localised_log_entry const& _e)
+	{
+			mcp::json res;
+			if (_e.isSpecial)
+				res = toJS(_e.special);
+			else
+			{
+				res = toJson(static_cast<mcp::log_entry const&>(_e));
+				res["type"] = "mined";
+				res["blockNumber"] = toJS(_e.blockNumber);
+				res["blockHash"] = _e.blockHash.hexPrefixed();
+				res["logIndex"] = _e.logIndex;
+				res["transactionHash"] = _e.transactionHash.hexPrefixed();
+				res["transactionIndex"] = toJS(_e.transactionIndex);
+			}
+			
+		return res;
+	}
+
 	mcp::json toJson(mcp::log_entry const& _e)
 	{
 		mcp::json res;

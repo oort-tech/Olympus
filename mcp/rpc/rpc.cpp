@@ -2186,11 +2186,9 @@ void mcp::rpc_handler::eth_getLogs(mcp::json &j_response, bool &)
 					toAddress(t->from(), t->nonce()),
 					search_address,
 					search_topics);
-
-				mcp::json logs = toJson(lt.localisedLogs());
-				if (logs.size() > 0)
-				{
-					logs_l.push_back(logs);
+				for(auto localisedLog : lt.localisedLogs()){
+					mcp::json log = toJson(localisedLog);
+					logs_l.push_back(log);
 				}
 			}
 		}
