@@ -1307,6 +1307,7 @@ void mcp::rpc_handler::eth_estimateGas(mcp::json &j_response, bool &)
 	{
 		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidBlock());
 	}
+	mc_info.mc_timestamp = mcp::seconds_since_epoch();
 
 	mcp::db::db_transaction transaction(m_store.create_transaction());
 
