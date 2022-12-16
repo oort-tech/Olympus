@@ -188,7 +188,6 @@ namespace mcp
 		if (is_eth) {
 			res["number"] = nullptr;
 			res["nonce"] = nullptr;
-			res["difficulty"] = "0x0";
 			res["extraData"] = "0x00";
 			res["hash"] = _b.hash().hexPrefixed();
 			res["parentHash"] = _b.previous().hexPrefixed();

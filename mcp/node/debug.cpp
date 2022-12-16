@@ -128,12 +128,12 @@ mcp::StandardTrace::DebugOptions mcp::debugOptions(mcp::json const& _json)
 	mcp::StandardTrace::DebugOptions op;
     if (!_json.is_object() || _json.empty())
         return op;
-    if (!_json["disable_storage"].empty())
-        op.disable_storage = _json["disable_storage"].get<bool>();
-    if (!_json["disable_memory"].empty())
-        op.disable_memory = _json["disable_memory"].get<bool>();
-    if (!_json["disable_stack"].empty())
-        op.disable_stack =_json["disable_stack"].get<bool>();
+    if (!_json["disableStorage"].empty())
+        op.disable_storage = _json["disableStorage"].get<bool>();
+    if (!_json["disableMemory"].empty())
+        op.disable_memory = _json["disableMemory"].get<bool>();
+    if (!_json["disableStack"].empty())
+        op.disable_stack =_json["disableStack"].get<bool>();
     if (!_json["full_storage"].empty())
         op.full_storage = _json["full_storage"].get<bool>();
     return op;
