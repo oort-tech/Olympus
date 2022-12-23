@@ -1314,10 +1314,10 @@ std::pair<u256, bool> mcp::chain::estimate_gas(mcp::db::db_transaction& transact
 	try
     {
 		int64_t upperBound = _maxGas;
-		if (upperBound == Invalid256 || upperBound > mcp::block_max_gas)
-			upperBound = mcp::block_max_gas;
+		if (upperBound == Invalid256 || upperBound > mcp::tx_max_gas)
+			upperBound = mcp::tx_max_gas;
 		//if (_maxGas == 0)
-		//	_maxGas = mcp::block_max_gas;
+		//	_maxGas = mcp::tx_max_gas;
 
 		int64_t lowerBound = Transaction::baseGasRequired(!_dest, &_data, dev::eth::EVMSchedule());
 
@@ -1326,8 +1326,8 @@ std::pair<u256, bool> mcp::chain::estimate_gas(mcp::db::db_transaction& transact
 		//	return std::make_pair(u256(), false);
 
         //int64_t upperBound = _maxGas;
-        //if (upperBound == Invalid256 || upperBound > mcp::block_max_gas)
-        //    upperBound = mcp::block_max_gas;
+        //if (upperBound == Invalid256 || upperBound > mcp::tx_max_gas)
+        //    upperBound = mcp::tx_max_gas;
 
 		// sichaoy: default gas price to be defined
          u256 gasPrice = _gasPrice == Invalid256 ? mcp::gas_price : _gasPrice;

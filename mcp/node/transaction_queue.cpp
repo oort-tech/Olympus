@@ -458,20 +458,20 @@ namespace mcp
 			(bigint)(_t->baseGasRequired(schedule)), (bigint)_t->gas()));
 
 		/// Avoid transactions that would take us beyond the block gas limit.
-		if ((uint256_t)_t->gas() > mcp::uint256_t(mcp::block_max_gas))
+		if ((uint256_t)_t->gas() > mcp::uint256_t(mcp::tx_max_gas))
 			BOOST_THROW_EXCEPTION(BlockGasLimitReached() << RequirementErrorComment(
-			(bigint)(mcp::block_max_gas), (bigint)_t->gas(),
+			(bigint)(mcp::tx_max_gas), (bigint)_t->gas(),
 				std::string("_gasUsed + (bigint)_t.gas() > _header.gasLimit()")));
 
 		/// Avoid transactions that are less than the lower gas price limit.
 		if ((uint256_t)_t->gasPrice() < mcp::uint256_t(mcp::gas_price))
 			BOOST_THROW_EXCEPTION(OutOfGasPriceIntrinsic() << RequirementErrorComment(
-			(bigint)(mcp::block_max_gas), (bigint)_t->gas(),
+			(bigint)(mcp::tx_max_gas), (bigint)_t->gas(),
 				std::string("_gasUsed + (bigint)_t.gas() < lower.gasLimit()")));
 		
 		if ((uint256_t)_t->gas()*(uint256_t)_t->gasPrice() > mcp::uint256_t(tx_max_gas_fee))
 			BOOST_THROW_EXCEPTION(BlockGasLimitReached() << RequirementErrorComment(
-			(bigint)(mcp::block_max_gas), (bigint)_t->gas(),
+			(bigint)(mcp::tx_max_gas), (bigint)_t->gas(),
 				std::string("_t->gas() * t->gasPrice() > tx_max_gas_fee")));
 		
 		/// Avoid transactions that are large than the data size limit.
