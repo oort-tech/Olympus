@@ -155,7 +155,5 @@ namespace mcp
 		int dencryption(unsigned char *m, const unsigned char *c,
 			unsigned long long clen, const unsigned char *n,
 			const unsigned char *ek);
-
-		secp256k1_context const* get_secp256k1_ctx();
 	}
 }

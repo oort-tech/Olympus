@@ -41,8 +41,7 @@ mcp::block_store::block_store(bool & error_a, boost::filesystem::path const & pa
 	transaction_receipt(0),
 	approve_receipt(0),
 	epoch_approves(0),
-	epoch_approve_receipts(0),
-	epoch_elected_approve_receipts(0)
+	epoch_param(0)
 {
 	if (error_a)
 		return;
@@ -89,8 +88,7 @@ mcp::block_store::block_store(bool & error_a, boost::filesystem::path const & pa
 	approves = m_db->set_column_family(default_col, "029");
 	approve_receipt = m_db->set_column_family(default_col, "030");
 	epoch_approves = m_db->set_column_family(default_col, "031");
-	epoch_approve_receipts = m_db->set_column_family(default_col, "032");
-	epoch_elected_approve_receipts = m_db->set_column_family(default_col, "033");
+	epoch_param = m_db->set_column_family(default_col, "032");
 
 	//use iterator
 	dag_free = m_db->set_column_family(default_col, "101");
@@ -1109,67 +1107,24 @@ void mcp::block_store::epoch_approves_put(mcp::db::db_transaction & transaction_
 	transaction_a.put(epoch_approves, key_a.val(), dev::Slice());
 }
 
-void mcp::block_store::epoch_approve_receipts_get(mcp::db::db_transaction & transaction_a, uint64_t const & epoch, std::list<h256> & hashs_a)
-{
-	mcp::epoch_approves_key key(epoch, h256());
-	mcp::db::forward_iterator it(transaction_a.begin(epoch_approve_receipts, key.val()));
-	while (true)
-	{
-		if (!it.valid())
-			break;
-		mcp::epoch_approves_key approve_key(it.key());
-		if (approve_key.epoch != epoch)
-			break;
-
-		hashs_a.push_back(approve_key.hash);
-
-		++it;
-	}
-}
-
-void mcp::block_store::epoch_approve_receipts_put(mcp::db::db_transaction & transaction_a, mcp::epoch_approves_key const & key_a)
-{
-	transaction_a.put(epoch_approve_receipts, key_a.val(), dev::Slice());
-}
-
-bool mcp::block_store::epoch_elected_approve_receipts_get(mcp::db::db_transaction & transaction_a, uint64_t const & epoch, epoch_elected_list & list)
+std::shared_ptr<mcp::witness_param> mcp::block_store::epoch_param_get(mcp::db::db_transaction & transaction_a, uint64_t const & epoch)
 {
 	std::string value;
-	bool exists(transaction_a.get(epoch_elected_approve_receipts, mcp::h64_to_slice(h64(epoch)), value));
+	bool exists(transaction_a.get(epoch_param, mcp::h64_to_slice(h64(epoch)), value));
+	std::shared_ptr<witness_param> result;
 	if (exists)
 	{
 		dev::RLP r(value);
-		list = mcp::epoch_elected_list(r);
+		result = std::make_shared<witness_param>(r);
 	}
-	return !exists;
-}
-
-void mcp::block_store::epoch_elected_approve_receipts_put(mcp::db::db_transaction & transaction_a, uint64_t const & epoch, epoch_elected_list & list)
-{
-	dev::bytes b_value;
-	{
-		dev::RLPStream s;
-		list.stream_RLP(s);
-		s.swapOut(b_value);
-	}
-	dev::Slice s_value((char *)b_value.data(), b_value.size());
-	transaction_a.put(epoch_elected_approve_receipts, mcp::h64_to_slice(h64(epoch)), s_value);
-}
-
-uint64_t mcp::block_store::last_epoch_get(mcp::db::db_transaction & transaction_a)
-{
-	std::string value;
-	bool exists(transaction_a.get(prop, mcp::h256_to_slice(last_epoch_key), value));
-	uint64_t result(0);
-	if (exists)
-		result = ((dev::h64::Arith) mcp::slice_to_h64(value)).convert_to<uint64_t>();
 	return result;
 }
 
-void mcp::block_store::last_epoch_put(mcp::db::db_transaction & transaction_a, uint64_t const & last_epoch_a)
+void mcp::block_store::epoch_param_put(mcp::db::db_transaction & transaction_a, uint64_t const & epoch, witness_param & param)
 {
-	dev::h64 last_epoch(last_epoch_a);
-	transaction_a.put(prop, mcp::h256_to_slice(last_epoch_key), mcp::h64_to_slice(last_epoch));
+	dev::bytes b_value = param.rlp();
+	dev::Slice s_value((char *)b_value.data(), b_value.size());
+	transaction_a.put(epoch_param, mcp::h64_to_slice(h64(epoch)), s_value);
 }
 
 dev::h256 const mcp::block_store::version_key(0);
@@ -1181,4 +1136,3 @@ dev::h256 const mcp::block_store::advance_info_key(5);
 dev::h256 const mcp::block_store::last_stable_index_key(6);
 dev::h256 const mcp::block_store::catchup_index(7);
 dev::h256 const mcp::block_store::catchup_max_index(8);
-dev::h256 const mcp::block_store::last_epoch_key(9);

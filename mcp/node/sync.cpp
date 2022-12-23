@@ -1,6 +1,7 @@
 #include "sync.hpp"
 #include "requesting.hpp"
 #include <libdevcore/TrieHash.h>
+#include <mcp/core/param.hpp>
 
 mcp::sync_request_status::sync_request_status(mcp::p2p::node_id const & request_node_id_a,
 	mcp::sub_packet_type const & request_type_a) :
@@ -315,7 +316,7 @@ void mcp::node_sync::request_remote_mc(mcp::db::db_transaction & transaction_a, 
 	req_mg.unstable_mc_joints_tail = unstable_tail_block;
 	req_mg.first_catchup_chain_summary = from_summary;
 
-	mcp::witness_param const & w_param(mcp::param::witness_param(m_chain->last_epoch()));
+	mcp::witness_param const & w_param(mcp::param::witness_param(transaction_a, m_chain->last_epoch()));
 	req_mg.arr_witnesses = w_param.witness_list;
 	req_mg.distinct_witness_size = w_param.witness_count - w_param.majority_of_witnesses + 1; //there must be at least one honest witness
 
@@ -431,7 +432,7 @@ void mcp::node_sync::prepare_catchup_chain(mcp::catchup_request_message const& r
 	uint64_t last_stable_mci_remote = request.last_stable_mci;
 	uint64_t last_known_mci_remote = request.last_known_mci;
 	mcp::summary_hash first_catchup_chain_summary = request.first_catchup_chain_summary;
-	std::set<dev::Address> arr_witnesses_remote = request.arr_witnesses;
+	WitnessList arr_witnesses_remote = request.arr_witnesses;
 	size_t distinct_witness_size_remote = request.distinct_witness_size;
 
 	mcp::db::db_transaction transaction(m_store.create_transaction());
@@ -1540,7 +1541,7 @@ void mcp::node_sync::process_hash_tree(p2p::node_id const &id, mcp::hash_tree_re
 			{
 				for (auto a : s_item.approves)
 				{
-					m_aq->import(*a);
+					m_aq->import(a, source::sync);
 				}
 			}
 			catch (const std::exception& e)

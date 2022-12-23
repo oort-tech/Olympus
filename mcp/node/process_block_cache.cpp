@@ -203,12 +203,9 @@ void mcp::process_block_cache::transaction_del_from_queue(h256 const& _hash)
 	m_transaction_dels.push_back(_hash);
 }
 
-void mcp::process_block_cache::approve_del_from_queue(h256 const& _hash, uint64_t const& _epoch)
+void mcp::process_block_cache::approve_del_from_queue(h256 const& _hash)
 {
-	if(m_approve_dels.find(_epoch) == m_approve_dels.end()){
-		m_approve_dels.insert(std::make_pair(_epoch, h256s()));
-	}
-	m_approve_dels[_epoch].push_back(_hash);
+	m_approve_dels.push_back(_hash);
 }
 
 

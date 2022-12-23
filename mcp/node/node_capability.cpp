@@ -22,7 +22,7 @@ mcp::node_capability::node_capability(
 {
 	m_request_timer = std::make_unique<ba::deadline_timer>(m_io_service);
 	m_tq->onImport([this](ImportResult _ir, p2p::node_id const& _nodeId) { onTransactionImported(_ir, _nodeId); });
-	m_aq->onImport([this](ImportApproveResult _ir, h256 const& _h, p2p::node_id const& _nodeId) { onApproveImported(_ir, _h, _nodeId); });
+	m_aq->onImport([this](ImportResult _ir, p2p::node_id const& _nodeId) { onTransactionImported(_ir, _nodeId); });
 }
 
 void mcp::node_capability::set_processor(std::shared_ptr<mcp::block_processor> block_processor_a)
@@ -336,9 +336,11 @@ bool mcp::node_capability::read_packet(std::shared_ptr<p2p::peer> peer_a, unsign
 				Transaction t(r[0], CheckTransaction::Cheap);///Signature will be checked later
 				auto _f = source::broadcast;
 				{
-					if (RequestingMageger.try_erase(mcp::block_hash(t.sha3())))
+					if (RequestingMageger.try_erase(t.sha3()))
 						_f = source::request;
 				}
+				if (mcp::node_sync::is_syncing() && _f == source::broadcast)
+					return true;
 				mark_as_known_transaction(peer_a->remote_node_id(), t.sha3());
 				mcp::CapMetricsRecieved.transaction++;
 				m_tq->enqueue(std::make_shared<Transaction>(t), peer_a->remote_node_id(), _f);
@@ -371,18 +373,31 @@ bool mcp::node_capability::read_packet(std::shared_ptr<p2p::peer> peer_a, unsign
 		}
 		case mcp::sub_packet_type::approve:
 		{
-			LOG(m_log.trace) << "[read_packet] approve";
-			bool error(r.itemCount() != 1);
-
-			mcp::CapMetricsRecieved.approve++;
-			if (error)
+			if (r.itemCount() != 1)
 			{
-				LOG(m_log.error) << "Invalid new approve message rlp: " << r[0];
+				LOG(m_log.error) << "Invalid approve message rlp: " << r[0];
 				peer_a->disconnect(p2p::disconnect_reason::bad_protocol);
 				return true;
 			}
-			m_aq->enqueue(r[0], peer_a->remote_node_id());
-
+			try
+			{
+				approve ap(r[0], CheckTransaction::Cheap);///Signature will be checked later
+				auto _f = source::broadcast;
+				{
+					if (RequestingMageger.try_erase(ap.sha3()))
+						_f = source::request;
+				}
+				if (mcp::node_sync::is_syncing() && _f == source::broadcast)
+					return true;
+				mark_as_known_approve(peer_a->remote_node_id(), ap.sha3());
+				mcp::CapMetricsRecieved.approve++;
+				m_aq->enqueue(std::make_shared<approve>(ap), peer_a->remote_node_id(), _f);
+			}
+			catch (...)///Malformed approve
+			{
+				LOG(m_log.error) << "Bad approve:" << boost::current_exception_diagnostic_information();
+				peer_a->disconnect(p2p::disconnect_reason::bad_protocol);
+			}
 			break;
 		}
 		case mcp::sub_packet_type::approve_request:
@@ -822,6 +837,13 @@ void mcp::node_capability::mark_as_known_transaction(p2p::node_id node_id_a, h25
 		m_peers.at(node_id_a).mark_as_known_transaction(_h);
 }
 
+void mcp::node_capability::mark_as_known_approve(p2p::node_id node_id_a, h256 _h)
+{
+	std::lock_guard<std::mutex> lock(m_peers_mutex);
+	if (m_peers.count(node_id_a))
+		m_peers.at(node_id_a).mark_as_known_approve(_h);
+}
+
 uint64_t mcp::node_capability::num_peers()
 {
     std::lock_guard<std::mutex> lock(m_peers_mutex);
@@ -937,37 +959,6 @@ void mcp::node_capability::onTransactionImported(ImportResult _ir, p2p::node_id 
 	default:
 		break;
 	}
-}
-
-void mcp::node_capability::onApproveImported(ImportApproveResult _ir, h256 const& _h, p2p::node_id const& _nodeId)
-{
-	///io service execute delay, maybe some approve through the filter
-	 if (_h != h256())
-	{
-		mcp::block_hash h(_h);
-		std::lock_guard<std::mutex> lock(m_peers_mutex);
-		if (m_peers.count(_nodeId))
-		{
-			m_peers.at(_nodeId).mark_as_known_approve(_h);
-		}
-		RequestingMageger.try_erase(h);
-	}
-	else
-	{
-		std::shared_ptr<p2p::peer> p = nullptr;
-		{
-			std::lock_guard<std::mutex> lock(m_peers_mutex);
-			if (!m_peers.count(_nodeId))
-				return;
-
-			mcp::peer_info &pi(m_peers.at(_nodeId));
-			p = pi.try_lock_peer();
-		}
-		/// todo:disconnect call drop.drop call on_disconnect.on_disconnect will used m_peers_mutex. So it locks twice. need modify logic.
-		if (p)
-			p->disconnect(p2p::disconnect_reason::bad_protocol);
-	}
-	/// todo different import result add or reduce rating for the peer
 }
 
 

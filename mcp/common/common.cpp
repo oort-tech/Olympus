@@ -15,16 +15,6 @@ namespace mcp
 	fast_steady_clock SteadyClock;
 }
 
-secp256k1_context const* mcp::encry::get_secp256k1_ctx()
-{
-	static std::unique_ptr<secp256k1_context, decltype(&secp256k1_context_destroy)> s_ctx{
-		secp256k1_context_create(SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY),
-		&secp256k1_context_destroy
-	};
-	return s_ctx.get();
-}
-
-
 int mcp::encry::encryption(unsigned char *c, const unsigned char *m,
 	unsigned long long mlen, const unsigned char *n,
 	const unsigned char *ek) {

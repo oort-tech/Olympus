@@ -81,31 +81,32 @@ namespace mcp
 		{
 			m_complete_store_notice = func_a;
 		}
+		/// Register a handler that will be called once mci stabled
+		void onMciStable(std::function<void(uint64_t const&)> const& _t) { m_onMciStable.add(_t); }
 
-		uint64_t last_epoch();
-		uint64_t last_summary_mci();
-		void set_last_summary_mci(mcp::db::db_transaction & transaction_a, uint64_t const& mci);
-		uint64_t get_last_summary_mci(mcp::db::db_transaction& transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a, std::shared_ptr<mcp::block_cache> block_cache_a, uint64_t const & mci);
-		void check_need_send_approve(mcp::db::db_transaction& transaction_a, std::shared_ptr<mcp::block_cache> cache_a, dev::Address account_a);
-		void check_and_send_approve(std::shared_ptr<ApproveQueue> aq_a);
-		bool need_approve();
-		void send_approve(std::shared_ptr<ApproveQueue> aq_a);
-		
-		void set_witness(std::shared_ptr<mcp::witness>& witness_a) { m_witness = witness_a; }
+		Epoch last_epoch();
 		void set_approve_queue(std::shared_ptr<mcp::ApproveQueue> aq_a) { m_aq = aq_a; }
+
+		std::string vrf_outputs_size() ///todo deleted
+		{ 
+			std::string str = "";
+			for (auto it : vrf_outputs)
+			{
+				str += "[" + std::to_string(it.first) + ":" + std::to_string(it.second.size()) + "]";
+			}
+			return str;
+		}
 
 	private:
 		void write_dag_block(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a, std::shared_ptr<mcp::block> block_a);
 		void find_main_chain_changes(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a, std::shared_ptr<mcp::block> block_a, mcp::block_hash const & best_free_block_hash, bool & is_mci_retreat, uint64_t & retreat_mci, uint64_t &retreat_level, std::list<mcp::block_hash>& new_mc_block_hashs);
 		void update_mci(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a, std::shared_ptr<mcp::block> block_a, uint64_t const & retreat_mci, std::list<mcp::block_hash> const & new_mc_block_hashs);
 		void update_latest_included_mci(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a, std::shared_ptr<mcp::block> block_a, bool const &is_mci_retreat, uint64_t const & retreat_mci, uint64_t const &retreat_level);
-		void advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a, uint64_t const & mci, mcp::block_hash const & block_hash_a, uint64_t & mc_last_summary_mci);
+		void advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a, uint64_t const & mci, mcp::block_hash const & block_hash_a);
 		void set_block_stable(mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a, mcp::block_hash const & stable_block_hash, uint64_t const & mci, uint64_t const & mc_timestamp, uint64_t const & mc_last_summary_mci, uint64_t const & stable_timestamp, uint64_t const & stable_index, h256 receiptsRoot);
 		void search_stable_block(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a, mcp::block_hash const & block_hash, uint64_t const & mci, std::map<uint64_t, std::set<mcp::block_hash>>& stable_block_hashs);
-		void search_already_stable_block(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a, mcp::block_hash const & block_hash, uint64_t const & mci, std::map<uint64_t, std::set<mcp::block_hash>>& stable_block_hashs);
 		void add_new_witness_list(mcp::db::db_transaction & transaction_a, uint64_t mc_last_summary_mci);
-		void init_vrf_outputs(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a);
-		void init_witness(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a);
+		void init_vrf_outputs(mcp::db::db_transaction & transaction_a);
 		mcp::block_store m_store;
 		//std::list<std::function<void(std::shared_ptr<mcp::block>)> > m_new_block_observer;
 		//std::queue<std::shared_ptr<mcp::block>> m_new_blocks;
@@ -122,21 +123,19 @@ namespace mcp
 		uint64_t m_last_mci_internal = 0;
 		uint64_t m_last_stable_mci = 0;
 		uint64_t m_last_stable_mci_internal = 0;
-		uint64_t m_last_summary_mci = 0;
 		uint64_t m_min_retrievable_mci = 0;
 		uint64_t m_min_retrievable_mci_internal = 0;
 		uint64_t m_last_stable_index = 0;
 		uint64_t m_last_stable_index_internal = 0;
-		uint64_t m_last_epoch = 0;
+		Epoch m_last_stable_epoch;
 		
 		mcp::advance_info m_advance_info;
 
 		std::unordered_map<Address, dev::eth::PrecompiledContract> m_precompiled;
 
-		std::map<uint64_t, std::map<uint32_t, dev::ApproveReceipt>> vrf_outputs;
-		bool m_need_send_approve = true;
-		std::shared_ptr<mcp::witness> m_witness;
+		std::map<Epoch, std::map<h256, dev::ApproveReceipt>> vrf_outputs;
 		std::shared_ptr<mcp::ApproveQueue> m_aq;
+		Signal<uint64_t const&> m_onMciStable; ///<  Called when a subsequent call to import transactions and ready.
 
         mcp::log m_log = { mcp::log("node") };
 	};

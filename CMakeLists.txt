@@ -347,6 +347,8 @@ add_library (core
 	mcp/core/genesis.hpp
 	mcp/core/config.cpp
 	mcp/core/config.hpp
+	mcp/core/param.cpp
+	mcp/core/param.hpp
 	mcp/core/blocks.cpp
 	mcp/core/blocks.hpp
 	mcp/core/block_store.cpp

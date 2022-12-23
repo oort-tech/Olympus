@@ -543,19 +543,8 @@ namespace mcp
 		Malformed,
 		OverbidGasPrice,
 		BadProcol,
-		InvalidNonce
-	};
-	
-	// approve queue import
-	enum class ImportApproveResult
-	{
-		Success = 0,
-		AlreadyInChain,
-		AlreadyKnown,
-		EpochIsTooHigh,
-		Malformed,
-		BadChain/*,
-		ZeroSignature*/
+		InvalidNonce,
+		EpochIsTooHigh
 	};
 	
 	using BlockNumber = uint64_t;
@@ -586,22 +575,10 @@ namespace mcp
 	class epoch_approves_key
 	{
 	public:
-		epoch_approves_key(uint64_t const &epoch_a, h256 const &hash_a) : epoch(epoch_a), hash(hash_a){ }
+		epoch_approves_key(Epoch const &epoch_a, h256 const &hash_a) : epoch(epoch_a), hash(hash_a){ }
 		epoch_approves_key(dev::Slice const &);
-		//bool operator== (mcp::epoch_approves_key const &) const;
 		dev::Slice val() const { return dev::Slice((char *)this, sizeof(*this)); }
-		uint64_t epoch;
+		Epoch epoch;
 		h256 hash;
-	};
-
-	class epoch_elected_list
-	{
-	public:
-		epoch_elected_list();
-		epoch_elected_list(std::vector<h256> const &);
-		epoch_elected_list(dev::RLP const & r);
-		void stream_RLP(dev::RLPStream & s) const;
-
-		std::vector<h256> hashs;
 	};
 }

@@ -11,20 +11,12 @@
 using namespace dev;
 namespace mcp
 {
-	const uint64_t epoch_period = 100; //一个eopch包含的主链block数量
-
-	struct ApproveSkeleton
-	{
-		uint64_t epoch;
-		std::vector<uint8_t> proof;
-	};
-
 	class approve
 	{
 	public:
 		approve() {}
 		/// Constructs a transaction from a transaction skeleton & optional secret.
-		approve(ApproveSkeleton const& ts, Secret const& _s);
+		approve(Epoch const & _epoch, h648 const & _proof, Secret const& _s);
 
 		/// Constructs a approve from the given RLP.
 		approve(dev::RLP const & r, CheckTransaction _checkSig);
@@ -73,28 +65,21 @@ namespace mcp
 
 		void sign(Secret const& _priv);			///< Sign the transaction.
 
-		void setSinature(h256 const& _r, h256 const& _s, byte _v) { m_vrs = SignatureStruct(_r, _s, _v); }
-
-		secp256k1_pubkey getPublicKey() const;
-
-		int vrf_verify(std::vector<uint8_t>& output, std::string msg) const;
-
-		static uint64_t calc_curr_epoch(uint64_t last_summary_mci);
-		static uint64_t calc_elect_epoch(uint64_t last_summary_mci);
+		void vrf_verify(mcp::block_hash const& msg) const;
+		h256 outputs() { return m_outputs; }
 		
-		void show() const;
-		uint64_t epoch() { return m_epoch; }
-
-		uint64_t m_epoch;
-		std::vector<uint8_t> m_proof;
-
-
+		Epoch epoch() const { return m_epoch; }
+		h648 proof() const { return m_proof; }
+		
 	private:
-		static bool isZeroSignature(u256 const& _r, u256 const& _s) { return !_r && !_s; }
+		Epoch m_epoch;
+		h648 m_proof;
 
 		SignatureStruct m_vrs;	///< The signature of the approve. Encodes the sender.
 		uint64_t m_chainId;
-		mutable h256 m_hashWith;			///< Cached hash of transaction with signature.
+		mutable h256 m_hashWith;			///< Cached hash of approve with signature.
+		mutable dev::PublicCompressed m_publicCompressed;
+		mutable h256 m_outputs;			    ///< Cached output of proof.
 		mutable boost::optional<Address> m_sender;  ///< Cached sender, determined from signature.
 	};
 }

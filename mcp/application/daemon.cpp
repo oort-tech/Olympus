@@ -2,7 +2,7 @@
 #include <iostream>
 #include <thread>
 #include <boost/algorithm/string.hpp>
-
+#include <mcp/core/param.hpp>
 #include <mcp/application/daemon.hpp>
 #include <mcp/common/pwd.hpp>
 #include <mcp/node/witness.hpp>
@@ -733,8 +733,6 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 
 		mcp::db::database::init_table_cache(config.db.cache_size);
 
-		mcp::param::init();
-
 		///chain store
 		mcp::block_store chain_store(error, data_path / "chaindb");
 		if (error)
@@ -760,13 +758,15 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 
 		///cache
 		std::shared_ptr<mcp::block_cache> cache(std::make_shared<mcp::block_cache>(chain_store));
+
+		mcp::param::init(cache);
 		///chain
 		std::shared_ptr<mcp::chain> chain(std::make_shared<mcp::chain>(chain_store));
 
 		/// transaction queue
 		std::shared_ptr<mcp::TransactionQueue> TQ(std::make_shared<mcp::TransactionQueue>(io_service, chain_store, cache, chain, sync_async));
 		/// approve queue
-		std::shared_ptr<mcp::ApproveQueue> AQ(std::make_shared<mcp::ApproveQueue>(chain_store, cache, chain, sync_async));
+		std::shared_ptr<mcp::ApproveQueue> AQ(std::make_shared<mcp::ApproveQueue>(chain_store, cache, sync_async));
 		chain->set_approve_queue(AQ);
 
 		///validation
@@ -811,7 +811,7 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 		{
 			mcp::error_message error_msg;
 			witness = std::make_shared<mcp::witness>(error_msg,
-				key_manager, chain_store, alarm, composer, chain, processor, cache, TQ,
+				key_manager, chain_store, alarm, composer, chain, processor, cache, TQ, AQ,
 				config.witness.account_or_file, config.witness.password);
 
 			if (error_msg.error)
@@ -821,7 +821,6 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 			}
 			witness->start();
 		}
-		chain->set_witness(witness);
 
 		std::shared_ptr<mcp::rpc> rpc = get_rpc(
 			chain_store, chain, cache, key_manager, wallet, host, background, composer,
@@ -956,6 +955,7 @@ void mcp_daemon::ongoing_report(
 		<< ", dag free:" << dag_free_count
 		<< ", last_stable_mci:" << last_stable_mci
 		<< ", last_mci:" << last_mci;
+	LOG(log.info) << "vrf_outputs_size:" << chain->vrf_outputs_size();
 
 	LOG(log.info) << "TQ:" << tq->getInfo();
 	LOG(log.info) << "AQ:" << aq->getInfo();

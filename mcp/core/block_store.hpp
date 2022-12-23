@@ -166,17 +166,11 @@ namespace mcp
 		void epoch_approves_get(mcp::db::db_transaction & transaction_a, uint64_t const & epoch, std::list<h256> & hashs_a);
 		void epoch_approves_put(mcp::db::db_transaction & transaction_a, mcp::epoch_approves_key const & key_a);
 
-		void epoch_approve_receipts_get(mcp::db::db_transaction & transaction_a, uint64_t const & epoch, std::list<h256> & hashs_a);
-		void epoch_approve_receipts_put(mcp::db::db_transaction & transaction_a, mcp::epoch_approves_key const & key_a);
-
-		bool epoch_elected_approve_receipts_get(mcp::db::db_transaction & transaction_a, uint64_t const & epoch, epoch_elected_list & list);
-		void epoch_elected_approve_receipts_put(mcp::db::db_transaction & transaction_a, uint64_t const & epoch, epoch_elected_list & list);
+		std::shared_ptr<witness_param> epoch_param_get(mcp::db::db_transaction & transaction_a, uint64_t const & epoch);
+		void epoch_param_put(mcp::db::db_transaction & transaction_a, uint64_t const & epoch, witness_param & param);
 
 		void version_put(mcp::db::db_transaction &, int);
 		int version_get();
-
-		uint64_t last_epoch_get(mcp::db::db_transaction & transaction_a);
-		void last_epoch_put(mcp::db::db_transaction & transaction_a, uint64_t const & last_epoch_a);
 
 		mcp::db::db_transaction create_transaction(std::shared_ptr<rocksdb::WriteOptions> write_options_a = nullptr,
 			std::shared_ptr<rocksdb::TransactionOptions> txn_ops_a = nullptr)
@@ -260,8 +254,7 @@ namespace mcp
 		int approve_receipt;
 
 		int epoch_approves;
-		int epoch_approve_receipts;
-		int epoch_elected_approve_receipts;
+		int epoch_param;
 
 		//genesis hash key
 		static dev::h256 const genesis_hash_key;
@@ -279,7 +272,5 @@ namespace mcp
 		static dev::h256 const catchup_index;
 		//catch up max index key
 		static dev::h256 const catchup_max_index;
-		//
-		static dev::h256 const last_epoch_key;
 	};
 }
