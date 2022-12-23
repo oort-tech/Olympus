@@ -162,13 +162,10 @@ void mcp::chain::save_dag_block(mcp::timeout_db_transaction & timeout_tx_a, std:
 			}
 
 			//m_new_blocks.push(block_a);
-
-			//timeout_tx_a.commit_if_timeout();
 		}
 		catch (std::exception const & e)
 		{
 			LOG(m_log.error) << "Chain save block error: " << e.what();
-			//timeout_tx_a.rollback();
 			throw;
 		}
 	}
@@ -204,13 +201,10 @@ void mcp::chain::save_transaction(mcp::timeout_db_transaction & timeout_tx_a, st
 			}
 
 			//m_new_blocks.push(block_a->block);
-
-			//timeout_tx_a.commit_if_timeout();
 		}
 		catch (std::exception const & e)
 		{
 			LOG(m_log.error) << "Chain save transaction error: " << e.what();
-			//timeout_tx_a.rollback();
 			throw;
 		}
 	}
@@ -243,13 +237,10 @@ void mcp::chain::save_approve(mcp::timeout_db_transaction & timeout_tx_a, std::s
 			}
 
 			//m_new_blocks.push(block_a->block);
-
-			//timeout_tx_a.commit_if_timeout();
 		}
 		catch (std::exception const & e)
 		{
 			LOG(m_log.error) << "Chain save approve error: " << e.what();
-			//timeout_tx_a.rollback();
 			throw;
 		}
 	}
@@ -399,15 +390,11 @@ void mcp::chain::try_advance(mcp::timeout_db_transaction & timeout_tx_a, std::sh
 			m_onMciStable(m_last_stable_mci_internal);
 
 			//m_stable_mcis.push(m_last_stable_mci_internal);
-
-			//timeout_tx_a.commit_if_timeout();
-			
 			add_new_witness_list(transaction, m_last_stable_mci_internal);
 		}
 		catch (std::exception const & e)
 		{
 			LOG(m_log.error) << "Chain update last stable mci error: " << e.what();
-			//timeout_tx_a.rollback();
 			throw;
 		}
 
@@ -1085,13 +1072,10 @@ void mcp::chain::set_block_stable(mcp::timeout_db_transaction & timeout_tx_a, st
 		}
 
 		//m_stable_blocks.push(stable_block);
-
-		//timeout_tx_a.commit_if_timeout();
 	}
 	catch (std::exception const & e)
 	{
 		LOG(m_log.error) << "Chain Set block stable error: " << e.what();
-		//timeout_tx_a.rollback();
 		throw;
 	}
 }
