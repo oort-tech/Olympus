@@ -177,7 +177,7 @@ void test3()
 
 		std::array<byte, 65> p;
 		p[0] = 0x04;
-		bytesConstRef(&_public.asBytes()).copyTo(bytesRef(&p[1],64));
+		_public.ref().copyTo(bytesRef(&p[1],64));
 
 		std::cout << "Public to p:" << toHex(p) << std::endl;
 
