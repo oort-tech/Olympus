@@ -21,7 +21,7 @@ Prerequisite:
 * Install ```boost```.
   ```
   wget https://boostorg.jfrog.io/artifactory/main/release/1.66.0/source/boost_1_66_0.tar.gz
-  tar --gzips -xf  boost_1_66_0.tar.bz2
+  tar --gzip -xf  boost_1_66_0.tar.bz2
   cd boost_1_66_0
   ./bootstrap.sh --prefix=/usr/local
   ./b2 -j$(nproc) --with-atomic --with-chrono --with-date_time --with-filesystem --with-log \
