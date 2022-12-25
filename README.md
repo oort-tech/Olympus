@@ -20,13 +20,13 @@ Prerequisite:
   apt-get install -y git cmake wget unzip
 * Install ```boost```.
   ```
-  wget https://dl.bintray.com/boostorg/release/1.66.0/source/boost_1_66_0.tar.bz2
-  tar --bzip2 -xf  boost_1_66_0.tar.bz2
+  wget https://boostorg.jfrog.io/artifactory/main/release/1.66.0/source/boost_1_66_0.tar.gz
+  tar --gzips -xf  boost_1_66_0.tar.bz2
   cd boost_1_66_0
   ./bootstrap.sh --prefix=/usr/local
   ./b2 -j$(nproc) --with-atomic --with-chrono --with-date_time --with-filesystem --with-log \
       --with-program_options --with-regex --with-system --with-thread link=static install
-  cd .. && rm -rf boost_1_66_0 boost_1_66_0.tar.bz2
+  cd .. && rm -rf boost_1_66_0 boost_1_66_0.tar.gz
   ```
 * Install libraries required by rocksdb. The output libraries are `liblz4.a` `libzstd.a` `libz.a`.
   ```
@@ -44,12 +44,12 @@ Prerequisite:
 	```
 * Install `rocksdb`. The installed library name is `librocksdb.a`.
   ```
-  wget https://github.com/facebook/rocksdb/archive/v5.18.3.zip
-  unzip v5.18.3.zip
-  cd rocksdb-5.18.3
+  wget https://github.com/facebook/rocksdb/archive/v7.8.7.zip
+  unzip v7.8.3.zip
+  cd rocksdb-7.8.3
   PORTABLE=1 make -j$(nproc) USE_RTTI=1 static_lib
   make install
-  cd .. && rm -rf rocksdb-5.18.3 v5.18.3.zip
+  cd .. && rm -rf rocksdb-7.8.3 v7.8.3.zip
   ```
   Note：Set `USE_RTTI=1` in Makefile. Otherwise, there will be link failed to rocksdb. Moreover, set `PORTABLE=1` to enhance the portability of the code. Please refer to the following link for more details. https://github.com/facebook/rocksdb/blob/master/INSTALL.md
 	
