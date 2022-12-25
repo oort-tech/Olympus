@@ -90,11 +90,11 @@ The installation procedure is the same as Linux system. The only difference is t
 Note：1).Compilation of a few library will fail in Debug mode. Set the "treat warnings as errors" option to be false. 2). Run msbuild in the command line tools inside vs-tools, instead of in command shell.
 
 Prerequisite:
-  * Visual studio version >= 2015.
-  * Install `git` 、 `cmake`. Download these tools from official website, and install them to the same folder, say `c:\dependence`.
-  * Install `boost`. Download Version 1.66.0 from https://www.boost.org/users/download/, and install in `c\dependence`.
-  * Install `libsodium`. Download from https://download.libsodium.org/libsodium/releases/libsodium-1.0.17-msvc.zip, and install in `c\dependence`.
-  * Build `lz4` which is required by `rocksdb`. Download from https://github.com/lz4/lz4/archive/v1.7.5.zip, and install in `c\dependence`.
+  * Visual studio version >= 2022 & C++17.
+  * Install `git` 、 `cmake`. Download these tools from official website, and install them to the same folder, say `C:\dependence`.
+  * Install `boost`. Download Version 1.66.0 from https://www.boost.org/users/download/, and install in `C:\dependence`.
+  * Install `libsodium`. Download from https://download.libsodium.org/libsodium/releases/libsodium-1.0.17-msvc.zip, and install in `C:\dependence`.
+  * Build `lz4` which is required by `rocksdb`. Download from https://github.com/lz4/lz4/archive/v1.7.5.zip, and install in `C:\dependence`.
     ```
     cd c:\dependence (Download the package in this directory and unzip it)
     cd lz4-1.7.5
@@ -165,21 +165,21 @@ Compile MCP
   ```
 * CMake configuration. Using `cmake-gui` to help generating the configuration.
   ```
-  cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-  -DBOOST_ROOT=c:\dependence\boost
-  -DBOOST_INCLUDE_DIR=c:\dependence\boost\include\boost-1_66
-  -Dsodium_INCLUDE_DIR=c:\dependence\lisodium\include \
-  -Dsodium_LIBRARY_RELEASE=c:\dependence\lisodium\x64\Release\v141\static\libsodium.lib \
-  -Dsodium_LIBRARY_DEBUG=c:\dependence\rocksdb\rocksDB\build\Debug\rocksdb.lib \
-  -Drocksdb_INCLUDE_DIR=c:\dependence\rocksdb\rocksDB\include \
-  -Drocksdb_LIBRARY_RELEASE=c:\dependence\rocksdb\rocksDB\build\Release\rocksdb.lib \
-  -Drocksdb_LIBRARY_DEBUG=c:\dependence\rocksdb\rocksDB\build\Debug\rocksdb.lib \
-  -Dlz4_LIBRARY_DEBUG=c:\dependence\lz4-1.7.5\visual\VS2010\bin\x64_Debug\liblz4_static.lib \
-  -Dlz4_LIBRARY_RELEASE=c:\dependence\lz4-1.7.5\visual\VS2010\bin\x64_Release\liblz4_static.lib \
-  -DZSTD_LIBRARY_DEBUG=c:\dependence\zstd-1.3.7\build\VS2010\bin\x64_Debug\libzstd_static.lib \
-  -DZSTD_LIBRARY_RELEASE=c:\dependence\zstd-1.3.7\build\VS2010\bin\x64_Release\libzstd_static.lib \
-  -DZLIB_LIB_DEBUG=c:\dependence\zlib-1.2.11\contrib\vstudio\vc14\x64\ZlibStatDebug\zlibstat.lib \
-  -DZLIB_LIB_RELEASE=c:\dependence\zlib-1.2.11\contrib\vstudio\vc14\x64\ZlibStatRelease\zlibstat.lib \
-  -G "Visual Studio 14 Win64" ../
+  cmake -DCMAKE_BUILD_TYPE=Release \
+  -DBOOST_ROOT=C:\dependence\boost
+  -DBOOST_INCLUDE_DIR=C:\dependence\boost-1_66\boost
+  -Dsodium_INCLUDE_DIR=C:\dependence\lisodium\include \
+  -Dsodium_LIBRARY_RELEASE=C:\dependence\lisodium\x64\Release\v141\static\libsodium.lib \
+  -Dsodium_LIBRARY_DEBUG=C:\dependence\rocksdb\rocksDB\build\Debug\rocksdb.lib \
+  -Drocksdb_INCLUDE_DIR=C:\dependence\rocksdb\rocksDB\include\
+  -Drocksdb_LIBRARY_RELEASE=C:\dependence\build\Release\rocksdb.lib \
+  -Drocksdb_LIBRARY_DEBUG=C:\dependence\rocksdb\build\Debug\rocksdb.lib \
+  -Dlz4_LIBRARY_DEBUG=C:\dependence\lz4-1.7.5\visual\VS2010\bin\x64_Debug\liblz4_static.lib \
+  -Dlz4_LIBRARY_RELEASE=C:\dependence\lz4-1.7.5\visual\VS2010\bin\x64_Release\liblz4_static.lib \
+  -DZSTD_LIBRARY_DEBUG=C:\dependence\zstd-1.3.7\build\VS2010\bin\x64_Debug\libzstd_static.lib \
+  -DZSTD_LIBRARY_RELEASE=C:\dependence\zstd-1.3.7\build\VS2010\bin\x64_Release\libzstd_static.lib \
+  -DZLIB_LIB_DEBUG=C:\dependence\zlib-1.2.13\contrib\vstudio\vc10\x64\ZlibStatDebug\zlibstat.lib \
+  -DZLIB_LIB_RELEASE=C:\dependence\zlib-1.2.13\contrib\vstudio\vc10\x64\ZlibStatRelease\zlibstat.lib \
+  -G "Visual Studio 17 2022" ../
   ```
  * Compile the Visual Studio project
