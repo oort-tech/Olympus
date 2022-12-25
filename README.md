@@ -44,7 +44,7 @@ Prerequisite:
 	```
 * Install `rocksdb`. The installed library name is `librocksdb.a`.
   ```
-  wget https://github.com/facebook/rocksdb/archive/v7.8.7.zip
+  wget https://github.com/facebook/rocksdb/archive/v7.8.3.zip
   unzip v7.8.3.zip
   cd rocksdb-7.8.3
   PORTABLE=1 make -j$(nproc) USE_RTTI=1 static_lib
