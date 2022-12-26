@@ -21,7 +21,7 @@ Prerequisite:
 * Install ```boost```.
   ```
   wget https://boostorg.jfrog.io/artifactory/main/release/1.66.0/source/boost_1_66_0.tar.gz
-  tar --gzip -xf  boost_1_66_0.tar.bz2
+  tar --gzip -xf  boost_1_66_0.tar.gz
   cd boost_1_66_0
   ./bootstrap.sh --prefix=/usr/local
   ./b2 -j$(nproc) --with-atomic --with-chrono --with-date_time --with-filesystem --with-log \
@@ -114,7 +114,7 @@ Prerequisite:
 * Build `zlib` which is required by `rocksdb`. Download from http://zlib.net/zlib1211.zip, and install in `c:\dependence`.
     ```
     cd c:\dependence (Download the package in this directory and unzip it)
-    cd zlib-1.2.11\contrib\vstudio\vc14
+    cd zlib-1.2.13\contrib\vstudio\vc10
     ```
     Edit file `zlibvc.vcxproj`，Modify `<Command>cd ..\..\contrib\masmx64` to `<Command>cd ..\..\masmx64
     ```
@@ -140,7 +140,7 @@ Prerequisite:
     set(ZSTD_LIB_DEBUG ${ZSTD_HOME}/build/VS2010/bin/x64_Debug/libzstd_static.lib)
     set(ZSTD_LIB_RELEASE ${ZSTD_HOME}/build/VS2010/bin/x64_Release/libzstd_static.lib)
 
-    set(ZLIB_HOME $ENV{THIRDPARTY_HOME}/zlib-1.2.11)
+    set(ZLIB_HOME $ENV{THIRDPARTY_HOME}/zlib-1.2.13)
     set(ZLIB_INCLUDE ${ZLIB_HOME})
     set(ZLIB_LIB_DEBUG ${ZLIB_HOME}/contrib/vstudio/vc14/x64/ZlibStatDebug/zlibstat.lib)
     set(ZLIB_LIB_RELEASE ${ZLIB_HOME}/contrib/vstudio/vc14/x64/ZlibStatRelease/zlibstat.lib)
@@ -151,8 +151,8 @@ Prerequisite:
     ```
     mkdir build
     cd build
-    set THIRDPARTY_HOME=c:\dependence
-    cmake -G "Visual Studio 14 Win64" -DLZ4=1 -DZLIB=1 -DZSTD=1 -DPORTABLE=1 ..
+    set THIRDPARTY_HOME=C:\dependence
+    cmake -G "Visual Studio 17 2022" -DLZ4=1 -DZLIB=1 -DZSTD=1 -DPORTABLE=1 ..
     msbuild rocksdb.sln /p:Configuration=Release
     msbuild rocksdb.sln /p:Configuration=Debug
     ```
