@@ -29,7 +29,7 @@ extern uint64_t chain_id;
 bool is_test_network();
 mcp::uint256_t chainID();
 
-size_t const static max_data_size(24576); //24k
+size_t const static max_data_size(131072); //128k
 size_t const static skiplist_divisor(10);
 uint64_t const static tx_max_gas(50000000);
 uint256_t const static tx_max_gas_fee(1000000000000000000);  //1 CCN
