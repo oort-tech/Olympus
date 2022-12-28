@@ -326,7 +326,6 @@ void mcp::chain::add_new_witness_list(mcp::db::db_transaction & transaction_a, u
 		else
 			LOG(m_log.debug) << "Not switch witness_list because elector not found.epoch:" << vrfepoch;
 		mcp::param::add_witness_param(transaction_a, useepoch, p_param);
-		assert_x(false);///todo delete
 	}
 	else
 	{

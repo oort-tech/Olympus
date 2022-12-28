@@ -141,7 +141,6 @@ namespace mcp
 		if(ret != ImportResult::Success)
 		{
 			LOG(m_log.info) << "[importLocal] fail with ret = " << (uint32_t)ret;
-			assert_x(false); ///todo delete
 			return;
 		}
 	}
