@@ -16,6 +16,7 @@ https://camo.githubusercontent.com/915b7be44ada53c290eb157634330494ebe3e30a/6874
 Prerequisite:
 * g++ version >= 5. Use command `g++ -v` to check current version.
 * Install `git`, `cmake`, `wget` and `unzip`.
+* cmake version >= 3.24.2
   ```
   apt-get install -y git cmake wget unzip
 * Install ```boost```.
