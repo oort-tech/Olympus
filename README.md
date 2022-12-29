@@ -18,7 +18,7 @@ Prerequisite:
 * Install `git`, `cmake`, `wget` and `unzip`.
 * cmake version >= 3.24.2. Use command `cmake --version`
   ```
-  apt-get install -y git cmake wget unzip
+  apt-get install -y build-essential git cmake wget unzip
 * Install ```boost```.
   ```
   wget https://boostorg.jfrog.io/artifactory/main/release/1.66.0/source/boost_1_66_0.tar.gz
