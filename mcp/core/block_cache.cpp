@@ -2,19 +2,19 @@
 
 mcp::block_cache::block_cache(mcp::block_store &store_a) :
 	m_store(store_a),
-	m_blocks(1000),
-	m_block_states(1000),
-	m_latest_account_states(50000),
+	m_blocks(500),
+	m_block_states(500),
+	m_latest_account_states(10000),
 	m_transactions(50000),
-	m_account_nonces(30000),
-	m_transaction_address(50000),
-	m_successors(1000),
-	m_block_summarys(1000),
+	m_account_nonces(10000),
+	m_transaction_address(10000),
+	m_successors(300),
+	m_block_summarys(500),
 	m_block_numbers(1000),
 	m_number_blocks(1000),
-	m_transaction_receipts(50000),
-	m_approves(1000),
-	m_approve_receipts(1000),
+	m_transaction_receipts(10000),
+	m_approves(500),
+	m_approve_receipts(500),
 	m_epoch_param(10)
 {
 }
