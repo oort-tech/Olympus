@@ -1511,7 +1511,6 @@ void mcp::node_sync::process_hash_tree(p2p::node_id const &id, mcp::hash_tree_re
                 if (m_request_info.index <= 1)//last
                 {
                     clear_catchup_info(false);
-                    LOG(log_sync.info) << "sync success1";
                     return;
                 }
 
@@ -1584,20 +1583,6 @@ void mcp::node_sync::process_hash_tree(p2p::node_id const &id, mcp::hash_tree_re
 	}
 }
 
-// Delete the first element of catchup_chain_summaries
-void mcp::node_sync::del_catchup_indexs()
-{
-	if (!m_request_info.catchup_del_index.empty())
-	{
-		std::map<uint64_t, uint64_t> del_indexs;
-		std::swap(del_indexs, m_request_info.catchup_del_index);
-
-		m_async_task->sync_async([this, del_indexs]() {
-			del_catchup_index(del_indexs);
-		});
-	}
-}
-
 void mcp::node_sync::del_catchup_index(uint64_t index)
 {
     std::shared_ptr<rocksdb::WriteOptions> write_option(mcp::db::database::default_write_options());
@@ -1628,63 +1613,6 @@ void mcp::node_sync::del_catchup_index(uint64_t index)
     }
 }
 
-void mcp::node_sync::del_catchup_index(std::map<uint64_t, uint64_t> const& map_a)
-{
-	uint64_t version = 0;
-	{
-		std::lock_guard<std::mutex> lock(m_request_info.version_mutex);
-		version = m_request_info.version;
-	}
-
-	std::lock_guard<std::mutex> lock(m_del_catchup_mutex);
-	uint64_t min_index = 0;
-	auto it = map_a.begin();
-	while (it != map_a.end())
-	{
-		if (it->second == version)
-		{
-			min_index = it->first;
-			break;
-		}
-		else
-			it++;
-	}
-
-	if (min_index == 0 || min_index >= m_request_info.current_del_catchup || m_request_info.current_del_catchup < 1)
-		return;
-
-	while (true)
-	{
-		uint64_t index = m_request_info.current_del_catchup - 1;
-		if (index >= min_index)
-		{
-			m_request_info.current_del_catchup = index;
-
-			if (index <= 1)//last
-			{
-				clear_catchup_info(false);
-				LOG(log_sync.info) << "sync success2";
-				return;
-			}
-
-            del_catchup_index(index);
-		}
-		else
-			break;
-	}
-}
-
-void mcp::node_sync::deal_exist_catchup_index(mcp::block_hash const& hash_a)
-{
-	std::lock_guard<std::mutex> lock(m_request_info.version_mutex);
-	if (m_request_info.to_summary_index.count(hash_a))
-	{
-        LOG(log_sync.debug) << "catchup_del_index hash:" << hash_a.hex() << ",index:" << std::to_string(m_request_info.to_summary_index[hash_a]);
-
-		m_request_info.catchup_del_index.insert(std::make_pair(m_request_info.to_summary_index[hash_a], m_request_info.version));
-		m_request_info.to_summary_index.erase(hash_a);
-	}
-}
 
 void mcp::node_sync::clear_catchup_info(bool lock)
 {
@@ -1706,6 +1634,7 @@ void mcp::node_sync::clear_catchup_info(bool lock)
 			{
 				m_store.catchup_index_del(transaction);
 				m_store.catchup_max_index_del(transaction);
+				m_store.hash_tree_summary_clear(write_option);
 
 				LOG(log_sync.info) << "clear all sync table";
 			}
@@ -1875,46 +1804,6 @@ void mcp::node_sync::add_hash_tree_summary(mcp::timeout_db_transaction & tx_a, m
 	mcp::db::db_transaction & transaction(tx_a.get_transaction());
 	m_store.hash_tree_summary_put(transaction, summary_a);
 	tx_a.commit_if_timeout();
-}
-
-void mcp::node_sync::del_hash_tree_summaries()
-{
-	if (!m_to_del_hash_tree_summaries.empty())
-	{
-		std::list<mcp::summary_hash> to_del_summaries;
-		std::swap(to_del_summaries, m_to_del_hash_tree_summaries);
-		m_async_task->sync_async([this, to_del_summaries]() {
-			del_hash_tree_summary(to_del_summaries);
-		});
-	}
-}
-
-void mcp::node_sync::put_hash_tree_summaries(mcp::summary_hash const& hash)
-{
-	m_to_del_hash_tree_summaries.push_back(hash);
-}
-
-void mcp::node_sync::del_hash_tree_summary(std::list<mcp::summary_hash> const & summaries_a)
-{
-	std::shared_ptr<rocksdb::WriteOptions> w_option(mcp::db::database::default_write_options());
-	w_option->disableWAL = true;
-	uint32_t tx_timeout = 500;//ms
-	mcp::timeout_db_transaction tx(m_store, tx_timeout, w_option);
-	try
-	{
-		for (mcp::summary_hash const & summary : summaries_a)
-		{
-			m_store.hash_tree_summary_del(tx.get_transaction(), summary);
-			tx.commit_if_timeout();
-		}
-		tx.commit();
-	}
-	catch (std::exception const & e)
-	{
-		LOG(log_sync.error) << "del summary fail, " << e.what();
-		tx.rollback();
-		throw;
-	}
 }
 
 void mcp::node_sync::purge_handled_summaries_from_hash_tree()
@@ -2250,7 +2139,7 @@ std::string mcp::node_sync::get_sync_info()
 	str = str + ", catchup_del_index:" + std::to_string(m_request_info.catchup_del_index.size());
 	str = str + ", catchup to summary size:" + std::to_string(m_request_info.to_summary_index.size());
 	str = str + ", m_joint_request_pending size:" + std::to_string(m_joint_request_pending.size());
-	str = str + ", del_hash_tree_summaries size:" + std::to_string(m_to_del_hash_tree_summaries.size());
+	//str = str + ", del_hash_tree_summaries size:" + std::to_string(m_to_del_hash_tree_summaries.size());
 	return str;
 }
 

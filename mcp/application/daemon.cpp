@@ -782,9 +782,6 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 		///sync
 		std::shared_ptr<mcp::node_sync> sync(std::make_shared<mcp::node_sync>(capability, chain_store, chain, cache, TQ, AQ, sync_async, bg_io_service));
 		capability->set_sync(sync);
-		chain->set_complete_store_notice_func(
-			std::bind(&mcp::node_sync::put_hash_tree_summaries, sync, std::placeholders::_1)
-		);
 
 		/// block processor
 		std::shared_ptr<mcp::block_processor> processor(std::make_shared<mcp::block_processor>(error, chain_store, cache, chain, sync, capability, validation, sync_async, TQ, AQ, bg_io_service, alarm));

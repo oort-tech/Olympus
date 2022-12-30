@@ -899,12 +899,11 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 						}
 						std::shared_ptr<dev::ApproveReceipt> preceipt = std::make_shared<dev::ApproveReceipt>(ap->sender(), ap->outputs());
 						cache_a->approve_receipt_put(transaction_a, approve_hash, preceipt);
-						//m_store.epoch_approve_receipts_put(transaction_a, mcp::epoch_approves_key(ap->epoch(), approve_hash));
 					
 						///the approve which is smaller than the current epoch, is not eligible for election.
 						///Bigger than the present is problematic
-						LOG(m_log.debug) << "[vrf_outputs] ap epoch:" << ap->epoch() <<",epoch:" << epoch(mci)
-							<< ",address:" << preceipt->from().hexPrefixed();
+						//LOG(m_log.debug) << "[vrf_outputs] ap epoch:" << ap->epoch() <<",epoch:" << epoch(mci)
+						//	<< ",address:" << preceipt->from().hexPrefixed();
 						if (ap->epoch() == epoch(mci))
 						{
 							vrf_outputs[ap->epoch()].insert(std::make_pair(ap->outputs(), *preceipt));
@@ -926,12 +925,9 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 			{
 				h256 receiptsRoot = dev::orderedTrieRoot(receipts);
 				//mcp::stopwatch_guard sw("advance_stable_mci2_2");
-				//m_last_stable_index_internal++;
 				set_block_stable(timeout_tx_a, cache_a, dag_stable_block_hash, mci, mc_timestamp, mc_last_summary_mci, stable_timestamp, m_last_stable_index_internal, receiptsRoot);
 			}
 		}
-
-		//LOG(m_log.debug) << "Mci: " << mci << ", stable_index: " << stable_index;
 	}
 }
 
@@ -1066,8 +1062,6 @@ void mcp::chain::set_block_stable(mcp::timeout_db_transaction & timeout_tx_a, st
 
 #pragma endregion
 
-			//add hash tree summary to delete list
-			m_complete_store_notice(summary_hash);
 		}
 
 		//m_stable_blocks.push(stable_block);

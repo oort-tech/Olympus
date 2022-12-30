@@ -77,10 +77,6 @@ namespace mcp
 		//{
 		//	m_stable_mci_observer.push_back(stable_mci_observer_a);
 		//}
-		void set_complete_store_notice_func(std::function<void(mcp::block_hash)> func_a)
-		{
-			m_complete_store_notice = func_a;
-		}
 		/// Register a handler that will be called once mci stabled
 		void onMciStable(std::function<void(uint64_t const&)> const& _t) { m_onMciStable.add(_t); }
 
@@ -114,9 +110,6 @@ namespace mcp
 		//std::queue<std::shared_ptr<mcp::block>> m_stable_blocks;
 		//std::list<std::function<void(uint64_t const&)> > m_stable_mci_observer;
 		//std::queue<uint64_t> m_stable_mcis;
-
-		//completed write to store notice sync,if need
-		std::function<void(mcp::block_hash)> m_complete_store_notice;
 
 		bool m_stopped;
 		uint64_t m_last_mci = 0;

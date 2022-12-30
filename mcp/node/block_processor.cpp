@@ -376,8 +376,6 @@ void mcp::block_processor::add_to_process(std::shared_ptr<mcp::block_processor_i
 	if (!item_a->is_sync() && item_a->joint.summary_hash != mcp::summary_hash(0))
 	{
 		assert_x(!item_a->is_local());
-		LOG(m_log.debug) << "[add_to_process]Start sync:" << item_a->joint.block->hash().hexPrefixed();
-
 		//start sync;
 		mcp::p2p::node_id id(item_a->remote_node_id());
 		m_async_task->sync_async([this, id]() {
@@ -929,8 +927,6 @@ void mcp::block_processor::after_db_commit_event()
 		local_promise->set_value(mcp::validate_status(true, ""));
 		m_ok_local_promises.pop_front();
 	}
-
-	m_sync->del_hash_tree_summaries();
 
 	//m_chain->notify_observers();
 }
