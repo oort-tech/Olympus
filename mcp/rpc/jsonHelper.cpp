@@ -212,7 +212,7 @@ namespace mcp
 			res["parentHash"] = _b.previous().hexPrefixed();
 			res["gasUsed"] = 0;
 			res["minGasPrice"] = 0;
-			res["gasLimit"] = toJS(mcp::block_max_gas);
+			res["gasLimit"] = toJS(mcp::tx_max_gas);
 			res["timestamp"] = toJS(_b.exec_timestamp());
 			res["transactions"] = mcp::json::array();
 			res["miner"] = _b.from().hexPrefixed();
@@ -238,7 +238,7 @@ namespace mcp
 			res["last_summary_block"] = _b.last_summary_block().hexPrefixed();
 			res["last_stable_block"] = _b.last_stable_block().hexPrefixed();
 			res["timestamp"] = _b.exec_timestamp();
-			res["gasLimit"] = toJS(mcp::block_max_gas);
+			res["gasLimit"] = toJS(mcp::tx_max_gas);
 			res["signature"] = ((Signature)_b.signature()).hexPrefixed();
 		}
 
