@@ -11,12 +11,13 @@ namespace mcp
 
 	ApproveQueue::ApproveQueue(
 		mcp::block_store& store_a, std::shared_ptr<mcp::block_cache> cache_a,
-		std::shared_ptr<mcp::async_task> async_task_a
+		std::shared_ptr<mcp::chain> chain_a, std::shared_ptr<mcp::async_task> async_task_a
 	):
 		m_store(store_a),
 		m_cache(cache_a),
+		m_chain(chain_a),
 		m_async_task(async_task_a),
-		m_dropped(1000)
+		m_dropped(300)
 	{
 		unsigned verifierThreads = std::max(thread::hardware_concurrency()/2, 3U) - 2U;
 		for (unsigned i = 0; i < verifierThreads; ++i)
@@ -115,7 +116,7 @@ namespace mcp
 			if (ir != ImportResult::Success)
 				return ir;
 
-			ir = validateApprove(*_approve);
+			ir = validateApprove(*_approve, _in);
 			if (ir != ImportResult::Success)
 				return ir;
 			{
@@ -277,10 +278,12 @@ namespace mcp
 		}
 	}
 
-	ImportResult ApproveQueue::validateApprove(approve const& _t){
+	ImportResult ApproveQueue::validateApprove(approve const& _t, source _in){
 		_t.checkChainId(mcp::chain_id);
 		_t.checkLowS();
 		
+		if (_t.epoch() < m_chain->last_stable_epoch() && _in == source::broadcast)
+			return ImportResult::EpochIsTooLow;
 		mcp::db::db_transaction transaction(m_store.create_transaction());
 		mcp::block_hash hash;
 		if(_t.epoch() <= 1){

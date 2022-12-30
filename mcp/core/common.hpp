@@ -544,7 +544,8 @@ namespace mcp
 		OverbidGasPrice,
 		BadProcol,
 		InvalidNonce,
-		EpochIsTooHigh
+		EpochIsTooHigh,
+		EpochIsTooLow
 	};
 	
 	using BlockNumber = uint64_t;

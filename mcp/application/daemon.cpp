@@ -766,8 +766,7 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 		/// transaction queue
 		std::shared_ptr<mcp::TransactionQueue> TQ(std::make_shared<mcp::TransactionQueue>(io_service, chain_store, cache, chain, sync_async));
 		/// approve queue
-		std::shared_ptr<mcp::ApproveQueue> AQ(std::make_shared<mcp::ApproveQueue>(chain_store, cache, sync_async));
-		chain->set_approve_queue(AQ);
+		std::shared_ptr<mcp::ApproveQueue> AQ(std::make_shared<mcp::ApproveQueue>(chain_store, cache, chain, sync_async));
 
 		///validation
 		std::shared_ptr<mcp::validation> validation(std::make_shared<mcp::validation>(chain_store, cache, TQ, AQ));

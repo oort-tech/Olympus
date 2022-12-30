@@ -17,7 +17,7 @@ namespace mcp
 	public:
 		ApproveQueue(
 			mcp::block_store& store_a, std::shared_ptr<mcp::block_cache> cache_a,
-			std::shared_ptr<mcp::async_task> async_task_a
+			std::shared_ptr<mcp::chain> chain_a, std::shared_ptr<mcp::async_task> async_task_a
 		);
 		~ApproveQueue();
 
@@ -100,7 +100,7 @@ namespace mcp
 
 		void verifierBody();
 
-		ImportResult validateApprove(approve const& _t);
+		ImportResult validateApprove(approve const& _t, source _in);
 
 		mutable SharedMutex m_lock;  ///< General lock.
 		h256Hash m_known;            ///< Headers of transactions in both sets.
@@ -125,6 +125,7 @@ namespace mcp
 		mcp::block_store & m_store;
 		std::shared_ptr<mcp::iblock_cache> m_cache;
 		std::shared_ptr<mcp::async_task> m_async_task;
+		std::shared_ptr<mcp::chain> m_chain;
 		std::shared_ptr<mcp::node_capability> m_capability;
 
 		mcp::log m_log = { mcp::log("node") };

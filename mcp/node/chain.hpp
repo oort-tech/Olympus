@@ -81,7 +81,7 @@ namespace mcp
 		void onMciStable(std::function<void(uint64_t const&)> const& _t) { m_onMciStable.add(_t); }
 
 		Epoch last_epoch();
-		void set_approve_queue(std::shared_ptr<mcp::ApproveQueue> aq_a) { m_aq = aq_a; }
+		Epoch last_stable_epoch();
 
 		std::string vrf_outputs_size() ///todo deleted
 		{ 
@@ -127,7 +127,6 @@ namespace mcp
 		std::unordered_map<Address, dev::eth::PrecompiledContract> m_precompiled;
 
 		std::map<Epoch, std::map<h256, dev::ApproveReceipt>> vrf_outputs;
-		std::shared_ptr<mcp::ApproveQueue> m_aq;
 		Signal<uint64_t const&> m_onMciStable; ///<  Called when a subsequent call to import transactions and ready.
 
         mcp::log m_log = { mcp::log("node") };

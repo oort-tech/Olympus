@@ -1151,6 +1151,11 @@ uint64_t mcp::chain::last_stable_index()
 
 mcp::Epoch mcp::chain::last_epoch()
 {
+	return mcp::epoch(m_last_mci);
+}
+
+mcp::Epoch mcp::chain::last_stable_epoch()
+{
 	return mcp::epoch(m_last_stable_mci);
 }
 
