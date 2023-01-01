@@ -96,7 +96,7 @@ mcp::db::database::~database()
 		delete handle;
 	}
 
-	if (nullptr != m_db)
+	if (m_db != nullptr)
 		delete m_db;
 }
 
@@ -106,6 +106,7 @@ bool mcp::db::database::open()
 	if (status.ok())
 	{
 		//m_column->preserve_index();
+		LOG(m_log.debug) << "RocksDB Version: " + rocksdb::GetRocksVersionAsString();
 	}
 	else
 	{
@@ -265,7 +266,7 @@ bool mcp::db::database::exists(int const& _index, dev::Slice const & _k,
 	std::shared_ptr<rocksdb::ReadOptions> read_ops_a)
 {
 	std::shared_ptr<rocksdb::ReadOptions> read_ops(read_ops_a);
-	if (nullptr == read_ops)
+	if (read_ops == nullptr)
 		read_ops = m_read_options;
 
 	std::shared_ptr<mcp::db::index_info> info = std::make_shared<mcp::db::index_info>();
@@ -446,7 +447,7 @@ std::string mcp::db::database::get_rocksdb_state(uint64_t limit)
 	size_t block_pinned_usage = table_cache->GetPinnedUsage();
 
 	std::string str = "";
-	str = "Rocksdb chche: block cache usage:" + std::to_string(block_cache_usage)
+	str = "Rocksdb cache: block cache usage:" + std::to_string(block_cache_usage)
 		+ " , block_pinned_usage:" + std::to_string(block_pinned_usage) + " , ";
 
 	std::string size = "";
