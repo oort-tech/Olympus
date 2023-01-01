@@ -61,22 +61,7 @@ namespace mcp
 			return m_precompiled.at(account_a).execute(in_a);
 		}
 
-		//void notify_observers();
-
 		std::vector<uint64_t> cal_skip_list_mcis(uint64_t const &);
-
-		//void set_ws_new_block_func(std::function<void(std::shared_ptr<mcp::block>)> new_block_observer_a)
-		//{
-		//	m_new_block_observer.push_back(new_block_observer_a);
-		//}
-		//void set_ws_stable_block_func(std::function<void(std::shared_ptr<mcp::block>)> stable_block_observer_a)
-		//{
-		//	m_stable_block_observer.push_back(stable_block_observer_a);
-		//}
-		//void set_ws_stable_mci_func(std::function<void(uint64_t const&)> stable_mci_observer_a)
-		//{
-		//	m_stable_mci_observer.push_back(stable_mci_observer_a);
-		//}
 		void set_complete_store_notice_func(std::function<void(mcp::block_hash)> func_a)
 		{
 			m_complete_store_notice = func_a;
@@ -107,13 +92,6 @@ namespace mcp
 		void init_vrf_outputs(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a);
 		void init_witness(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a);
 		mcp::block_store m_store;
-		//std::list<std::function<void(std::shared_ptr<mcp::block>)> > m_new_block_observer;
-		//std::queue<std::shared_ptr<mcp::block>> m_new_blocks;
-		//std::list<std::function<void(std::shared_ptr<mcp::block>)> > m_stable_block_observer;
-		//std::queue<std::shared_ptr<mcp::block>> m_stable_blocks;
-		//std::list<std::function<void(uint64_t const&)> > m_stable_mci_observer;
-		//std::queue<uint64_t> m_stable_mcis;
-
 		//completed write to store notice sync,if need
 		std::function<void(mcp::block_hash)> m_complete_store_notice;
 
