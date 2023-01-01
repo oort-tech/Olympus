@@ -1503,7 +1503,7 @@ void mcp::rpc_handler::eth_call(mcp::json &j_response, bool &)
 
 	TransactionSkeleton ts = mcp::toTransactionSkeletonForEth(params[0]);
 	ts.gasPrice = 0;
-	ts.gas = mcp::block_max_gas;
+	ts.gas = mcp::tx_max_gas;
 	if (ts.nonce == Invalid256)
 		ts.nonce = m_wallet->getTransactionCount(ts.from);
 
