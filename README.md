@@ -63,7 +63,7 @@ Compile MCP
   ```
 * CMake configuration
   ```
-  cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo ../
+  cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_COMPILER=g++ ../
   ```
 * Compile
   ```
