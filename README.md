@@ -127,7 +127,7 @@ Prerequisite:
     ```
     cd c:\dependence
     ```
-    Downlood using `git clone https://github.com/facebook/rocksdb` and checkout tag 5.18.3
+    Downlood using `git clone https://github.com/facebook/rocksdb` and checkout tag 7.8.3
     
     Edit `rocksdb\thirdparty.inc`.
     ```
