@@ -91,7 +91,7 @@ The installation procedure is the same as Linux system. The only difference is t
 Note：1).Compilation of a few library will fail in Debug mode. Set the "treat warnings as errors" option to be false. 2). Run msbuild in the command line tools inside vs-tools, instead of in command shell.
 
 Prerequisite:
-  * Visual Studio version 2022 & C++17.
+  * Visual Studio 2022 & C++17.
   * Install `git` 、 `cmake`. Download these tools from official website, and install them to the same folder, say `C:\dependence`.
   * Install `boost`. Download Version 1.66.0 from https://www.boost.org/users/download/, and install in `C:\dependence`.
   * Install `libsodium`. Download from https://download.libsodium.org/libsodium/releases/libsodium-1.0.17-msvc.zip, and install in `C:\dependence`.
