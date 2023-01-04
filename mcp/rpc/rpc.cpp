@@ -2104,6 +2104,10 @@ void mcp::rpc_handler::eth_getLogs(mcp::json &j_response, bool &)
 				auto td = m_cache->transaction_address_get(transaction, th);
 				if (t == nullptr || tr == nullptr || td == nullptr)
 					continue;
+				if(td->blockHash != block_hash){
+					continue;
+				}
+				
 
 				auto lt = dev::eth::LocalisedTransactionReceipt(
 					*tr,
