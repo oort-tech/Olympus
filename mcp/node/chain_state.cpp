@@ -71,8 +71,8 @@ std::shared_ptr<mcp::account_state> mcp::chain_state::account(Address const& _ad
 	if (it != m_cache.end())
 	{
 		return it->second;
-	}        
-
+	}    
+    
     // If the account doesn't exist, return nullptr
     if (m_nonExistingAccountsCache.count(_addr))
         return nullptr;
@@ -205,6 +205,10 @@ void mcp::chain_state::rollback(size_t _savepoint)
 
 void mcp::chain_state::commit()
 {
+    if (ts.isCreation() || addressHasCode(ts.receiveAddress()))
+    {
+        save_previous_account_state();
+    }
     removeEmptyAccounts();
 	std::shared_ptr<mcp::process_block_cache> process_block_cache = std::dynamic_pointer_cast<mcp::process_block_cache>(block_cache);
     m_touched += mcp::commit(transaction, m_cache, &m_db, process_block_cache, store, ts.sha3());
@@ -222,6 +226,21 @@ void mcp::chain_state::removeEmptyAccounts()
     for (auto& i: m_cache)
         if (i.second->isDirty() && i.second->isEmpty())
             i.second->kill();
+}
+
+void mcp::chain_state::save_previous_account_state()
+{
+    std::vector<h256> hs;
+    for(auto& address : m_unchangedCacheEntries)
+    {
+        h256 hash;
+        bool exists = !store.latest_account_state_get(transaction, address, hash);
+        if (exists)
+        {
+            hs.emplace_back(hash);
+        }
+    }
+    store.transaction_previous_account_state_put(transaction, ts.sha3(), hs);
 }
 
 
@@ -286,6 +305,7 @@ AddressHash mcp::commit(mcp::db::db_transaction & transaction_a, mcp::AccountMap
             ret.insert(i.first);
         }
     }
+
     return ret;
 }
 
@@ -511,4 +531,17 @@ bigint mcp::chain_state::cost_of_precompiled(Address const& account_a, bytesCons
 std::pair<bool, bytes> mcp::chain_state::execute_precompiled(Address const& account_a, bytesConstRef in_a) const
 {
 	return chain->execute_precompiled(account_a, in_a);
+}
+
+void mcp::chain_state::set_defalut_account_state(std::vector<h256>& accout_state_hashs)
+{
+    for(auto hash : accout_state_hashs)
+    {
+        std::shared_ptr<mcp::account_state> acc_state(store.account_state_get(transaction, hash));
+        if (acc_state)
+        {
+            LOG(m_log.debug) << "[set_defalut_account_state] "<<toHexPrefixed(acc_state->account());
+            m_cache.insert(std::make_pair(acc_state->account(), acc_state));
+        }
+    }
 }

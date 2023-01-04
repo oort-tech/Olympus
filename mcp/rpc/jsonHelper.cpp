@@ -168,6 +168,25 @@ namespace mcp
 		return res;
 	}
 
+	mcp::json toJson(mcp::localised_log_entry const& _e)
+	{
+			mcp::json res;
+			if (_e.isSpecial)
+				res = toJS(_e.special);
+			else
+			{
+				res = toJson(static_cast<mcp::log_entry const&>(_e));
+				res["type"] = "mined";
+				res["blockNumber"] = toJS(_e.blockNumber);
+				res["blockHash"] = _e.blockHash.hexPrefixed();
+				res["logIndex"] = _e.logIndex;
+				res["transactionHash"] = _e.transactionHash.hexPrefixed();
+				res["transactionIndex"] = toJS(_e.transactionIndex);
+			}
+			
+		return res;
+	}
+
 	mcp::json toJson(mcp::log_entry const& _e)
 	{
 		mcp::json res;
@@ -188,13 +207,12 @@ namespace mcp
 		if (is_eth) {
 			res["number"] = nullptr;
 			res["nonce"] = nullptr;
-			res["difficulty"] = "0x0";
 			res["extraData"] = "0x00";
 			res["hash"] = _b.hash().hexPrefixed();
 			res["parentHash"] = _b.previous().hexPrefixed();
 			res["gasUsed"] = 0;
 			res["minGasPrice"] = 0;
-			res["gasLimit"] = toJS(mcp::block_max_gas);
+			res["gasLimit"] = toJS(mcp::tx_max_gas);
 			res["timestamp"] = toJS(_b.exec_timestamp());
 			res["transactions"] = mcp::json::array();
 			res["miner"] = _b.from().hexPrefixed();
@@ -220,7 +238,7 @@ namespace mcp
 			res["last_summary_block"] = _b.last_summary_block().hexPrefixed();
 			res["last_stable_block"] = _b.last_stable_block().hexPrefixed();
 			res["timestamp"] = _b.exec_timestamp();
-			res["gasLimit"] = toJS(mcp::block_max_gas);
+			res["gasLimit"] = toJS(mcp::tx_max_gas);
 			res["signature"] = ((Signature)_b.signature()).hexPrefixed();
 		}
 

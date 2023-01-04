@@ -1,6 +1,7 @@
 #pragma once
 
 #include <libdevcore/Exceptions.h>
+#include <mcp/common/Exceptions.h>
 
 namespace mcp
 {
@@ -207,6 +208,9 @@ namespace mcp
 		}
 		else if (instanceof<dev::UnknownAccount>(&e)) {
 			RPC_Error_Eth_InvalidAccount().toJson(j_response);
+		}
+		else if (instanceof<dev::eth::ExtraDataTooBig>(&e)) {
+			RPC_Error_Eth_DataTooLarge().toJson(j_response);
 		}
 		else {
 			RPC_Error_Eth_InvalidParams().toJson(j_response);

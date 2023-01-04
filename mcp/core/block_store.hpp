@@ -172,6 +172,9 @@ namespace mcp
 		void version_put(mcp::db::db_transaction &, int);
 		int version_get();
 
+		bool transaction_previous_account_state_get(mcp::db::db_transaction & transaction_a, dev::h256 const & link_a, std::vector<h256> & hashs_a);
+		void transaction_previous_account_state_put(mcp::db::db_transaction & transaction_a, dev::h256 const & link_a, std::vector<h256> & hashs_a);
+
 		mcp::db::db_transaction create_transaction(std::shared_ptr<rocksdb::WriteOptions> write_options_a = nullptr,
 			std::shared_ptr<rocksdb::TransactionOptions> txn_ops_a = nullptr)
 		{
@@ -255,6 +258,8 @@ namespace mcp
 
 		int epoch_approves;
 		int epoch_param;
+
+		int transaction_account_state;
 
 		//genesis hash key
 		static dev::h256 const genesis_hash_key;

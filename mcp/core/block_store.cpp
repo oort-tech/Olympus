@@ -1127,6 +1127,34 @@ void mcp::block_store::epoch_param_put(mcp::db::db_transaction & transaction_a, 
 	transaction_a.put(epoch_param, mcp::h64_to_slice(h64(epoch)), s_value);
 }
 
+bool mcp::block_store::transaction_previous_account_state_get(mcp::db::db_transaction & transaction_a, dev::h256 const & link_a, std::vector<h256> & hashs_a)
+{
+	std::string value;
+	bool exists(transaction_a.get(transaction_account_state, mcp::h256_to_slice(link_a), value));
+	if (exists)
+	{
+		dev::RLP r(value);
+		assert_x(r.isList());
+		for (auto sk : r)
+			hashs_a.emplace_back((h256) sk);
+	}
+	return exists;
+}
+
+void mcp::block_store::transaction_previous_account_state_put(mcp::db::db_transaction & transaction_a, dev::h256 const & link_a, std::vector<h256> & hashs_a)
+{
+	dev::bytes b_value;
+    dev::RLPStream s;
+    s.appendList(hashs_a.size());
+    for (h256 sk : hashs_a)
+        s << sk;
+	s.swapOut(b_value);
+	
+	dev::Slice s_value((char *)b_value.data(), b_value.size());
+	transaction_a.put(transaction_account_state, mcp::h256_to_slice(link_a), s_value);
+}
+
+
 dev::h256 const mcp::block_store::version_key(0);
 dev::h256 const mcp::block_store::genesis_hash_key(1);
 dev::h256 const mcp::block_store::genesis_transaction_hash_key(2);

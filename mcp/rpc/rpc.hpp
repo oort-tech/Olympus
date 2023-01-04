@@ -107,7 +107,6 @@ public:
 	void nodes(mcp::json & j_response, bool & async);
 	void witness_list(mcp::json & j_response, bool & async);
 
-	void debug_trace_transaction(mcp::json & j_response, bool & async);
 	void debug_storage_range_at(mcp::json & j_response, bool & async);
 
 	void get_eth_signed_msg(dev::bytes & data, dev::h256 & hash);
@@ -147,6 +146,7 @@ public:
 	void eth_accounts(mcp::json & j_response, bool & async);
 	void eth_sign(mcp::json & j_response, bool & async);
 	void eth_signTransaction(mcp::json & j_response, bool & async);
+	void debug_traceTransaction(mcp::json & j_response, bool & async);
 	// related to personal
 	void personal_importRawKey(mcp::json & j_response, bool & async);
 	void personal_listAccounts(mcp::json & j_response, bool & async);
