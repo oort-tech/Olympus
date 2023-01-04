@@ -821,6 +821,7 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 							<< ", from: " << dev::toJS(_t->sender())
 							<< ", to: " << dev::toJS(_t->to())
 							<< ", value: " << _t->value();
+						cache_a->account_nonce_put(transaction_a, _t->sender(), _t->nonce()-1);
 						invalid = true;
 					}
 					catch (dev::eth::InvalidNonce const& _e)

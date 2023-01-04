@@ -83,16 +83,6 @@ namespace mcp
 		Epoch last_epoch();
 		Epoch last_stable_epoch();
 
-		std::string vrf_outputs_size() ///todo deleted
-		{ 
-			std::string str = "";
-			for (auto it : vrf_outputs)
-			{
-				str += "[" + std::to_string(it.first) + ":" + std::to_string(it.second.size()) + "]";
-			}
-			return str;
-		}
-
 	private:
 		void write_dag_block(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a, std::shared_ptr<mcp::block> block_a);
 		void find_main_chain_changes(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a, std::shared_ptr<mcp::block> block_a, mcp::block_hash const & best_free_block_hash, bool & is_mci_retreat, uint64_t & retreat_mci, uint64_t &retreat_level, std::list<mcp::block_hash>& new_mc_block_hashs);

@@ -951,7 +951,6 @@ void mcp_daemon::ongoing_report(
 		<< ", dag free:" << dag_free_count
 		<< ", last_stable_mci:" << last_stable_mci
 		<< ", last_mci:" << last_mci;
-	LOG(log.info) << "vrf_outputs_size:" << chain->vrf_outputs_size();
 
 	LOG(log.info) << "TQ:" << tq->getInfo();
 	LOG(log.info) << "AQ:" << aq->getInfo();
