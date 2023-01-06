@@ -32,17 +32,6 @@ public:
     bool rpc_enable;
 };
 
-enum class payment_status
-{
-	not_a_status,
-	unknown,
-	nothing, // Timeout and nothing was received
-	//insufficient, // Timeout and not enough was received
-	//over, // More than requested received
-	//success_fork, // Amount received but it involved a fork
-	success // Amount received
-};
-
 class rpc
 {
 public:
@@ -168,8 +157,7 @@ public:
 	void personal_sign(mcp::json & j_response, bool & async);
 	void personal_ecRecover(mcp::json & j_response, bool & async);
 	void epoch_approves(mcp::json &j_response, bool &);
-	void epoch_approve_receipts(mcp::json &j_response, bool &);
-	void epoch_elected_approve_receipts(mcp::json &j_response, bool &);
+	void approve_receipt(mcp::json &j_response, bool &);
 
 	std::string body;
 	mcp::rpc & rpc;

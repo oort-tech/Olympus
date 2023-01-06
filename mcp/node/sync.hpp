@@ -113,12 +113,6 @@ namespace mcp
 		void approve_request_handler(p2p::node_id const &, mcp::approve_request_message const &);
 		void send_peer_info_request(p2p::node_id id);
 		void send_peer_info(p2p::node_id const &, mcp::peer_info_message const &);
-
-		void del_hash_tree_summaries();
-		void put_hash_tree_summaries(mcp::summary_hash const& hash);
-
-		void del_catchup_indexs();
-		void deal_exist_catchup_index(mcp::block_hash const& hash_a);
 		
 		void stop();
 
@@ -157,11 +151,7 @@ namespace mcp
 		void send_approve_request(p2p::node_id const &, mcp::approve_request_message const &);
 
 		void clear_catchup_info(bool lock = true);
-		void del_catchup_index(std::map<uint64_t, uint64_t> const& map_a);
         void del_catchup_index(uint64_t index);
-
-		void del_hash_tree_summary(std::list<mcp::summary_hash> const & summaries_a);
-		std::list<mcp::summary_hash> m_to_del_hash_tree_summaries;
 
 		std::shared_ptr<mcp::node_capability> m_capability;
 		mcp::block_store & m_store;

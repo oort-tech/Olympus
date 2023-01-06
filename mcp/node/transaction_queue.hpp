@@ -32,10 +32,10 @@ namespace mcp
 		~TransactionQueue();
 
 		/// Add transaction to the queue to be verified and imported.
-		/// @param _data RLP encoded transaction data.
+		/// @param _t transaction ptr.
 		/// @param _nodeId Optional network identified of a node transaction comes from.
 		/// @param _in Optional network identified of a node transaction comes from type.
-		void enqueue(std::shared_ptr<Transaction>, p2p::node_id const& _nodeId, source _in);
+		void enqueue(std::shared_ptr<Transaction>, p2p::node_id const&, source);
 
 		void set_capability(std::shared_ptr<mcp::node_capability> capability_a) { m_capability = capability_a; }
 

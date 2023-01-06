@@ -8,9 +8,9 @@
 #include <vector>
 
 
-mcp::approve::approve(ApproveSkeleton const& ts, Secret const& s) :
-	m_epoch(ts.epoch),
-	m_proof(ts.proof),
+mcp::approve::approve(Epoch const & _epoch, h648 const & _proof, Secret const& s) :
+	m_epoch(_epoch),
+	m_proof(_proof),
 	m_chainId(mcp::chain_id)
 {
 	if (s)
@@ -28,7 +28,7 @@ mcp::approve::approve(dev::RLP const & rlp, CheckTransaction _checkSig)
 			BOOST_THROW_EXCEPTION(InvalidTransactionFormat() << errinfo_comment("too many or to low fields in the transaction RLP"));
 
         m_epoch = rlp[0].toInt<uint64_t>();
-        m_proof = rlp[1].toBytes();
+        m_proof = (h648)rlp[1];
 
 		u256 const v = rlp[2].toInt<u256>();
 		h256 const r = rlp[3].toInt<u256>();
@@ -48,6 +48,10 @@ mcp::approve::approve(dev::RLP const & rlp, CheckTransaction _checkSig)
         auto const recoveryID = byte(v - (u256(m_chainId) *2 + 35));
         m_vrs = SignatureStruct{ r, s, recoveryID };
 
+		///check signature valid if broadcast
+		if (_checkSig >= CheckTransaction::Cheap && !m_vrs.isValid())
+			BOOST_THROW_EXCEPTION(InvalidSignature());
+
         if (_checkSig == CheckTransaction::Everything)
 			m_sender = sender();
 	}
@@ -62,16 +66,11 @@ Address const& mcp::approve::sender() const
 {
 	if (!m_sender.is_initialized())
 	{
-		//if (hasZeroSignature())
-		//	m_sender = MaxAddress;
-		//else
-		//{
-
-			auto p = recover(m_vrs, sha3(WithoutSignature));
-			if (!p)
-				BOOST_THROW_EXCEPTION(InvalidSignature());
-			m_sender = right160(dev::sha3(bytesConstRef(p.data(), sizeof(p))));
-		//}
+		auto p = recover(m_vrs, sha3(WithoutSignature));
+		if (!p)
+			BOOST_THROW_EXCEPTION(InvalidSignature());
+		m_sender = right160(dev::sha3(bytesConstRef(p.data(), sizeof(p))));
+		m_publicCompressed = dev::toPublicCompressed(p);
 	}
 	return *m_sender;
 }
@@ -97,24 +96,13 @@ void mcp::approve::sign(Secret const& priv)
 		BOOST_THROW_EXCEPTION(InvalidSignature() << errinfo_comment("signatue invalid"));
 }
 
-secp256k1_pubkey mcp::approve::getPublicKey() const
-{
-	auto p = toPubkey(m_vrs, sha3(WithoutSignature));
-	return p;
-}
-
 void mcp::approve::streamRLP(RLPStream& s, IncludeSignature sig) const
 {
 	s.appendList(5);
     s << m_epoch << m_proof;
     if (sig == IncludeSignature::WithSignature) //rlp for p2p and storage
 	{
-		//if (hasZeroSignature())
-		//	s << *m_chainId;
-		//else
-			s << rawV();
-
-		s << (u256)m_vrs.r << (u256)m_vrs.s;
+		s << rawV() << (u256)m_vrs.r << (u256)m_vrs.s;
 	}
 	else  ///rlp for hash and verify sinature
 		s << m_chainId << 0 << 0;
@@ -157,51 +145,14 @@ h256 mcp::approve::sha3(IncludeSignature _sig) const
 	return ret;
 }
 
-int mcp::approve::vrf_verify(std::vector<uint8_t>& output, std::string msg) const
+void mcp::approve::vrf_verify(mcp::block_hash const& msg) const
 {
-	auto* ctx = mcp::encry::get_secp256k1_ctx();
-	secp256k1_pubkey rawPubkey = getPublicKey();
-	std::array<byte, 65> serializedPubkey;
-	auto serializedPubkeySize = serializedPubkey.size();
-	output.resize(32, 0);
-	secp256k1_ec_pubkey_serialize(
-		ctx,
-		serializedPubkey.data(),
-		&serializedPubkeySize,
-		&rawPubkey,
-		SECP256K1_EC_COMPRESSED
-	);
-
-	if(secp256k1_vrf_verify(output.data(), m_proof.data(), serializedPubkey.data(), msg.data(), msg.size()) == 1){
-		//LOG(g_log.debug) << "[vrf_verify] secp256k1_vrf_verify ok";
-	}
-	else{
+	sender();
+	if(!dev::verify(m_outputs, m_proof, m_publicCompressed, msg))
+	{
 		//LOG(g_log.debug) << "[vrf_verify] secp256k1_vrf_verify fail ";
-		BOOST_THROW_EXCEPTION(ZeroSignatureTransaction());
+		BOOST_THROW_EXCEPTION(InvalidSignature());
 	}
+	//LOG(g_log.debug) << "[vrf_verify] secp256k1_vrf_verify ok";
 }
 
-uint64_t mcp::approve::calc_curr_epoch(uint64_t last_summary_mci)
-{
-	if(last_summary_mci < 2 * mcp::epoch_period) return 0;
-	
-	return last_summary_mci / mcp::epoch_period - 1;
-}
-
-uint64_t mcp::approve::calc_elect_epoch(uint64_t last_summary_mci)
-{
-	return last_summary_mci / mcp::epoch_period + 1;
-}
-
-void mcp::approve::show() const
-{
-    LOG(g_log.info) << "[approve show] sender="<<sender().hex();
-    LOG(g_log.info) << "m_epoch="<<m_epoch;
-    LOG(g_log.info) << "m_proof="<<dev::toHex(m_proof);
-	LOG(g_log.info) << "m_vrs r=" << m_vrs.r.hex() << " s=" << m_vrs.s.hex() << " v=" << (uint32_t)m_vrs.v;
-	LOG(g_log.info) << "m_chainId = " << m_chainId;
-    LOG(g_log.info) << "m_hashWith="<<m_hashWith.hex();
-	LOG(g_log.info) << "sha3(WithoutSignature) = " << sha3(WithoutSignature).hex();
-	secp256k1_pubkey rawPubkey = getPublicKey();
-	LOG(g_log.info) << "rawPubkey = " << toHex(std::vector<unsigned char>(rawPubkey.data, rawPubkey.data+sizeof(rawPubkey.data)));
-}

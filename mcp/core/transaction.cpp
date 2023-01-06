@@ -62,14 +62,6 @@ mcp::Transaction::Transaction(dev::RLP const & rlp, CheckTransaction _checkSig)
 			m_chainId.is_initialized() ? byte(v - (u256(*m_chainId) * 2 + 35)) : byte(v - 27);
 		m_vrs = SignatureStruct{ r, s, recoveryID };
 
-		//mcp::log m_log = { mcp::log("node") };
-		//LOG(m_log.info) << "v:" << toHex(bytes(recoveryID));
-		//LOG(m_log.info) << "r:" << r.hex();
-		//LOG(m_log.info) << "s:" << s.hex();
-		//auto aa = *m_vrs;
-		//LOG(m_log.info) << "sig:" << ((Signature)aa).hex();
-		
-
 		if (_checkSig >= CheckTransaction::Cheap && !m_vrs->isValid())
 			BOOST_THROW_EXCEPTION(InvalidSignature());
 

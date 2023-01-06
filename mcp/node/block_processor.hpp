@@ -164,12 +164,17 @@ namespace mcp
 		std::deque<std::shared_ptr<mcp::block>> m_blocks_processing;
 
 		///transaction ready
-		std::mutex m_transaction_hashs_mutex;
-		std::condition_variable m_transaction_hashs_condition;
-		h256Hash m_transaction_hashs_pending;
-		h256Hash m_transaction_hashs_processing;
-		std::thread m_transaction_hashs_thread;
-		void process_ready_transaction();
+		enum hashType
+		{
+			Transaction = 0,
+			Approve = 1
+		};
+		std::mutex m_ready_hashs_mutex;
+		std::condition_variable m_ready_hashs_condition;
+		std::unordered_map<h256, hashType> m_ready_hashs_pending;
+		std::unordered_map<h256, hashType> m_ready_hashs_processing;
+		std::thread m_ready_hashs_thread;
+		void process_ready_func();
 
 		Signal<ImportResult, p2p::node_id const&> m_onImport;			///< Called for each import attempt. Arguments are result.
 

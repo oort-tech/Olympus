@@ -102,11 +102,11 @@ mcp::block_processor::block_processor(bool & error_a,
 		return;
 
 	m_tq->onReady([this](h256 const& _h) { onTransactionReady(_h); });
-	m_aq->onImportProcessed([this](h256 const& _h) { onApproveImported(_h); });
+	m_aq->onReady([this](h256 const& _h) { onApproveImported(_h); });
 
 	m_mt_process_block_thread = std::thread([this]() { this->mt_process_blocks(); });
 	m_process_block_thread = std::thread([this]() { this->process_blocks(); });
-	m_transaction_hashs_thread = std::thread([this]() { this->process_ready_transaction(); });
+	m_ready_hashs_thread = std::thread([this]() { this->process_ready_func(); });
 
 	ongoing_retry_late_message();
 }
@@ -135,16 +135,16 @@ void mcp::block_processor::stop()
 	}
 
 	{
-		std::lock_guard<std::mutex> lock(m_transaction_hashs_mutex);
-		m_transaction_hashs_condition.notify_all();
+		std::lock_guard<std::mutex> lock(m_ready_hashs_mutex);
+		m_ready_hashs_condition.notify_all();
 	}
 
 	if (m_mt_process_block_thread.joinable())
 		m_mt_process_block_thread.join();
 	if (m_process_block_thread.joinable())
 		m_process_block_thread.join();
-	if (m_transaction_hashs_thread.joinable())
-		m_transaction_hashs_thread.join();
+	if (m_ready_hashs_thread.joinable())
+		m_ready_hashs_thread.join();
 }
 
 bool mcp::block_processor::is_full()
@@ -376,8 +376,6 @@ void mcp::block_processor::add_to_process(std::shared_ptr<mcp::block_processor_i
 	if (!item_a->is_sync() && item_a->joint.summary_hash != mcp::summary_hash(0))
 	{
 		assert_x(!item_a->is_local());
-		LOG(m_log.debug) << "[add_to_process]Start sync:" << item_a->joint.block->hash().hexPrefixed();
-
 		//start sync;
 		mcp::p2p::node_id id(item_a->remote_node_id());
 		m_async_task->sync_async([this, id]() {
@@ -682,11 +680,6 @@ void mcp::block_processor::do_process_dag_item(mcp::timeout_db_transaction & tim
 	std::shared_ptr<mcp::block> block(item_a->joint.block);
 	mcp::db::db_transaction & transaction(timeout_tx.get_transaction());
 
-	std::shared_ptr<mcp::block_state> last_summary_block = m_local_cache->block_state_get(transaction, block->last_summary_block());
-	assert_x(last_summary_block);
-	uint64_t elect_epoch = mcp::approve::calc_elect_epoch(*last_summary_block->main_chain_index);
-	m_chain->set_last_summary_mci(transaction, *last_summary_block->main_chain_index);
-
 	mcp::block_hash const & block_hash(block->hash());
 	for (auto const & link_hash : block->links())
 	{
@@ -702,7 +695,7 @@ void mcp::block_processor::do_process_dag_item(mcp::timeout_db_transaction & tim
 	for (auto const & approve_hash : block->approves())
 	{
 		/// Unprocessed transactions cannot be discarded because the cache is full.  todo zhouyou
-		auto t = m_aq->get(approve_hash, elect_epoch);
+		auto t = m_aq->get(approve_hash);
 		if (t == nullptr || m_local_cache->approve_exists(transaction, approve_hash)) /// transaction maybe processed yet
 		{
 			continue;
@@ -713,7 +706,6 @@ void mcp::block_processor::do_process_dag_item(mcp::timeout_db_transaction & tim
 	/// save block and try advance 
 	m_chain->save_dag_block(timeout_tx, m_local_cache, block);
 	m_chain->try_advance(timeout_tx, m_local_cache);
-	m_chain->check_and_send_approve(m_aq);
 }
 
 void mcp::block_processor::process_missing(std::shared_ptr<mcp::block_processor_item> item_a, std::unordered_set<mcp::block_hash> const & missings, h256Hash const & transactions, h256Hash const & approves)
@@ -850,51 +842,71 @@ void mcp::block_processor::on_sync_completed(mcp::p2p::node_id const & remote_no
 
 void mcp::block_processor::onTransactionReady(h256 const& _t)
 {
-	std::lock_guard<std::mutex> lock(m_transaction_hashs_mutex);
-	m_transaction_hashs_pending.insert(_t);
-	m_transaction_hashs_condition.notify_all();
+	std::lock_guard<std::mutex> lock(m_ready_hashs_mutex);
+	m_ready_hashs_pending.insert(std::make_pair(_t, hashType::Transaction));
+	m_ready_hashs_condition.notify_all();
 }
 
-void mcp::block_processor::process_ready_transaction()
+void mcp::block_processor::process_ready_func()
 {
-	std::unique_lock<std::mutex> lock(m_transaction_hashs_mutex);
+	std::unique_lock<std::mutex> lock(m_ready_hashs_mutex);
 	while (!m_stopped)
 	{
-		if (!m_transaction_hashs_pending.empty())
+		if (!m_ready_hashs_pending.empty())
 		{
-			mcp::stopwatch_guard sw("process_ready_transaction");
+			mcp::stopwatch_guard sw("process_ready_func");
 
-			std::swap(m_transaction_hashs_processing, m_transaction_hashs_pending);
+			std::swap(m_ready_hashs_processing, m_ready_hashs_pending);
 			lock.unlock();
 
-			std::unordered_set<std::shared_ptr<mcp::block_processor_item>> unhandle_items = unhandle->release_transaction_dependency(m_transaction_hashs_processing);
-			if (!unhandle_items.empty())
+			h256Hash ts;
+			h256Hash as;
+			for (auto it : m_ready_hashs_processing)
 			{
-				for (auto const & p : unhandle_items)
+				if (it.second)///approve
+					as.insert(it.first);
+				else
+					ts.insert(it.first);
+			}
+
+			if (!ts.empty())
+			{
+				std::unordered_set<std::shared_ptr<mcp::block_processor_item>> unhandle_items = unhandle->release_transaction_dependency(ts);
+				if (!unhandle_items.empty())
 				{
-					add_to_process(p);
+					for (auto const & p : unhandle_items)
+					{
+						add_to_process(p);
+					}
 				}
 			}
-			m_transaction_hashs_processing.clear();
+			if (!as.empty())
+			{
+				std::unordered_set<std::shared_ptr<mcp::block_processor_item>> unhandle_items = unhandle->release_approve_dependency(as);
+				if (!unhandle_items.empty())
+				{
+					for (auto const & p : unhandle_items)
+					{
+						add_to_process(p);
+					}
+				}
+			}
+			
+			m_ready_hashs_processing.clear();
 			lock.lock();
 		}
 		else
 		{
-			m_transaction_hashs_condition.wait(lock);
+			m_ready_hashs_condition.wait(lock);
 		}
 	}
 }
 
 void mcp::block_processor::onApproveImported(h256 const& _t)
 {
-	std::unordered_set<std::shared_ptr<mcp::block_processor_item>> unhandle_items = unhandle->release_approve_dependency(_t);
-	if (!unhandle_items.empty())
-	{
-		for (auto const & p : unhandle_items)
-		{
-			add_to_process(p);
-		}
-	}
+	std::lock_guard<std::mutex> lock(m_ready_hashs_mutex);
+	m_ready_hashs_pending.insert(std::make_pair(_t, hashType::Approve));
+	m_ready_hashs_condition.notify_all();
 }
 
 void mcp::block_processor::before_db_commit_event()
@@ -915,8 +927,6 @@ void mcp::block_processor::after_db_commit_event()
 		local_promise->set_value(mcp::validate_status(true, ""));
 		m_ok_local_promises.pop_front();
 	}
-
-	m_sync->del_hash_tree_summaries();
 
 	//m_chain->notify_observers();
 }

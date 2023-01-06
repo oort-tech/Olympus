@@ -94,6 +94,7 @@ namespace mcp
 	RPC_ERROR_EXCEPTION(RPC_Error_VMException, 47, "Unexpected exception in VM. There may be a bug in this implementation.");
 	RPC_ERROR_EXCEPTION(RPC_Error_PendingTransactionAlreadyExists, 48, "Pending transaction already exists");
 	RPC_ERROR_EXCEPTION(RPC_Error_TransactionAlreadyInChain, 49, "Transaction already exists in chain");
+	RPC_ERROR_EXCEPTION(RPC_Error_EpochTooBig, 50, "epoch is too big.");
 
 	RPC_ERROR_EXCEPTION(RPC_Error_UnknowError, 100, "Unkown Error");
 

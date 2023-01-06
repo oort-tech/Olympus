@@ -1,5 +1,6 @@
 #include "chain.hpp"
 #include <mcp/core/genesis.hpp>
+#include <mcp/core/param.hpp>
 #include <mcp/common/stopwatch.hpp>
 #include <mcp/common/Exceptions.h>
 #include <mcp/node/debug.hpp>
@@ -7,7 +8,6 @@
 #include <libdevcore/TrieHash.h>
 #include <libdevcore/CommonJS.h>
 #include <mcp/core/config.hpp>
-#include <mcp/node/witness.hpp>
 #include <mcp/node/approve_queue.hpp>
 #include <mcp/consensus/ledger.hpp>
 
@@ -85,16 +85,11 @@ void mcp::chain::init(bool & error_a, mcp::timeout_db_transaction & timeout_tx_a
 	}
 
 	m_last_stable_index_internal = m_store.last_stable_index_get(transaction);
-
 	m_advance_info = m_store.advance_info_get(transaction);
-	m_last_epoch = m_store.last_epoch_get(transaction);
-	m_last_summary_mci = get_last_summary_mci(transaction, cache_a, block_cache_a, m_last_mci_internal);
-	LOG(m_log.info) << "m_last_mci_internal: " << m_last_mci_internal << " m_last_stable_mci_internal: " << m_last_stable_mci_internal;
-	LOG(m_log.info) << "m_last_epoch: " << m_last_epoch << " m_last_summary_mci: " << m_last_summary_mci;
+	init_vrf_outputs(transaction);
+	m_last_stable_epoch = mcp::epoch(m_last_stable_mci_internal);
 
 	update_cache();
-	init_witness(transaction, cache_a);
-	init_vrf_outputs(transaction, cache_a);
 }
 
 void mcp::chain::stop()
@@ -234,11 +229,11 @@ void mcp::chain::save_approve(mcp::timeout_db_transaction & timeout_tx_a, std::s
 
 				//save approve, need put first
 				cache_a->approve_put(transaction, t_a);
-				m_store.epoch_approves_put(transaction, mcp::epoch_approves_key(t_a->m_epoch, t_a->sha3()));
+				m_store.epoch_approves_put(transaction, mcp::epoch_approves_key(t_a->epoch(), t_a->sha3()));
 				m_store.approve_unstable_count_add(transaction);
 				//LOG(m_log.debug) << "approve_unstable: add " << m_store.approve_unstable_count(transaction);
 				m_store.approve_count_add(transaction);
-				cache_a->approve_del_from_queue(hash, t_a->m_epoch);///mark as clear,It will be really cleaned up after commit event
+				cache_a->approve_del_from_queue(hash);///mark as clear,It will be really cleaned up after commit event
 			}
 
 			//m_new_blocks.push(block_a->block);
@@ -252,28 +247,20 @@ void mcp::chain::save_approve(mcp::timeout_db_transaction & timeout_tx_a, std::s
 }
 
 void mcp::chain::add_new_witness_list(mcp::db::db_transaction & transaction_a, uint64_t mc_last_summary_mci){
-	static uint64_t old_summary_mci = 0;
-	static uint64_t old_elected_epoch = 0;
-	uint64_t elected_epoch = mcp::approve::calc_elect_epoch(mc_last_summary_mci) - 1;
-	if(old_summary_mci >= mc_last_summary_mci) return;
-	else old_summary_mci = mc_last_summary_mci;
-
-	static bool restart_not_need_add_witness = true;
-	if(restart_not_need_add_witness){
-		old_elected_epoch = elected_epoch;
-		restart_not_need_add_witness = false;
+	Epoch epoch = mcp::epoch(mc_last_summary_mci);
+	if (!epoch || epoch == m_last_stable_epoch)///epoch 0 or completed
+	{
+		//LOG(m_log.debug) << "[add_new_witness_list]completed";
 		return;
 	}
-	if(old_elected_epoch == elected_epoch) return;
-	else old_elected_epoch = elected_epoch;
 
 	//test switch to all new witness
 	#if 0
 	{
-		if(1){ //(elected_epoch == 1){
-			LOG(m_log.info) << "[add_new_witness_list] test in last_summary_mci = " << mc_last_summary_mci << " elected_epoch = " << elected_epoch;
+		if(1){
+			LOG(m_log.info) << "[add_new_witness_list] test in last_summary_mci = " << mc_last_summary_mci << " elected_epoch = " << epoch;
 			std::vector<std::string> test_witness_str_list_v0;
-			if(elected_epoch%2 == 1){
+			if(epoch%2 == 1){
 				test_witness_str_list_v0 = {
 					"0x1144B522F45265C2DFDBAEE8E324719E63A1694C",
 					"0x088415bbf9b7dfe93f2231fa5dd527a04c874845",
@@ -293,16 +280,16 @@ void mcp::chain::add_new_witness_list(mcp::db::db_transaction & transaction_a, u
 			}
 			else{
 				test_witness_str_list_v0 = {
-				"0x49a1b41e8ccb704f5c069ef89b08cd33f764e9b3",
-				"0xf0821dc4ba9419b865aa412170377ca3b44cdb58",
-				"0x329e6b5b8e59fc73d892958b2ff6a89474e3d067",
-				"0x827cce78dc6ec7051f2d7bb9e7adaefba7ca3248",
-				"0x918d3fe1dbff02fc7521d4a04b50017ce1a7c2ea",
-				"0x929f336edb0a39ad5532a462d4a84e1546c5e5de",
-				"0x1895ac1edc15389b905bb19537eb0c5b33d8c77a",
-				"0x05174fa7ab39a36391b17850a2db9afdcf57190e",
-				"0xa11b98c54d4189adda8eda97e13c214fedaf0a0f",
-				"0xa65ec5c65031d668094cb1b81bb8253ea64a23d7",
+				"0xef9e345925e8d096fe085b20f5e339ae4283fa06",
+				"0x2a11707850d85b0e3a9ed6432dbff5ff6599372e",
+				"0x103af377f48cd792c508141ea62a21cbb5de9b16",
+				"0x316f50d2ede952ee0ddf1225fcc7c2d92a1375c5",
+				"0x1311c3f0bffe235bb39969568dc8a034c5c6eed9",
+				"0x8112eabeea9d6a3f41048c4a041b6786dbbcf3b6",
+				"0x6bbce9a587a3bbc3028c720e59d3898b26c6af33",
+				"0x75ea05cd831653211df7a5a17827b6fc6185ef67",
+				"0x441ba5b61aec13e86db119ab7f0d36529f9df3b8",
+				"0xb7ce949ce324ae7ad35957e07cdef25a7632039c",
 				"0xba618c1e3e90d16e6c15d92ed198780dc4ad39c2",
 				"0xc2cf7b9eb048c34c2b00175a884543366bbcd029",
 				"0xc543a3868f3613eecd109761f71e31832ecf51ba",
@@ -316,97 +303,72 @@ void mcp::chain::add_new_witness_list(mcp::db::db_transaction & transaction_a, u
 			w_param_v0.witness_list = mcp::param::to_witness_list(test_witness_str_list_v0);
 			assert_x(w_param_v0.witness_list.size() == w_param_v0.witness_count);
 
-			mcp::param::add_witness_param(elected_epoch, w_param_v0);
+			mcp::param::add_witness_param(transaction_a, epoch + 1, w_param_v0);
 
-			vrf_outputs[elected_epoch].clear();
-			m_aq->dropObsolete(m_last_epoch);
+			vrf_outputs.erase(epoch - 1);
+			m_last_stable_epoch = epoch;
 			return;
 		}
 	}
 	#endif
 
-	mcp::witness_param w_param = mcp::param::witness_param(m_last_epoch);
-	LOG(m_log.info) << "[add_new_witness_list] in last_summary_mci = " << mc_last_summary_mci << " elected_epoch = " << elected_epoch;
+	///send approve at #0, this approve stable at #1, used witness at #2
+	Epoch vrfepoch = epoch - 1;
+	Epoch useepoch = epoch + 1;
+	mcp::witness_param p_param = mcp::param::witness_param(transaction_a, epoch);
+	//LOG(m_log.info) << "[add_new_witness_list] in last_summary_mci = " << mc_last_summary_mci << " epoch = " << epoch;
 	
-	epoch_elected_list elected_list;
-	if(vrf_outputs.find(elected_epoch) == vrf_outputs.end()) return;
-	if(vrf_outputs[elected_epoch].size() < w_param.witness_count)
+	if (!vrf_outputs.count(vrfepoch) ||	/// used the previous epoch
+		vrf_outputs[vrfepoch].size() < p_param.witness_count)
 	{
-		LOG(m_log.info) << "Not switch witness_list because elector's number is too short: " << vrf_outputs[elected_epoch].size();
-		vrf_outputs[elected_epoch].clear();
-		return;
+		if (vrf_outputs.count(vrfepoch))
+			LOG(m_log.debug) << "Not switch witness_list because elector's number is too short: " << vrf_outputs[vrfepoch].size() << " ,epoch:" << vrfepoch;
+		else
+			LOG(m_log.debug) << "Not switch witness_list because elector not found.epoch:" << vrfepoch;
+		mcp::param::add_witness_param(transaction_a, useepoch, p_param);
 	}
-	std::vector<std::string> test_witness;
-	auto it = vrf_outputs[elected_epoch].rbegin();
-	for(int i=0; i<w_param.witness_count; i++){
-		Address a = it->second.from();
-		uint32_t output = it->first;
-
-		test_witness.emplace_back(a.hexPrefixed());
-		elected_list.hashs.emplace_back(it->second.approve_hash());
-		LOG(m_log.debug) << "elect " << a.hexPrefixed() << " output:" << output << " hash:" << it->second.approve_hash().hexPrefixed();
-		it++;
+	else
+	{
+		p_param.witness_list.clear();
+		auto it = vrf_outputs[vrfepoch].rbegin();
+		for (int i = 0; i<p_param.witness_count; i++) {
+			p_param.witness_list.insert(it->second.from());
+			//LOG(m_log.debug) << "elect " << it->second.from().hexPrefixed() << " output:" << it->first.hex();
+			it++;
+		}
+		assert_x(p_param.witness_list.size() == p_param.witness_count);
 	}
-	w_param.witness_list.clear();
-	w_param.witness_list = mcp::param::to_witness_list(test_witness);
-	
-	assert_x(w_param.witness_list.size() == w_param.witness_count);
-
-	mcp::param::add_witness_param(elected_epoch, w_param);
-	//The elected_list corresponds to next epoch.
-	m_store.epoch_elected_approve_receipts_put(transaction_a, elected_epoch, elected_list);
-	vrf_outputs[elected_epoch].clear();
-
-	m_aq->dropObsolete(m_last_epoch);
+	mcp::param::add_witness_param(transaction_a, useepoch, p_param);
+	vrf_outputs.erase(vrfepoch);
+	m_last_stable_epoch = epoch;
 }
 
-void mcp::chain::init_vrf_outputs(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a)
+void mcp::chain::init_vrf_outputs(mcp::db::db_transaction & transaction_a)
 {
 	std::list<h256> hashs;
-	auto elect_epoch = mcp::approve::calc_elect_epoch(m_last_summary_mci);
-	m_store.epoch_approve_receipts_get(transaction_a, elect_epoch, hashs);
+	auto epoch = mcp::epoch(m_last_stable_mci_internal);
+	m_store.epoch_approves_get(transaction_a, epoch, hashs);
 	for(auto hash : hashs)
 	{
-		auto approve_receipt = cache_a->approve_receipt_get(transaction_a, hash);
-		assert_x(approve_receipt);
-		vrf_outputs[elect_epoch].insert(std::make_pair(*(uint32_t*)approve_receipt->output().data(), *approve_receipt));
-		LOG(m_log.debug) << "[init_vrf_outputs] add output: sender=" << approve_receipt->from().hexPrefixed() << " output="<<*(uint32_t*)approve_receipt->output().data() << " epoch="<<approve_receipt->epoch();
-	}
-}
-
-void mcp::chain::init_witness(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a)
-{
-	mcp::witness_param w_param = mcp::param::witness_param(m_last_epoch);
-	for(uint64_t i=1; i<=m_last_epoch + 2; i++){
-		mcp::epoch_elected_list list;
-		if(m_store.epoch_elected_approve_receipts_get(transaction_a, i, list)){
-			continue;;
-		}
-
-		std::vector<std::string> test_witness;
-		for(auto hash : list.hashs)
+		auto approve_receipt = m_store.approve_receipt_get(transaction_a, hash);
+		if (approve_receipt) ///approve is not the driving force of mci, so maybe exist approve is linked but not stable.
 		{
-			std::shared_ptr<dev::ApproveReceipt> receipt = cache_a->approve_receipt_get(transaction_a, hash);
-			assert_x(receipt);
-
-			test_witness.emplace_back(receipt->from().hexPrefixed());
-			LOG(m_log.debug) << "[init_witness] epoch" << i << "\'s receipts from=" << receipt->from().hexPrefixed();
+			vrf_outputs[epoch].insert(std::make_pair(approve_receipt->output(), *approve_receipt));
+			LOG(m_log.debug) << "[init_vrf_outputs] ap epoch=" << epoch 
+				<< ",address:" << approve_receipt->from().hexPrefixed()
+				<< ",outputs:" << approve_receipt->output().hexPrefixed();
 		}
-		w_param.witness_list.clear();
-		w_param.witness_list = mcp::param::to_witness_list(test_witness);		
-		assert_x(w_param.witness_list.size() == w_param.witness_count);
-		mcp::param::add_witness_param(i, w_param);
 	}
 }
+
 
 void mcp::chain::try_advance(mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a)
 {
 	while (!m_stopped && ((dev::h64::Arith) m_advance_info.mci).convert_to<uint64_t>() > m_last_stable_mci_internal)
 	{
-		uint64_t last_summary_mci_stable;
 		m_last_stable_mci_internal++;
-		advance_stable_mci(timeout_tx_a, cache_a, m_last_stable_mci_internal, m_advance_info.witness_block, last_summary_mci_stable);
-		LOG(m_log.debug) << "[try_advance] last_summary_mci_stable=" << last_summary_mci_stable;
+		advance_stable_mci(timeout_tx_a, cache_a, m_last_stable_mci_internal, m_advance_info.witness_block);
+		LOG(m_log.debug) << "[try_advance] m_last_stable_mci_internal=" << m_last_stable_mci_internal;
 
 		//update last stable mci
 		mcp::db::db_transaction & transaction(timeout_tx_a.get_transaction());
@@ -423,8 +385,11 @@ void mcp::chain::try_advance(mcp::timeout_db_transaction & timeout_tx_a, std::sh
 			assert_x(min_retrievable_state->main_chain_index);
 			m_min_retrievable_mci_internal = *min_retrievable_state->main_chain_index;
 
+			/// send approve if witness
+			m_onMciStable(m_last_stable_mci_internal);
+
 			//m_stable_mcis.push(m_last_stable_mci_internal);
-			add_new_witness_list(transaction, last_summary_mci_stable);
+			add_new_witness_list(transaction, m_last_stable_mci_internal);
 		}
 		catch (std::exception const & e)
 		{
@@ -480,7 +445,7 @@ void mcp::chain::write_dag_block(mcp::db::db_transaction & transaction_a, std::s
 		&& last_summary_block_state->is_on_main_chain
 		&& last_summary_block_state->main_chain_index);
 	uint64_t const & last_summary_mci(*last_summary_block_state->main_chain_index);
-	mcp::witness_param const & w_param(mcp::param::witness_param(mcp::approve::calc_curr_epoch(last_summary_mci)));
+	mcp::witness_param const & w_param(mcp::param::witness_param(transaction_a,mcp::epoch(last_summary_mci)));
 
 	//best parent
 	mcp::block_hash best_pblock_hash(Ledger.determine_best_parent(transaction_a, cache_a, block_a->parents()));
@@ -764,7 +729,7 @@ void mcp::chain::update_latest_included_mci(mcp::db::db_transaction & transactio
 	//LOG(m_log.debug) << "update limci:" << to_update_hashs.size();
 }
 
-void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a, uint64_t const &mci, mcp::block_hash const & block_hash_a, uint64_t & mc_last_summary_mci)
+void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a, uint64_t const &mci, mcp::block_hash const & block_hash_a)
 {
 	mcp::db::db_transaction & transaction_a(timeout_tx_a.get_transaction());
 
@@ -783,7 +748,7 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 	assert_x(last_summary_state->is_stable);
 	assert_x(last_summary_state->is_on_main_chain);
 	assert_x(last_summary_state->main_chain_index);
-	mc_last_summary_mci = *last_summary_state->main_chain_index;
+	uint64_t const & mc_last_summary_mci = *last_summary_state->main_chain_index;
 
 	auto block_to_advance = cache_a->block_get(transaction_a, block_hash_a);
 	uint64_t const & stable_timestamp = block_to_advance->exec_timestamp();
@@ -856,6 +821,7 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 							<< ", from: " << dev::toJS(_t->sender())
 							<< ", to: " << dev::toJS(_t->to())
 							<< ", value: " << _t->value();
+						cache_a->account_nonce_put(transaction_a, _t->sender(), _t->nonce()-1);
 						invalid = true;
 					}
 					catch (dev::eth::InvalidNonce const& _e)
@@ -904,7 +870,7 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 					h256 const& approve_hash = approves[i];
 					
 					auto receipt = cache_a->approve_receipt_get(transaction_a, approve_hash);
-					if (receipt)/// transaction maybe processed yet,but summary need used receipt even if it has been processed.
+					if (receipt)/// approve maybe processed yet,but summary need used receipt even if it has been processed.
 					{
 						RLPStream receiptRLP;
 						receipt->streamRLP(receiptRLP);
@@ -916,35 +882,33 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 					assert_x(ap);
 					/// exec approves
 					try{
-						mcp::block_hash hash;
-						if(ap->m_epoch <= 2){
-							hash = mcp::block_hash(0);
-						}
-						else{
-							bool exists(!m_store.stable_block_get(transaction_a, (ap->m_epoch-2)*epoch_period, hash));
-							assert_x(exists);
-						}
-						
-						std::vector<uint8_t> output;
-						if(ap->m_epoch != mcp::approve::calc_elect_epoch(mc_last_summary_mci))
-						{
-							LOG(m_log.info) << "epoch " << ap->m_epoch << " mismatch last_summary_mci " << mc_last_summary_mci;
-							continue;
-						}
-						ap->vrf_verify(output, hash.hex());
-
 						/// exec approve can reduce, if two or more block linked a approve,reduce once.
 						m_store.approve_unstable_count_reduce(transaction_a);
 						//LOG(m_log.debug) << "approve_unstable: reduce " << m_store.approve_unstable_count(transaction_a);
 
-						std::shared_ptr<dev::ApproveReceipt> preceipt = std::make_shared<dev::ApproveReceipt>(ap->sender(), ap->m_epoch, output, approve_hash);
+						if (ap->outputs() == h256(0))/// reboot system. approve read from db,but not cache outputs
+						{
+							mcp::block_hash hash;
+							if (ap->epoch() <= 1) {
+								hash = mcp::genesis::block_hash;
+							}
+							else {
+								bool exists(!m_store.main_chain_get(transaction_a, (ap->epoch() - 1)*epoch_period, hash));
+								assert_x(exists);
+							}
+							ap->vrf_verify(hash);///cached outputs.must successed.
+						}
+						std::shared_ptr<dev::ApproveReceipt> preceipt = std::make_shared<dev::ApproveReceipt>(ap->sender(), ap->outputs());
 						cache_a->approve_receipt_put(transaction_a, approve_hash, preceipt);
-						m_store.epoch_approve_receipts_put(transaction_a, mcp::epoch_approves_key(ap->m_epoch, approve_hash));
 					
-						vrf_outputs[ap->m_epoch].insert(std::make_pair(*(uint32_t*)output.data(), *preceipt));
-						//LOG(m_log.info) << "add vrf output: sender=" << preceipt->from().hexPrefixed() << " output="<<*(uint32_t*)output.data() << " epoch="<<preceipt->epoch()
-						//	<< " mc_last_summary_mci="<<mc_last_summary_mci;
-						
+						///the approve which is smaller than the current epoch, is not eligible for election.
+						///Bigger than the present is problematic
+						//LOG(m_log.debug) << "[vrf_outputs] ap epoch:" << ap->epoch() <<",epoch:" << epoch(mci)
+						//	<< ",address:" << preceipt->from().hexPrefixed();
+						if (ap->epoch() == epoch(mci))
+						{
+							vrf_outputs[ap->epoch()].insert(std::make_pair(ap->outputs(), *preceipt));
+						}
 
 						RLPStream receiptRLP;
 						preceipt->streamRLP(receiptRLP);
@@ -962,12 +926,9 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 			{
 				h256 receiptsRoot = dev::orderedTrieRoot(receipts);
 				//mcp::stopwatch_guard sw("advance_stable_mci2_2");
-				//m_last_stable_index_internal++;
 				set_block_stable(timeout_tx_a, cache_a, dag_stable_block_hash, mci, mc_timestamp, mc_last_summary_mci, stable_timestamp, m_last_stable_index_internal, receiptsRoot);
 			}
 		}
-
-		//LOG(m_log.debug) << "Mci: " << mci << ", stable_index: " << stable_index;
 	}
 }
 
@@ -1102,8 +1063,6 @@ void mcp::chain::set_block_stable(mcp::timeout_db_transaction & timeout_tx_a, st
 
 #pragma endregion
 
-			//add hash tree summary to delete list
-			m_complete_store_notice(summary_hash);
 		}
 
 		//m_stable_blocks.push(stable_block);
@@ -1146,36 +1105,6 @@ void mcp::chain::search_stable_block(mcp::db::db_transaction & transaction_a, st
 	}
 }
 
-void mcp::chain::search_already_stable_block(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a, mcp::block_hash const &block_hash_a, uint64_t const &mci, std::map<uint64_t, std::set<mcp::block_hash>> &stable_block_level_and_hashs)
-{
-	std::queue<mcp::block_hash> queue;
-	queue.push(block_hash_a);
-
-	while (!queue.empty())
-	{
-		mcp::block_hash block_hash(queue.front());
-		queue.pop();
-
-		if (block_hash == mcp::genesis::block_hash)
-			continue;
-
-		std::shared_ptr<mcp::block_state> state(cache_a->block_state_get(transaction_a, block_hash));
-		assert_x(state);
-
-		if (!state->is_stable)
-			continue;
-
-		auto r = stable_block_level_and_hashs[state->level].insert(block_hash);
-		if (!r.second)
-			continue;
-
-		std::shared_ptr<mcp::block> block(cache_a->block_get(transaction_a, block_hash));
-		for (mcp::block_hash const &pblock_hash : block->parents())
-		{
-			queue.push(pblock_hash);
-		}
-	}
-}
 
 std::vector<uint64_t> mcp::chain::cal_skip_list_mcis(uint64_t const &mci)
 {
@@ -1221,9 +1150,14 @@ uint64_t mcp::chain::last_stable_index()
 	return m_last_stable_index;
 }
 
-uint64_t mcp::chain::last_epoch()
+mcp::Epoch mcp::chain::last_epoch()
 {
-	return m_last_epoch;
+	return mcp::epoch(m_last_mci);
+}
+
+mcp::Epoch mcp::chain::last_stable_epoch()
+{
+	return mcp::epoch(m_last_stable_mci);
 }
 
 bool mcp::chain::get_mc_info_from_block_hash(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::iblock_cache> cache_a, mcp::block_hash hash_a, dev::eth::McInfo & mc_info_a)
@@ -1395,160 +1329,4 @@ mcp::json mcp::chain::traceTransaction(Executive& _e, Transaction const& _t, mcp
 		_e.go(st.onOp());
 	_e.finalize();
 	return st.jsonValue();
-}
-
-uint64_t mcp::chain::get_last_summary_mci(mcp::db::db_transaction& transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a, std::shared_ptr<mcp::block_cache> block_cache_a, uint64_t const & mci)
-{
-	mcp::block_hash mc_block_hash;
-	bool exists(!m_store.main_chain_get(transaction_a, mci, mc_block_hash));
-	assert_x(exists)
-
-	uint64_t last_summary_mci(0);
-	if (mc_block_hash != mcp::genesis::block_hash)
-	{
-		std::shared_ptr<mcp::block> mc_block(cache_a->block_get(transaction_a, mc_block_hash));
-		LOG(m_log.info) << "[get_last_summary_mci] mci=" << mci << "mc_block_hash:" << mc_block_hash.hexPrefixed() << "last_summary_block: " << mc_block->last_summary_block().hexPrefixed();
-		std::shared_ptr<mcp::block_state> last_summary_block_state(cache_a->block_state_get(transaction_a, mc_block->last_summary_block()));
-		assert_x(last_summary_block_state
-			&& last_summary_block_state->is_stable
-			&& last_summary_block_state->is_on_main_chain
-			&& last_summary_block_state->main_chain_index);
-
-		last_summary_mci = *last_summary_block_state->main_chain_index;
-	}
-	else
-	{
-		last_summary_mci = 0;
-	}
-	return last_summary_mci;
-}
-
-void mcp::chain::check_need_send_approve(mcp::db::db_transaction& transaction_a, std::shared_ptr<mcp::block_cache> block_cache_a, dev::Address account_a)
-{
-	std::list<h256> hashs;
-	m_store.epoch_approves_get(transaction_a, mcp::approve::calc_elect_epoch(m_last_summary_mci), hashs);
-	for(auto hash : hashs)
-	{
-		std::shared_ptr<mcp::approve> ap = block_cache_a->approve_get(transaction_a, hash);
-		if(ap->sender() == account_a){
-    		LOG(m_log.debug) << "[check_need_send_approve] not need send approve";
-			m_need_send_approve = false;
-			return;
-		}
-	}
-    LOG(m_log.debug) << "[check_need_send_approve] need send approve";
-}
-
-uint64_t mcp::chain::last_summary_mci()
-{
-	return m_last_summary_mci;
-}
-
-void mcp::chain::set_last_summary_mci(mcp::db::db_transaction & transaction_a, uint64_t const& mci)
-{
-	if(m_last_summary_mci < mci)
-	{
-		m_last_summary_mci = mci;
-		uint64_t new_epoch = mcp::approve::calc_curr_epoch(m_last_summary_mci);
-		if(m_last_epoch < new_epoch){
-			m_last_epoch = new_epoch;
-			m_store.last_epoch_put(transaction_a, m_last_epoch);
-		}
-	}
-}
-bool mcp::chain::need_approve(){
-	static uint64_t last_epoch_num = UINT64_MAX;
-	if(m_last_summary_mci <= 2){
-		return false;
-	}
-
-	if (mcp::node_sync::is_syncing())
-	{
-        LOG(m_log.debug) << "[need_approve] Needn't send approve when syncing";
-		return false;
-	}
-
-	uint64_t elect_epoch = mcp::approve::calc_elect_epoch(m_last_summary_mci);
-	if(!m_need_send_approve){
-		m_need_send_approve = true;
-		last_epoch_num = elect_epoch;
-		LOG(m_log.info) << "[need_approve] restart and not need send approve in this epoch.";
-		return false;
-	}
-	
-	if(elect_epoch != last_epoch_num){
-		if(m_witness != nullptr && m_last_summary_mci%mcp::epoch_period > *(uint64_t *)m_witness->witness_account().data()%mcp::epoch_period/10){
-			//LOG(m_log.debug) << "[need_approve] send in m_last_summary_mci=" << m_last_summary_mci << " epoch" << elect_epoch;
-			last_epoch_num = elect_epoch;
-			return true;
-		}
-		else{
-			return false;
-		}
-	}
-	else{
-		return false;
-	}
-}
-
-void mcp::chain::send_approve(std::shared_ptr<ApproveQueue> aq_a)
-{
-	ApproveSkeleton as;
-	as.epoch = mcp::approve::calc_elect_epoch(m_last_summary_mci);
-    LOG(m_log.info) << "[send_approve] m_last_summary_mci=" << m_last_summary_mci << " epoch=" << as.epoch;
-
-	mcp::db::db_transaction transaction(m_store.create_transaction());
-	mcp::block_hash hash;
-	std::string msg;
-	if(as.epoch <= 2){
-		msg = mcp::block_hash(0).hex();
-	}
-	else{
-		bool exists(!m_store.stable_block_get(transaction, (as.epoch-2)*epoch_period, hash));
-		assert_x(exists);
-		msg = hash.hex();
-	}
-	
-	//char msg[3]={0x31,0x32,0x33};
-	as.proof.resize(81);
-	auto* ctx = mcp::encry::get_secp256k1_ctx();
-	secp256k1_pubkey rawPubkey;
-	auto w_secret = m_witness->witness_secret();
-	if (!secp256k1_ec_pubkey_create(ctx, &rawPubkey, w_secret.data()))
-        return;
-	
-	std::array<byte, 65> serializedPubkey;
-    unsigned char output[32]={0};
-    auto serializedPubkeySize = serializedPubkey.size();
-    secp256k1_ec_pubkey_serialize(
-        ctx,
-		serializedPubkey.data(),
-		&serializedPubkeySize,
-		&rawPubkey,
-		SECP256K1_EC_COMPRESSED
-	);
-    if(secp256k1_vrf_prove(as.proof.data(),w_secret.data(),&rawPubkey,msg.data(),msg.size()) == 1){
-        //LOG(m_log.debug) << "[send_approve] secp256k1_vrf_prove ok";
-    }
-    else{
-        //LOG(m_log.debug) << "[send_approve] secp256k1_vrf_prove fail";
-    }
-	
-    // if(secp256k1_vrf_verify(output, as.proof.data(), serializedPubkey.data(),msg.data(),msg.size()) == 1){
-    //     LOG(m_log.debug) << "[send_approve] secp256k1_vrf_verify ok" << msg;
-    // }
-    // else{
-    //     LOG(m_log.debug) << "[send_approve] secp256k1_vrf_verify fail";
-    // }
-
-	auto a = mcp::approve(as, w_secret);
-	//a.show();
-	aq_a->importLocal(a);
-	return;
-}
-void mcp::chain::check_and_send_approve(std::shared_ptr<ApproveQueue> aq_a)
-{
-	if(need_approve()){
-		send_approve(aq_a);
-	}
 }

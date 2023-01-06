@@ -1,4 +1,5 @@
 #include <mcp/node/composer.hpp>
+#include <mcp/core/param.hpp>
 #include <mcp/core/genesis.hpp>
 #include <mcp/common/stopwatch.hpp>
 #include <mcp/consensus/ledger.hpp>
@@ -111,7 +112,7 @@ void mcp::composer::pick_parents_and_last_summary_and_wl_block(mcp::db::db_trans
 	assert_x(last_summary_block_state->main_chain_index);
 
 	uint64_t const & last_summary_mci(*last_summary_block_state->main_chain_index);
-	LOG(m_log.debug) << "[pick_parents_and_last_summary_and_wl_block] new last_summary_mci=" << last_summary_mci;
+	//LOG(m_log.debug) << "[pick_parents_and_last_summary_and_wl_block] new last_summary_mci=" << last_summary_mci;
 
 	mcp::block_param const & b_param(mcp::param::block_param(last_summary_mci));
 
@@ -186,12 +187,13 @@ void mcp::composer::pick_parents_and_last_summary_and_wl_block(mcp::db::db_trans
 
 		assert_x(best_pblock_hash == Ledger.determine_best_parent(transaction_a, m_cache, parents));
 
-		if (!mcp::param::is_witness(mcp::approve::calc_curr_epoch(last_summary_mci), from_a))
+		Epoch epoch = mcp::epoch(last_summary_mci);
+		if (!mcp::param::is_witness(transaction_a, epoch, from_a))
 			BOOST_THROW_EXCEPTION(BadComposeBlock()
 				<< errinfo_comment("compose error: account is not a witness account now."));
 
-		approves = m_aq->topApproves(b_param.max_link_size, mcp::approve::calc_elect_epoch(last_summary_mci));
-		mcp::witness_param const & w_param(mcp::param::witness_param(mcp::approve::calc_curr_epoch(last_summary_mci)));
+		approves = m_aq->topApproves(b_param.max_link_size, epoch);
+		mcp::witness_param const & w_param(mcp::param::witness_param(transaction_a, epoch));
 
 		//check majority different of witnesses
 		bool is_diff_majority(Ledger.check_majority_witness(transaction_a, m_cache, best_pblock_hash, from_a, w_param));

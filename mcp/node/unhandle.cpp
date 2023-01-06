@@ -296,41 +296,46 @@ std::unordered_set<std::shared_ptr<mcp::block_processor_item>> mcp::unhandle_cac
 	return result;
 }
 
-std::unordered_set<std::shared_ptr<mcp::block_processor_item>> mcp::unhandle_cache::release_approve_dependency(h256 const &h)
+std::unordered_set<std::shared_ptr<mcp::block_processor_item>> mcp::unhandle_cache::release_approve_dependency(h256Hash const &hashs)
 {
 	std::lock_guard<std::mutex> lock(m_mutux);
 
 	std::unordered_set<std::shared_ptr<mcp::block_processor_item>> result;
-	if (!m_approves.count(h))
-		return result;
 
-	std::shared_ptr<std::unordered_set<mcp::block_hash>> unhandle_hashs = m_approves[h];
-	for (auto it : *unhandle_hashs)
+	for (auto h : hashs)
 	{
-		mcp::block_hash const &unhandle_hash = it;
+		if (!m_approves.count(h))
+			return result;
 
-		if (!m_unhandles.count(unhandle_hash))
+		std::shared_ptr<std::unordered_set<mcp::block_hash>> unhandle_hashs = m_approves[h];
+		for (auto it : *unhandle_hashs)
 		{
-			LOG(m_log.info) << "m_unhandles dont have:hash:" << unhandle_hash.hex() << ",dependency_hash:" << h.hex();
-		}
-		assert_x(m_unhandles.count(unhandle_hash));
-		auto &unhandle = m_unhandles[unhandle_hash];
-		unhandle.approves.erase(h);
-		if (unhandle.dependency_hashs.empty() && unhandle.transactions.empty() && unhandle.approves.empty())
-		{
-			result.insert(unhandle.item);
+			mcp::block_hash const &unhandle_hash = it;
 
-			del_unhandle_in_dependencies(unhandle_hash);
-			m_unhandles.erase(unhandle_hash);
-			//LOG(m_log.info) << "release_dependency:m_unhandles.erase to process hash:" << unhandle_hash.to_string();
-			m_tips.erase(unhandle_hash);
+			if (!m_unhandles.count(unhandle_hash))
+			{
+				LOG(m_log.info) << "m_unhandles dont have:hash:" << unhandle_hash.hex() << ",dependency_hash:" << h.hex();
+			}
+			assert_x(m_unhandles.count(unhandle_hash));
+			auto &unhandle = m_unhandles[unhandle_hash];
+			unhandle.approves.erase(h);
+			if (unhandle.dependency_hashs.empty() && unhandle.transactions.empty() && unhandle.approves.empty())
+			{
+				result.insert(unhandle.item);
+
+				del_unhandle_in_dependencies(unhandle_hash);
+				m_unhandles.erase(unhandle_hash);
+				//LOG(m_log.info) << "release_dependency:m_unhandles.erase to process hash:" << unhandle_hash.to_string();
+				m_tips.erase(unhandle_hash);
+			}
 		}
+
+		//delete dependency
+		m_approves.erase(h);
+		//delete unknown dependencies
+		m_approve_missings.erase(h);
 	}
 
-	//delete dependency
-	m_approves.erase(h);
-	//delete unknown dependencies
-	m_approve_missings.erase(h);
 	return result;
 }
 

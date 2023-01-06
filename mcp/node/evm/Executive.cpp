@@ -63,8 +63,7 @@ void mcp::Executive::initialize(Transaction const& _transaction)
     {
 		LOG(m_log.info) << "Not enough cash: Require > " << totalCost << " = " << m_t.gas()
 			<< " * " << m_t.gasPrice() << " + " << m_t.value() << " Got"
-			<< m_s.balance(m_t.sender()) << " for sender: " << m_t.sender();
-		m_excepted = TransactionException::NotEnoughCash;
+			<< m_s.balance(m_t.sender()) << " for sender: " << m_t.sender().hexPrefixed();
 		m_excepted = TransactionException::NotEnoughCash;
 		BOOST_THROW_EXCEPTION(dev::eth::NotEnoughCash() << RequirementError(totalCost, (bigint)m_s.balance(m_t.sender())) << errinfo_comment(m_t.sender().hex()));
 	}

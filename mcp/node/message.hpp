@@ -181,7 +181,7 @@ class catchup_request_message
 	uint64_t last_known_mci;
 	mcp::block_hash unstable_mc_joints_tail;
 	mcp::summary_hash first_catchup_chain_summary;
-	std::set<dev::Address> arr_witnesses;
+	WitnessList arr_witnesses;
 	uint64_t distinct_witness_size;
     mcp::sync_request_hash request_id;
 };

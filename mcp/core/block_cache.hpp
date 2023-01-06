@@ -103,6 +103,9 @@ class block_cache : public mcp::iblock_cache
 	std::shared_ptr<dev::ApproveReceipt> approve_receipt_get(mcp::db::db_transaction & transaction_a, h256 const & hash);
 	void approve_receipt_put(h256 const & hash, std::shared_ptr<dev::ApproveReceipt> const& t);
 
+	std::shared_ptr<witness_param> epoch_param_get(mcp::db::db_transaction & transaction_a, Epoch const & epoch);
+	void epoch_param_put(mcp::db::db_transaction & transaction_a, Epoch const & epoch, std::shared_ptr<witness_param> param);
+
 	std::string report_cache_size();
 
 private:
@@ -152,5 +155,8 @@ private:
 
 	std::mutex m_approve_receipt_mutex;
 	mcp::Cache<h256, std::shared_ptr<dev::ApproveReceipt>> m_approve_receipts;
+
+	std::mutex m_epoch_param_mutex;
+	mcp::Cache<Epoch, std::shared_ptr<mcp::witness_param>> m_epoch_param;
 };
 } // namespace mcp

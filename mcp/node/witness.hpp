@@ -4,7 +4,7 @@
 #include <mcp/wallet/wallet.hpp>
 #include <mcp/node/chain.hpp>
 #include <mcp/core/block_cache.hpp>
-
+#include <mcp/core/approve.hpp>
 #include <memory>
 
 namespace mcp
@@ -29,13 +29,12 @@ namespace mcp
 			std::shared_ptr<mcp::composer> composer_a, std::shared_ptr<mcp::chain> chain_a,
 			std::shared_ptr<mcp::block_processor> block_processor_a,
 			std::shared_ptr<mcp::block_cache> cache_a, std::shared_ptr<TransactionQueue> tq,
+			std::shared_ptr<ApproveQueue> aq,
 			std::string const & account_text, std::string const & password_a
 		);
 		void start();
 		void check_and_witness();
-		dev::Secret witness_secret() { return m_secret; } 
-		dev::Address witness_account() { return m_account; }
-
+		void try_create_approve(uint64_t const& mci);
 		std::string getInfo();
 
 	private:
@@ -48,8 +47,10 @@ namespace mcp
 		std::shared_ptr<mcp::composer> m_composer;
 		std::shared_ptr<mcp::block_processor> m_block_processor;
 		std::shared_ptr<TransactionQueue> m_tq;
+		std::shared_ptr<ApproveQueue> m_aq;
 		dev::Address m_account;
 		dev::Secret m_secret;
+		secp256k1_pubkey m_rawPubkey; ///for approve
 
 		std::chrono::steady_clock::time_point m_last_witness_time;
 		uint32_t const m_min_witness_interval = 1000;
@@ -67,5 +68,7 @@ namespace mcp
 		std::atomic<uint64_t> witness_transaction_count = { 0 };
 		std::atomic<uint64_t> witness_notwitness_count = { 0 };
 		std::atomic<uint64_t> witness_majority_count = { 0 };
+		std::atomic<uint64_t> approve_success_count = { 0 };
+		std::atomic<uint64_t> approve_failed_count = { 0 };
 	};
 }

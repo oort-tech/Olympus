@@ -6,6 +6,7 @@
 #include <mcp/node/composer.hpp>
 #include <mcp/common/pwd.hpp>
 #include <mcp/core/genesis.hpp>
+#include <mcp/core/param.hpp>
 #include <mcp/node/evm/Executive.hpp>
 #include <libdevcore/CommonJS.h>
 #include <libdevcore/CommonData.h>
@@ -222,8 +223,7 @@ mcp::rpc_handler::rpc_handler(mcp::rpc &rpc_a, std::string const &body_a, std::f
 	m_mcpRpcMethods["debug_storage_range_at"] = &mcp::rpc_handler::debug_storage_range_at;
 
 	m_mcpRpcMethods["epoch_approves"] = &mcp::rpc_handler::epoch_approves;
-	m_mcpRpcMethods["epoch_approve_receipts"] = &mcp::rpc_handler::epoch_approve_receipts;
-	m_mcpRpcMethods["epoch_elected_approve_receipts"] = &mcp::rpc_handler::epoch_elected_approve_receipts;
+	m_mcpRpcMethods["approve_receipt"] = &mcp::rpc_handler::approve_receipt;
 
 	m_ethRpcMethods["net_version"] = &mcp::rpc_handler::net_version;
 	m_ethRpcMethods["net_listening"] = &mcp::rpc_handler::net_listening;
@@ -983,7 +983,19 @@ void mcp::rpc_handler::nodes(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::witness_list(mcp::json &j_response, bool &)
 {
-	mcp::witness_param const &w_param(mcp::param::witness_param(m_chain->last_epoch()));
+	Epoch epoch = m_chain->last_epoch();
+	if (request.count("epoch") && request["epoch"].is_string())
+	{
+		epoch = (uint64_t)jsToInt(request["epoch"]);
+	}
+
+	if (epoch > m_chain->last_epoch())
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_EpochTooBig());
+	}
+
+	mcp::db::db_transaction transaction(m_store.create_transaction());
+	mcp::witness_param const &w_param(mcp::param::witness_param(transaction, epoch));
 	mcp::json witness_list_l = mcp::json::array();
 	for (auto i : w_param.witness_list)
 	{
@@ -2435,14 +2447,19 @@ void mcp::rpc_handler::get_eth_signed_msg(dev::bytes &data, dev::h256 &hash)
 
 void mcp::rpc_handler::epoch_approves(mcp::json &j_response, bool &)
 {
-	if (!request.count("epoch") || (!request["epoch"].is_string()) || (uint64_t)jsToInt(request["epoch"]) > m_chain->last_epoch() + 2)
+	Epoch epoch = m_chain->last_epoch();
+	if (request.count("epoch") && request["epoch"].is_string())
 	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams());
+		epoch = (uint64_t)jsToInt(request["epoch"]);
+	}
+
+	if (epoch > m_chain->last_epoch())
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_EpochTooBig());
 	}
 
 	mcp::json approves_l = mcp::json::array();
 	mcp::db::db_transaction transaction(m_store.create_transaction());
-	uint64_t epoch = jsToInt(request["epoch"]);
 	std::list<h256> hashs;
 	m_store.epoch_approves_get(transaction, epoch, hashs);
 
@@ -2451,94 +2468,42 @@ void mcp::rpc_handler::epoch_approves(mcp::json &j_response, bool &)
 		auto approve = m_cache->approve_get(transaction, hash);
 		if (approve) {
 			mcp::json approve_l;
+			approve_l["hash"] = approve->sha3().hexPrefixed();
 			approve_l["from"] = approve->sender().hexPrefixed();
-			approve_l["proof"] = toHexPrefixed(approve->m_proof);
+			approve_l["proof"] = approve->proof().hexPrefixed();
 			approves_l.push_back(approve_l);
 		}
 		else {
 			//throw JsonRpcException(exceptionToErrorMessage());
 		}
 	}
-	j_response["epoch_approves"] = approves_l;
+	j_response["result"] = approves_l;
 }
 
-void mcp::rpc_handler::epoch_approve_receipts(mcp::json &j_response, bool &)
+void mcp::rpc_handler::approve_receipt(mcp::json &j_response, bool &)
 {
-	if (!request.count("epoch") || (!request["epoch"].is_string()) || (uint64_t)jsToInt(request["epoch"]) > m_chain->last_epoch() + 2)
+	if (!request.count("hash") || (!request["hash"].is_string()))
 	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams());
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidHash());
 	}
 
-	mcp::json approve_receipts_l = mcp::json::array();
+	h256 hash;
+	try
+	{
+		hash = jsToHash(request["hash"]);
+	}
+	catch (...)
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidHash());
+	}
+
+	mcp::json approve_receipt_l;
 	mcp::db::db_transaction transaction(m_store.create_transaction());
-	uint64_t epoch = jsToInt(request["epoch"]);
-	std::list<h256> hashs;
-	m_store.epoch_approve_receipts_get(transaction, epoch, hashs);
-	LOG(m_log.info) << "[epoch_approve_receipts] hashs.size = " << hashs.size();
-
-	for (auto hash : hashs)
-	{
-		LOG(m_log.info) << "[epoch_approve_receipts] in3";
-		auto approve_receipt = m_cache->approve_receipt_get(transaction, hash);
-		if (approve_receipt) {
-			mcp::json approve_receipt_l;
-			approve_receipt_l["from"] = approve_receipt->from().hexPrefixed();
-			approve_receipt_l["output"] = toHexPrefixed(approve_receipt->output());
-			approve_receipts_l.push_back(approve_receipt_l);
-		}
-		else {
-			//throw JsonRpcException(exceptionToErrorMessage());
-		}
+	auto approve_receipt = m_cache->approve_receipt_get(transaction, hash);
+	if (approve_receipt) {
+		approve_receipt_l["from"] = approve_receipt->from().hexPrefixed();
+		approve_receipt_l["output"] = toHexPrefixed(approve_receipt->output());
 	}
-	j_response["epoch_approve_receipts"] = approve_receipts_l;
+	j_response["result"] = approve_receipt_l;
 }
 
-void mcp::rpc_handler::epoch_elected_approve_receipts(mcp::json &j_response, bool &)
-{
-	if (!request.count("epoch") || (!request["epoch"].is_string()) || (uint64_t)jsToInt(request["epoch"]) > m_chain->last_epoch() + 1)
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams());
-	}
-
-	mcp::json electeds_l = mcp::json::array();
-	mcp::db::db_transaction transaction(m_store.create_transaction());
-	uint64_t epoch = jsToInt(request["epoch"]);
-
-	if (epoch == 0)
-	{
-		for (auto witness : mcp::param::witness_param(0).witness_list)
-		{
-			mcp::json elected_l;
-			elected_l["from"] = witness.hexPrefixed();
-			electeds_l.push_back(elected_l);
-		}
-		
-	}
-	else
-	{
-		epoch_elected_list list;
-		m_store.epoch_elected_approve_receipts_get(transaction, epoch, list);
-		for (auto hash : list.hashs)
-		{
-			mcp::json elected_l;
-			auto approve = m_cache->approve_get(transaction, hash);
-			if (approve) {
-				elected_l["from"] = approve->sender().hexPrefixed();
-				elected_l["proof"] = toHexPrefixed(approve->m_proof);
-			}
-			else {
-				//throw JsonRpcException(exceptionToErrorMessage());
-			}
-
-			auto approve_receipt = m_cache->approve_receipt_get(transaction, hash);
-			if (approve_receipt) {
-				elected_l["output"] = toHexPrefixed(approve_receipt->output());
-			}
-			else {
-				//throw JsonRpcException(exceptionToErrorMessage());
-			}
-			electeds_l.push_back(elected_l);
-		}
-	}
-	j_response["epoch_elected_approve_receipts"] = electeds_l;
-}

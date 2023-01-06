@@ -46,7 +46,7 @@ class unhandle_cache
 	unhandle_add_result add(mcp::block_hash const &hash_a, std::unordered_set<mcp::block_hash> const &dependency_hashs_a, h256Hash const &transactions, h256Hash const &approves, std::shared_ptr<mcp::block_processor_item> item_a);
 	std::unordered_set<std::shared_ptr<mcp::block_processor_item>> release_dependency(mcp::block_hash const &dependency_hash_a);
 	std::unordered_set<std::shared_ptr<mcp::block_processor_item>> release_transaction_dependency(h256Hash const &hashs);
-	std::unordered_set<std::shared_ptr<mcp::block_processor_item>> release_approve_dependency(h256 const &h);
+	std::unordered_set<std::shared_ptr<mcp::block_processor_item>> release_approve_dependency(h256Hash const &hashs);
 	void get_missings(size_t const & missing_limit_a, std::vector<mcp::block_hash>& missings_a, std::vector<h256>& light_missings_a, std::vector<h256>& approve_missings_a);
 
 	bool exists(mcp::block_hash const & block_hash_a);

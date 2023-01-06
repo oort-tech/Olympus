@@ -2,19 +2,20 @@
 
 mcp::block_cache::block_cache(mcp::block_store &store_a) :
 	m_store(store_a),
-	m_blocks(1000),
-	m_block_states(1000),
-	m_latest_account_states(50000),
+	m_blocks(500),
+	m_block_states(500),
+	m_latest_account_states(10000),
 	m_transactions(50000),
-	m_account_nonces(30000),
-	m_transaction_address(50000),
-	m_successors(1000),
-	m_block_summarys(1000),
+	m_account_nonces(10000),
+	m_transaction_address(10000),
+	m_successors(300),
+	m_block_summarys(500),
 	m_block_numbers(1000),
 	m_number_blocks(1000),
-	m_transaction_receipts(50000),
-	m_approves(1000),
-	m_approve_receipts(1000)
+	m_transaction_receipts(10000),
+	m_approves(500),
+	m_approve_receipts(500),
+	m_epoch_param(10)
 {
 }
 
@@ -539,6 +540,27 @@ void mcp::block_cache::approve_receipt_put(h256 const &hash, std::shared_ptr<dev
 {
 	std::lock_guard<std::mutex> lock(m_approve_receipt_mutex);
 	m_approve_receipts.insert(hash, t);
+}
+
+std::shared_ptr<mcp::witness_param> mcp::block_cache::epoch_param_get(mcp::db::db_transaction & transaction_a, Epoch const & epoch)
+{
+	std::shared_ptr<mcp::witness_param> param = nullptr;
+	std::lock_guard<std::mutex> lock(m_epoch_param_mutex);
+	bool exists = m_epoch_param.tryGet(epoch, param);
+	if (!exists)
+	{
+		param = m_store.epoch_param_get(transaction_a, epoch);
+		if (param)
+			m_epoch_param.insert(epoch, param);
+	}
+	return param;
+}
+
+void mcp::block_cache::epoch_param_put(mcp::db::db_transaction & transaction_a, Epoch const & epoch, std::shared_ptr<witness_param> param)
+{
+	std::lock_guard<std::mutex> lock(m_epoch_param_mutex);
+	m_store.epoch_param_put(transaction_a, epoch, *param);
+	m_epoch_param.insert(epoch, param);
 }
 
 std::string mcp::block_cache::report_cache_size()

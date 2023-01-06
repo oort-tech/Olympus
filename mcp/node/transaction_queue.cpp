@@ -12,6 +12,7 @@ namespace mcp
 	constexpr size_t c_maxVerificationQueueSize = 40960;
 	constexpr size_t c_maxDroppedTransactionCount = 100000;
 	constexpr size_t c_maxPendingTransactionCount = 100000;
+	constexpr size_t c_maxReadyTransactionCount = 100000;
 
 	TransactionQueue::TransactionQueue(
 		boost::asio::io_service& io_service_a, mcp::block_store& store_a, std::shared_ptr<mcp::block_cache> cache_a, std::shared_ptr<mcp::chain> chain_a,
@@ -422,6 +423,10 @@ namespace mcp
 				UnverifiedTransaction work = std::move(works.front());
 				try
 				{
+					if (all.size() > c_maxReadyTransactionCount/2 && work.in == source::broadcast)///only process request or sync transactions.
+					{
+						continue;
+					}
 					auto ir = import(work.transaction, work.in);
 					m_onImport(ir, work.nodeId);
 				}

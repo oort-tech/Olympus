@@ -1,4 +1,5 @@
 #include "approve_queue.hpp"
+#include <mcp/core/genesis.hpp>
 #include <thread>
 
 namespace mcp
@@ -9,16 +10,16 @@ namespace mcp
 	constexpr size_t c_maxVerificationQueueSizeApprove = 8192;
 
 	ApproveQueue::ApproveQueue(
-		mcp::block_store& store_a, std::shared_ptr<mcp::block_cache> cache_a, std::shared_ptr<mcp::chain> chain_a,
-		std::shared_ptr<mcp::async_task> async_task_a
+		mcp::block_store& store_a, std::shared_ptr<mcp::block_cache> cache_a,
+		std::shared_ptr<mcp::chain> chain_a, std::shared_ptr<mcp::async_task> async_task_a
 	):
 		m_store(store_a),
 		m_cache(cache_a),
 		m_chain(chain_a),
 		m_async_task(async_task_a),
-		m_dropped(100000)
+		m_dropped(300)
 	{
-		unsigned verifierThreads = std::max(thread::hardware_concurrency(), 3U) - 2U;
+		unsigned verifierThreads = std::max(thread::hardware_concurrency()/2, 3U) - 2U;
 		for (unsigned i = 0; i < verifierThreads; ++i)
 			m_verifiers.emplace_back([=]() {
 			setThreadName("approveCheck" + toString(i));
@@ -35,207 +36,145 @@ namespace mcp
 			i.join();
 	}
 
-	ImportApproveResult ApproveQueue::check_WITH_LOCK(h256 const& _h)
+	ImportResult ApproveQueue::check_WITH_LOCK(h256 const& _h)
 	{
 		if (m_known.count(_h) )
-			return ImportApproveResult::AlreadyKnown;
+			return ImportResult::AlreadyKnown;
 
+		if (m_dropped.contains(_h))
+			return ImportResult::AlreadyInChain;
 		mcp::db::db_transaction t(m_store.create_transaction());
-		if (m_dropped.contains(_h) || m_cache->approve_exists(t, _h))
-			return ImportApproveResult::AlreadyInChain;
+		if (m_cache->approve_exists(t, _h))
+			return ImportResult::AlreadyInChain;
 
-		return ImportApproveResult::Success;
+		return ImportResult::Success;
 	}
 
-	ImportApproveResult ApproveQueue::manageImport_WITH_LOCK(h256 const& _h, approve const& _approve)
+	ImportResult ApproveQueue::manageImport_WITH_LOCK(std::shared_ptr<approve> _approve)
 	{
 		try
-		{
-			assert(_h == _approve.sha3());
-			
-			m_known.insert(_h);
-			if(m_current.find(_approve.m_epoch) == m_current.end()){
-				m_current.insert(std::make_pair(_approve.m_epoch, std::unordered_map<h256, approve>()));
-			}
-			m_current[_approve.m_epoch].insert(std::make_pair(_h, _approve));
+		{	
+			if (all.count(_approve->sha3()))
+				assert_x(false);
+
+			if (!queue.count(_approve->epoch()))
+				queue[_approve->epoch()] = h256Hash();
+			queue[_approve->epoch()].insert(_approve->sha3());
+			all.insert(std::make_pair(_approve->sha3(), _approve));
+			m_known.insert(_approve->sha3());
+
+			m_onReady(_approve->sha3());
 		}
 		catch (Exception const& _e)
 		{
 			LOG(m_log.debug) << "Ignoring invalid approve: " << diagnostic_information(_e);
-			return ImportApproveResult::Malformed;
+			return ImportResult::Malformed;
 		}
 		catch (std::exception const& _e)
 		{
 			LOG(m_log.debug) << "Ignoring invalid approve: " << _e.what();
-			return ImportApproveResult::Malformed;
+			return ImportResult::Malformed;
 		}
 
-		return ImportApproveResult::Success;
+		return ImportResult::Success;
 	}
 
-	bool ApproveQueue::remove_WITH_LOCK(h256 const& _txHash, uint64_t _epoch)
+	bool ApproveQueue::remove_WITH_LOCK(h256 const& _txHash)
 	{
-		if(m_current.find(_epoch) == m_current.end()){
+		auto ap = all.find(_txHash);
+		if (ap == all.end())
+		{
+			LOG(m_log.debug) << "remove_WITH_LOCK Approve hash" << _txHash.hex() << "already in all?!";
 			return false;
 		}
-
-		auto t = m_current.at(_epoch).find(_txHash);
-		if (t == m_current.at(_epoch).end())
-			return false;
-
-		m_current.at(_epoch).erase(t);
-		if(m_current[_epoch].empty()){
-			m_current.erase(m_current.find(_epoch));
+		auto epoch = ap->second->epoch();
+		if (queue.count(epoch))
+		{
+			queue[epoch].erase(_txHash);
+			if (queue[epoch].empty())
+				queue.erase(epoch);
 		}
+
+		all.erase(_txHash);
 		m_known.erase(_txHash);
 		
 		return true;
 	}
 
 
-	ImportApproveResult ApproveQueue::import(approve const& _approve)
+	ImportResult ApproveQueue::import(std::shared_ptr<approve> _approve, source _in)
 	{
-		LOG(m_log.trace) << "[import] in";
+		//LOG(m_log.trace) << "[import] in";
 
 		// Check if we already know this approve.
-		h256 h = _approve.sha3();
+		h256 h = _approve->sha3();
 
-		ImportApproveResult ret;
+		ImportResult ir;
 		{
 			UpgradableGuard l(m_lock);
-			auto ir = check_WITH_LOCK(h);
-			if (ir != ImportApproveResult::Success)
+			ir = check_WITH_LOCK(h);
+			if (ir != ImportResult::Success)
 				return ir;
 
+			ir = validateApprove(*_approve, _in);
+			if (ir != ImportResult::Success)
+				return ir;
 			{
 				UpgradeGuard ul(l);
-				ret = manageImport_WITH_LOCK(h, _approve);
+				ir = manageImport_WITH_LOCK(_approve);
 			}
 		}
 
-		if (ImportApproveResult::Success == ret)/// first import && successed,broadcast it
+		if (ImportResult::Success == ir)/// first import && successed,broadcast it
 		{
-			m_onImportProcessed(h);
+			m_async_task->sync_async([this, _approve]() {
+				m_capability->broadcast_approve(*_approve);
+			});
 		}
 
-		//LOG(m_log.debug) << "[import] out";
-		return ret;
+		return ir;
 	}
 
-	void ApproveQueue::importLocal(approve const& _approve)
+	void ApproveQueue::importLocal(std::shared_ptr<approve> _approve)
 	{
 		//LOG(m_log.trace) << "[importLocal] in";
-		auto ret = import(_approve);
-		if(ret != ImportApproveResult::Success)
+		auto ret = import(_approve, source::local);
+		if(ret != ImportResult::Success)
 		{
 			LOG(m_log.info) << "[importLocal] fail with ret = " << (uint32_t)ret;
 			return;
 		}
-		
-		m_async_task->sync_async([this, _approve]() {
-			m_capability->broadcast_approve(_approve);
-		});
 	}
 
-	void ApproveQueue::drop(std::map<uint64_t, h256s> const& _mapHashs)
-	{
-		try
-		{
-			UpgradableGuard l(m_lock);
-			for(auto hashs : _mapHashs){
-				h256s dels;
-				auto _txHashs = hashs.second;
-				auto epoch = hashs.first;
-				for (auto h : _txHashs)
-				{
-					if (m_known.count(h))
-					{
-						dels.push_back(h);
-					}
-				}
-
-				UpgradeGuard ul(l);
-				for (auto h : dels)
-				{
-					m_dropped.insert(h, true /* placeholder value */);
-					remove_WITH_LOCK(h, epoch);
-				}
-			}
-		}
-		catch(const std::exception& e)
-		{
-			LOG(m_log.error) << "[drop] error: " << e.what();
-			assert_x(false);
-		}
-	}
-
-	void ApproveQueue::dropObsolete(uint64_t _cur_epoch)
-	{
-		try
-		{
-			UpgradableGuard l(m_lock);
-			for(auto it=m_current.begin(); it!=m_current.end();){
-				auto epoch = it->first;
-				if(it->first >= _cur_epoch)
-				{
-					return;
-				}
-				LOG(m_log.debug) << "[dropObsolete] drop epoch" << epoch << " size="<<it->second.size();
-				h256s dels;
-				for(auto ap : it->second)
-				{
-					h256 h = ap.first;
-					if (m_known.count(h))
-					{
-						dels.push_back(h);
-					}
-				}
-
-				UpgradeGuard ul(l);
-				for (auto h : dels)
-				{
-					m_dropped.insert(h, true /* placeholder value */);
-					remove_WITH_LOCK(h, epoch);
-				}
-				if(m_current.find(epoch) != m_current.end()){
-					m_current.erase(epoch);
-				}
-				it = m_current.begin();
-			}
-		}
-		catch(const std::exception& e)
-		{
-			LOG(m_log.error) << "[dropObsolete] fail in epoch " << _cur_epoch << " error: " << e.what();
-			assert_x(false);
-		}
-	}
-
-	std::shared_ptr<approve> ApproveQueue::get(h256 const& _txHash, uint64_t _epoch) const
+	void ApproveQueue::drop(h256s const& _txHashs)
 	{
 		UpgradableGuard l(m_lock);
-		if(m_current.find(_epoch) == m_current.end()){
-			return nullptr;
+		h256s dels;
+		for (auto h : _txHashs)
+		{
+			///if not known,must be deleted
+			if (m_known.count(h))
+			{
+				dels.push_back(h);
+			}
 		}
 
-		auto t = m_current.at(_epoch).find(_txHash);
-		if (t == m_current.at(_epoch).end())
-			return nullptr;
-
-		return std::make_shared<approve>(t->second);
+		UpgradeGuard ul(l);
+		for (auto h : dels)
+		{
+			m_dropped.insert(h, true /* placeholder value */);
+			remove_WITH_LOCK(h);
+		}
 	}
 
 	std::shared_ptr<approve> ApproveQueue::get(h256 const& _txHash) const
 	{
 		UpgradableGuard l(m_lock);
-		if(m_current.empty()){
+		auto t = all.find(_txHash);
+		if (t == all.end())
 			return nullptr;
-		}
 
-		for(auto hashs : m_current){
-			auto t = hashs.second.find(_txHash);
-			if (t != hashs.second.end())
-				return std::make_shared<approve>(t->second);
-		}
+		return t->second;
 		return nullptr;
 	}
 
@@ -243,13 +182,12 @@ namespace mcp
 	{
 		ReadGuard l(m_lock);
 		h256s ret;
-		for(auto hashs : m_current)
+		for(auto hashs : queue)
 		{
 			for (auto cs = hashs.second.begin(); cs != hashs.second.end(); ++cs)
 			{
-				auto hash = cs->first;
-				if (!_avoid.count(hash))
-					ret.push_back(hash);
+				if (!_avoid.count(*cs))
+					ret.push_back(*cs);
 					if (ret.size() == _limit)
 						return ret;
 			}
@@ -261,12 +199,11 @@ namespace mcp
 	{
 		ReadGuard l(m_lock);
 		h256s ret;
-		if(m_current.find(_epoch) == m_current.end()) return ret;
-		for (auto cs = m_current.at(_epoch).begin(); cs != m_current.at(_epoch).end(); ++cs)
+		if(queue.find(_epoch) == queue.end()) return ret;
+		for (auto cs = queue.at(_epoch).begin(); cs != queue.at(_epoch).end(); ++cs)
 		{
-			auto hash = cs->first;
-			if (!_avoid.count(hash))
-				ret.push_back(hash);
+			if (!_avoid.count(*cs))
+				ret.push_back(*cs);
 				if (ret.size() == _limit)
 					return ret;
 		}
@@ -277,14 +214,7 @@ namespace mcp
 	bool ApproveQueue::exist(h256 const& _hash)
 	{
 		ReadGuard l(m_lock);
-		if(m_current.empty()) return false;
-		for(auto hashs : m_current)
-		{
-			if(hashs.second.find(_hash) != hashs.second.end()){
-				return true;
-			}
-		}
-		return false;
+		return all.count(_hash);
 	}
 
 	h256Hash ApproveQueue::knownApproves() const
@@ -293,7 +223,7 @@ namespace mcp
 		return m_known;
 	}
 
-	void ApproveQueue::enqueue(RLP const& _data, p2p::node_id const& _nodeId)
+	void ApproveQueue::enqueue(std::shared_ptr<approve> _ap, p2p::node_id const& _nodeId, source _in)
 	{
 		bool queued = false;
 		{
@@ -303,103 +233,92 @@ namespace mcp
 				LOG(m_log.debug) << "Approve verification queue is full. Dropping approve";
 				return;
 			}
-			m_unverified.emplace_back(UnverifiedApprove(_data.data(), _nodeId));
+			m_unverified.emplace_back(UnverifiedApprove(_ap, _nodeId, _in));
 			queued = true;
 		}
 		
-		m_queueReady.notify_all();
+		if (queued)
+			m_queueReady.notify_all();
 	}
 
 	void ApproveQueue::verifierBody()
 	{
 		while (!m_aborting)
 		{
-			UnverifiedApprove work;
+			std::deque<UnverifiedApprove> works;
 
 			{
 				unique_lock<Mutex> l(x_queue);
 				m_queueReady.wait(l, [&]() { return !m_unverified.empty() || m_aborting; });
 				if (m_aborting)
 					return;
-				work = move(m_unverified.front());
-				m_unverified.pop_front();
+				std::swap(works, m_unverified);
 			}
 
-			try
+			while (!works.empty())
 			{
-				approve t(work.m_approve, CheckTransaction::Everything);
-				ImportApproveResult vr = validateApprove(t);
-				if(ImportApproveResult::Success != vr){
-					m_onImport(vr, t.sha3(), work.nodeId);
-					continue;
-				}
-
-				ImportApproveResult ir = import(t);
-				m_onImport(ir, t.sha3(), work.nodeId);
-
-				if (ImportApproveResult::Success == ir)/// first import && successed,broadcast it
+				UnverifiedApprove work = std::move(works.front());
+				try
 				{
-					m_async_task->sync_async([this, t]() {
-						m_capability->broadcast_approve(t);
-					});
+					auto ir = import(work.ap, work.in);
+					m_onImport(ir, work.nodeId);
 				}
-			}
-			catch (...)
-			{
-				m_onImport(ImportApproveResult::BadChain, h256(0), work.nodeId);///  Notify capability and P2P to process peer. diconnect peer if bad transaction  
-				// should not happen as exceptions are handled in import.
-				LOG(m_log.error) << "Bad approve:" << boost::current_exception_diagnostic_information();
+				catch (InvalidNonce)
+				{
+					///remote network is not very good,Disconnect the peer.todo
+				}
+				catch (...)
+				{
+					LOG(m_log.error) << "Bad approve:" << boost::current_exception_diagnostic_information();
+					m_onImport(ImportResult::Malformed, work.nodeId);///  Notify capability and P2P to process peer. diconnect peer if bad transaction 
+				}
+				
+				works.pop_front();
 			}
 		}
 	}
 
-	ImportApproveResult ApproveQueue::validateApprove(approve const& _t){
+	ImportResult ApproveQueue::validateApprove(approve const& _t, source _in){
 		_t.checkChainId(mcp::chain_id);
 		_t.checkLowS();
 		
+		if (_t.epoch() < m_chain->last_stable_epoch() && _in == source::broadcast)
+			return ImportResult::EpochIsTooLow;
 		mcp::db::db_transaction transaction(m_store.create_transaction());
 		mcp::block_hash hash;
-		if(_t.m_epoch <= 2){
-			hash = mcp::block_hash(0);
+		if(_t.epoch() <= 1){
+			hash = mcp::genesis::block_hash;
 		}
 		else{
-			bool ret = m_store.stable_block_get(transaction, (_t.m_epoch-2)*epoch_period, hash);
+			bool ret = m_store.main_chain_get(transaction, (_t.epoch()-1)*epoch_period, hash);
 			if(ret){
 				LOG(m_log.debug) << "[validateApprove] epoch is too high";
-				return ImportApproveResult::EpochIsTooHigh;
+				//LOG(m_log.debug) << "[validateApprove] hash=" << hash.hex();
+				return ImportResult::EpochIsTooHigh;
 			}
 		}
 		
-		std::vector<uint8_t> output;
-		_t.vrf_verify(output, hash.hex());
-		return ImportApproveResult::Success;
-	}
-
-	size_t ApproveQueue::size(uint64_t _epoch)
-	{
-		if(m_current.find(_epoch) == m_current.end())
-		{
-			return 0;
-		}
-		return m_current[_epoch].size();
+		_t.vrf_verify(hash);
+		return ImportResult::Success;
 	}
 
 	std::string ApproveQueue::getInfo()
 	{
 		UpgradableGuard l(m_lock);
-		std::string str = "ApproveQueue current:" + std::to_string(m_current.size())
+		std::string str = "ApproveQueue all:" + std::to_string(all.size())
 			+ " ,m_unverified:" + std::to_string(m_unverified.size())
 			+ " ,m_known:" + std::to_string(m_known.size())
 			+ " ,m_dropped:" + std::to_string(m_dropped.size());
-		if(m_current.size() > 0){
+		if(queue.size() > 0){
 			str += " current[";
-			for(auto current : m_current){
-				str += " epoch" + std::to_string(current.first) + " size=" + std::to_string(current.second.size()); 
+			for(auto current : queue){
+				str += " epoch:" + std::to_string(current.first) + " size=" + std::to_string(current.second.size()); 
 			}
 			str += " ]";
 		}
 		
 
 		return str;
+		return "";
 	}
 }

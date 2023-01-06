@@ -1,5 +1,6 @@
 #include <mcp/node/witness.hpp>
 #include <mcp/core/genesis.hpp>
+#include <mcp/core/param.hpp>
 #include <mcp/consensus/ledger.hpp>
 
 mcp::witness::witness(mcp::error_message & error_msg,
@@ -8,6 +9,7 @@ mcp::witness::witness(mcp::error_message & error_msg,
 	std::shared_ptr<mcp::composer> composer_a, std::shared_ptr<mcp::chain> chain_a,
 	std::shared_ptr<mcp::block_processor> block_processor_a,
 	std::shared_ptr<mcp::block_cache> cache_a, std::shared_ptr<TransactionQueue> tq,
+	std::shared_ptr<ApproveQueue> aq,
 	std::string const & account_or_file_text, std::string const & password_a
 ) :
 	m_store(store_a),
@@ -17,9 +19,11 @@ mcp::witness::witness(mcp::error_message & error_msg,
 	m_block_processor(block_processor_a),
 	m_cache(cache_a),
 	m_tq(tq),
+	m_aq(aq),
 	m_last_witness_time(std::chrono::steady_clock::now()),
 	m_witness_interval(std::chrono::milliseconds(m_max_witness_interval))
 {
+	m_chain->onMciStable([this](uint64_t const& mci) { try_create_approve(mci); });
 	bool error(!mcp::isAddress(account_or_file_text));
 	if (error) /// Specifies the keystore that needs to be imported. like: --witness_account=\home\0x1144B522F45265C2DFDBAEE8E324719E63A1694C.json
 	{
@@ -45,12 +49,16 @@ mcp::witness::witness(mcp::error_message & error_msg,
 		LOG(m_log.error) << "Witness error: Account not exists, " << m_account.hexPrefixed();
 		return;
 	}
+	m_rawPubkey = dev::toPublickey(m_secret);
 
     mcp::db::db_transaction transaction(m_store.create_transaction());
-	m_chain->check_need_send_approve(transaction, m_cache, m_account);
 
     //std::cout << "Witness start success.\n" << std::flush;
     LOG(m_log.info) << "witness account:" << m_account.hexPrefixed();
+
+
+	///try send approves
+	try_create_approve(m_chain->last_stable_mci());
 }
 
 void mcp::witness::start()
@@ -125,15 +133,15 @@ void mcp::witness::check_and_witness()
 		last_summary_mci = *last_summary_block_state->main_chain_index;
 	}
 
-	mcp::witness_param const & w_param(mcp::param::witness_param(mcp::approve::calc_curr_epoch(last_summary_mci)));
-
-	if (!mcp::param::is_witness(mcp::approve::calc_curr_epoch(last_summary_mci), m_account))
+	Epoch epoch = mcp::epoch(last_summary_mci);
+	mcp::witness_param const & w_param(mcp::param::witness_param(transaction, epoch));
+	if (!mcp::param::is_witness(transaction, epoch, m_account))
 	{
 		witness_notwitness_count++;
 		m_is_witnessing.clear();
-		LOG(m_log.trace) << "Not do witness, account:" << m_account.hexPrefixed() << " is not witness, last_summary_mci:" << last_summary_mci;
+		LOG(m_log.debug) << "Not do witness, account:" << m_account.hexPrefixed() << " is not witness, last_summary_mci:" << last_summary_mci;
 		return;
-	}	
+	}
 
 	//check majority different of witnesses
 	bool is_diff_majority(Ledger.check_majority_witness(transaction, m_cache, mc_block_hash, m_account, w_param));
@@ -181,13 +189,61 @@ void mcp::witness::do_witness()
 	}
 }
 
+void mcp::witness::try_create_approve(uint64_t const& mci)
+{
+	if (mci == 0 || mcp::node_sync::is_syncing()) 
+	{
+		//LOG(m_log.debug) << "Needn't send approve when syncing";
+		return;
+	}
+	static Epoch last_epoch = UINT64_MAX;
+	Epoch epoch = mcp::epoch(mci);
+	if (epoch != last_epoch &&
+		mci%mcp::epoch_period > *(uint64_t *)m_account.data() % mcp::epoch_period / 10) 
+	{
+		mcp::db::db_transaction transaction(m_store.create_transaction());
+		mcp::block_hash hash;
+		if (epoch <= 1) {
+			hash = mcp::genesis::block_hash;
+		}
+		else {
+			bool exists(!m_store.main_chain_get(transaction, (epoch - 1)*epoch_period, hash));
+			assert_x(exists);
+			///maybe not stable,But it doesn't matter
+		}
+
+		h648 proof;
+		if (!dev::signProve(proof, m_secret, m_rawPubkey, hash)) {
+			//LOG(m_log.debug) << "[send_approve] secp256k1_vrf_prove fail m_last_summary_mci=" << mci << " epoch=" << epoch;
+			return;
+		}
+
+		auto ap = std::make_shared<approve>(epoch, proof, m_secret);
+		if (!m_cache->approve_exists(transaction, ap->sha3()))///maybe send but not execute
+		{
+			LOG(m_log.debug) << "[send_approve] m_last_summary_mci=" << mci << " epoch=" << epoch;
+			m_aq->importLocal(ap);
+		}
+		
+		last_epoch = epoch;
+		approve_success_count++;
+	}
+	else
+	{
+		//LOG(m_log.debug) << "[send_approve] last_epoch existed m_last_summary_mci=" << mci << " epoch=" << epoch;
+		approve_failed_count++;
+	}
+}
+
 std::string mcp::witness::getInfo()
 {
 	std::string str = "lessInterval:" + std::to_string(witness_interval_count)
 		+ " ,syncing:" + std::to_string(witness_syncing_count)
 		+ " ,noTransaction:" + std::to_string(witness_transaction_count)
 		+ " ,notWitness:" + std::to_string(witness_notwitness_count)
-		+ " ,majority:" + std::to_string(witness_majority_count);
+		+ " ,majority:" + std::to_string(witness_majority_count)
+		+ " ,approveSuccessed:" + std::to_string(approve_success_count)
+		+ " ,approveFailed:" + std::to_string(approve_failed_count);
 
 	return str;
 }
