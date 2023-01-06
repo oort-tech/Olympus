@@ -41,7 +41,8 @@ mcp::block_store::block_store(bool & error_a, boost::filesystem::path const & pa
 	transaction_receipt(0),
 	approve_receipt(0),
 	epoch_approves(0),
-	epoch_param(0)
+	epoch_param(0),
+	transaction_account_state(0)
 {
 	if (error_a)
 		return;
@@ -89,6 +90,7 @@ mcp::block_store::block_store(bool & error_a, boost::filesystem::path const & pa
 	approve_receipt = m_db->set_column_family(default_col, "030");
 	epoch_approves = m_db->set_column_family(default_col, "031");
 	epoch_param = m_db->set_column_family(default_col, "032");
+	transaction_account_state = m_db->set_column_family(default_col, "033");
 
 	//use iterator
 	dag_free = m_db->set_column_family(default_col, "101");
