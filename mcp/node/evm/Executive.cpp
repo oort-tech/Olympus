@@ -377,7 +377,7 @@ bool mcp::Executive::go(dev::eth::OnOpFunc const& _onOp)
         {
             if (m_depth != 0)
                 throw;
-            BOOST_LOG(m_log.info) << "Safe VM Exception. " << diagnostic_information(_e);
+            BOOST_LOG(m_log.debug) << "Safe VM Exception. " << diagnostic_information(_e);
             m_gas = 0;
             m_excepted = toTransactionException(_e);
             revert();
