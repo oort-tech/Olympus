@@ -41,8 +41,8 @@ mcp::approve::approve(dev::RLP const & rlp, CheckTransaction _checkSig)
                 BOOST_THROW_EXCEPTION(InvalidSignature());
             m_chainId = static_cast<uint64_t>(chainId);
         }
-        // only values 27 and 28 are allowed for non-replay protected transactions
-        else if (v != 27 && v != 28)
+        // not support non-replay protected approves
+        else
             BOOST_THROW_EXCEPTION(InvalidSignature());
 
         auto const recoveryID = byte(v - (u256(m_chainId) *2 + 35));
