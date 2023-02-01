@@ -71,26 +71,29 @@ private:
 		b_param_v0.max_link_size = 4096;
 		block_param_map.insert({ 0, b_param_v0 });
 
-		chain_id = (uint64_t)971;
 		switch (mcp::mcp_network)
 		{
 		case mcp::mcp_networks::mcp_mini_test_network:
 		{
+			chain_id = (uint64_t)9700;
 			gas_price = 10000000;
 			break;
 		}
 		case mcp::mcp_networks::mcp_test_network:
 		{
+			chain_id = (uint64_t)9700;
 			gas_price = 10000000;
 			break;
 		}
 		case mcp::mcp_networks::mcp_beta_network:
 		{
+			chain_id = (uint64_t)972;// Ascraeus 972; huygens 971
 			gas_price = 10000000;
 			break;
 		}
 		case mcp::mcp_networks::mcp_live_network:
 		{
+			chain_id = (uint64_t)970;
 			gas_price = (uint256_t)5e13;
 			break;
 		}
