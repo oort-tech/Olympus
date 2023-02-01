@@ -104,21 +104,22 @@ unsigned peer_manager::fall_back_seconds(peers_content const& _p, PeerType type)
 	case disconnect_reason::tcp_error:
 	case disconnect_reason::too_many_peers:
 	case disconnect_reason::duplicate_peer:
-	{
-		if (_p.m_fail_attempts > 25)/// try to connect 25 times one day
-			return oneDayInSeconds;
-		return 10 * (_p.m_fail_attempts + 1);
-	}
+	//{
+	//	if (_p.m_fail_attempts > 25)/// try to connect 25 times one day
+	//		return oneDayInSeconds;
+	//	return 10 * (_p.m_fail_attempts + 1);
+	//}
 	case disconnect_reason::client_quit:
-	{
-		if (_p.m_fail_attempts > 10)
-			return oneDayInSeconds;
-		return 25 * (_p.m_fail_attempts + 1);
-	}
+	//{
+	//	if (_p.m_fail_attempts > 10)
+	//		return oneDayInSeconds;
+	//	return 25 * (_p.m_fail_attempts + 1);
+	//}
 	default:
-		if (_p.m_fail_attempts > 15)/// try to connect 15 times one day
-			return oneDayInSeconds;
-		return defaultFallbackSeconds(_p.m_fail_attempts);
+		//if (_p.m_fail_attempts > 15)/// try to connect 15 times one day
+		//	return oneDayInSeconds;
+		//return defaultFallbackSeconds(_p.m_fail_attempts);
+		return 0;
 	}
 }
 
