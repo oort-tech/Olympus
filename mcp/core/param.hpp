@@ -136,7 +136,7 @@ private:
 		}
 		case mcp::mcp_networks::mcp_beta_network:
 		{
-			witness_str_list_v0 = {
+			/*witness_str_list_v0 = { //for huygens
 				"0x6d76b7de9fa746bdfe2d5462ff46778a06bb2c35",
 				"0x7f4f900abde901c79c1fe91a81ccd876595eceac",
 				"0x94ab8f03fffc515d332894ea4be45df8aeacff4e",
@@ -151,6 +151,22 @@ private:
 				"0xc757c14c4e20d604227c27935cd9f37150d27626",
 				"0xd4c19e0c6a219e3a0e0b7249667cea21a69a6fdc",
 				"0xdf691895cf79f2ca139b3e5d0714280877971eea"
+			};*/
+			witness_str_list_v0 = { //for ascraeus
+				"0x0cefadfedc6b2d21b1a3c5b58b0ccc1d3cdff6f2",
+				"0x0ede6b6ca19f6bb7ce5be21546beae64c6762b6b",
+				"0x111a6899a9d63d4295e6de66f791acdaca6d07c6",
+				"0x234a808020b60abd2e85b68a57b19bc6aa7ac217",
+				"0x27821d50355795d2ce792553201a36afc232c4c1",
+				"0x2e2cb4884db9f2976a6b23e0544ea4d2d6f13c45",
+				"0x33d640ed625551c4ab29f81e2481f937c6cf24ee",
+				"0x3b9cf59b26286c0faf3f714ac17cc59284dae5fb",
+				"0x3ca4ded5891e7482f7ae34ff44ba86679bc3584d",
+				"0x4089240950b8a3118ddd647d14d53e77a61ff618",
+				"0x422ceefcce450aa293f81777c3fa4972349778ab",
+				"0x442f16643aeb9d466add91a464d9aa6acd63625d",
+				"0x49eb9d07b82dbdc6efd3ca14b71336a6a56d2962",
+				"0x4a625c5ddceb732a9e73d30e98f52e87bf53d8ee"
 			};
 			break;
 		}

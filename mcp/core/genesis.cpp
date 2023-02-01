@@ -20,12 +20,21 @@ std::string const test_genesis_data = R"%%%({
 	"exec_timestamp":"1514764800"
 })%%%";
 
+//// for huygens
+//std::string const beta_genesis_data = R"%%%({
+//    "from":"0x2953233ace71ff6419fbed672f4e92a8aaf1f98b",
+//    "to":"0x2953233ace71ff6419fbed672f4e92a8aaf1f98b",
+//    "value":"2000000000000000000000000000",
+//    "data":"",
+//	"exec_timestamp":"1514764800"
+//})%%%";
+// for ascraeus
 std::string const beta_genesis_data = R"%%%({
-    "from":"0x2953233ace71ff6419fbed672f4e92a8aaf1f98b",
-    "to":"0x2953233ace71ff6419fbed672f4e92a8aaf1f98b",
+    "from":"0x92415ac021b91045e9bff73334640c6a0e099069",
+    "to":"0x92415ac021b91045e9bff73334640c6a0e099069",
     "value":"2000000000000000000000000000",
     "data":"",
-	"exec_timestamp":"1514764800"
+	"exec_timestamp":"1675240217"
 })%%%";
 
 std::string const live_genesis_data = R"%%%({
