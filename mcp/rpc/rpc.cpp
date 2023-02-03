@@ -2004,147 +2004,166 @@ void mcp::rpc_handler::eth_getLogs(mcp::json &j_response, bool &)
 		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
 	}
 	params = params[0];
-
-	try
+	std::unordered_set<dev::Address> search_address;
+	if (params.count("address"))///is_null() or empty() invalid for string of json.
 	{
-		uint64_t fromBlock = m_chain->last_stable_index();
-		if (params.count("fromBlock"))
+		if (params["address"].is_string())
 		{
-			std::string blockText = params["fromBlock"];
-			if (blockText == "latest" || blockText == "pending")
+			dev::Address _a = jsToAddress(params["address"]);
+			if (_a != dev::ZeroAddress)
+				search_address.insert(_a);
+		}
+		else if (params["address"].is_array())
+		{
+			std::vector<std::string> address_l = params["address"];
+			for (std::string const &address_text : address_l)
 			{
-				fromBlock = m_chain->last_stable_index();
-			}
-			else if (blockText == "earliest")
-			{
-				fromBlock = 0;
-			}
-			else
-			{
-				fromBlock = jsToInt(blockText);
+				dev::Address _a = jsToAddress(address_text);
+				if (_a != dev::ZeroAddress)
+					search_address.insert(_a);
 			}
 		}
+		else
+			BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
+	}
 
-		uint64_t toBlock = m_chain->last_stable_index();
-		if (params.count("toBlock"))
+	std::unordered_set<dev::h256> search_topics;
+	if (params.count("topics"))
+	{
+		if (!params["topics"].is_array())
+			BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
+
+		std::vector<std::string> topics_l = params["topics"];
+		for (std::string const &topic_text : topics_l)
 		{
-			std::string blockText = params["toBlock"];
-			if (blockText == "latest" || blockText == "pending")
-			{
-				toBlock = m_chain->last_stable_index();
-			}
-			else if (blockText == "earliest")
-			{
-				toBlock = 0;
-			}
-			else
-			{
-				toBlock = jsToInt(blockText);
-			}
+			search_topics.insert(jsToHash(topic_text));
 		}
+	}
 
-		mcp::block_hash block_hash(0);
-		if (params.count("blockhash"))
+	mcp::json logs_l = mcp::json::array();
+	mcp::db::db_transaction transaction(m_store.create_transaction());
+	/// If we're doing singleton block filtering, execute and return
+	mcp::block_hash block_hash(0);
+	if (params.count("blockhash"))
+		block_hash = jsToHash(params["blockhash"]);
+	if (block_hash != mcp::block_hash(0))///is_null() or empty() invalid for string of json.
+	{
+		auto state = m_cache->block_state_get(transaction, block_hash);
+		if (!state || !state->is_stable)
+			BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidBlockHash());
+
+		auto block = m_cache->block_get(transaction, block_hash);
+		for (auto &th : block->links())
 		{
-			block_hash = jsToHash(params["blockhash"]);
-		}
-
-		std::unordered_set<dev::Address> search_address;
-		if (params.count("address") && !params["address"].is_null())
-		{
-			if (params["address"].is_string())
-			{
-				search_address.insert(jsToAddress(params["address"]));
-			}
-			else if (params["address"].is_array())
-			{
-				std::vector<std::string> address_l = params["address"];
-				for (std::string const &address_text : address_l)
-				{
-					search_address.insert(jsToAddress(address_text));
-				}
-			}
-		}
-
-		std::unordered_set<dev::h256> search_topics;
-		if (params.count("topics") && !params["topics"].is_null())
-		{
-			if (!params["topics"].is_array())
-			{
-				throw "";
-			}
-
-			std::vector<std::string> topics_l = params["topics"];
-			for (std::string const &topic_text : topics_l)
-			{
-				search_topics.insert(jsToHash(topic_text));
-			}
-		}
-
-		int logi = 0;
-		mcp::json logs_l = mcp::json::array();
-		mcp::db::db_transaction transaction(m_store.create_transaction());
-
-		if (block_hash != mcp::block_hash(0))
-		{
-			auto state = m_cache->block_state_get(transaction, block_hash);
-			if (state == nullptr)
-			{
-				throw "";
-			}
-			fromBlock = toBlock = state->stable_index;
-		}
-
-		for (uint64_t i(fromBlock); i <= toBlock; i++)
-		{
-			if (m_store.stable_block_get(transaction, i, block_hash))
-			{
+			auto t = m_cache->transaction_get(transaction, th);
+			auto tr = m_store.transaction_receipt_get(transaction, th);
+			auto td = m_cache->transaction_address_get(transaction, th);
+			if (t == nullptr || tr == nullptr || td == nullptr)
+				continue;
+			if (td->blockHash != block_hash) {///not first linked, ignore.
 				continue;
 			}
 
-			auto block_state = m_cache->block_state_get(transaction, block_hash);
-			if (!block_state || !block_state->is_stable)
-			{
-				continue;
-			}
-
-			auto block = m_cache->block_get(transaction, block_hash);
-			for (auto &th : block->links())
-			{
-				auto t = m_cache->transaction_get(transaction, th);
-				auto tr = m_store.transaction_receipt_get(transaction, th);
-				auto td = m_cache->transaction_address_get(transaction, th);
-				if (t == nullptr || tr == nullptr || td == nullptr)
-					continue;
-				if(td->blockHash != block_hash){
-					continue;
-				}
-				
-
-				auto lt = dev::eth::LocalisedTransactionReceipt(
-					*tr,
-					t->sha3(),
-					block_hash,
-					i,
-					t->from(),
-					t->to(),
-					td->index,
-					toAddress(t->from(), t->nonce()),
-					search_address,
-					search_topics);
-				for(auto localisedLog : lt.localisedLogs()){
-					mcp::json log = toJson(localisedLog);
-					logs_l.push_back(log);
-				}
+			auto lt = dev::eth::LocalisedTransactionReceipt(
+				*tr,
+				t->sha3(),
+				block_hash,
+				state->stable_index,
+				t->from(),
+				t->to(),
+				td->index,
+				toAddress(t->from(), t->nonce()),
+				search_address,
+				search_topics);
+			for (auto localisedLog : lt.localisedLogs()) {
+				mcp::json log = toJson(localisedLog);
+				logs_l.push_back(log);
 			}
 		}
-
 		j_response["result"] = logs_l;
+		return;
 	}
-	catch (...)
+
+	uint64_t fromBlock = m_chain->last_stable_index();
+	if (params.count("fromBlock"))
 	{
-		j_response["result"] = mcp::json::array();
+		std::string blockText = params["fromBlock"];
+		if (blockText == "latest" || blockText == "pending")
+		{
+			fromBlock = m_chain->last_stable_index();
+		}
+		else if (blockText == "earliest")
+		{
+			fromBlock = 0;
+		}
+		else
+		{
+			fromBlock = jsToInt(blockText);
+		}
 	}
+
+	uint64_t toBlock = m_chain->last_stable_index();
+	if (params.count("toBlock"))
+	{
+		std::string blockText = params["toBlock"];
+		if (blockText == "latest" || blockText == "pending")
+		{
+			toBlock = m_chain->last_stable_index();
+		}
+		else if (blockText == "earliest")
+		{
+			toBlock = 0;
+		}
+		else
+		{
+			toBlock = jsToInt(blockText);
+		}
+	}
+
+	if (toBlock - fromBlock + 1 > 200)///max 200
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_TooLargeResults());
+
+	for (uint64_t i(fromBlock); i <= toBlock; i++)
+	{
+		mcp::block_hash block_hash(0);
+		if (m_store.stable_block_get(transaction, i, block_hash))
+			break;
+
+		auto block_state = m_cache->block_state_get(transaction, block_hash);
+		if (!block_state || !block_state->is_stable)
+			break;
+
+		auto block = m_cache->block_get(transaction, block_hash);
+		for (auto &th : block->links())
+		{
+			auto t = m_cache->transaction_get(transaction, th);
+			auto tr = m_store.transaction_receipt_get(transaction, th);
+			auto td = m_cache->transaction_address_get(transaction, th);
+			if (t == nullptr || tr == nullptr || td == nullptr)
+				continue;
+			if (td->blockHash != block_hash) {///not first linked, ignore.
+				continue;
+			}
+
+			auto lt = dev::eth::LocalisedTransactionReceipt(
+				*tr,
+				t->sha3(),
+				block_hash,
+				i,
+				t->from(),
+				t->to(),
+				td->index,
+				toAddress(t->from(), t->nonce()),
+				search_address,
+				search_topics);
+			for (auto localisedLog : lt.localisedLogs()) {
+				mcp::json log = toJson(localisedLog);
+				logs_l.push_back(log);
+			}
+		}
+	}
+
+	j_response["result"] = logs_l;
 }
 
 void mcp::rpc_handler::debug_traceTransaction(mcp::json &j_response, bool &)

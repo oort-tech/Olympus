@@ -99,6 +99,7 @@ namespace mcp
 	RPC_ERROR_EXCEPTION(RPC_Error_UnknowError, 100, "Unkown Error");
 
 	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_OK, 0, "");
+	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_TooLargeResults, -32005, "The range exceeds the limitation");
 	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_InvalidAccount, -32602, "Invalid account");
 	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_InvalidPassword, -32602, "Invalid password");
 	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_LockedAccount, -32602, "Locked account");
@@ -113,6 +114,7 @@ namespace mcp
 	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_InvalidNonce, -32602, "Invalid nonce");
 	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_ZeroSignatureTransaction, -32602, "Zero signature transaction.");
 	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_InvalidBlock, -32602, "Invalid block number");
+	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_InvalidBlockHash, -32602, "Invalid block hash");
 	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_InvalidAccountFrom, -32602, "Invalid sender account");
 	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_InvalidAccountTo, -32602, "Invalid receiver account");
 	RPC_ETH_ERROR_EXCEPTION(RPC_Error_Eth_InvalidHash, -32602, "Invalid hash");
