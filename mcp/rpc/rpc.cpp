@@ -10,6 +10,7 @@
 #include <mcp/node/evm/Executive.hpp>
 #include <libdevcore/CommonJS.h>
 #include <libdevcore/CommonData.h>
+#include <libdevcore/TrieHash.h>
 
 #include "exceptions.hpp"
 #include "jsonHelper.hpp"
@@ -780,27 +781,21 @@ void mcp::rpc_handler::block_traces(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::stable_blocks(mcp::json &j_response, bool &)
 {
-	uint64_t index(0);
 	if (!request.count("index"))
-	{
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidIndex());
-	}
-	index = jsToInt(request["index"]);
+	uint64_t index = jsToInt(request["index"]);
 
-	uint64_t limit_l(0);
 	if (!request.count("limit"))
-	{
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidLimit());
-	}
-	limit_l = jsToInt(request["limit"]);
-	if (limit_l > list_max_limit)
-	{
+	uint64_t limit_l = jsToInt(request["limit"]);
+	if (limit_l > list_max_limit || !limit_l)///too big or zero.
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidLimit());
-	}
+
+	uint64_t last_stable_index(m_chain->last_stable_index());
+	if (index > last_stable_index)///invalid index,bigger than stable index.
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidIndex());
 
 	mcp::db::db_transaction transaction(m_store.create_transaction());
-	uint64_t last_stable_index(m_chain->last_stable_index());
-
 	mcp::json block_list_l = mcp::json::array();
 	int blocks_count(0);
 	for (uint64_t stable_index = index; stable_index <= last_stable_index; stable_index++)
@@ -884,18 +879,31 @@ void mcp::rpc_handler::block_summary(mcp::json &j_response, bool &)
 		}
 		j_response["parent_summaries"] = parent_summaries_l;
 
-		// link summary hashs
-		mcp::json link_summaries_l = mcp::json::array();
-		for (auto it(block->links().begin()); it != block->links().end(); it++)
+		///High performance overhead.
+		/*/// receiptsRoot hash
+		std::vector<bytes> receipts;
+		for (auto _h : block->links())
 		{
-			mcp::block_hash const &link_hash(*it);
-			mcp::summary_hash l_summary_hash;
-			bool l_summary_hash_error(m_cache->block_summary_get(transaction, link_hash, l_summary_hash));
-			assert_x(!l_summary_hash_error);
-
-			link_summaries_l.push_back(l_summary_hash.hexPrefixed());
+			auto receipt = m_cache->transaction_receipt_get(transaction, _h);
+			if (receipt)/// transaction maybe processed yet,but summary need used receipt even if it has been processed.
+			{
+				RLPStream receiptRLP;
+				receipt->streamRLP(receiptRLP);
+				receipts.push_back(receiptRLP.out());
+			}
 		}
-		j_response["link_summaries"] = link_summaries_l;
+		for (auto _h : block->links())
+		{
+			auto receipt = m_cache->approve_receipt_get(transaction, _h);
+			if (receipt)
+			{
+				RLPStream receiptRLP;
+				receipt->streamRLP(receiptRLP);
+				receipts.push_back(receiptRLP.out());
+			}
+		}
+		h256 receiptsRoot = dev::orderedTrieRoot(receipts);
+		j_response["receiptsRoot"] = receiptsRoot.hexPrefixed();*/
 
 		// skip list
 		mcp::json skiplist_summaries_l = mcp::json::array();
