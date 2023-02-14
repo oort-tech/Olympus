@@ -2234,6 +2234,7 @@ void mcp::rpc_handler::debug_traceTransaction(mcp::json &j_response, bool &)
 		{
 			BOOST_THROW_EXCEPTION(RPC_Error_InvalidHash());
 		}
+		c_state.ts = *_t;
 		c_state.set_defalut_account_state(accout_state_hashs);
 
 		//c_state should be used after set_defalut_account_state. Otherwise, account_state will be abnormal.
