@@ -30,8 +30,8 @@ std::string const test_genesis_data = R"%%%({
 //})%%%";
 // for ascraeus
 std::string const beta_genesis_data = R"%%%({
-    "from":"0x92415ac021b91045e9bff73334640c6a0e099069",
-    "to":"0x92415ac021b91045e9bff73334640c6a0e099069",
+    "from":"0x68B2c790B17b13C1217c31f7d8782C852109a2a5",
+    "to":"0x68B2c790B17b13C1217c31f7d8782C852109a2a5",
     "value":"2000000000000000000000000000",
     "data":"",
 	"exec_timestamp":"1675240217"
