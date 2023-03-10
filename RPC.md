@@ -12,9 +12,9 @@ Import an account into the node, the private key will be managed by the node, un
     "json": "{\"account\":\"<account>\",\"kdf_salt\":\"<kdf_salt>\",\"iv\":\"<iv>\",\"ciphertext\":\"<ciphertext>\"}"
 }
 ```
-#### mcp.js
+#### web3-olympus.js
 ```javascript
-mcp.request.accountImport(keystore)
+olympusRequest.accountImport(keystore)
 ```
 ### Returns
 - **code** - Integer: Error code. *0*: success, *9*: invalid json.
@@ -22,7 +22,7 @@ mcp.request.accountImport(keystore)
 - **account** - String: Imported account.
 #### Example
 ```javascript
-mcp.request.accountImport("{\"account\":\"0xa9d8863d0bf68dbaaacacad4ee0e865a0cc59f28\",\"kdf_salt\":\"175DCAF994E6992AAD1369014670C086\",\"iv\":\"F6054D9B144A254D3D4EAB78C95F21B6\",\"ciphertext\":\"2A943F3A7316C33B16374D9076FEF5BA7770C2A0424A08501D3663A1467DEDD7\"}")
+olympusRequest.accountImport("{\"account\":\"0xa9d8863d0bf68dbaaacacad4ee0e865a0cc59f28\",\"kdf_salt\":\"175DCAF994E6992AAD1369014670C086\",\"iv\":\"F6054D9B144A254D3D4EAB78C95F21B6\",\"ciphertext\":\"2A943F3A7316C33B16374D9076FEF5BA7770C2A0424A08501D3663A1467DEDD7\"}")
 
 // Success
 > {
@@ -50,9 +50,9 @@ Export the keystore file of an imported account.
     "account": <account>
 }
 ```
-#### mcp.js
+#### web3-olympus.js
 ```javascript
-mcp.request.accountExport(account)
+olympusRequest.accountExport(account)
 ```
 ### Returns
 - **code** - Integer: Error code. *0*: success, *1*: invalid account, *7*: account not found.
@@ -60,7 +60,7 @@ mcp.request.accountExport(account)
 - **json** - String: Keystore file of the exported account.
 #### Example
 ```javascript
-mcp.request.accountExport("0xa9d8863d0bf68dbaaacacad4ee0e865a0cc59f28")
+olympusRequest.accountExport("0xa9d8863d0bf68dbaaacacad4ee0e865a0cc59f28")
 
 // Success
 > {
@@ -96,16 +96,16 @@ Remove the keystore file of an account previously imported through account_impor
     "password": <password>
 }
 ```
-#### mcp.js
+#### web3-olympus.js
 ```javascript
-mcp.request.accountRemove(account, password)
+olympusRequest.accountRemove(account, password)
 ```
 ### Returns
 - **code** - Integer: Error code. *0*: success, *1*: invalid account, *5*: invalid password, *7*: account not found, *8*: wrong password, *46*: empty password.
 - **msg** - String: Error message.
 #### Example
 ```javascript
-mcp.request.accountRemove("0xa9d8863d0bf68dbaaacacad4ee0e865a0cc59f28", "s4iH1t@hBFtymA")
+olympusRequest.accountRemove("0xa9d8863d0bf68dbaaacacad4ee0e865a0cc59f28", "s4iH1t@hBFtymA")
 
 // Success
 > {
@@ -152,9 +152,9 @@ Return the state of a block with its block hash.
     "hash": <blockHash>
 }
 ```
-#### mcp.js
+#### web3-olympus.js
 ```javascript
-mcp.request.getBlockState(blockHash)
+olympusRequest.getBlockState(blockHash)
 ```
 ### Returns
 - **code** - Integer: Error code. *0*: success, *36*: invalid hash format.
@@ -175,7 +175,7 @@ mcp.request.getBlockState(blockHash)
       - **is_free** - Number: Does the block have children. *0*: no children, *1*: has children.
 #### Example
 ```javascript
-mcp.request.getBlockState("0xdbd8c3d4264e92e59b3b9d5f500a258427466e23ad7904b0c01e2e5b0a81c174")
+olympusRequest.getBlockState("0xdbd8c3d4264e92e59b3b9d5f500a258427466e23ad7904b0c01e2e5b0a81c174")
 
 // Success
 > {
@@ -222,9 +222,9 @@ Return the stable blocks by giving the index of the first block to retrieve and 
     "index": <index>
 }
 ```
-#### mcp.js
+#### web3-olympus.js
 ```javascript
-mcp.request.stableBlocks(limit, index)
+olympusRequest.stableBlocks(limit, index)
 ```
 ### Returns
 - **code** - Integer: Error code. *0*: success, *12*: invalid limit, *14*: invalid index.
@@ -245,7 +245,7 @@ mcp.request.stableBlocks(limit, index)
 - **next_index** - Number: The index of next stable block. *null* if there is no subsequent block.
 #### Example
 ```javascript
-mcp.request.stableBlocks("1", "10")
+olympusRequest.stableBlocks("1", "10")
 
 // Success
 > {
@@ -296,7 +296,7 @@ Return the summary of a stable block.
     "hash": <blockHash>
 }
 ```
-#### web3-olympus
+#### web3-olympus.js
 ```javascript
 olympusRequest.blockSummary(block_hash);
 ```
