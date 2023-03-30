@@ -298,7 +298,7 @@ Return the summary of a stable block.
 ```
 #### web3-olympus.js
 ```javascript
-olympusRequest.blockSummary(block_hash);
+olympusRequest.blockSummary(block_hash)
 ```
 ### Returns
 - **code** - Integer: Error code. *0*: success, *36*: invalid hash format.
@@ -330,5 +330,212 @@ olympusRequest.blockSummary("0xdbd8c3d4264e92e59b3b9d5f500a258427466e23ad7904b0c
 > {
     "code": 36,
     "msg": "Invalid hash format"
+}
+```
+
+## version
+Acquire the current node version, rpc interface version, and database version.
+### Parameters
+None
+#### POST Request Body
+```json
+{
+    "action": "version"
+}
+```
+#### web3-olympus.js
+```javascript
+olympusRequest.version()
+```
+### Returns
+- **code** - Integer: Error code. *0*: success.
+- **msg** - String: Error message.
+- **version** - String: Current node version.
+- **rpc_version** - String: RPC interface version.
+- **store_version** - String: Database version.
+#### Example
+```javascript
+olympusRequest.version()
+
+// Success
+> {
+    "code": 0,
+    "msg": "OK",
+    "version": "1.0.10",
+    "rpc_version": "1",
+    "store_version": "1"
+}
+```
+
+## status
+Retrieve the current status of DAG on the node.
+### Parameters
+None
+#### POST Request Body
+```json
+{
+    "action": "status"
+}
+```
+#### web3-olympus.js
+```javascript
+olympusRequest.status()
+```
+### Returns
+- **code** - Integer: Error code. *0*: success.
+- **msg** - String: Error message.
+- **syncing** - Number: If the node is syncing to the other nodes. *0* if not syncing, *1* if syncing.
+- **last_stable_mci** - Number: The mci of the last stable block.
+- **last_mci** - Number: The mci of the last block on the main chain.
+- **last_stable_block_index** - Number: The stable index of the last stable block. Stable index starts from value 0 and keep increasing. It indicates the order of stable blocks on DAG.
+- **epoch** - Number: The current epoch number of mcp.
+- **epoch_period** - Number: The number of blocks in main chain included in each epoch.
+#### Example
+```javascript
+olympusRequest.status()
+
+// Success
+> {
+    "code": 0,
+    "msg": "OK",
+    "syncing": 0,
+    "last_stable_mci": 366451,
+    "last_mci": 366469,
+    "last_stable_block_index": 535333,
+    "epoch": 3664,
+    "epoch_period": 100
+}
+```
+
+## peers
+Retrieve the peers connected to the node.
+### Parameters
+None
+#### POST Request Body
+```json
+{
+    "action": "peers"
+}
+```
+#### web3-olympus.js
+```javascript
+olympusRequest.peers()
+```
+### Returns
+- **code** - Integer: Error code. *0*: success.
+- **msg** - String: Error message.
+- **peers** - Array: List of peers returned.
+#### Example
+```javascript
+olympusRequest.peers()
+
+// Success
+> {
+    "code": 0,
+    "msg": "OK",
+    "peers": [
+        {
+            "id": "0x25931a5f55212a19ac22b5fc3cb1dfda6025828854fa90c14fffeef8027127a8c22a5aae61909d73b6de2167253596853a123e6e2b0050193e45a08be6cc8129",
+            "endpoint": "172.104.91.244:30607"
+        },
+        {
+            "id": "0x8185ce9ca658354142847666ab45a1991fbe86a3fbbdfdab1acfa173a0041600c56d3419f34e88fc1bc888ce913589953f186cc5412c688f45a2de1074db4b4b",
+            "endpoint": "43.154.130.109:30606"
+        },
+        ...
+    ]
+}
+```
+
+## nodes
+Retrieve the nodes that are candidates to connect to the node.
+### Parameters
+None
+#### POST Request Body
+```json
+{
+    "action": "nodes"
+}
+```
+#### web3-olympus.js
+```javascript
+olympusRequest.nodes()
+```
+### Returns
+- **code** - Integer: Error code. *0*: success.
+- **msg** - String: Error message.
+- **nodes** - Array: List of nodes returned.
+#### Example
+```javascript
+olympusRequest.nodes()
+
+// Success
+> {
+    "code": 0,
+    "msg": "OK",
+    "nodes": [
+        {
+            "id": "0x25931a5f55212a19ac22b5fc3cb1dfda6025828854fa90c14fffeef8027127a8c22a5aae61909d73b6de2167253596853a123e6e2b0050193e45a08be6cc8129",
+            "endpoint": "172.104.91.244:30607"
+        },
+        {
+            "id": "0x8a7becc16d52a1d61079cb9c9cdeb13952f5e56d488fcd836b7fa87eaecda542b4abce8b5fe20c7befe78cbe13a83e056242f92b65259d522e9b326c0314face",
+            "endpoint": "109.74.206.50:30607"
+        },
+        ...
+    ]
+}
+```
+
+## witness_list
+Retrieve the list of witnesses.
+### Parameters
+- **action** - String: "witness_list".
+- **epoch** (Optional) - String: Epoch number.
+#### POST Request Body
+```json
+{
+    "action": "witness_list",
+    "epoch": "100" // Optional
+}
+```
+#### web3-olympus.js
+```javascript
+olympusRequest.witnessList(epoch: Optional)
+```
+### Returns
+- **code** - Integer: Error code. *0*: success, *50*: epoch is too big.
+- **msg** - String: Error message.
+- **witness_list** - Array: List of witnesses.
+#### Example
+```javascript
+olympusRequest.witnessList("100")
+
+// Success
+> {
+    "code": 0,
+    "msg": "OK",
+    "witness_list": [
+        "0x111a6899a9d63d4295e6de66f791acdaca6d07c6",
+        "0x234a808020b60abd2e85b68a57b19bc6aa7ac217",
+        "0x27821d50355795d2ce792553201a36afc232c4c1",
+        "0x2e2cb4884db9f2976a6b23e0544ea4d2d6f13c45",
+        "0x422ceefcce450aa293f81777c3fa4972349778ab",
+        "0x442f16643aeb9d466add91a464d9aa6acd63625d",
+        "0x49eb9d07b82dbdc6efd3ca14b71336a6a56d2962",
+        "0x712f0e7ef7e055923611721d38d3ed05a5fc878c",
+        "0x9337d003c960c673f42116893f69c248ec4c655d",
+        "0xa6b11d16bd51d996d921dce6c8c350cbb1723c86",
+        "0xb1d9b0199bac38d32b2d539d9911941a14e56f60",
+        "0xb82d856e065ae9b63115eb4024a71bd6df81ba52",
+        "0xc1c64d93759b35effb645cf700983c7d1b9edcca",
+        "0xdf127194cf3c7e314ed25952169d1c56fcbb2d46"
+    ]
+}
+
+// Failed
+> { 
+    "code": 50, 
+    "msg": "epoch is too big."
 }
 ```
