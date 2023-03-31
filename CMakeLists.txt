@@ -66,7 +66,7 @@ if (BOOST_CUSTOM)
     list(APPEND CMAKE_MODULE_PATH ".\\" ${CMAKE_SOURCE_PATH})
 endif (BOOST_CUSTOM)
 
-find_package (Boost 1.66.0 REQUIRED COMPONENTS date_time filesystem system log log_setup thread program_options regex chrono atomic)
+find_package (Boost 1.66.0 REQUIRED COMPONENTS date_time filesystem system log log_setup thread program_options regex locale chrono atomic)
 include_directories (${Boost_INCLUDE_DIR})
 
 set(rocksdb_INCLUDE_DIR "" CACHE PATH "rocksdb include directory")
@@ -200,6 +200,7 @@ add_subdirectory(evmc)
 add_subdirectory(libevm)
 add_subdirectory(libdevcore)
 add_subdirectory(libdevcrypto)
+add_subdirectory(account)
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 	set (PLATFORM_SECURE_SOURCE mcp/plat/osx/working.mm)
@@ -372,6 +373,8 @@ add_library (core
 	mcp/core/approve_receipt.cpp
 	mcp/core/approve.hpp
 	mcp/core/approve.cpp
+	mcp/core/contract.hpp
+	mcp/core/contract.cpp
 	mcp/core/iapprove_queue.hpp
 	)
 	
@@ -388,6 +391,7 @@ add_executable (test_account
 	test/account/main.cpp
 	test/account/account.cpp
 	test/account/crypto.cpp
+	test/account/abi.cpp
 	test/account/secure_string.cpp)
 
 set (UPNPC_BUILD_SHARED OFF CACHE BOOL "")
@@ -441,8 +445,8 @@ else ()
     set (DEPENDENCE_LIBS ${DEPENDENCE_LIBS} ${ZLIB_LIBRARY})
 endif()
 
-target_link_libraries (mcp rpc wallet consensus node p2p core db common devcrypto devcore evm libminiupnpc-static secp256k1 lz4_static ${CRYPTOPP_LIBRARY} ${Boost_ATOMIC_LIBRARY} ${Boost_CHRONO_LIBRARY} ${Boost_REGEX_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_LOG_LIBRARY} ${Boost_PROGRAM_OPTIONS_LIBRARY} ${Boost_LOG_SETUP_LIBRARY} ${Boost_THREAD_LIBRARY} ${PLATFORM_LIBS}  ${DEPENDENCE_LIBS})
+target_link_libraries (mcp rpc wallet consensus node p2p core db common account devcrypto devcore evm libminiupnpc-static secp256k1 lz4_static ${CRYPTOPP_LIBRARY} ${Boost_ATOMIC_LIBRARY} ${Boost_CHRONO_LIBRARY} ${Boost_REGEX_LIBRARY} ${Boost_LOCALE_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_LOG_LIBRARY} ${Boost_PROGRAM_OPTIONS_LIBRARY} ${Boost_LOG_SETUP_LIBRARY} ${Boost_THREAD_LIBRARY} ${PLATFORM_LIBS}  ${DEPENDENCE_LIBS})
 
-target_link_libraries (test_account rpc wallet consensus node p2p core db common devcrypto devcore evm libminiupnpc-static secp256k1 lz4_static ${CRYPTOPP_LIBRARY} ${Boost_ATOMIC_LIBRARY} ${Boost_CHRONO_LIBRARY} ${Boost_REGEX_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_LOG_LIBRARY} ${Boost_PROGRAM_OPTIONS_LIBRARY} ${Boost_LOG_SETUP_LIBRARY} ${Boost_THREAD_LIBRARY} ${PLATFORM_LIBS} ${DEPENDENCE_LIBS})
+target_link_libraries (test_account rpc wallet consensus node p2p core db common account devcrypto devcore evm libminiupnpc-static secp256k1 lz4_static ${CRYPTOPP_LIBRARY} ${Boost_ATOMIC_LIBRARY} ${Boost_CHRONO_LIBRARY} ${Boost_REGEX_LIBRARY} ${Boost_LOCALE_LIBRARY}  ${Boost_DATE_TIME_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_LOG_LIBRARY} ${Boost_PROGRAM_OPTIONS_LIBRARY} ${Boost_LOG_SETUP_LIBRARY} ${Boost_THREAD_LIBRARY} ${PLATFORM_LIBS} ${DEPENDENCE_LIBS})
 
 

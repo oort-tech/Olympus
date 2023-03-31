@@ -3,6 +3,7 @@
 #include <thread>
 #include <boost/algorithm/string.hpp>
 #include <mcp/core/param.hpp>
+#include <mcp/core/contract.hpp>
 #include <mcp/application/daemon.hpp>
 #include <mcp/common/pwd.hpp>
 #include <mcp/node/witness.hpp>
@@ -761,10 +762,11 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 
 		mcp::param::init(cache);
 		///chain
-		std::shared_ptr<mcp::chain> chain(std::make_shared<mcp::chain>(chain_store));
+		std::shared_ptr<mcp::chain> chain(std::make_shared<mcp::chain>(chain_store, cache));
 
 		/// transaction queue
 		std::shared_ptr<mcp::TransactionQueue> TQ(std::make_shared<mcp::TransactionQueue>(io_service, chain_store, cache, chain, sync_async));
+		chain->set_TQ(TQ);
 		/// approve queue
 		std::shared_ptr<mcp::ApproveQueue> AQ(std::make_shared<mcp::ApproveQueue>(chain_store, cache, chain, sync_async));
 
@@ -800,6 +802,9 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 		}
 		host->register_capability(capability);
 		host->start();
+
+		///contract caller
+		mcp::DENCaller = NewDENContractCaller(std::bind(&mcp::chain::call, chain, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
 
 		//witness node start
 		std::shared_ptr<mcp::witness> witness = nullptr;

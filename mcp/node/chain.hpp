@@ -25,15 +25,18 @@ namespace mcp
 	class chain : public std::enable_shared_from_this<mcp::chain>
 	{
 	public:
-		chain(mcp::block_store& store_a);
+		chain(mcp::block_store& store_a, std::shared_ptr<mcp::block_cache> cache_a);
 		~chain();
 		void init(bool & error_a, mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a, std::shared_ptr<mcp::block_cache> block_cache_a);
 		void stop();
+
+		void set_TQ(std::shared_ptr<mcp::TransactionQueue> tq) { m_tq = tq; }
 
 		std::pair<u256, bool> estimate_gas(mcp::db::db_transaction& transaction_a, std::shared_ptr<mcp::iblock_cache> cache_a,
 			Address const& _from, u256 const& _value, Address const& _dest, bytes const& _data, int64_t const& _maxGas, u256 const& _gasPrice, dev::eth::McInfo const & mc_info, GasEstimationCallback const& _callback = GasEstimationCallback());
 		std::pair<ExecutionResult, dev::eth::TransactionReceipt> execute(mcp::db::db_transaction& transaction_a, std::shared_ptr<mcp::iblock_cache> cache_a, Transaction const& _t, dev::eth::McInfo const & mc_info_a, Permanence _p, dev::eth::OnOpFunc const& _onOp);
 		mcp::json traceTransaction(Executive& _e, Transaction const& _t, mcp::json const& _json);
+		void call(dev::Address const& _from, dev::Address const& _contractAddress, dev::bytes const& _data, dev::bytes& result);
 
 		void save_dag_block(mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a, std::shared_ptr<mcp::block> block_a);
 		void save_transaction(mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a, std::shared_ptr<mcp::Transaction> t_a);
@@ -94,6 +97,8 @@ namespace mcp
 		void add_new_witness_list(mcp::db::db_transaction & transaction_a, uint64_t mc_last_summary_mci);
 		void init_vrf_outputs(mcp::db::db_transaction & transaction_a);
 		mcp::block_store m_store;
+		std::shared_ptr<mcp::block_cache> m_cache;
+		std::shared_ptr<mcp::TransactionQueue> m_tq;
 		//std::list<std::function<void(std::shared_ptr<mcp::block>)> > m_new_block_observer;
 		//std::queue<std::shared_ptr<mcp::block>> m_new_blocks;
 		//std::list<std::function<void(std::shared_ptr<mcp::block>)> > m_stable_block_observer;

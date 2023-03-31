@@ -13,8 +13,9 @@
 
 #include <queue>
 
-mcp::chain::chain(mcp::block_store& store_a) :
+mcp::chain::chain(mcp::block_store& store_a, std::shared_ptr<mcp::block_cache> cache_a) :
 	m_store(store_a),
+	m_cache(cache_a),
 	m_stopped(false)
 {
 }
@@ -1329,4 +1330,35 @@ mcp::json mcp::chain::traceTransaction(Executive& _e, Transaction const& _t, mcp
 		_e.go(st.onOp());
 	_e.finalize();
 	return st.jsonValue();
+}
+
+void mcp::chain::call(dev::Address const& _from, dev::Address const& _contractAddress, dev::bytes const& _data, dev::bytes& result)
+{
+	mcp::db::db_transaction transaction(m_store.create_transaction());
+	mcp::block_hash block_hash;
+	m_cache->block_number_get(transaction, last_stable_index(), block_hash);
+	std::shared_ptr<mcp::block_state> mc_state(m_cache->block_state_get(transaction, block_hash));
+
+	uint64_t last_summary_mci(0);
+	if (block_hash != mcp::genesis::block_hash)
+	{
+		std::shared_ptr<mcp::block> mc_block(m_cache->block_get(transaction, block_hash));
+		std::shared_ptr<mcp::block_state> last_summary_state(m_cache->block_state_get(transaction, mc_block->last_summary_block()));
+		last_summary_mci = *last_summary_state->main_chain_index;
+	}
+	dev::eth::McInfo mc_info = dev::eth::McInfo(mc_state->stable_index, *mc_state->main_chain_index, mc_state->mc_timestamp, last_summary_mci);
+	TransactionSkeleton ts;
+	ts.from = _from;
+	ts.to = _contractAddress;
+	ts.data = _data;
+	ts.gasPrice = 0;
+	ts.gas = mcp::tx_max_gas;
+	ts.nonce = m_tq->maxNonce(ts.from);
+	Transaction _t(ts);
+
+	dev::eth::EnvInfo env(transaction, m_store, m_cache, mc_info, mcp::chainID());
+	auto chain_ptr(shared_from_this());
+	chain_state c_state(transaction, 0, m_store, chain_ptr, m_cache);
+	std::pair<mcp::ExecutionResult, dev::eth::TransactionReceipt> ar = c_state.execute(env, Permanence::Uncommitted, _t, dev::eth::OnOpFunc());
+	result = ar.first.output;
 }
