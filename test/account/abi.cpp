@@ -10,7 +10,6 @@
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/regex.hpp>
 #include <boost/algorithm/string/join.hpp>
-#include <boost/locale.hpp>
 #include <mcp/core/contract.hpp>
 #include <boost/tuple/tuple.hpp>
 #include <boost/tuple/tuple_io.hpp>
