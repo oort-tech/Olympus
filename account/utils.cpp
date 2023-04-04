@@ -2,8 +2,6 @@
 
 namespace dev
 {
-	using rational = boost::rational<dev::bigint>;
-
 	//ToCamelCase converts an under-score string to a camel-case string
 	std::string ToCamelCase(std::string input)
 	{

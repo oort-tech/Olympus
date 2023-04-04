@@ -403,7 +403,7 @@ add_subdirectory(miniupnp/miniupnpc)
 add_subdirectory(lz4/contrib/cmake_unofficial)
 
 set_target_properties (db PROPERTIES COMPILE_FLAGS "${PLATFORM_CXX_FLAGS} ${PLATFORM_COMPILE_FLAGS}")
-set_target_properties (common rpc wallet consensus core node devcrypto devcore p2p mcp evm PROPERTIES COMPILE_FLAGS "${PLATFORM_CXX_FLAGS} ${PLATFORM_COMPILE_FLAGS} -DQT_NO_KEYWORDS -DMCP_VERSION=${VERSION} -DBOOST_ASIO_HAS_STD_ARRAY=1")
+set_target_properties (common rpc wallet consensus core node devcrypto devcore p2p mcp evm account PROPERTIES COMPILE_FLAGS "${PLATFORM_CXX_FLAGS} ${PLATFORM_COMPILE_FLAGS} -DQT_NO_KEYWORDS -DMCP_VERSION=${VERSION} -DBOOST_ASIO_HAS_STD_ARRAY=1")
 set_target_properties (common rpc wallet consensus core node devcrypto devcore p2p mcp PROPERTIES LINK_FLAGS "${PLATFORM_LINK_FLAGS}")
 set_target_properties (libminiupnpc-static PROPERTIES COMPILE_FLAGS "${PLATFORM_C_FLAGS} ${PLATFORM_COMPILE_FLAGS}")
 

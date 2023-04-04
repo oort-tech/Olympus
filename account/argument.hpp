@@ -12,9 +12,9 @@ namespace dev
 	class Argument
 	{
 	public:
-		Argument(std::string const& _n, std::shared_ptr<Type> _t, bool const& _i): Name(_n), Type(_t), Indexed(_i) {}
+		Argument(std::string const& _n, std::shared_ptr<Type> _t, bool const& _i): Name(_n), Typ(_t), Indexed(_i) {}
 		std::string Name;
-		std::shared_ptr<Type>    Type;
+		std::shared_ptr<Type>    Typ;
 		bool	Indexed;  /// indexed is only used by events
 	};	
 
@@ -58,9 +58,9 @@ namespace dev
 		/// param input type
 		Argument input = abiArgs[index];
 		/// pack the input
-		dev::bytes packed = input.Type->Pack(_firstArg);
+		dev::bytes packed = input.Typ->Pack(_firstArg);
 		/// check for dynamic types
-		if (isDynamicType(*input.Type))
+		if (input.Typ->isDynamicType())
 		{
 			/// set the offset
 			ret += Type::encode(inputOffset);
@@ -86,7 +86,7 @@ namespace dev
 		dev::bytes variableInput;
 		int inputOffset = 0;
 		for (auto abiArg : abiArgs)
-			inputOffset += getTypeSize(*abiArg.Type);
+			inputOffset += abiArg.Typ->getTypeSize();
 
 		dev::bytes ret;
 		pack(inputOffset, variableInput, ret, args...);
@@ -102,8 +102,8 @@ namespace dev
 		/// param index
 		int index = abiArgs.size() - sizeof...(args)-1;
 		Argument output = abiArgs[index];
-		output.Type->Unpack((index + virtualArgs) * 32, data, _firstArg);
-		if (output.Type->T == ValueType::ArrayTy && !isDynamicType(*output.Type))
+		output.Typ->Unpack((index + virtualArgs) * 32, data, _firstArg);
+		if (output.Typ->T == ValueType::ArrayTy && !output.Typ->isDynamicType())
 		{
 			/// If we have a static array, like [3]uint256, these are coded as
 			/// just like uint256,uint256,uint256.
@@ -115,13 +115,13 @@ namespace dev
 			///
 			/// Calculate the full array size to get the correct offset for the next argument.
 			/// Decrement it by 1, as the normal index increment is still applied.
-			virtualArgs += getTypeSize(*output.Type) / 32 - 1;
+			virtualArgs += output.Typ->getTypeSize() / 32 - 1;
 		}
-		else if (output.Type->T == TupleTy && !isDynamicType(*output.Type))
+		else if (output.Typ->T == TupleTy && !output.Typ->isDynamicType())
 		{
 			/// If we have a static tuple, like (uint256, bool, uint256), these are
 			/// coded as just like uint256,bool,uint256
-			virtualArgs += getTypeSize(*output.Type) / 32 - 1;
+			virtualArgs += output.Typ->getTypeSize() / 32 - 1;
 		}
 		///next
 		unpack(nonIndexedArgs, virtualArgs, data, args...);

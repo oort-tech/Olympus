@@ -5,16 +5,13 @@
 
 #pragma once
 
+#include <functional>
 #include <boost/algorithm/string/regex.hpp>
 #include <boost/algorithm/string/join.hpp>
 #include <boost/format.hpp>
-#include <libdevcore/Common.h>
-#include <libdevcore/FixedHash.h>
 
 namespace dev
 {
-	using rational = boost::rational<dev::bigint>;
-
 	// ToCamelCase converts an under-score string to a camel-case string
 	std::string ToCamelCase(std::string input);
 

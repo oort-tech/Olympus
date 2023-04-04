@@ -26,25 +26,25 @@ namespace dev
 			j.at("indexed").get_to(p.Indexed);
 	}
 
-	/// isDynamicType returns true if the type is dynamic.
-	/// The following types are called ¡°dynamic¡±:
-	/// * bytes
-	/// * string
-	/// * T[] for any T
-	/// * T[k] for any dynamic T and any k >= 0
-	/// * (T1,...,Tk) if Ti is dynamic for some 1 <= i <= k
-	bool isDynamicType(Type const & t)
+	///isDynamicType returns true if the type is dynamic.
+	///The following types are called ¡°dynamic¡±:
+	///* bytes
+	///* string
+	///* T[] for any T
+	///* T[k] for any dynamic T and any k >= 0
+	///* (T1,...,Tk) if Ti is dynamic for some 1 <= i <= k
+	bool Type::isDynamicType()
 	{
-		if (t.T == ValueType::TupleTy)
+		if (T == ValueType::TupleTy)
 		{
-			for (auto elem : t.TupleElems)
+			for (auto elem : TupleElems)
 			{
-				if (isDynamicType(elem))
+				if (elem.isDynamicType())
 					return true;
 			}
 			return false;
 		}
-		return t.T == ValueType::StringTy || t.T == ValueType::BytesTy || t.T == ValueType::SliceTy || (t.T == ValueType::ArrayTy && isDynamicType(*t.Elem));
+		return T == ValueType::StringTy || T == ValueType::BytesTy || T == ValueType::SliceTy || (T == ValueType::ArrayTy && Elem->isDynamicType());
 	}
 
 	/// getTypeSize returns the size that this type needs to occupy.
@@ -55,29 +55,30 @@ namespace dev
 	/// variable actually occupies.
 	/// For a dynamic variable, the returned size is fixed 32 bytes, which is used
 	/// to store the location reference for actual value storage.
-	int getTypeSize(Type const& t)
+	int Type::getTypeSize()
 	{
-		if (t.T == ValueType::ArrayTy && !isDynamicType(*t.Elem))
+		if (T == ValueType::ArrayTy && !Elem->isDynamicType())
 		{
 			/// Recursively calculate type size if it is a nested array
-			if ((*(t.Elem)).T == ValueType::ArrayTy || (*(t.Elem)).T == ValueType::TupleTy)
+			if (Elem->T == ValueType::ArrayTy || Elem->T == ValueType::TupleTy)
 			{
-				return t.Size * getTypeSize(*t.Elem);
+				return Size * Elem->getTypeSize();
 			}
-			return t.Size * 32;
+			return Size * 32;
 		}
-		else if (t.T == TupleTy && !isDynamicType(t))
+		else if (T == TupleTy && !isDynamicType())
 		{
 			int total = 0;
-			for (auto elem : t.TupleElems) {
-				total += getTypeSize(elem);
+			for (auto elem : TupleElems) {
+				total += elem.getTypeSize();
 			}
 			return total;
 		}
 		return 32;
 	}
 
-	int lengthPrefixPointsTo(int index, dev::bytes const & output)
+	/// lengthPrefixPointsTo interprets a 32 byte slice as an offset and then determines which indices to look to decode the type.
+	int Type::lengthPrefixPointsTo(int index, dev::bytes const & output)
 	{
 		int outputLength = output.size();
 		///data offset

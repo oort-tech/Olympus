@@ -8,12 +8,12 @@ namespace dev
 		std::vector<std::string> types(_Inputs.size()), inputNames(_Inputs.size()), outputNames(_Outputs.size());
 		for (size_t i = 0; i < _Inputs.size(); i++)
 		{
-			inputNames[i] = boost::str(boost::format("%1% %2%") % _Inputs[i].Type->stringKind % _Inputs[i].Name); //todo ???????????????????????????
-			types[i] = _Inputs[i].Type->stringKind;
+			inputNames[i] = boost::str(boost::format("%1% %2%") % _Inputs[i].Typ->stringKind % _Inputs[i].Name);
+			types[i] = _Inputs[i].Typ->stringKind;
 		}
 		for (size_t i = 0; i < _Outputs.size(); i++)
 		{
-			outputNames[i] = _Outputs[i].Type->stringKind; //todo
+			outputNames[i] = _Outputs[i].Typ->stringKind; //todo
 			if (_Outputs[i].Name.length()) /// name valid
 				outputNames[i] = outputNames[i] + " " + _Outputs[i].Name;
 		}

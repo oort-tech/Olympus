@@ -9,13 +9,10 @@
 #include <libdevcore/Common.h>
 #include <mcp/common/json.hpp>
 #include <boost/algorithm/string.hpp>
-#include <boost/any.hpp>
 #include <libdevcore/Exceptions.h>
 
 namespace dev
 {
-	using rational = boost::rational<dev::bigint>;
-
 	/// Type enumerator
 	enum ValueType : byte
 	{
@@ -77,73 +74,14 @@ namespace dev
 		dev::bytes encode(char const* _value) { return encode(std::string(_value)); }
 
 		///for boost::tuple
+		void encode(const boost::tuples::null_type&, int& offset, dev::bytes& ret, dev::bytes& tail, int index);///tuple stopped function
 		template <typename Tuple>
-		void encode(const Tuple& _value, int& offset, dev::bytes& ret, dev::bytes& tail, int index = 0) {
-			if (TupleElems.size() == index)///missing parameter
-				BOOST_THROW_EXCEPTION(dev::FailedABI());
-			Type elem = TupleElems[index];
-			auto field = _value.get_head();
-			dev::bytes val = elem.Pack(field);
-			if (isDynamicType(elem))
-			{
-				ret += encode(offset);
-				tail += val;
-				offset += val.size();
-			}
-			else
-				ret += val;
-
-			index++;///next value
-			encode(_value.get_tail(), offset, ret, tail, index);
-		}
-		template<>///tuple stopped function
-		void encode(const boost::tuples::null_type&, int& offset, dev::bytes& ret, dev::bytes& tail, int index) {
-			if (TupleElems.size() > index)///missing parameter
-				BOOST_THROW_EXCEPTION(dev::FailedABI());
-		}
-
+		void encode(const Tuple& _value, int& offset, dev::bytes& ret, dev::bytes& tail, int index = 0);
 		template <typename Tuple>
-		dev::bytes encode(Tuple const& _value)
-		{ 
-			if (T != ValueType::TupleTy)///tuple
-				BOOST_THROW_EXCEPTION(dev::FailedABI());
-			int offset = 0;
-			dev::bytes ret;
-			dev::bytes tail;
-			for (auto elem : TupleElems)
-				offset += getTypeSize(elem);
-			encode(_value, offset, ret, tail);
-			return ret + tail;
-		}
-
-		template <class T>
-		dev::bytes encode(std::vector<T> const& _value)
-		{
-			dev::bytes ret;
-			if (requiresLengthPrefix())
-				ret = encode(_value.size());///encode with length;
-
-			/// calculate offset if any
-			int offset = 0;
-			bool offsetReq = isDynamicType(*Elem);
-			if (offsetReq)
-				offset = getTypeSize(*Elem) * _value.size();
-
-			dev::bytes tail;
-			for (auto const& v : _value)
-			{
-				dev::bytes val = Elem->Pack(v);
-				if (!offsetReq)
-				{
-					ret += val;
-					continue;
-				}
-				ret += encode(offset);
-				offset += val.size();
-				tail += val;
-			}
-			return ret + tail;
-		}
+		dev::bytes encode(Tuple const& _value);
+		///for vector
+		template <typename TY>
+		dev::bytes encode(std::vector<TY> const& _value);
 
 		///decoder
 		static void decode(dev::bytes const& _in, uint8_t& _value) { _value = _in.at(31); }
@@ -169,42 +107,32 @@ namespace dev
 		void decode(dev::bytes const& _in, std::string& _value) { dev::bytes r; decode(_in, r); _value = dev::asString(r); }
 
 		///for boost::tuple
+		void decode(dev::bytes const& in, const boost::tuples::null_type&, int virtualArgs, int index);///tuple stopped function
 		template <typename Tuple>
-		void decode(dev::bytes const& in, Tuple& _value, int virtualArgs = 0, int index = 0) {
-			if (TupleElems.size() == index)///missing parameter
-				BOOST_THROW_EXCEPTION(dev::FailedABI());
-			Type elem = TupleElems[index];
+		void decode(dev::bytes const& in, Tuple& _value, int virtualArgs = 0, int index = 0);
+		///for vector
+		template <class TY>
+		void decode(dev::bytes const& _in, std::vector<TY>& _value);
 
-			elem.Unpack((index + virtualArgs) * 32, in, _value.get_head());
-
-			index++;
-			if (elem.T == ValueType::ArrayTy && !isDynamicType(elem))///array but static data, put data in the place 
-				virtualArgs = virtualArgs + elem.Size - 1;
-			decode(in, _value.get_tail(), virtualArgs, index);
-		}
-		template<>///tuple stopped function
-		void decode(dev::bytes const& in, boost::tuples::null_type&, int virtualArgs, int index) {}
-
-		template <class T>
-		void decode(dev::bytes const& _in, std::vector<T>& _value)
-		{
-			dev::bytes in(_in);
-			int size = Size;
-			if (requiresLengthPrefix())
-			{
-				size = fromBigEndian<int>(dev::bytes(in.data(), in.data() + 32));
-				in = dev::bytes(in.data() + 32, in.data() + in.size());
-			}
-
-			/// calculate offset if any
-			for (size_t i = 0; i < size; i++)
-			{
-				int index = i * 32;
-				T v;
-				Elem->Unpack(index, in, v);
-				_value.push_back(v);
-			}
-		}
+		///isDynamicType returns true if the type is dynamic.
+		///The following types are called ¡°dynamic¡±:
+		///* bytes
+		///* string
+		///* T[] for any T
+		///* T[k] for any dynamic T and any k >= 0
+		///* (T1,...,Tk) if Ti is dynamic for some 1 <= i <= k
+		bool isDynamicType();
+		/// getTypeSize returns the size that this type needs to occupy.
+		/// We distinguish static and dynamic types. Static types are encoded in-place
+		/// and dynamic types are encoded at a separately allocated location after the
+		/// current block.
+		/// So for a static variable, the size returned represents the size that the
+		/// variable actually occupies.
+		/// For a dynamic variable, the returned size is fixed 32 bytes, which is used
+		/// to store the location reference for actual value storage.
+		int getTypeSize();
+		/// lengthPrefixPointsTo interprets a 32 byte slice as an offset and then determines which indices to look to decode the type.
+		int lengthPrefixPointsTo(int index, dev::bytes const& output);
 
 		template<typename Arg>
 		dev::bytes Pack(Arg const& arg);
@@ -223,6 +151,115 @@ namespace dev
 		std::vector<Type> TupleElems;      /// Type information of all tuple fields
 		std::vector<std::string>	TupleRawNames;     /// Raw field name of all tuple fields
 	};
+
+	///tuple stopped function
+	inline void Type::encode(const boost::tuples::null_type&, int& offset, dev::bytes& ret, dev::bytes& tail, int index)
+	{
+		if (TupleElems.size() > index)///missing parameter
+			BOOST_THROW_EXCEPTION(dev::FailedABI());
+	}
+	template<typename Tuple>
+	inline void Type::encode(const Tuple & _value, int & offset, dev::bytes & ret, dev::bytes & tail, int index)
+	{
+		if (TupleElems.size() == index)///missing parameter
+			BOOST_THROW_EXCEPTION(dev::FailedABI());
+		Type elem = TupleElems[index];
+		auto field = _value.get_head();
+		dev::bytes val = elem.Pack(field);
+		if (elem.isDynamicType())
+		{
+			ret += encode(offset);
+			tail += val;
+			offset += val.size();
+		}
+		else
+			ret += val;
+
+		index++;///next value
+		encode(_value.get_tail(), offset, ret, tail, index);
+	}
+
+	template<typename Tuple>
+	inline dev::bytes Type::encode(Tuple const & _value)
+	{
+		if (T != ValueType::TupleTy)///tuple
+			BOOST_THROW_EXCEPTION(dev::FailedABI());
+		int offset = 0;
+		dev::bytes ret;
+		dev::bytes tail;
+		for (auto elem : TupleElems)
+			offset += elem.getTypeSize();
+		encode(_value, offset, ret, tail);
+		return ret + tail;
+	}
+
+	template<typename TY>
+	inline dev::bytes Type::encode(std::vector<TY> const & _value)
+	{
+		dev::bytes ret;
+		if (requiresLengthPrefix())
+			ret = encode(_value.size());///encode with length;
+
+										/// calculate offset if any
+		int offset = 0;
+		bool offsetReq = Elem->isDynamicType();
+		if (offsetReq)
+			offset = Elem->getTypeSize() * _value.size();
+
+		dev::bytes tail;
+		for (auto const& v : _value)
+		{
+			dev::bytes val = Elem->Pack(v);
+			if (!offsetReq)
+			{
+				ret += val;
+				continue;
+			}
+			ret += encode(offset);
+			offset += val.size();
+			tail += val;
+		}
+		return ret + tail;
+	}
+
+	///tuple stopped function
+	inline void Type::decode(dev::bytes const& in, const boost::tuples::null_type&, int virtualArgs, int index) {}
+
+	template<typename Tuple>
+	inline void Type::decode(dev::bytes const & in, Tuple & _value, int virtualArgs, int index)
+	{
+		if (TupleElems.size() == index)///missing parameter
+			BOOST_THROW_EXCEPTION(dev::FailedABI());
+		Type elem = TupleElems[index];
+
+		elem.Unpack((index + virtualArgs) * 32, in, _value.get_head());
+
+		index++;
+		if (elem.T == ValueType::ArrayTy && !elem.isDynamicType())///array but static data, put data in the place 
+			virtualArgs = virtualArgs + elem.Size - 1;
+		decode(in, _value.get_tail(), virtualArgs, index);
+	}
+
+	template<class TY>
+	inline void Type::decode(dev::bytes const & _in, std::vector<TY>& _value)
+	{
+		dev::bytes in(_in);
+		int size = Size;
+		if (requiresLengthPrefix())
+		{
+			size = fromBigEndian<int>(dev::bytes(in.data(), in.data() + 32));
+			in = dev::bytes(in.data() + 32, in.data() + in.size());
+		}
+
+		/// calculate offset if any
+		for (size_t i = 0; i < size; i++)
+		{
+			int index = i * 32;
+			TY v;
+			Elem->Unpack(index, in, v);
+			_value.push_back(v);
+		}
+	}
 
 	template<typename Arg>
 	inline dev::bytes Type::Pack(Arg const& arg)
@@ -270,7 +307,7 @@ namespace dev
 		}
 		case dev::ArrayTy:
 		{
-			if (isDynamicType(*Elem))
+			if (Elem->isDynamicType())
 			{
 				int offset = fromBigEndian<int>(returnOutput);
 				if (offset > output.size())
@@ -296,7 +333,7 @@ namespace dev
 		}
 		case dev::TupleTy:
 		{
-			if (isDynamicType(*this))
+			if (isDynamicType())
 			{
 				int offset = fromBigEndian<int>(returnOutput);
 				if (offset > output.size())
@@ -314,28 +351,6 @@ namespace dev
 			break;
 		}
 	}
-
-	 ///isDynamicType returns true if the type is dynamic.
-	 ///The following types are called ¡°dynamic¡±:
-	 ///* bytes
-	 ///* string
-	 ///* T[] for any T
-	 ///* T[k] for any dynamic T and any k >= 0
-	 ///* (T1,...,Tk) if Ti is dynamic for some 1 <= i <= k
-	bool isDynamicType(Type const & t);
-
-	/// getTypeSize returns the size that this type needs to occupy.
-	/// We distinguish static and dynamic types. Static types are encoded in-place
-	/// and dynamic types are encoded at a separately allocated location after the
-	/// current block.
-	/// So for a static variable, the size returned represents the size that the
-	/// variable actually occupies.
-	/// For a dynamic variable, the returned size is fixed 32 bytes, which is used
-	/// to store the location reference for actual value storage.
-	int getTypeSize(Type const& t);
-
-	/// lengthPrefixPointsTo interprets a 32 byte slice as an offset and then determines which indices to look to decode the type.
-	int lengthPrefixPointsTo(int index, dev::bytes const& output);
 
 	///NewType creates a new reflection type of abi type given in t.
 	std::shared_ptr<Type> NewType(std::string const& _t, std::string const& _internalType, ArgumentMarshalings components);

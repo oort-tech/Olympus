@@ -4,7 +4,6 @@
 /// @file
 /// This file defines contract abi function selector.
 #pragma once
-#include <libdevcore/FixedHash.h>
 #include <libdevcore/SHA3.h>
 
 namespace dev
