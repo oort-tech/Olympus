@@ -805,6 +805,7 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 
 		///contract caller
 		mcp::DENCaller = NewDENContractCaller(std::bind(&mcp::chain::call, chain, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
+		mcp::MainCaller = NewMainContractCaller(std::bind(&mcp::chain::call, chain, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
 
 		//witness node start
 		std::shared_ptr<mcp::witness> witness = nullptr;

@@ -8,6 +8,7 @@
 #include <libdevcore/TrieHash.h>
 #include <libdevcore/CommonJS.h>
 #include <mcp/core/config.hpp>
+#include <mcp/core/contract.hpp>
 #include <mcp/node/approve_queue.hpp>
 #include <mcp/consensus/ledger.hpp>
 
@@ -55,6 +56,26 @@ void mcp::chain::init(bool & error_a, mcp::timeout_db_transaction & timeout_tx_a
 
 		mcp::overlay_db db(transaction, m_store);
 		mcp::commit(transaction, precompiled_accounts, &db, cache_a, m_store,h256(0));
+
+		///init system contract
+		try
+		{
+			auto gstate = m_store.block_state_get(transaction, mcp::genesis::block_hash);
+			dev::eth::McInfo mc_info(0, 0, gstate->stable_timestamp, 0);
+			auto _t = InitMainContractTransaction();
+			std::pair<ExecutionResult, dev::eth::TransactionReceipt> result = execute(transaction, cache_a, _t, mc_info, Permanence::Committed, dev::eth::OnOpFunc());
+			assert_x(result.second.statusCode());
+			cache_a->account_nonce_put(transaction, _t.sender(), _t.nonce());
+			cache_a->transaction_receipt_put(transaction, _t.sha3(), std::make_shared<dev::eth::TransactionReceipt>(result.second));
+		}
+		catch (const std::exception& e)
+		{
+			LOG(m_log.error) << boost::str(boost::format("Init genesis error: %1%") % e.what());
+			transaction.rollback();
+			error_a = true;
+			return;
+		}
+		
 	}
 
 	// Setup default precompiled contracts as equal to genesis of Frontier.
@@ -362,6 +383,73 @@ void mcp::chain::init_vrf_outputs(mcp::db::db_transaction & transaction_a)
 	}
 }
 
+dev::eth::McInfo mcp::chain::GetMcInfo(mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a, uint64_t const & mci)
+{
+	mcp::db::db_transaction & transaction_a(timeout_tx_a.get_transaction());
+
+	mcp::block_hash mc_stable_hash;
+	bool mc_stable_hash_error(m_store.main_chain_get(transaction_a, mci, mc_stable_hash));
+	assert_x(!mc_stable_hash_error);
+
+	std::shared_ptr<mcp::block> mc_stable_block = cache_a->block_get(transaction_a, mc_stable_hash);
+	assert_x(mc_stable_block != nullptr);
+
+	std::shared_ptr<mcp::block_state> last_summary_state(cache_a->block_state_get(transaction_a, mc_stable_block->last_summary_block()));
+	assert_x(last_summary_state);
+	assert_x(last_summary_state->is_stable);
+	assert_x(last_summary_state->is_on_main_chain);
+	assert_x(last_summary_state->main_chain_index);
+	uint64_t const & mc_last_summary_mci = *last_summary_state->main_chain_index;
+
+	uint64_t const & mc_timestamp = mc_stable_block->exec_timestamp();
+	return dev::eth::McInfo(m_last_stable_index_internal, m_last_stable_mci_internal, mc_timestamp, mc_last_summary_mci);
+}
+
+void mcp::chain::ApplyWorkTransaction(mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a, uint64_t const &mci)
+{
+	if (mci%10 != 0)///test block contains transactions that sender same as deployed the contract. nonce invalid.
+		return;
+
+	timeout_tx_a.commit_and_continue();///update global cache from local cache,commit contract data. if block contains main contract address cause nonce error.
+	///
+	mcp::db::db_transaction & transaction_a(timeout_tx_a.get_transaction());
+	std::map<dev::Address, u256> _v;
+	u256 value = 1000000000000000000;
+	_v.insert(std::make_pair(dev::Address("0x49a1b41e8ccb704f5c069ef89b08cd33f764e9b3"), value)); value += 1000000000000000000;
+	_v.insert(std::make_pair(dev::Address("0xf0821dc4ba9419b865aa412170377ca3b44cdb58"), value)); value += 1000000000000000000;
+	_v.insert(std::make_pair(dev::Address("0x329e6b5b8e59fc73d892958b2ff6a89474e3d067"), value)); value += 1000000000000000000;
+	_v.insert(std::make_pair(dev::Address("0x827cce78dc6ec7051f2d7bb9e7adaefba7ca3248"), value)); value += 1000000000000000000;
+	_v.insert(std::make_pair(dev::Address("0x918d3fe1dbff02fc7521d4a04b50017ce1a7c2ea"), value)); value += 1000000000000000000;
+	_v.insert(std::make_pair(dev::Address("0x929f336edb0a39ad5532a462d4a84e1546c5e5de"), value)); value += 1000000000000000000;
+	_v.insert(std::make_pair(dev::Address("0x1895ac1edc15389b905bb19537eb0c5b33d8c77a"), value)); value += 1000000000000000000;
+	_v.insert(std::make_pair(dev::Address("0x05174fa7ab39a36391b17850a2db9afdcf57190e"), value)); value += 1000000000000000000;
+	_v.insert(std::make_pair(dev::Address("0xa11b98c54d4189adda8eda97e13c214fedaf0a0f"), value)); value += 1000000000000000000;
+	_v.insert(std::make_pair(dev::Address("0xa65ec5c65031d668094cb1b81bb8253ea64a23d7"), value)); value += 1000000000000000000;
+	_v.insert(std::make_pair(dev::Address("0xba618c1e3e90d16e6c15d92ed198780dc4ad39c2"), value)); value += 1000000000000000000;
+	_v.insert(std::make_pair(dev::Address("0xc2cf7b9eb048c34c2b00175a884543366bbcd029"), value)); value += 1000000000000000000;
+	_v.insert(std::make_pair(dev::Address("0xc543a3868f3613eecd109761f71e31832ecf51ba"), value)); value += 1000000000000000000;
+	_v.insert(std::make_pair(dev::Address("0xdab8a5fb82eb24ad321751bb2dd8e4cc9a4e45e5"), value));
+
+	dev::eth::McInfo mc_info = GetMcInfo(timeout_tx_a, cache_a, mci);
+	auto chain_ptr(shared_from_this());
+	chain_state c_state(transaction_a, 0, m_store, chain_ptr, cache_a);
+	TransactionSkeleton ts;
+	ts.from = MainCallcAddress;
+	ts.to = MainContractAddress;
+	ts.data = MainCaller.BatchTransfer(_v);
+	ts.gasPrice = mcp::gas_price;
+	ts.gas = mcp::tx_max_gas;
+	ts.nonce = c_state.getNonce(ts.from);
+	Transaction _t(ts);
+	_t.setSignature(h256(0), h256(0), 0);
+
+	std::pair<ExecutionResult, dev::eth::TransactionReceipt> result = execute(transaction_a, cache_a, _t, mc_info, Permanence::Committed, dev::eth::OnOpFunc());
+	assert_x(result.second.statusCode());
+	cache_a->account_nonce_put(transaction_a, _t.sender(), _t.nonce());
+	cache_a->transaction_receipt_put(transaction_a, _t.sha3(), std::make_shared<dev::eth::TransactionReceipt>(result.second));
+	timeout_tx_a.commit_and_continue();
+}
+
 
 void mcp::chain::try_advance(mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a)
 {
@@ -391,6 +479,9 @@ void mcp::chain::try_advance(mcp::timeout_db_transaction & timeout_tx_a, std::sh
 
 			//m_stable_mcis.push(m_last_stable_mci_internal);
 			add_new_witness_list(transaction, m_last_stable_mci_internal);
+
+			///
+			ApplyWorkTransaction(timeout_tx_a, cache_a, m_last_stable_mci_internal);
 		}
 		catch (std::exception const & e)
 		{
@@ -1347,18 +1438,18 @@ void mcp::chain::call(dev::Address const& _from, dev::Address const& _contractAd
 		last_summary_mci = *last_summary_state->main_chain_index;
 	}
 	dev::eth::McInfo mc_info = dev::eth::McInfo(mc_state->stable_index, *mc_state->main_chain_index, mc_state->mc_timestamp, last_summary_mci);
+	dev::eth::EnvInfo env(transaction, m_store, m_cache, mc_info, mcp::chainID());
+	auto chain_ptr(shared_from_this());
+	chain_state c_state(transaction, 0, m_store, chain_ptr, m_cache);
 	TransactionSkeleton ts;
 	ts.from = _from;
 	ts.to = _contractAddress;
 	ts.data = _data;
 	ts.gasPrice = 0;
 	ts.gas = mcp::tx_max_gas;
-	ts.nonce = m_tq->maxNonce(ts.from);
+	ts.nonce = c_state.getNonce(ts.from);
 	Transaction _t(ts);
-
-	dev::eth::EnvInfo env(transaction, m_store, m_cache, mc_info, mcp::chainID());
-	auto chain_ptr(shared_from_this());
-	chain_state c_state(transaction, 0, m_store, chain_ptr, m_cache);
+	_t.setSignature(h256(0), h256(0), 0);
 	std::pair<mcp::ExecutionResult, dev::eth::TransactionReceipt> ar = c_state.execute(env, Permanence::Uncommitted, _t, dev::eth::OnOpFunc());
 	result = ar.first.output;
 }

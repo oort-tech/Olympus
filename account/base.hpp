@@ -40,6 +40,10 @@ namespace dev
 		template<typename... Args>
 		dev::bytes Call(CallOpts* opts, std::string const & method, Args const&... args);
 
+		///Pack arguments with method. for write abi.
+		template<typename... Args>
+		dev::bytes Pack(std::string const & method, Args const&... args);
+
 		/// unpack codes with abi
 		template<typename... Args>
 		void Unpack(std::string const & method, dev::bytes const& output, Args&... args);
@@ -63,6 +67,12 @@ namespace dev
 		dev::bytes output;
 		caller(opts->From, address, input, output);
 		return output;
+	}
+
+	template<typename ...Args>
+	inline dev::bytes BoundContract::Pack(std::string const & method, Args const & ...args)
+	{
+		return abi.Pack(method, args...);
 	}
 
 	template<typename ...Args>
