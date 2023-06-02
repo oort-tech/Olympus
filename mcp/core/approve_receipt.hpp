@@ -14,14 +14,16 @@ class ApproveReceipt
 {
 public:
 	ApproveReceipt(RLP r);
-	ApproveReceipt(Address _from, h256 _output);
+	ApproveReceipt(uint8_t _status, Address _from, h256 _output);
 
+	uint8_t statusCode() const { return m_statusCode; };
 	Address from() const { return m_from; }
 	h256 output() const { return m_output; }
 
 	void streamRLP(dev::RLPStream & s) const;
 	bytes rlp() const { RLPStream s; streamRLP(s); return s.out(); }
 private:
+	uint8_t m_statusCode;
 	Address m_from;
 	h256 m_output;
 };

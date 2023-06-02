@@ -154,7 +154,6 @@ bool mcp::genesis::try_initialize(mcp::db::db_transaction & transaction_a, mcp::
 	//summary hash
 	mcp::summary_hash previous_summary_hash(0);
 	std::list<mcp::summary_hash> p_summary_hashs; //no parents
-	std::list<mcp::summary_hash> l_summary_hashs; //no links
 	std::set<mcp::summary_hash> summary_skiplist; //no skiplist
 	mcp::summary_hash summary_hash = mcp::summary::gen_summary_hash(block_hash, previous_summary_hash, p_summary_hashs, receiptsRoot, summary_skiplist,
 		block_state.status, block_state.stable_index, block_state.mc_timestamp);

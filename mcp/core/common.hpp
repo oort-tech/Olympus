@@ -91,8 +91,8 @@ namespace mcp
 		unknown = 255,
         ok = 0,
         fork = 1,
-        invalid = 2,
-        fail = 3,
+        //invalid = 2,
+        //fail = 3,
     };
 
 	class block_child_key
@@ -532,6 +532,26 @@ namespace mcp
 		unsigned index = 0;
 		//uint64_t blockNum = 0;
 	};
+
+	/// staking 
+	struct StakingInfo
+	{
+		StakingInfo(dev::Address const& account_a, dev::u256 balance_a) :account(account_a), balance(balance_a) {}
+		StakingInfo(RLP const& _rlp) { account = (dev::Address)_rlp[0]; balance = _rlp[1].toInt<dev::u256>(); }
+		void streamRLP(dev::RLPStream & s) const { s.appendList(2); s << account << balance; }
+		explicit operator bool() const { return account != dev::ZeroAddress; }
+
+		dev::Address account;
+		dev::u256 balance;
+	};
+	using StakingList = std::vector<StakingInfo>;
+
+	struct MainInfo
+	{
+		dev::u256 amount;
+		int onMci;
+		int notOnMci;
+	};
 	
 	// transaction queue import
 	enum class ImportResult
@@ -545,7 +565,8 @@ namespace mcp
 		BadProcol,
 		InvalidNonce,
 		EpochIsTooHigh,
-		EpochIsTooLow
+		EpochIsTooLow,
+		NotStaking	///for approves
 	};
 	
 	using BlockNumber = uint64_t;

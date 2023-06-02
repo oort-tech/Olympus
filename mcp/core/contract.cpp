@@ -1,4 +1,5 @@
 #include "contract.hpp"
+#include <libdevcore/CommonJS.h>
 
 namespace mcp
 {
@@ -24,17 +25,46 @@ namespace mcp
 		return contract.Pack(method, address, values);
 	}
 
+	StakingList MainContractCaller::List()
+	{
+		std::string method = "list";
+		dev::CallOpts opts{ MainCallcAddress };
+		dev::bytes ret = contract.Call(&opts, method, true);
+
+		std::vector<boost::tuple<dev::Address, dev::u256>> _l;
+		contract.Unpack(method, ret, _l);
+
+		StakingList _r;
+		for (auto v : _l)
+			_r.push_back(StakingInfo(v.get<0>(), v.get<1>()));
+
+		return _r;
+	}
+
+	MainInfo MainContractCaller::GetMainInfo()
+	{
+		std::string method = "getinfo";
+		dev::CallOpts opts{ MainCallcAddress };
+		dev::bytes ret = contract.Call(&opts, method);
+
+		MainInfo _r;
+		auto p = boost::make_tuple(boost::ref(_r.amount), boost::ref(_r.onMci), boost::ref(_r.notOnMci));
+		contract.Unpack(method, ret, p);
+		return _r;
+	}
+
 	Transaction InitMainContractTransaction()
 	{
 		TransactionSkeleton ts;
 		ts.from = MainCallcAddress;
 		ts.data = MainContractByteCode;
 		ts.gasPrice = 10000000;
-		//ts.gas = mcp::tx_max_gas;
-		ts.gas = 1215903;
-		ts.nonce = 1;///genesis account used 1
+		ts.value = jsToU256("100000000000000000000000000");///a hundred million
+		ts.gas = 1843195;
+		ts.nonce = 0;
 		Transaction _t(ts);
-		_t.setSignature(h256("06460da14eb32eda6a16745b8f6632b2df073db58f5a801d7be8ee569be5c89f"), h256("087ddfd6e85788e21f2a3130c667b816add20ab718ab104f3f006ccfe1681565"), 1);
+		//_t.setSignature(h256("e767053c47fb1c069ae5cf0faada77ef5b6aeaaba5c2082b0a40ff0303493a07"), h256("7be79a3be63b25adc980c9179f348ab4921d70b6582ab910e29d7d3df6ba633e"), 1);
+		_t.setSignature(h256("b78e35990bb2a7db14e3fe0e96f18d533a31fed460402f868a8ef37134098144"), h256("2a09aafe948dd0b6215cb8ef3f1ae30497fa90c6888433c3853648ab5b00c8cf"), 0);
 		return _t;
 	}
 

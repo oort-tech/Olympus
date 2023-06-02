@@ -42,7 +42,9 @@ mcp::block_store::block_store(bool & error_a, boost::filesystem::path const & pa
 	approve_receipt(0),
 	epoch_approves(0),
 	epoch_param(0),
-	transaction_account_state(0)
+	transaction_account_state(0),
+	epoch_work_transaction(0),
+	stakingList(0)
 {
 	if (error_a)
 		return;
@@ -91,6 +93,8 @@ mcp::block_store::block_store(bool & error_a, boost::filesystem::path const & pa
 	epoch_approves = m_db->set_column_family(default_col, "031");
 	epoch_param = m_db->set_column_family(default_col, "032");
 	transaction_account_state = m_db->set_column_family(default_col, "033");
+	epoch_work_transaction = m_db->set_column_family(default_col, "034");
+	stakingList = m_db->set_column_family(default_col, "035");
 
 	//use iterator
 	dag_free = m_db->set_column_family(default_col, "101");
@@ -1156,6 +1160,46 @@ void mcp::block_store::transaction_previous_account_state_put(mcp::db::db_transa
 	transaction_a.put(transaction_account_state, mcp::h256_to_slice(link_a), s_value);
 }
 
+bool mcp::block_store::epoch_work_transaction_get(mcp::db::db_transaction & transaction_a, Epoch const & epoch, h256 & hash_a)
+{
+	std::string value;
+	bool exists(transaction_a.get(epoch_work_transaction, mcp::h64_to_slice(h64(epoch)), value));
+	if (exists)
+		hash_a = mcp::slice_to_h256(value);
+	return exists;
+}
+
+void mcp::block_store::epoch_work_transaction_put(mcp::db::db_transaction & transaction_a, Epoch const & epoch, h256 const& hash_a)
+{
+	transaction_a.put(epoch_work_transaction, mcp::h64_to_slice(h64(epoch)), mcp::h256_to_slice(hash_a));
+}
+
+mcp::StakingList mcp::block_store::GetStakingList(mcp::db::db_transaction & _transaction, Epoch const & _epoch)
+{
+	mcp::StakingList ret;
+	std::string value;
+	bool exists(_transaction.get(stakingList, mcp::h64_to_slice(h64(_epoch)), value));
+	if (exists)
+	{
+		dev::RLP r(value);
+		for (dev::RLP _r : r)
+			ret.emplace_back((mcp::StakingInfo)_r);
+	}
+	return ret;
+}
+
+void mcp::block_store::PutStakingList(mcp::db::db_transaction & _transaction, Epoch const & _epoch, mcp::StakingList const & _sl)
+{
+	dev::bytes b_value;
+	dev::RLPStream s;
+	s.appendList(_sl.size());
+	for (auto _v : _sl)
+		_v.streamRLP(s);
+	s.swapOut(b_value);
+
+	dev::Slice s_value((char *)b_value.data(), b_value.size());
+	_transaction.put(stakingList, mcp::h64_to_slice(h64(_epoch)), s_value);
+}
 
 dev::h256 const mcp::block_store::version_key(0);
 dev::h256 const mcp::block_store::genesis_hash_key(1);

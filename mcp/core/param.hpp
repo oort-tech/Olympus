@@ -110,7 +110,7 @@ private:
 		case mcp::mcp_networks::mcp_mini_test_network:
 		{
 			witness_str_list_v0 = {
-				"0x1144B522F45265C2DFDBAEE8E324719E63A1694C"
+				"0x49a1b41e8ccb704f5c069ef89b08cd33f764e9b3"
 			};
 			break;
 		}

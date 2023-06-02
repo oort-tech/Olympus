@@ -20,6 +20,37 @@ namespace mcp
 	};
 	using GasEstimationCallback = std::function<void(GasEstimationProgress const&)>;
 
+	class Statistics
+	{
+		struct Details
+		{
+			int OnMci = 0;
+			int NotOnMci = 0;
+		};
+	public:
+		void Insert(dev::Address const& _a, bool const& _onMci)
+		{
+			if (!m.count(_a))
+				m[_a] = Details();
+
+			if (_onMci)
+				m[_a].OnMci++;
+			else
+				m[_a].NotOnMci++;
+		}
+		std::map<dev::Address, Details> values()
+		{
+			return m;
+		}
+
+		void clear()
+		{
+			m.clear();
+		}
+	private:
+		std::map<dev::Address, Details> m;
+	};
+
 	class witness;
 	class ApproveQueue;
 	class chain : public std::enable_shared_from_this<mcp::chain>
@@ -42,6 +73,7 @@ namespace mcp
 		void save_transaction(mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a, std::shared_ptr<mcp::Transaction> t_a);
 		void save_approve(mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a, std::shared_ptr<mcp::approve> t_a);
 		void try_advance(mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a);
+		bool IsStakingList(mcp::db::db_transaction & _transaction, Epoch const& _epoch, dev::Address const& _address);
 
 		void update_cache();
 		uint64_t last_mci();
@@ -94,10 +126,17 @@ namespace mcp
 		void advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a, uint64_t const & mci, mcp::block_hash const & block_hash_a);
 		void set_block_stable(mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a, mcp::block_hash const & stable_block_hash, uint64_t const & mci, uint64_t const & mc_timestamp, uint64_t const & mc_last_summary_mci, uint64_t const & stable_timestamp, uint64_t const & stable_index, h256 receiptsRoot);
 		void search_stable_block(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a, mcp::block_hash const & block_hash, uint64_t const & mci, std::map<uint64_t, std::set<mcp::block_hash>>& stable_block_hashs);
-		void add_new_witness_list(mcp::db::db_transaction & transaction_a, uint64_t mc_last_summary_mci);
+		void UpdateCommittee(mcp::timeout_db_transaction & timeout_tx_a, Epoch const& epoch);
 		void init_vrf_outputs(mcp::db::db_transaction & transaction_a);
 		dev::eth::McInfo GetMcInfo(mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a, uint64_t const &mci);
-		void ApplyWorkTransaction(mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a, uint64_t const &mci);
+		void InitWork(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a);
+		void ApplyWorkTransaction(mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a, Epoch const& epoch, uint64_t const &mci, mcp::block_hash const& hash);
+		Transaction PackSystemContract(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a, std::map<dev::Address, u256> const& _v);
+		void UpdateStaking(mcp::timeout_db_transaction & timeout_tx_a, Epoch const& epoch);
+		void EpochFinalize(mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a, uint64_t const &mci, mcp::block_hash const& hash);
+		bool IsEpochFinalized(uint64_t const& mci);
+		std::pair<ExecutionResult, dev::eth::TransactionReceipt> executeSystemContract(mcp::db::db_transaction& transaction_a, std::shared_ptr<mcp::iblock_cache> cache_a, Transaction const& _t, dev::eth::McInfo const & mc_info_a);
+
 		mcp::block_store m_store;
 		std::shared_ptr<mcp::block_cache> m_cache;
 		std::shared_ptr<mcp::TransactionQueue> m_tq;
@@ -125,6 +164,8 @@ namespace mcp
 
 		std::map<Epoch, std::map<h256, dev::ApproveReceipt>> vrf_outputs;
 		Signal<uint64_t const&> m_onMciStable; ///<  Called when a subsequent call to import transactions and ready.
+
+		Statistics m_statistics; ///Statistical witness block
 
         mcp::log m_log = { mcp::log("node") };
 	};

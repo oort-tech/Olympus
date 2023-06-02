@@ -256,6 +256,8 @@ add_library (node
 	${NODE_EVM_SOURCES}
 	mcp/node/chain.hpp
 	mcp/node/chain.cpp
+	mcp/node/staking.hpp
+	mcp/node/staking.cpp
 	mcp/node/chain_state.hpp
 	mcp/node/chain_state.cpp
 	mcp/node/composer.hpp

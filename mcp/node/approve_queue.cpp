@@ -1,4 +1,5 @@
 #include "approve_queue.hpp"
+#include "staking.hpp"
 #include <mcp/core/genesis.hpp>
 #include <thread>
 
@@ -105,7 +106,7 @@ namespace mcp
 	ImportResult ApproveQueue::import(std::shared_ptr<approve> _approve, source _in)
 	{
 		//LOG(m_log.trace) << "[import] in";
-
+		validateApprove(_approve);
 		// Check if we already know this approve.
 		h256 h = _approve->sha3();
 
@@ -115,8 +116,8 @@ namespace mcp
 			ir = check_WITH_LOCK(h);
 			if (ir != ImportResult::Success)
 				return ir;
-
-			ir = validateApprove(*_approve, _in);
+			_approve->sender();
+			ir = checkApprove(_approve, _in);
 			if (ir != ImportResult::Success)
 				return ir;
 			{
@@ -278,27 +279,35 @@ namespace mcp
 		}
 	}
 
-	ImportResult ApproveQueue::validateApprove(approve const& _t, source _in){
-		_t.checkChainId(mcp::chain_id);
-		_t.checkLowS();
-		
-		if (_t.epoch() < m_chain->last_stable_epoch() && _in == source::broadcast)
+	void ApproveQueue::validateApprove(std::shared_ptr<approve> _approve){
+		_approve->checkChainId(mcp::chain_id);
+		_approve->checkLowS();
+	}
+
+	ImportResult ApproveQueue::checkApprove(std::shared_ptr<approve> _approve, source _in)
+	{
+		if (_approve->epoch() < m_chain->last_stable_epoch() && _in == source::broadcast)
 			return ImportResult::EpochIsTooLow;
+
 		mcp::db::db_transaction transaction(m_store.create_transaction());
 		mcp::block_hash hash;
-		if(_t.epoch() <= 1){
+		if (_approve->epoch() <= 1) {
 			hash = mcp::genesis::block_hash;
 		}
-		else{
-			bool ret = m_store.main_chain_get(transaction, (_t.epoch()-1)*epoch_period, hash);
-			if(ret){
+		else {
+			bool ret = m_store.main_chain_get(transaction, (_approve->epoch() - 1)*epoch_period, hash);
+			if (ret) {
 				LOG(m_log.debug) << "[validateApprove] epoch is too high";
 				//LOG(m_log.debug) << "[validateApprove] hash=" << hash.hex();
 				return ImportResult::EpochIsTooHigh;
 			}
 		}
-		
-		_t.vrf_verify(hash);
+		_approve->vrf_verify(hash);
+		if (!m_chain->IsStakingList(transaction, _approve->epoch(), _approve->sender()))
+		{
+			LOG(m_log.info) << "[checkApprove] failed not staking:" << _approve->sender().hexPrefixed();
+			return ImportResult::NotStaking;
+		}
 		return ImportResult::Success;
 	}
 
