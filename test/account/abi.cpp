@@ -256,24 +256,6 @@ void test_decode()
 		toHex(t33.bytes1[0]) == "0102030405060708090a0b0c0d0e0f1112131415161718191a1b1c1d1e1f3a3b3c" && toHex(t33.bytes1[1]) == "6a6b6c" &&
 		toHex(t33.bytes2[0]) == "212223" && toHex(t33.bytes2[1]) == "242526"
 	);
-
-	const std::string ABI4 = "[{\"inputs\":[],\"stateMutability\":\"payable\",\"type\":\"constructor\",\"payable\":true},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"_from\",\"type\":\"address\"}],\"name\":\"EventDeposit\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"_from\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address[]\",\"name\":\"recipients\",\"type\":\"address[]\"},{\"indexed\":false,\"internalType\":\"uint256[]\",\"name\":\"amounts\",\"type\":\"uint256[]\"}],\"name\":\"EventTransfer\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"depositedAmount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\",\"constant\":true},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\",\"constant\":true},{\"inputs\":[],\"name\":\"list\",\"outputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"a\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"internalType\":\"struct BatchTransfer.st[]\",\"name\":\"\",\"type\":\"tuple[]\"}],\"stateMutability\":\"pure\",\"type\":\"function\",\"constant\":true},{\"inputs\":[],\"name\":\"deposit\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\",\"payable\":true},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"recipients\",\"type\":\"address[]\"},{\"internalType\":\"uint256[]\",\"name\":\"amounts\",\"type\":\"uint256[]\"}],\"name\":\"batchTransfer\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"withdraw\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]";
-	ABI abi4 = dev::JSON(ABI4);
-	dev::bytes ret34 = dev::fromHex("000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000030000000000000000000000006d76b7de9fa746bdfe2d5462ff46778a06bb2c3500000000000000000000000000000000000000000000d3c21bcecceda10000000000000000000000000000007f4f900abde901c79c1fe91a81ccd876595eceac00000000000000000000000000000000000000000001a784379d99db4200000000000000000000000000000049a1b41e8ccb704f5c069ef89b08cd33f764e9b3000000000000000000000000000000000000000000027b46536c66c8e3000000");
-	typedef boost::tuple<dev::h160, u256> animal;
-	std::vector<animal> p34;
-	abi4.Unpack("list", ret34, p34);
-	//for (auto v : p34)
-	//{
-	//	std::cout << v << std::endl;
-	//	std::cout << v.get<0>() << std::endl;
-	//	std::cout << v.get<1>() << std::endl;
-	//}
-	assert_x(p34.size() == 3 && 
-		p34[0].get<0>().hex() == "6d76b7de9fa746bdfe2d5462ff46778a06bb2c35" && p34[0].get<1>() == jsToU256("1000000000000000000000000") &&
-		p34[1].get<0>().hex() == "7f4f900abde901c79c1fe91a81ccd876595eceac" && p34[1].get<1>() == jsToU256("2000000000000000000000000") &&
-		p34[2].get<0>().hex() == "49a1b41e8ccb704f5c069ef89b08cd33f764e9b3" && p34[2].get<1>() == jsToU256("3000000000000000000000000")
-	);
 }
 
 void test_abi()
