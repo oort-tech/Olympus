@@ -1,5 +1,5 @@
 ## Olympus (The blockchain layer in Computecoin)
-Official C++ implementation of the Olympus protocol.
+UnOfficial C++ implementation of the Olympus protocol by Fangze Xu for editing.
 
 To understand the consensus algorithm in Olympus, refer to the CCN yellow paper.\
 https://resources.computecoin.com/docs/computecoin-consensus-and-security.pdf
