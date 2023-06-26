@@ -1,5 +1,4 @@
 #include "approve_queue.hpp"
-#include "staking.hpp"
 #include <mcp/core/genesis.hpp>
 #include <thread>
 
@@ -328,6 +327,5 @@ namespace mcp
 		
 
 		return str;
-		return "";
 	}
 }

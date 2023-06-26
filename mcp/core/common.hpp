@@ -533,19 +533,10 @@ namespace mcp
 		//uint64_t blockNum = 0;
 	};
 
-	/// staking 
-	struct StakingInfo
-	{
-		StakingInfo(dev::Address const& account_a, dev::u256 balance_a) :account(account_a), balance(balance_a) {}
-		StakingInfo(RLP const& _rlp) { account = (dev::Address)_rlp[0]; balance = _rlp[1].toInt<dev::u256>(); }
-		void streamRLP(dev::RLPStream & s) const { s.appendList(2); s << account << balance; }
-		explicit operator bool() const { return account != dev::ZeroAddress; }
+	/// staking address -> staking balance
+	using StakingList = std::map<dev::Address, dev::u256>;
 
-		dev::Address account;
-		dev::u256 balance;
-	};
-	using StakingList = std::vector<StakingInfo>;
-
+	/// reword info
 	struct MainInfo
 	{
 		dev::u256 amount;

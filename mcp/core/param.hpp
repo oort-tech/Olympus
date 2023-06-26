@@ -63,6 +63,11 @@ public:
 		}
 	}
 
+	static mcp::witness_param const & genesis_witness_param()
+	{
+		return init_param;
+	}
+
 private:
 	static void init_block_param()
 	{

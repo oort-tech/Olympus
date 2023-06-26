@@ -1182,8 +1182,13 @@ mcp::StakingList mcp::block_store::GetStakingList(mcp::db::db_transaction & _tra
 	if (exists)
 	{
 		dev::RLP r(value);
+		assert_x(r.isList());
 		for (dev::RLP _r : r)
-			ret.emplace_back((mcp::StakingInfo)_r);
+		{
+			auto _a = (dev::Address)_r[0];
+			auto _b = _r[1].toInt<dev::u256>();
+			ret[_a] = _b;
+		}	
 	}
 	return ret;
 }
@@ -1194,7 +1199,10 @@ void mcp::block_store::PutStakingList(mcp::db::db_transaction & _transaction, Ep
 	dev::RLPStream s;
 	s.appendList(_sl.size());
 	for (auto _v : _sl)
-		_v.streamRLP(s);
+	{
+		s.appendList(2); 
+		s << _v.first << _v.second;
+	}
 	s.swapOut(b_value);
 
 	dev::Slice s_value((char *)b_value.data(), b_value.size());

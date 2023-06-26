@@ -1,5 +1,6 @@
 #include "genesis.hpp"
 #include "config.hpp"
+#include "transaction_receipt.hpp"
 #include <mcp/common/log.hpp>
 #include <libdevcore/CommonJS.h>
 #include <libdevcore/TrieHash.h>
@@ -71,15 +72,15 @@ bool mcp::genesis::try_initialize(mcp::db::db_transaction & transaction_a, mcp::
 	_t.to = jsToFixed<20>(json["to"]);
 	_t.value = jsToU256(json["value"]);
 	_t.nonce = 0;
+	_t.gas = mcp::tx_max_gas;
+	_t.gasPrice = mcp::gas_price;
 	Transaction ts(_t);
+	ts.setSignature(h256(0), h256(0), 0);
 	
-	std::string from_account = json["from"];
-	dev::Address from(from_account);
-	//if (from.decode_account(json["from"]))
-	//	throw std::runtime_error("deserialize genesis block from error");
 	std::unique_ptr<mcp::block> block(std::make_unique<mcp::block>());
-	block->init_from_genesis_transaction(from, ts.sha3(IncludeSignature::WithoutSignature), json["exec_timestamp"]);
+	block->init_from_genesis_transaction(ts.sender(), ts.sha3(), json["exec_timestamp"]);
 
+	GenesisAddress = ts.sender();
 	block_hash = block->hash();
 	mcp::block_hash genesis_hash;
 	bool exists(!store_a.genesis_hash_get(transaction_a, genesis_hash));
@@ -139,11 +140,14 @@ bool mcp::genesis::try_initialize(mcp::db::db_transaction & transaction_a, mcp::
 
 	//genesis account state
     // sichaoy: nonce of genesis account?
-	mcp::account_state to_state(ts.sender(), ts.sha3(IncludeSignature::WithoutSignature), h256(0), 0, ts.value());
+	mcp::account_state to_state(ts.sender(), ts.sha3(), h256(0), 0, ts.value());
 	to_state.incNonce();//nonce + 1 Stored for the next nonce
 	store_a.account_state_put(transaction_a, to_state.hash(), to_state);
 	store_a.latest_account_state_put(transaction_a, ts.to(), to_state.hash());
-	store_a.account_nonce_put(transaction_a, ts.sender(), _t.nonce);
+	store_a.account_nonce_put(transaction_a, ts.sender(), ts.nonce());
+	store_a.transaction_put(transaction_a, ts.sha3(), ts);
+	store_a.transaction_receipt_put(transaction_a, ts.sha3(), dev::eth::TransactionReceipt(1,0, mcp::log_entries()));
+	store_a.transaction_address_put(transaction_a, ts.sha3(), mcp::TransactionAddress(mcp::genesis::block_hash, 0));
 
 	dev::eth::TransactionReceipt const receipt = dev::eth::TransactionReceipt(true, 0, mcp::log_entries());
 	std::vector<bytes> receipts;
@@ -168,4 +172,5 @@ bool mcp::genesis::try_initialize(mcp::db::db_transaction & transaction_a, mcp::
 }
 
 mcp::block_hash mcp::genesis::block_hash(0);
+dev::Address mcp::genesis::GenesisAddress(dev::ZeroAddress);
 

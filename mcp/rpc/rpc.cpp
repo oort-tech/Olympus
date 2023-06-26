@@ -1476,7 +1476,21 @@ void mcp::rpc_handler::eth_sendRawTransaction(mcp::json &j_response, bool &)
 
 	try
 	{
+		//LOG(m_log.info) << "eth_sendRawTransaction:" << params[0];
+
 		Transaction t(jsToBytes(params[0], OnFailed::Throw), CheckTransaction::None);
+
+		//LOG(m_log.info) << "m_nonce:" << t.nonce() 
+		//	<< " ,m_value:" << t.value() 
+		//	<< " ,m_receiveAddress:" << t.receiveAddress().hex()
+		//	<< " ,m_gasPrice:" << t.gasPrice()
+		//	<< " ,m_gas:" << t.gas()
+		//	<< " ,m_data:" << toHex(t.data())
+		//	<< " ,m_vrs v:" << (int)t.signature().v
+		//	<< " ,m_vrs r:" << t.signature().r.hex()
+		//	<< " ,m_vrs s:" << t.signature().s.hex()
+		//	<< " ,m_chainId:" << t.chainID();
+
 		j_response["result"] = toJS(m_wallet->importTransaction(t));
 	}
 	catch (dev::Exception &e)
@@ -1522,6 +1536,8 @@ void mcp::rpc_handler::eth_call(mcp::json &j_response, bool &)
 		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
 	}
 
+	//LOG(m_log.info) << "eth_call:" << params[0];
+
 	TransactionSkeleton ts = mcp::toTransactionSkeletonForEth(params[0]);
 	ts.gasPrice = 0;
 	ts.gas = mcp::tx_max_gas;
@@ -1560,6 +1576,8 @@ void mcp::rpc_handler::eth_call(mcp::json &j_response, bool &)
 		mc_info,
 		Permanence::Uncommitted,
 		dev::eth::OnOpFunc());
+
+	//LOG(m_log.info) << "eth_call res:" << toJS(result.first.output);
 
 	j_response["result"] = toJS(result.first.output);
 }

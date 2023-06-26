@@ -135,7 +135,6 @@ namespace mcp
 		void UpdateStaking(mcp::timeout_db_transaction & timeout_tx_a, Epoch const& epoch);
 		void EpochFinalize(mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a, uint64_t const &mci, mcp::block_hash const& hash);
 		bool IsEpochFinalized(uint64_t const& mci);
-		std::pair<ExecutionResult, dev::eth::TransactionReceipt> executeSystemContract(mcp::db::db_transaction& transaction_a, std::shared_ptr<mcp::iblock_cache> cache_a, Transaction const& _t, dev::eth::McInfo const & mc_info_a);
 
 		mcp::block_store m_store;
 		std::shared_ptr<mcp::block_cache> m_cache;

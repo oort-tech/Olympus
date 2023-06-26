@@ -118,8 +118,7 @@ void mcp::block::init_from_genesis_transaction(dev::Address const& from, h256 co
 {
 	m_from = from;
 	m_previous.clear();
-	h256s links;
-	links.push_back(hash);
+	m_links.push_back(hash);
 	m_last_summary.clear();
 	m_last_summary_block.clear();
 	m_last_stable_block.clear();

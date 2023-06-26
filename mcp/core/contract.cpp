@@ -1,4 +1,6 @@
 #include "contract.hpp"
+#include "param.hpp"
+#include "genesis.hpp"
 #include <libdevcore/CommonJS.h>
 
 namespace mcp
@@ -11,12 +13,12 @@ namespace mcp
 
 	DENContractCaller DENCaller;
 
-	///for main caller
-	dev::bytes MainContractCaller::BatchTransfer(std::map<dev::Address, u256> const& _v)
+	///for main caller.
+	dev::bytes MainContractCaller::DistributeRewards(std::map<dev::Address, u256> const& _v)
 	{
-		std::string method = "batchTransfer";
-		std::vector<dev::Address> address;
-		std::vector<u256> values;
+		std::string method = "distributeRewards";
+		h160s address;
+		u256s values;
 		for (auto it : _v)
 		{
 			address.push_back(it.first);
@@ -25,25 +27,41 @@ namespace mcp
 		return contract.Pack(method, address, values);
 	}
 
-	StakingList MainContractCaller::List()
+	///for initializer.
+	dev::bytes MainContractCaller::InitWitnesses(WitnessList const& _v)
 	{
-		std::string method = "list";
-		dev::CallOpts opts{ MainCallcAddress };
-		dev::bytes ret = contract.Call(&opts, method, true);
+		std::string method = "initWitnesses";
+		h160s _a;
+		_a.assign(_v.begin(), _v.end());
+		return contract.Pack(method, _a);
+	}
 
-		std::vector<boost::tuple<dev::Address, dev::u256>> _l;
-		contract.Unpack(method, ret, _l);
+	std::pair<StakingList, int> MainContractCaller::GetWitnesses(int const& start)
+	{
+		std::string method = "getWitnesses";
+		dev::CallOpts opts{ MainCallcAddress };
+		dev::bytes ret = contract.Call(&opts, method, start);
+
+		h160s _l;
+		u256s _b;
+		int _t;
+		contract.Unpack(method, ret, _l, _b, _t);
 
 		StakingList _r;
-		for (auto v : _l)
-			_r.push_back(StakingInfo(v.get<0>(), v.get<1>()));
+		for (int i = 0; i < _l.size(); i++)
+		{
+			u256 temp = 0;
+			if (i < _b.size())
+				temp = _b[i];
+			_r.insert(std::make_pair(_l[i], temp));
+		}
 
-		return _r;
+		return std::make_pair(_r,_t);
 	}
 
 	MainInfo MainContractCaller::GetMainInfo()
 	{
-		std::string method = "getinfo";
+		std::string method = "getInfo";
 		dev::CallOpts opts{ MainCallcAddress };
 		dev::bytes ret = contract.Call(&opts, method);
 
@@ -53,19 +71,83 @@ namespace mcp
 		return _r;
 	}
 
-	Transaction InitMainContractTransaction()
+	std::vector<Transaction> InitMainContractTransaction()
 	{
-		TransactionSkeleton ts;
-		ts.from = MainCallcAddress;
-		ts.data = MainContractByteCode;
-		ts.gasPrice = 10000000;
-		ts.value = jsToU256("100000000000000000000000000");///a hundred million
-		ts.gas = 1843195;
-		ts.nonce = 0;
-		Transaction _t(ts);
-		//_t.setSignature(h256("e767053c47fb1c069ae5cf0faada77ef5b6aeaaba5c2082b0a40ff0303493a07"), h256("7be79a3be63b25adc980c9179f348ab4921d70b6582ab910e29d7d3df6ba633e"), 1);
-		_t.setSignature(h256("b78e35990bb2a7db14e3fe0e96f18d533a31fed460402f868a8ef37134098144"), h256("2a09aafe948dd0b6215cb8ef3f1ae30497fa90c6888433c3853648ab5b00c8cf"), 0);
-		return _t;
+		std::vector<Transaction> _r;
+
+		///Admin contract
+		TransactionSkeleton _tsAdmin;
+		_tsAdmin.from = MainCallcAddress;
+		_tsAdmin.data = MainContractByteCodeAdmin;
+		_tsAdmin.gasPrice = 10000000;
+		_tsAdmin.value = 0;
+		_tsAdmin.gas = mcp::tx_max_gas;
+		_tsAdmin.nonce = 0;
+		Transaction _tAdmin(_tsAdmin);
+		_tAdmin.setSignature(h256(0), h256(0), 0);
+		_r.push_back(_tAdmin);
+
+		///Deposit contract
+		TransactionSkeleton _tsDeposit;
+		_tsDeposit.from = MainCallcAddress;
+		_tsDeposit.data = MainContractByteCodeDeposit;
+		_tsDeposit.gasPrice = mcp::gas_price;
+		_tsDeposit.value = 0;
+		_tsDeposit.gas = mcp::tx_max_gas;
+		_tsDeposit.nonce = 1;
+		Transaction _tDeposit(_tsDeposit);
+		_tDeposit.setSignature(h256(0), h256(0), 0);
+		_r.push_back(_tDeposit);
+
+		///Proxy contract
+		TransactionSkeleton _tsProxy;
+		_tsProxy.from = MainCallcAddress;
+		_tsProxy.data = MainContractByteCodeProxy;
+		_tsProxy.gasPrice = mcp::gas_price;
+		_tsProxy.value = 0;
+		_tsProxy.gas = mcp::tx_max_gas;
+		_tsProxy.nonce = 2;
+		Transaction _tProxy(_tsProxy);
+		_tProxy.setSignature(h256(0), h256(0), 0);
+		_r.push_back(_tProxy);
+
+
+		///staking
+		int count = mcp::param::genesis_witness_param().witness_count;
+		WitnessList list = mcp::param::genesis_witness_param().witness_list;
+
+		TransactionSkeleton _tsStaking;
+		_tsStaking.from = MainCallcAddress;
+		_tsStaking.to = MainContractAddress;
+		_tsStaking.data = MainCaller.InitWitnesses(list);
+		_tsStaking.gasPrice = mcp::gas_price;
+		_tsStaking.value = jsToU256("2000000000000000000000000") * count;
+		_tsStaking.gas = mcp::tx_max_gas;
+		_tsStaking.nonce = 3;
+		Transaction _tStaking(_tsStaking);
+		_tStaking.setSignature(h256(0), h256(0), 0);
+		_r.push_back(_tStaking);
+
+		return _r;
+	}
+
+	std::vector<Transaction> InitStakingContractTransaction()
+	{
+		std::vector<Transaction> _r;
+		///50000 for system contract gas. 2000000 * count for staking.
+		int count = mcp::param::genesis_witness_param().witness_count;
+		TransactionSkeleton _tsStaking;
+		_tsStaking.from = mcp::genesis::GenesisAddress;
+		_tsStaking.to = MainCallcAddress;
+		_tsStaking.gasPrice = mcp::gas_price;
+		_tsStaking.value = jsToU256("2000000000000000000000000") * count + jsToU256("50000000000000000000000");
+		_tsStaking.gas = mcp::tx_max_gas;
+		_tsStaking.nonce = 1;
+		Transaction _tStaking(_tsStaking);
+		_tStaking.setSignature(h256(0), h256(0), 0);
+		_r.push_back(_tStaking);
+
+		return _r;
 	}
 
 	MainContractCaller NewMainContractCaller(dev::ContractCaller const& _caller)
