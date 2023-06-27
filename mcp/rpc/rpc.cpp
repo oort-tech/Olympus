@@ -2535,7 +2535,7 @@ void mcp::rpc_handler::epoch_work_transaction(mcp::json &j_response, bool &)
 		epoch = (uint64_t)jsToInt(request["epoch"]);
 	}
 
-	if (epoch > m_chain->last_epoch())
+	if (epoch >= m_chain->last_epoch())
 	{
 		BOOST_THROW_EXCEPTION(RPC_Error_EpochTooBig());
 	}
