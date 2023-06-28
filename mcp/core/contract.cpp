@@ -71,9 +71,23 @@ namespace mcp
 		return _r;
 	}
 
-	std::vector<Transaction> InitMainContractTransaction()
+	Transactions InitMainContractTransaction()
 	{
-		std::vector<Transaction> _r;
+		int count = mcp::param::genesis_witness_param().witness_count;
+		WitnessList list = mcp::param::genesis_witness_param().witness_list;
+
+		Transactions _r;
+		///50000 for system contract gas. 2000000 * count for staking.
+		TransactionSkeleton _tsInit;
+		_tsInit.from = mcp::genesis::GenesisAddress;
+		_tsInit.to = MainCallcAddress;
+		_tsInit.gasPrice = mcp::gas_price;
+		_tsInit.value = jsToU256("2000000000000000000000000") * count + jsToU256("50000000000000000000000");
+		_tsInit.gas = mcp::tx_max_gas;
+		_tsInit.nonce = 1;
+		Transaction _tInit(_tsInit);
+		_tInit.setSignature(h256(0), h256(0), 0);
+		_r.push_back(_tInit);
 
 		///Admin contract
 		TransactionSkeleton _tsAdmin;
@@ -111,11 +125,7 @@ namespace mcp
 		_tProxy.setSignature(h256(0), h256(0), 0);
 		_r.push_back(_tProxy);
 
-
 		///staking
-		int count = mcp::param::genesis_witness_param().witness_count;
-		WitnessList list = mcp::param::genesis_witness_param().witness_list;
-
 		TransactionSkeleton _tsStaking;
 		_tsStaking.from = MainCallcAddress;
 		_tsStaking.to = MainContractAddress;
@@ -124,25 +134,6 @@ namespace mcp
 		_tsStaking.value = jsToU256("2000000000000000000000000") * count;
 		_tsStaking.gas = mcp::tx_max_gas;
 		_tsStaking.nonce = 3;
-		Transaction _tStaking(_tsStaking);
-		_tStaking.setSignature(h256(0), h256(0), 0);
-		_r.push_back(_tStaking);
-
-		return _r;
-	}
-
-	std::vector<Transaction> InitStakingContractTransaction()
-	{
-		std::vector<Transaction> _r;
-		///50000 for system contract gas. 2000000 * count for staking.
-		int count = mcp::param::genesis_witness_param().witness_count;
-		TransactionSkeleton _tsStaking;
-		_tsStaking.from = mcp::genesis::GenesisAddress;
-		_tsStaking.to = MainCallcAddress;
-		_tsStaking.gasPrice = mcp::gas_price;
-		_tsStaking.value = jsToU256("2000000000000000000000000") * count + jsToU256("50000000000000000000000");
-		_tsStaking.gas = mcp::tx_max_gas;
-		_tsStaking.nonce = 1;
 		Transaction _tStaking(_tsStaking);
 		_tStaking.setSignature(h256(0), h256(0), 0);
 		_r.push_back(_tStaking);

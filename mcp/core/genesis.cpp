@@ -1,6 +1,7 @@
 #include "genesis.hpp"
 #include "config.hpp"
 #include "transaction_receipt.hpp"
+#include "contract.hpp"
 #include <mcp/common/log.hpp>
 #include <libdevcore/CommonJS.h>
 #include <libdevcore/TrieHash.h>
@@ -46,7 +47,7 @@ std::string const live_genesis_data = R"%%%({
 	"exec_timestamp":"1562288400"
 })%%%";
 
-bool mcp::genesis::try_initialize(mcp::db::db_transaction & transaction_a, mcp::block_store & store_a)
+std::pair<bool, mcp::Transactions> mcp::genesis::try_initialize(mcp::db::db_transaction & transaction_a, mcp::block_store & store_a)
 {
 	std::string genesis_data;
 	switch (mcp::mcp_network)
@@ -76,11 +77,24 @@ bool mcp::genesis::try_initialize(mcp::db::db_transaction & transaction_a, mcp::
 	_t.gasPrice = mcp::gas_price;
 	Transaction ts(_t);
 	ts.setSignature(h256(0), h256(0), 0);
-	
-	std::unique_ptr<mcp::block> block(std::make_unique<mcp::block>());
-	block->init_from_genesis_transaction(ts.sender(), ts.sha3(), json["exec_timestamp"]);
-
 	GenesisAddress = ts.sender();
+
+	/// 0: genesis transaction.
+	/// 1: transfer to the account that deployed system contract.
+	/// 2: Admin contract transaction.
+	/// 3: Deposit contract transaction.
+	/// 4: Proxy contract transaction.
+	/// 5: staking init witness transaction.
+	h256s initHashes;
+	initHashes.push_back(ts.sha3());
+	/// genesis block linked initialized transaction 
+	Transactions _tstaking = InitMainContractTransaction();
+	for (Transaction _t : _tstaking)
+		initHashes.push_back(_t.sha3());
+
+	std::unique_ptr<mcp::block> block(std::make_unique<mcp::block>());
+	block->init_from_genesis_transaction(ts.sender(), initHashes, json["exec_timestamp"]);
+
 	block_hash = block->hash();
 	mcp::block_hash genesis_hash;
 	bool exists(!store_a.genesis_hash_get(transaction_a, genesis_hash));
@@ -90,7 +104,7 @@ bool mcp::genesis::try_initialize(mcp::db::db_transaction & transaction_a, mcp::
 		if(genesis_hash != block_hash)
 			throw std::runtime_error("genesis block changed");
 
-		return false;
+		return std::make_pair(false, _tstaking);
 	}
 	
 	store_a.genesis_hash_put(transaction_a, block_hash);
@@ -168,7 +182,7 @@ bool mcp::genesis::try_initialize(mcp::db::db_transaction & transaction_a, mcp::
 	store_a.block_summary_put(transaction_a, block_hash, summary_hash);
 	store_a.summary_block_put(transaction_a, summary_hash, block_hash);
 
-	return true;
+	return std::make_pair(true, _tstaking);
 }
 
 mcp::block_hash mcp::genesis::block_hash(0);

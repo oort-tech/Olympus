@@ -4,6 +4,7 @@
 #include <mcp/common/mcp_json.hpp>
 #include <mcp/core/common.hpp>
 #include <mcp/core/transaction_receipt.hpp>
+#include <mcp/core/approve_receipt.hpp>
 
 namespace mcp
 {
@@ -44,4 +45,6 @@ namespace mcp
 	mcp::json toJson(mcp::log_entry const& _e);
 
 	mcp::json toJson(mcp::block & _b, bool is_eth = false);
+
+	mcp::json toJson(dev::ApproveReceipt const& _a);
 }

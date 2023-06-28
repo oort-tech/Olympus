@@ -52,8 +52,7 @@ namespace mcp
 	const dev::Address MainContractAddress = dev::Address("0x8323Faf4203cB1eE1956100D3197803d7F7955d3");
 	const dev::Address MainCallcAddress = dev::Address("0x92415ac021B91045E9bfF73334640c6A0e099069");
 
-	std::vector<Transaction> InitMainContractTransaction();
-	std::vector<Transaction> InitStakingContractTransaction();
+	Transactions InitMainContractTransaction();
 
 	class MainContractCaller
 	{

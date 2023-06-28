@@ -2564,13 +2564,21 @@ void mcp::rpc_handler::approve_receipt(mcp::json &j_response, bool &)
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidHash());
 	}
 
-	mcp::json approve_receipt_l;
-	mcp::db::db_transaction transaction(m_store.create_transaction());
-	auto approve_receipt = m_cache->approve_receipt_get(transaction, hash);
-	if (approve_receipt) {
-		approve_receipt_l["from"] = approve_receipt->from().hexPrefixed();
-		approve_receipt_l["output"] = toHexPrefixed(approve_receipt->output());
+	try
+	{
+		mcp::db::db_transaction transaction(m_store.create_transaction());
+		auto _a = m_cache->approve_receipt_get(transaction, hash);
+		if (_a == nullptr)
+			throw "";
+		j_response["result"] = toJson(*_a);
 	}
-	j_response["result"] = approve_receipt_l;
+	catch (...)
+	{
+		j_response["result"] = nullptr;
+	}
+
+	
+
+	
 }
 
