@@ -77,27 +77,6 @@ void mcp::chain::init(bool & error_a, mcp::timeout_db_transaction & timeout_tx_a
 			timeout_tx_a.commit_and_continue();
 			auto _all = MainCaller.GetWitnesses();
 			m_cache->PutStakingList(transaction, 0, _all.first);
-
-			//test start
-			///for test transfer amount to contract account and staking account
-			Transactions allTransaction;
-			/// contract account. 0x1144b522f45265c2dfdbaee8e324719e63a1694c -> 0x8323faf4203cb1ee1956100d3197803d7f7955d3 100w ,nonce 2.
-			const dev::bytes ContractTransactionBytes(dev::fromHex("f86e028398968083200b20948323faf4203cb1ee1956100d3197803d7f7955d38ad3c21bcecceda100000080824beb9f7aa8590d4cdf38f6e507c4fa7f1a7d0ad8d64a97a3ce9472f4353027833e18a036c671b90b93334920ab2a4645c5393004795729cdb04245268b1458236ff5ab"));
-			allTransaction.push_back(Transaction(ContractTransactionBytes, CheckTransaction::None));
-			/// staking account. 0x1144b522f45265c2dfdbaee8e324719e63a1694c -> 0x8BEa69e42045E162CCfEd67ecb78D513a6Be2Eb3 1000w ,nonce 3.
-			//const dev::bytes StakingTransactionBytes(dev::fromHex("f86f0383989680825208948bea69e42045e162ccfed67ecb78d513a6be2eb38b52b7d2dcc80cd2e400000080824beba077392a4ac429b1d178d1bc719df93a817261b827506daceea36bb52efad4e921a02c3a020292388de60574f14d1daa3dd81f808717cfb51d845771bcf5383382bf"));
-			//allTransaction.push_back(Transaction(StakingTransactionBytes, CheckTransaction::None));
-
-			for (auto _t : allTransaction)
-			{
-				std::pair<ExecutionResult, dev::eth::TransactionReceipt> result = execute(transaction, cache_a, _t, mc_info, Permanence::Committed, dev::eth::OnOpFunc());
-				assert_x(result.second.statusCode());
-				cache_a->transaction_put(transaction, std::make_shared<Transaction>(_t));
-				cache_a->account_nonce_put(transaction, _t.sender(), _t.nonce());
-				cache_a->transaction_receipt_put(transaction, _t.sha3(), std::make_shared<dev::eth::TransactionReceipt>(result.second));
-				cache_a->transaction_address_put(transaction, _t.sha3(), std::make_shared<mcp::TransactionAddress>(mcp::genesis::block_hash, 0));
-			}
-			//test end
 		}
 	}
 	catch (const std::exception & e)

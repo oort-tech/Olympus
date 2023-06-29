@@ -138,6 +138,18 @@ namespace mcp
 		_tStaking.setSignature(h256(0), h256(0), 0);
 		_r.push_back(_tStaking);
 
+		///1000000 for contract reword.
+		TransactionSkeleton _tsr;
+		_tsr.from = mcp::genesis::GenesisAddress;
+		_tsr.to = MainContractAddress;
+		_tsr.gasPrice = mcp::gas_price;
+		_tsr.value = jsToU256("1000000000000000000000000");
+		_tsr.gas = mcp::tx_max_gas;
+		_tsr.nonce = 2;
+		Transaction _tr(_tsr);
+		_tr.setSignature(h256(0), h256(0), 0);
+		_r.push_back(_tr);
+
 		return _r;
 	}
 
