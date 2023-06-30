@@ -1476,8 +1476,6 @@ void mcp::rpc_handler::eth_sendRawTransaction(mcp::json &j_response, bool &)
 
 	try
 	{
-		//LOG(m_log.info) << "eth_sendRawTransaction:" << params[0];
-
 		Transaction t(jsToBytes(params[0], OnFailed::Throw), CheckTransaction::None);
 
 		//LOG(m_log.info) << "m_nonce:" << t.nonce() 
