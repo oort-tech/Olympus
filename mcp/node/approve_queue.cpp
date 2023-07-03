@@ -297,14 +297,21 @@ namespace mcp
 			bool ret = m_store.main_chain_get(transaction, (_approve->epoch() - 1)*epoch_period, hash);
 			if (ret) {
 				LOG(m_log.debug) << "[validateApprove] epoch is too high";
-				//LOG(m_log.debug) << "[validateApprove] hash=" << hash.hex();
 				return ImportResult::EpochIsTooHigh;
 			}
 		}
 		_approve->vrf_verify(hash);
+		if (m_chain->last_stable_epoch() < _approve->epoch()) ///have no staking list of this epoch
+		{
+			//LOG(m_log.info) << "[checkApprove] into future:" << _approve->sender().hexPrefixed()
+			//	<< " ,epoch=" << _approve->epoch() << " ,hash=" << _approve->sha3().hexPrefixed();
+			return ImportResult::FutureFull;
+		}
+
 		if (!m_chain->IsStakingList(transaction, _approve->epoch(), _approve->sender()))
 		{
-			LOG(m_log.info) << "[checkApprove] failed not staking:" << _approve->sender().hexPrefixed();
+			LOG(m_log.info) << "[checkApprove] failed not staking:" << _approve->sender().hexPrefixed() 
+				<< " ,epoch=" << _approve->epoch() <<" ,hash=" << _approve->sha3().hexPrefixed();
 			return ImportResult::NotStaking;
 		}
 		return ImportResult::Success;
