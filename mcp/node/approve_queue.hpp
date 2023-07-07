@@ -100,7 +100,8 @@ namespace mcp
 
 		void verifierBody();
 
-		ImportResult validateApprove(approve const& _t, source _in);
+		void validateApprove(std::shared_ptr<approve> _approve);
+		ImportResult checkApprove(std::shared_ptr<approve> _approve, source _in);/// epoch check
 
 		mutable SharedMutex m_lock;  ///< General lock.
 		h256Hash m_known;            ///< Headers of transactions in both sets.

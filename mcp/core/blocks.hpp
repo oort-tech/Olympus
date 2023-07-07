@@ -36,7 +36,7 @@ namespace mcp
 
 		mcp::block_hash root() const;
 
-		void init_from_genesis_transaction(dev::Address const& from, h256 const& hash, std::string time);
+		void init_from_genesis_transaction(dev::Address const& from, h256s const& hashes, std::string time);
 	private:
 		dev::Address m_from;// Other fields maybe same with other witness,cause same hash. so that, block must used from fields
 		mcp::block_hash m_previous;

@@ -234,6 +234,11 @@ namespace mcp
 				j_links.push_back(toJS(l));
 			res["links"] = j_links;
 
+			mcp::json j_approves = mcp::json::array();
+			for (auto & l : _b.approves())
+				j_approves.push_back(toJS(l));
+			res["approves"] = j_approves;
+
 			res["last_summary"] = _b.last_summary().hexPrefixed();
 			res["last_summary_block"] = _b.last_summary_block().hexPrefixed();
 			res["last_stable_block"] = _b.last_stable_block().hexPrefixed();
@@ -241,6 +246,17 @@ namespace mcp
 			res["gasLimit"] = toJS(mcp::tx_max_gas);
 			res["signature"] = ((Signature)_b.signature()).hexPrefixed();
 		}
+
+		return res;
+	}
+
+	mcp::json toJson(dev::ApproveReceipt const& _a)
+	{
+		mcp::json res;
+
+		res["from"] = _a.from().hexPrefixed();
+		res["output"] = toJS(_a.output());
+		res["status"] = toJS(_a.statusCode());
 
 		return res;
 	}

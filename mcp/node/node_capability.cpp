@@ -934,6 +934,7 @@ void mcp::node_capability::onTransactionImported(ImportResult _ir, p2p::node_id 
 	//	break;
 	case mcp::ImportResult::Malformed:
 	case mcp::ImportResult::BadProcol:
+	case mcp::ImportResult::NotStaking:
 	{
 		std::shared_ptr<p2p::peer> p = nullptr;
 		{
@@ -946,7 +947,7 @@ void mcp::node_capability::onTransactionImported(ImportResult _ir, p2p::node_id 
 		}
 
 		auto _r = p2p::disconnect_reason::bad_protocol;
-		if (_ir == mcp::ImportResult::Malformed)
+		if (_ir == mcp::ImportResult::Malformed || _ir == mcp::ImportResult::NotStaking)
 			_r = p2p::disconnect_reason::malformed;
 		/// todo:disconnect call drop.drop call on_disconnect.on_disconnect will used m_peers_mutex. So it locks twice. need modify logic.
 		if (p)

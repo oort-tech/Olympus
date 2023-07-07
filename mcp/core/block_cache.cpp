@@ -15,7 +15,8 @@ mcp::block_cache::block_cache(mcp::block_store &store_a) :
 	m_transaction_receipts(10000),
 	m_approves(500),
 	m_approve_receipts(500),
-	m_epoch_param(10)
+	m_epoch_param(10),
+	m_staking(10)
 {
 }
 
@@ -561,6 +562,25 @@ void mcp::block_cache::epoch_param_put(mcp::db::db_transaction & transaction_a, 
 	std::lock_guard<std::mutex> lock(m_epoch_param_mutex);
 	m_store.epoch_param_put(transaction_a, epoch, *param);
 	m_epoch_param.insert(epoch, param);
+}
+
+mcp::StakingList mcp::block_cache::GetStakingList(mcp::db::db_transaction & _transaction, Epoch const & _epoch)
+{
+	std::shared_ptr<mcp::StakingList> sl = nullptr;
+	std::lock_guard<std::mutex> lock(m_staking_mutex);
+	bool exists = m_staking.tryGet(_epoch, sl);
+	if (m_staking.tryGet(_epoch, sl))
+		return *sl;
+	return m_store.GetStakingList(_transaction, _epoch);
+	//if (param.size()) ///rarely
+	//	m_staking.insert(_epoch, std::make_shared<mcp::StakingList>(param));
+}
+
+void mcp::block_cache::PutStakingList(mcp::db::db_transaction & _transaction, Epoch const & _epoch, mcp::StakingList const & _sl)
+{
+	std::lock_guard<std::mutex> lock(m_staking_mutex);
+	m_store.PutStakingList(_transaction, _epoch, _sl);
+	m_staking.insert(_epoch, std::make_shared<mcp::StakingList>(_sl));
 }
 
 std::string mcp::block_cache::report_cache_size()

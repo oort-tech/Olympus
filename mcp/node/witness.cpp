@@ -202,6 +202,14 @@ void mcp::witness::try_create_approve(uint64_t const& mci)
 		mci%mcp::epoch_period > *(uint64_t *)m_account.data() % mcp::epoch_period / 10) 
 	{
 		mcp::db::db_transaction transaction(m_store.create_transaction());
+
+		///send if staking finalized.
+		if (!m_chain->IsStakingList(transaction, epoch, m_account))
+		{
+			last_epoch = epoch;
+			LOG(m_log.info) << "[witness] epoch=" << epoch << " staking was not completed.";
+			return;
+		}
 		mcp::block_hash hash;
 		if (epoch <= 1) {
 			hash = mcp::genesis::block_hash;
@@ -221,7 +229,7 @@ void mcp::witness::try_create_approve(uint64_t const& mci)
 		auto ap = std::make_shared<approve>(epoch, proof, m_secret);
 		if (!m_cache->approve_exists(transaction, ap->sha3()))///maybe send but not execute
 		{
-			LOG(m_log.debug) << "[send_approve] m_last_summary_mci=" << mci << " epoch=" << epoch;
+			LOG(m_log.info) << "[send_approve] m_last_summary_mci=" << mci << " epoch=" << epoch;
 			m_aq->importLocal(ap);
 		}
 		

@@ -18,3 +18,6 @@ void test_signature();
 void test_encrypt_decrypt();
 
 void test_eth_sign();
+
+void test_abi();
+void test_decode();

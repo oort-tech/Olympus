@@ -175,11 +175,17 @@ namespace mcp
 		bool transaction_previous_account_state_get(mcp::db::db_transaction & transaction_a, dev::h256 const & link_a, std::vector<h256> & hashs_a);
 		void transaction_previous_account_state_put(mcp::db::db_transaction & transaction_a, dev::h256 const & link_a, std::vector<h256> & hashs_a);
 
+		bool epoch_work_transaction_get(mcp::db::db_transaction & transaction_a, Epoch const & epoch, h256 & hash_a);
+		void epoch_work_transaction_put(mcp::db::db_transaction & transaction_a, Epoch const & epoch, h256 const& hash_a);
+
 		mcp::db::db_transaction create_transaction(std::shared_ptr<rocksdb::WriteOptions> write_options_a = nullptr,
 			std::shared_ptr<rocksdb::TransactionOptions> txn_ops_a = nullptr)
 		{
 			return m_db->create_transaction(write_options_a, txn_ops_a);
 		}
+
+		StakingList GetStakingList(mcp::db::db_transaction & _transaction, Epoch const & _epoch);
+		void PutStakingList(mcp::db::db_transaction & _transaction, Epoch const & _epoch, mcp::StakingList const & _sl);
 
 		std::shared_ptr<rocksdb::ManagedSnapshot> create_snapshot() { return m_db->create_snapshot(); }
 		//void release_snapshot(std::shared_ptr<rocksdb::ManagedSnapshot> _snapshot) { m_db->release_snapshot(_snapshot); }
@@ -260,6 +266,10 @@ namespace mcp
 		int epoch_param;
 
 		int transaction_account_state;
+		int epoch_work_transaction;
+
+		///staking list
+		int stakingList;
 
 		//genesis hash key
 		static dev::h256 const genesis_hash_key;

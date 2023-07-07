@@ -106,6 +106,9 @@ class block_cache : public mcp::iblock_cache
 	std::shared_ptr<witness_param> epoch_param_get(mcp::db::db_transaction & transaction_a, Epoch const & epoch);
 	void epoch_param_put(mcp::db::db_transaction & transaction_a, Epoch const & epoch, std::shared_ptr<witness_param> param);
 
+	mcp::StakingList GetStakingList(mcp::db::db_transaction & _transaction, Epoch const & _epoch);
+	void PutStakingList(mcp::db::db_transaction & _transaction, Epoch const & _epoch, mcp::StakingList const & _sl);
+
 	std::string report_cache_size();
 
 private:
@@ -158,5 +161,8 @@ private:
 
 	std::mutex m_epoch_param_mutex;
 	mcp::Cache<Epoch, std::shared_ptr<mcp::witness_param>> m_epoch_param;
+
+	std::mutex m_staking_mutex;
+	mcp::Cache<Epoch, std::shared_ptr<mcp::StakingList>> m_staking;
 };
 } // namespace mcp

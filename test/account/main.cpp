@@ -206,7 +206,9 @@ void test3()
 
 
 int main(int argc, char * const * argv)
-{
+{	
+	test_abi();
+	test_decode();
 	//test1();
 	//std::cout << ".........................................................." << std::endl;
 	//test2();

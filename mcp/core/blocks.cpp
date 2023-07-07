@@ -114,12 +114,11 @@ mcp::block_hash mcp::block::root() const
 	return m_previous == mcp::block_hash(0) ? mcp::block_hash(m_from) : m_previous; //todo maybe error
 }
 
-void mcp::block::init_from_genesis_transaction(dev::Address const& from, h256 const& hash, std::string time)
+void mcp::block::init_from_genesis_transaction(dev::Address const& from, h256s const& hashes, std::string time)
 {
 	m_from = from;
 	m_previous.clear();
-	h256s links;
-	links.push_back(hash);
+	m_links = hashes;
 	m_last_summary.clear();
 	m_last_summary_block.clear();
 	m_last_stable_block.clear();

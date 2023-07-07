@@ -21,17 +21,6 @@ namespace mcp
 		dev::h256 ciphertext;
 	};
 
-	class value_previous_work
-	{
-	public:
-		value_previous_work() = default;
-		value_previous_work(dev::Slice const & val_a);
-		value_previous_work(mcp::block_hash const &, dev::h64 const &);
-		dev::Slice val() const;
-		mcp::block_hash previous;
-		dev::h64 work;
-	};
-
 	class key_store
 	{
 	public:
