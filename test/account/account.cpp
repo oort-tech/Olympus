@@ -97,7 +97,8 @@ void test_account_encoding()
 	dev::h128 iv = dev::h128("c16adf7a5520dbdc08d7e08984451e0f");
 	dev::h256 ciphertext;
 
-	mcp::encry::aesCTRXOR(ciphertext, encryptKey, iv, data.ref());
+	bytesConstRef dataRef = data.ref();
+	mcp::encry::aesCTRXOR(ciphertext, encryptKey, iv, dataRef);
 
 	h128 a(derived.ref().cropped(dev::h128::size));
 	auto b = a.asBytes() + ciphertext.asBytes();
