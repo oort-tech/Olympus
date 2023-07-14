@@ -27,28 +27,39 @@ mcp::witness::witness(mcp::error_message & error_msg,
 	bool error(!mcp::isAddress(account_or_file_text));
 	if (error) /// Specifies the keystore that needs to be imported. like: --witness_account=\home\0x1144B522F45265C2DFDBAEE8E324719E63A1694C.json
 	{
-		mcp::key_content kc;
-		bool error(key_manager_a->import(account_or_file_text, kc, false));
-		if (error)
+		try
+		{
+			mcp::key_content kc;
+			mcp::json js = mcp::json::parse(account_or_file_text);
+			bool ret = key_manager_a->import(js, kc);
+			if (!ret)
+			{
+				error_msg.error = true;
+				error_msg.message = "Invalid account or json file";
+				return;
+			}
+			m_account = kc.address;
+		}
+		catch (...)
 		{
 			error_msg.error = true;
 			error_msg.message = "Invalid account or json file";
 			return;
 		}
-		m_account = kc.account;
 	}
 	else /// Specify an account(just address) that has been imported.like: --witness_account=0x1144B522F45265C2DFDBAEE8E324719E63A1694C
 	{
 		m_account = dev::Address(account_or_file_text);
 	}
 
-	error = key_manager_a->decrypt_prv(m_account, password_a, m_secret);
-	if (error)
+	std::pair<bool, Secret> _k = key_manager_a->DecryptKey(m_account, password_a);
+	if (!_k.first)
 	{
 		error_msg.error = true;
 		LOG(m_log.error) << "Witness error: Account not exists, " << m_account.hexPrefixed();
 		return;
 	}
+	m_secret = _k.second;
 	m_rawPubkey = dev::toPublickey(m_secret);
 
     mcp::db::db_transaction transaction(m_store.create_transaction());

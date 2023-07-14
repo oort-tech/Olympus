@@ -35,7 +35,7 @@ void mcp::wallet::send_async(TransactionSkeleton t, std::function<void(h256 &, b
 h256 mcp::wallet::send_action(TransactionSkeleton t, boost::optional<std::string> const & password)
 {
 	std::pair<bool, Secret> ar = m_key_manager->authenticate(t.from, password);
-	if (!ar.first)
+	if (ar.first)
 	{
 		populateTransactionWithDefaults(t);
 		t.from = dev::toAddress(ar.second);
