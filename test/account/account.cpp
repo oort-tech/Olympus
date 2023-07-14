@@ -75,17 +75,7 @@ void test_create_account()
 
 void test_account_encoding()
 {
-	boost::uuids::uuid id = boost::uuids::random_generator()();
-
-	std::string s = boost::uuids::to_string(id);
-	std::cout << s << std::endl;
-
-	std::string str = "137a236e-9740-477b-affb-921efdf922a1";
-	boost::uuids::uuid id2 = boost::uuids::string_generator()(str);
-	std::cout << boost::uuids::to_string(id2) << std::endl;
-	std::cout << id2 << std::endl;
-
-	/*std::cout << "-------------test_account_encoding---------------" << std::endl;
+	std::cout << "-------------test_account_encoding---------------" << std::endl;
 	std::string pass = "12345678";
 	dev::h256 salt = dev::h256("f7833b3bf2ef37426141e09bc7d5437521253736a4aac6bd83fe586507b841dc");
 	int N = 131072;
@@ -119,7 +109,7 @@ void test_account_encoding()
 	std::cout << "ciphertext:" << ciphertext.hex() << std::endl;
 	std::cout << "mac:" << mac.hex() << std::endl;
 
-	std::cout << "address:" << dev::toAddress(dev::toPublic(data)) << std::endl;*/
+	std::cout << "address:" << dev::toAddress(dev::toPublic(data)) << std::endl;
 }
 
 void test_account_decrypt()

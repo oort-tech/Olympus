@@ -222,7 +222,8 @@ mcp::CryptoJSON mcp::EncryptDataV3(dev::Secret const& _data, std::string const& 
 	cipherparamsJSON cpj(iv);
 	/// aes encrypt
 	dev::h256 ciphertext;
-	mcp::encry::aesCTRXOR(ciphertext, encryptKey, iv, _data.ref());
+	bytesConstRef _dataRef = _data.ref();
+	mcp::encry::aesCTRXOR(ciphertext, encryptKey, iv, _dataRef);
 	///
 	dev::h256 mac = dev::sha3(dev::h128(derivedKey.ref().cropped(dev::h128::size)).asBytes() + ciphertext.asBytes());
 
