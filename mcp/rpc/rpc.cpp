@@ -1195,7 +1195,7 @@ void mcp::rpc_handler::eth_getBlockByNumber(mcp::json &j_response, bool &)
 		}
 		else
 		{
-			j_block["transactions"].push_back(th.hexPrefixed());
+			j_block["transactions"].push_back(toJS(th));
 		}
 	}
 	j_block["gasUsed"] = toJS(gasUsed);
@@ -1245,7 +1245,7 @@ void mcp::rpc_handler::eth_getBlockByHash(mcp::json &j_response, bool &)
 			}
 			else
 			{
-				j_block["transactions"].push_back(th.hexPrefixed());
+				j_block["transactions"].push_back(toJS(th));
 			}
 		}
 		j_block["gasUsed"] = toJS(gasUsed);
@@ -1326,8 +1326,6 @@ void mcp::rpc_handler::eth_call(mcp::json &j_response, bool &)
 		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
 	}
 
-	//LOG(m_log.info) << "eth_call:" << params[0];
-
 	TransactionSkeleton ts = mcp::toTransactionSkeletonForEth(params[0]);
 	ts.gasPrice = 0;
 	ts.gas = mcp::tx_max_gas;
@@ -1366,8 +1364,6 @@ void mcp::rpc_handler::eth_call(mcp::json &j_response, bool &)
 		mc_info,
 		Permanence::Uncommitted,
 		dev::eth::OnOpFunc());
-
-	//LOG(m_log.info) << "eth_call res:" << toJS(result.first.output);
 
 	j_response["result"] = toJS(result.first.output);
 }
@@ -1470,7 +1466,7 @@ void mcp::rpc_handler::eth_getTransactionByHash(mcp::json &j_response, bool &)
 			throw "";
 		}
 
-		j_transaction["blockHash"] = td->blockHash.hexPrefixed();
+		j_transaction["blockHash"] = toJS(td->blockHash);
 		j_transaction["transactionIndex"] = toJS(td->index);
 
 		uint64_t block_number = 0;
@@ -1718,7 +1714,7 @@ void mcp::rpc_handler::eth_accounts(mcp::json &j_response, bool &)
 	Addresses account_list(m_key_manager->list());
 	for (auto account : account_list)
 	{
-		j_accounts.push_back(account.hexPrefixed());
+		j_accounts.push_back(toJS(account));
 	}
 	j_response["result"] = j_accounts;
 }
@@ -1757,7 +1753,7 @@ void mcp::rpc_handler::eth_sign(mcp::json &j_response, bool &)
 		get_eth_signed_msg(data, hash);
 
 		dev::Signature signature = dev::sign(ar.second, hash);
-		j_response["result"] = signature.hexPrefixed();
+		j_response["result"] = toJS(signature);
 	}
 	catch (dev::Exception &e)
 	{
@@ -2105,7 +2101,7 @@ void mcp::rpc_handler::personal_importRawKey(mcp::json &j_response, bool &)
 	}
 
 	mcp::key_content kc = m_key_manager->importRawKey(prv, password);
-	j_response["result"] = kc.address.hexPrefixed();
+	j_response["result"] = toJS(kc.address);
 }
 
 void mcp::rpc_handler::personal_listAccounts(mcp::json &j_response, bool &)
@@ -2114,7 +2110,7 @@ void mcp::rpc_handler::personal_listAccounts(mcp::json &j_response, bool &)
 	Addresses account_list(m_key_manager->list());
 	for (auto account : account_list)
 	{
-		j_accounts.push_back(account.hexPrefixed());
+		j_accounts.push_back(toJS(account));
 	}
 	j_response["result"] = j_accounts;
 }
@@ -2153,7 +2149,7 @@ void mcp::rpc_handler::personal_newAccount(mcp::json &j_response, bool &)
 	}
 
 	dev::Address account = m_key_manager->create(password);
-	j_response["result"] = account.hexPrefixed();
+	j_response["result"] = toJS(account);
 }
 
 void mcp::rpc_handler::personal_unlockAccount(mcp::json &j_response, bool &)
@@ -2240,7 +2236,7 @@ void mcp::rpc_handler::personal_sign(mcp::json &j_response, bool &)
 	get_eth_signed_msg(data, hash);
 
 	dev::Signature signature = dev::sign(_k.second, hash);
-	j_response["result"] = signature.hexPrefixed();
+	j_response["result"] = toJS(signature);
 }
 
 void mcp::rpc_handler::personal_ecRecover(mcp::json &j_response, bool &)
@@ -2271,7 +2267,7 @@ void mcp::rpc_handler::personal_ecRecover(mcp::json &j_response, bool &)
 	get_eth_signed_msg(data, hash);
 
 	dev::Address from = dev::toAddress(dev::recover(sig, hash));
-	j_response["result"] = from.hexPrefixed();
+	j_response["result"] = toJS(from);
 }
 
 void mcp::rpc_handler::get_eth_signed_msg(dev::bytes &data, dev::h256 &hash)
@@ -2310,9 +2306,9 @@ void mcp::rpc_handler::epoch_approves(mcp::json &j_response, bool &)
 		auto approve = m_cache->approve_get(transaction, hash);
 		if (approve) {
 			mcp::json approve_l;
-			approve_l["hash"] = approve->sha3().hexPrefixed();
-			approve_l["from"] = approve->sender().hexPrefixed();
-			approve_l["proof"] = approve->proof().hexPrefixed();
+			approve_l["hash"] = toJS(approve->sha3());
+			approve_l["from"] = toJS(approve->sender());
+			approve_l["proof"] = toJS(approve->proof());
 			approves_l.push_back(approve_l);
 		}
 		else {
@@ -2339,7 +2335,7 @@ void mcp::rpc_handler::epoch_work_transaction(mcp::json &j_response, bool &)
 	h256 _h;
 	m_store.epoch_work_transaction_get(transaction, epoch, _h);
 
-	j_response["result"] = _h.hexPrefixed();
+	j_response["result"] = toJS(_h);
 }
 
 void mcp::rpc_handler::approve_receipt(mcp::json &j_response, bool &)

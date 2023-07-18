@@ -108,7 +108,7 @@ namespace mcp
 				res["blockNumber"] = nullptr;
 			}
 			else {
-				res["blockHash"] = _t.blockHash().hexPrefixed();
+				res["blockHash"] = toJS(_t.blockHash());
 				res["transactionIndex"] = toJS(_t.transactionIndex());
 				res["blockNumber"] = toJS(_t.blockNumber());
 			}
@@ -124,7 +124,7 @@ namespace mcp
 		mcp::json res;
 		res["transactionHash"] = toJS(_t.hash());
 		res["transactionIndex"] = toJS(_t.transactionIndex());
-		res["blockHash"] = _t.blockHash().hexPrefixed();
+		res["blockHash"] = toJS(_t.blockHash());
 		res["blockNumber"] = toJS(_t.blockNumber());
 		res["from"] = toJS(_t.from());
 		if (_t.to() == dev::Address(0)) {
@@ -157,9 +157,9 @@ namespace mcp
 				rs = toJson(static_cast<mcp::log_entry const&>(r));
 				rs["type"] = "mined";
 				rs["blockNumber"] = toJS(r.blockNumber);
-				rs["blockHash"] = r.blockHash.hexPrefixed();
-				rs["logIndex"] = r.logIndex;
-				rs["transactionHash"] = r.transactionHash.hexPrefixed();
+				rs["blockHash"] = toJS(r.blockHash);
+				rs["logIndex"] = toJS(r.logIndex);
+				rs["transactionHash"] = toJS(r.transactionHash);
 				rs["transactionIndex"] = toJS(r.transactionIndex);
 			}
 			res.push_back(rs);
@@ -178,9 +178,9 @@ namespace mcp
 				res = toJson(static_cast<mcp::log_entry const&>(_e));
 				res["type"] = "mined";
 				res["blockNumber"] = toJS(_e.blockNumber);
-				res["blockHash"] = _e.blockHash.hexPrefixed();
-				res["logIndex"] = _e.logIndex;
-				res["transactionHash"] = _e.transactionHash.hexPrefixed();
+				res["blockHash"] = toJS(_e.blockHash);
+				res["logIndex"] = toJS(_e.logIndex);
+				res["transactionHash"] = toJS(_e.transactionHash);
 				res["transactionIndex"] = toJS(_e.transactionIndex);
 			}
 			
@@ -209,7 +209,7 @@ namespace mcp
 			res["nonce"] = nullptr;
 			res["extraData"] = "0x00";
 			res["hash"] = _b.hash().hexPrefixed();
-			res["parentHash"] = _b.previous().hexPrefixed();
+			res["parentHash"] = toJS(_b.previous());
 			res["gasUsed"] = 0;
 			res["minGasPrice"] = 0;
 			res["gasLimit"] = toJS(mcp::tx_max_gas);
@@ -218,14 +218,14 @@ namespace mcp
 			res["miner"] = _b.from().hexPrefixed();
 		}
 		else {
-			res["hash"] = _b.hash().hexPrefixed();
-			res["from"] = _b.from().hexPrefixed();
-			res["previous"] = _b.previous().hexPrefixed();
+			res["hash"] = toJS(_b.hash());
+			res["from"] = toJS(_b.from());
+			res["previous"] = toJS(_b.previous());
 
 			mcp::json j_parents = mcp::json::array();
 			for (auto & p : _b.parents())
 			{
-				j_parents.push_back(p.hexPrefixed());
+				j_parents.push_back(toJS(p));
 			}
 			res["parents"] = j_parents;
 
@@ -239,12 +239,12 @@ namespace mcp
 				j_approves.push_back(toJS(l));
 			res["approves"] = j_approves;
 
-			res["last_summary"] = _b.last_summary().hexPrefixed();
-			res["last_summary_block"] = _b.last_summary_block().hexPrefixed();
-			res["last_stable_block"] = _b.last_stable_block().hexPrefixed();
+			res["last_summary"] = toJS(_b.last_summary());
+			res["last_summary_block"] = toJS(_b.last_summary_block());
+			res["last_stable_block"] = toJS(_b.last_stable_block());
 			res["timestamp"] = _b.exec_timestamp();
 			res["gasLimit"] = toJS(mcp::tx_max_gas);
-			res["signature"] = ((Signature)_b.signature()).hexPrefixed();
+			res["signature"] = toJS((Signature)_b.signature());
 		}
 
 		return res;
@@ -254,7 +254,7 @@ namespace mcp
 	{
 		mcp::json res;
 
-		res["from"] = _a.from().hexPrefixed();
+		res["from"] = toJS(_a.from());
 		res["output"] = toJS(_a.output());
 		res["status"] = toJS(_a.statusCode());
 
