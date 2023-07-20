@@ -21,7 +21,7 @@ namespace mcp
 				ret.from = jsToAddress(_json["from"]);
 			}
 			catch (...) {
-				BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidAccountFrom());
+				BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidParams("Invalid Account From"));
 			}
 		}
 
@@ -30,7 +30,7 @@ namespace mcp
 				ret.to = jsToAddress(_json["to"]);
 			}
 			catch (...) {
-				BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidAccountTo());
+				BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidParams("Invalid Account to"));
 			}
 		}
 
@@ -49,7 +49,7 @@ namespace mcp
 				ret.data = jsToBytes(_json["data"], OnFailed::Throw);
 			}
 			catch (...) {
-				BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidData());
+				BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidParams("Invalid Data"));
 			}
 		}
 
@@ -243,5 +243,9 @@ namespace mcp
 		}
 
 		return res;
+	}
+
+	uint64_t jsToULl(std::string const & _s){
+		return stoull(_s);
 	}
 }
