@@ -3,7 +3,7 @@
 #include <libdevcore/CommonJS.h>
 #include <mcp/core/config.hpp>
 #include "jsonHelper.hpp"
-#include "exceptions.hpp"
+//#include "exceptions.hpp"
 
 namespace mcp
 {
@@ -243,9 +243,5 @@ namespace mcp
 		}
 
 		return res;
-	}
-
-	uint64_t jsToULl(std::string const & _s){
-		return stoull(_s);
 	}
 }

@@ -22,7 +22,7 @@ mcp::rpc_config::rpc_config() : rpc_config(false)
 }
 
 mcp::rpc_config::rpc_config(bool enable_rpc_a) : address(boost::asio::ip::address_v4::loopback()),
-													 port(8780),
+													 port(8765),
 													 //enable_control(enable_control_a),
 													 rpc_enable(enable_rpc_a)
 {
@@ -587,16 +587,10 @@ void mcp::rpc_handler::stable_blocks(mcp::json &j_response, bool &)
 	if (!request.count("index"))
 		BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidParams("Invalid Index"));
 	uint64_t index = jsToULl(request["index"]);
-	if(index == 0 && request["index"] != "0"){
-		BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidParams("Invalid Argument: not an uint_64 number"));
-	}
 
 	if (!request.count("limit"))
 		BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidParams("Invalid Limit"));
 	uint64_t limit_l = jsToULl(request["limit"]);
-	if(limit_l == 0 && request["limit"] != "0"){
-		BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidParams("Invalid Argument: not an uint_64 number"));
-	}
 	if (limit_l > list_max_limit || !limit_l)///too big or zero.
 		BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidParams("Invalid Limit"));
 
@@ -812,9 +806,6 @@ void mcp::rpc_handler::witness_list(mcp::json &j_response, bool &)
 	if (request.count("epoch") && request["epoch"].is_string())
 	{
 		epoch = (uint64_t)jsToULl(request["epoch"]);
-		if(epoch == 0 && request["epoch"] != "0"){
-			BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidParams("Invalid Argument: not an uint_64 number"));
-		}
 	}
 
 	if (epoch > m_chain->last_epoch())
@@ -878,9 +869,6 @@ void mcp::rpc_handler::debug_storage_range_at(mcp::json &j_response, bool &)
 		BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidParams("Invalid Begin"));
 	}
 	max_results = jsToULl(request["max_results"]);
-	if(max_results == 0 && request["max_results"] != "0"){
-		BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidParams("Invalid Argument: not an uint_64 number"));
-	}
 
 	j_response["result"] = mcp::json::object();
 
@@ -1225,9 +1213,6 @@ void mcp::rpc_handler::eth_getBlockByNumber(mcp::json &j_response, bool &)
 	else
 	{
 		block_number = jsToULl(blockText);
-		if(block_number == 0 && blockText != "0"){
-			BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidParams("Invalid Argument: not an uint_64 number"));
-		}
 	}
 
 	mcp::db::db_transaction transaction(m_store.create_transaction());
@@ -1409,9 +1394,6 @@ void mcp::rpc_handler::eth_call(mcp::json &j_response, bool &)
 		else
 		{
 			block_number = jsToULl(blockText);
-			if(block_number == 0 && blockText != "0"){
-				BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidParams("Invalid Argument: not an uint_64 number"));
-			}
 		}
 
 		dev::eth::McInfo mc_info;
@@ -1578,9 +1560,6 @@ void mcp::rpc_handler::eth_getTransactionByBlockHashAndIndex(mcp::json &j_respon
 	{
 		mcp::block_hash block_hash = jsToHash(params[0]);
 		uint64_t index = jsToULl(params[1]);
-		if(index == 0 && params[1] != "0"){
-			BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidParams("Invalid Argument: not an uint_64 number"));
-		}
 
 		auto transaction = m_store.create_transaction();
 		auto block(m_cache->block_get(transaction, block_hash));
@@ -1635,14 +1614,8 @@ void mcp::rpc_handler::eth_getTransactionByBlockNumberAndIndex(mcp::json &j_resp
 	else
 	{
 		block_number = jsToULl(blockText);// add features
-		if(block_number == 0 && blockText != "0"){
-			BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidParams("Invalid Argument: not an uint_64 number"));
-		}
 	}
 	uint64_t index = jsToULl(params[1]);
-	if(index == 0 && params[1] != "0"){
-		BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidParams("Invalid Argument: not an uint_64 number"));
-	}
 
 	try
 	{
@@ -1789,9 +1762,6 @@ void mcp::rpc_handler::eth_getBlockTransactionCountByNumber(mcp::json &j_respons
 	else
 	{
 		block_number = jsToULl(blockText);
-		if(block_number == 0 && blockText != "0"){
-			BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidParams("Invalid Argument: not an uint_64 number"));
-		}
 	}
 
 	try
@@ -2046,9 +2016,6 @@ void mcp::rpc_handler::eth_getLogs(mcp::json &j_response, bool &)
 		else
 		{
 			fromBlock = jsToULl(blockText);
-			if(fromBlock == 0 && blockText != "0"){
-				BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidParams("Invalid Argument: not an uint_64 number"));
-			}
 		}
 	}
 
@@ -2067,9 +2034,6 @@ void mcp::rpc_handler::eth_getLogs(mcp::json &j_response, bool &)
 		else
 		{
 			toBlock = jsToULl(blockText);
-			if(toBlock == 0 && blockText != "0"){
-				BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidParams("Invalid Argument: not an uint_64 number"));
-			}
 		}
 	}
 
@@ -2424,9 +2388,6 @@ void mcp::rpc_handler::epoch_approves(mcp::json &j_response, bool &)
 	if (request.count("epoch") && request["epoch"].is_string())
 	{
 		epoch = (uint64_t)jsToULl(request["epoch"]);
-		if(epoch == 0 && request["epoch"] != "0"){
-			BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidParams("Invalid Argument: not an uint_64 number"));
-		}
 	}
 
 	if (epoch > m_chain->last_epoch())
