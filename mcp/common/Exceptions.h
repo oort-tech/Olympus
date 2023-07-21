@@ -41,6 +41,7 @@ DEV_SIMPLE_EXCEPTION(ExtraDataIncorrect);
 DEV_SIMPLE_EXCEPTION(TransactionIsUnsigned);
 DEV_SIMPLE_EXCEPTION(InvalidSignature);
 DEV_SIMPLE_EXCEPTION(InvalidTransactionFormat);
+DEV_SIMPLE_EXCEPTION(InvalidKeyContentFormat);
 DEV_SIMPLE_EXCEPTION(InvalidBlockFormat);
 DEV_SIMPLE_EXCEPTION(InvalidUnclesHash);
 DEV_SIMPLE_EXCEPTION(TooManyUncles);

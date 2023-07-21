@@ -10,7 +10,7 @@ namespace mcp
 	inline std::string TransactionSkeletonField(mcp::json const& _json)
 	{
 		if (!_json.is_string())
-			BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
+			BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidParams("Invalid Params"));
 		std::string _a = _json;
 		return _a;
 	}
