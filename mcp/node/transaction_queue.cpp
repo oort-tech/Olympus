@@ -77,7 +77,7 @@ namespace mcp
 				return ir;
 
 			_transaction->sender();
-			if (_in != source::request)///block lined,do not checkout balance and nonce
+			if (_in != source::request && _in != source::sync)///block lined,do not checkout balance and nonce
 				checkTx(*_transaction); ///check balance and nonce
 			UpgradeGuard ul(l);
 			ret = manageImport_WITH_LOCK(_transaction, _in);

@@ -91,8 +91,8 @@ namespace mcp
 		unknown = 255,
         ok = 0,
         fork = 1,
-        invalid = 2,
-        fail = 3,
+        //invalid = 2,
+        //fail = 3,
     };
 
 	class block_child_key
@@ -532,6 +532,17 @@ namespace mcp
 		unsigned index = 0;
 		//uint64_t blockNum = 0;
 	};
+
+	/// staking address -> staking balance
+	using StakingList = std::map<dev::Address, dev::u256>;
+
+	/// reword info
+	struct MainInfo
+	{
+		dev::u256 amount;
+		int onMci;
+		int notOnMci;
+	};
 	
 	// transaction queue import
 	enum class ImportResult
@@ -545,7 +556,8 @@ namespace mcp
 		BadProcol,
 		InvalidNonce,
 		EpochIsTooHigh,
-		EpochIsTooLow
+		EpochIsTooLow,
+		NotStaking	///for approves
 	};
 	
 	using BlockNumber = uint64_t;

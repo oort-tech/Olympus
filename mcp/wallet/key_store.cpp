@@ -54,25 +54,6 @@ std::string mcp::key_content::to_json() const
 	return js.dump();
 }
 
-mcp::value_previous_work::value_previous_work(dev::Slice const & val_a)
-{
-	assert_x(val_a.size() == sizeof(*this));
-	std::copy(reinterpret_cast<uint8_t const *> (val_a.data()), reinterpret_cast<uint8_t const *> (val_a.data()) + sizeof(previous), previous.asArray().begin());
-	std::copy(reinterpret_cast<uint8_t const *> (val_a.data()) + sizeof(previous), reinterpret_cast<uint8_t const *> (val_a.data()) + sizeof(previous) + sizeof(work), work.asArray().begin());
-}
-
-mcp::value_previous_work::value_previous_work(mcp::block_hash const & previous_a, dev::h64 const & work_a) :
-	previous(previous_a),
-	work(work_a)
-{
-}
-
-dev::Slice mcp::value_previous_work::val() const
-{
-	static_assert (sizeof(*this) == sizeof(previous) + sizeof(work), "Class not packed");
-	return dev::Slice((char*)this, sizeof(*this));
-}
-
 //store
 mcp::key_store::key_store(bool & error_a, boost::filesystem::path const& _path) :
 	m_database(std::make_shared<mcp::db::database>(_path))

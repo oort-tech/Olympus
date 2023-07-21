@@ -157,6 +157,7 @@ public:
 	void personal_sign(mcp::json & j_response, bool & async);
 	void personal_ecRecover(mcp::json & j_response, bool & async);
 	void epoch_approves(mcp::json &j_response, bool &);
+	void epoch_work_transaction(mcp::json &j_response, bool &);
 	void approve_receipt(mcp::json &j_response, bool &);
 
 	std::string body;

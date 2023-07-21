@@ -227,6 +227,7 @@ mcp::rpc_handler::rpc_handler(mcp::rpc &rpc_a, std::string const &body_a, std::f
 
 	m_mcpRpcMethods["epoch_approves"] = &mcp::rpc_handler::epoch_approves;
 	m_mcpRpcMethods["approve_receipt"] = &mcp::rpc_handler::approve_receipt;
+	m_mcpRpcMethods["epoch_work_transaction"] = &mcp::rpc_handler::epoch_work_transaction;
 
 	m_ethRpcMethods["net_version"] = &mcp::rpc_handler::net_version;
 	m_ethRpcMethods["net_listening"] = &mcp::rpc_handler::net_listening;
@@ -1322,6 +1323,18 @@ void mcp::rpc_handler::eth_sendRawTransaction(mcp::json &j_response, bool &)
 	try
 	{
 		Transaction t(jsToBytes(params[0], OnFailed::Throw), CheckTransaction::None);
+
+		//LOG(m_log.info) << "m_nonce:" << t.nonce() 
+		//	<< " ,m_value:" << t.value() 
+		//	<< " ,m_receiveAddress:" << t.receiveAddress().hex()
+		//	<< " ,m_gasPrice:" << t.gasPrice()
+		//	<< " ,m_gas:" << t.gas()
+		//	<< " ,m_data:" << toHex(t.data())
+		//	<< " ,m_vrs v:" << (int)t.signature().v
+		//	<< " ,m_vrs r:" << t.signature().r.hex()
+		//	<< " ,m_vrs s:" << t.signature().s.hex()
+		//	<< " ,m_chainId:" << t.chainID();
+
 		j_response["result"] = toJS(m_wallet->importTransaction(t));
 	}
 	catch (dev::Exception &e)
@@ -2417,6 +2430,26 @@ void mcp::rpc_handler::epoch_approves(mcp::json &j_response, bool &)
 	j_response["result"] = approves_l;
 }
 
+void mcp::rpc_handler::epoch_work_transaction(mcp::json &j_response, bool &)
+{
+	Epoch epoch = m_chain->last_epoch();
+	if (request.count("epoch") && request["epoch"].is_string())
+	{
+		epoch = (uint64_t)jsToInt(request["epoch"]);
+	}
+
+	if (epoch >= m_chain->last_epoch())
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_EpochTooBig());
+	}
+
+	mcp::db::db_transaction transaction(m_store.create_transaction());
+	h256 _h;
+	m_store.epoch_work_transaction_get(transaction, epoch, _h);
+
+	j_response["result"] = _h.hexPrefixed();
+}
+
 void mcp::rpc_handler::approve_receipt(mcp::json &j_response, bool &)
 {
 	if (!request.count("hash") || (!request["hash"].is_string()))
@@ -2434,13 +2467,21 @@ void mcp::rpc_handler::approve_receipt(mcp::json &j_response, bool &)
 		BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidParams("Invalid Hash"));
 	}
 
-	mcp::json approve_receipt_l;
-	mcp::db::db_transaction transaction(m_store.create_transaction());
-	auto approve_receipt = m_cache->approve_receipt_get(transaction, hash);
-	if (approve_receipt) {
-		approve_receipt_l["from"] = approve_receipt->from().hexPrefixed();
-		approve_receipt_l["output"] = toHexPrefixed(approve_receipt->output());
+	try
+	{
+		mcp::db::db_transaction transaction(m_store.create_transaction());
+		auto _a = m_cache->approve_receipt_get(transaction, hash);
+		if (_a == nullptr)
+			throw "";
+		j_response["result"] = toJson(*_a);
 	}
-	j_response["result"] = approve_receipt_l;
+	catch (...)
+	{
+		j_response["result"] = nullptr;
+	}
+
+	
+
+	
 }
 
