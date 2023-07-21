@@ -618,14 +618,16 @@ void mcp::rpc_handler::stable_blocks(mcp::json &j_response, bool &)
 		if (blocks_count == limit_l)
 			break;
 	}
+	json result;
 
-	j_response["result"] = block_list_l;
+	result["blocks"] = block_list_l;
 
 	uint64_t next_index = index + limit_l;
 	if (next_index <= last_stable_index)
-		j_response["next_index"] = next_index;
+		result["next_index"] = next_index;
 	else
-		j_response["next_index"] = nullptr;
+		result["next_index"] = nullptr;
+	j_response["result"] = result;
 }
 
 void mcp::rpc_handler::block_summary(mcp::json &j_response, bool &)
@@ -649,13 +651,14 @@ void mcp::rpc_handler::block_summary(mcp::json &j_response, bool &)
 	mcp::db::db_transaction transaction(m_store.create_transaction());
 	mcp::summary_hash summary;
 	bool exists(!m_cache->block_summary_get(transaction, hash, summary));
+	json result;
 	if (!exists)
 	{
-		j_response["result"] = nullptr;
+		result["summeries"] = nullptr;
 	}
 	else
 	{
-		j_response["result"] = summary.hexPrefixed();
+		result["summeries"] = summary.hexPrefixed();
 
 		auto block(m_cache->block_get(transaction, hash));
 		assert_x(block);
@@ -669,7 +672,7 @@ void mcp::rpc_handler::block_summary(mcp::json &j_response, bool &)
 			bool previous_summary_hash_error(m_cache->block_summary_get(transaction, block->previous(), previous_summary_hash));
 			assert_x(!previous_summary_hash_error);
 		}
-		j_response["previous_summary"] = previous_summary_hash.hexPrefixed();
+		result["previous_summary"] = previous_summary_hash.hexPrefixed();
 
 		// parent summary hashs
 		mcp::json parent_summaries_l = mcp::json::array();
@@ -681,7 +684,7 @@ void mcp::rpc_handler::block_summary(mcp::json &j_response, bool &)
 
 			parent_summaries_l.push_back(p_summary_hash.hexPrefixed());
 		}
-		j_response["parent_summaries"] = parent_summaries_l;
+		result["parent_summaries"] = parent_summaries_l;
 
 		///High performance overhead.
 		/*/// receiptsRoot hash
@@ -730,17 +733,20 @@ void mcp::rpc_handler::block_summary(mcp::json &j_response, bool &)
 			for (mcp::summary_hash s : summary_skiplist)
 				skiplist_summaries_l.push_back(s.hexPrefixed());
 		}
-		j_response["skiplist_summaries"] = skiplist_summaries_l;
+		result["skiplist_summaries"] = skiplist_summaries_l;
 
-		j_response["status"] = (uint64_t)block_state->status;
+		result["status"] = (uint64_t)block_state->status;
+		j_response["result"] = result;
 	}
 }
 
 void mcp::rpc_handler::version(mcp::json &j_response, bool &)
 {
-	j_response["result"] = STR(MCP_VERSION);
-	j_response["rpc_version"] = "1";
-	j_response["store_version"] = std::to_string(m_store.version_get());
+	json result;
+	result["version"] = STR(MCP_VERSION);
+	result["rpc_version"] = "1";
+	result["store_version"] = std::to_string(m_store.version_get());
+	j_response["result"] = result;
 }
 
 void mcp::rpc_handler::status(mcp::json &j_response, bool &)
@@ -2440,7 +2446,7 @@ void mcp::rpc_handler::epoch_work_transaction(mcp::json &j_response, bool &)
 
 	if (epoch >= m_chain->last_epoch())
 	{
-		BOOST_THROW_EXCEPTION(RPC_Error_EpochTooBig());
+		BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidParams("Epoch Too Big"));
 	}
 
 	mcp::db::db_transaction transaction(m_store.create_transaction());

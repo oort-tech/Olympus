@@ -5,6 +5,7 @@
 #include <mcp/core/common.hpp>
 #include <mcp/core/transaction_receipt.hpp>
 #include <mcp/core/approve_receipt.hpp>
+#include "exceptions.hpp"
 
 namespace mcp
 {
