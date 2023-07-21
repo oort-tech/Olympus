@@ -784,16 +784,13 @@ void mcp::rpc_handler::nodes(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::witness_list(mcp::json &j_response, bool &)
 {
-	Epoch epoch = m_chain->last_epoch();
-	if (request.count("epoch") && request["epoch"].is_string())
-	{
-		epoch = (uint64_t)jsToInt(request["epoch"]);
-	}
+	if (!request.count("epoch") || !request["epoch"].is_string())
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
+
+	Epoch epoch = (uint64_t)jsToInt(request["epoch"]);
 
 	if (epoch > m_chain->last_epoch())
-	{
 		BOOST_THROW_EXCEPTION(RPC_Error_EpochTooBig());
-	}
 
 	mcp::db::db_transaction transaction(m_store.create_transaction());
 	mcp::witness_param const &w_param(mcp::param::witness_param(transaction, epoch));

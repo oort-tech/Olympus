@@ -7,6 +7,14 @@
 
 namespace mcp
 {
+	inline std::string TransactionSkeletonField(mcp::json const& _json)
+	{
+		if (!_json.is_string())
+			BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
+		std::string _a = _json;
+		return _a;
+	}
+
 	TransactionSkeleton toTransactionSkeletonForEth(mcp::json const& _json)
 	{
 		TransactionSkeleton ret;
@@ -16,45 +24,53 @@ namespace mcp
 		if (!_json.is_object() || _json.empty())
 			return ret;
 
-		if (_json.count("from") && !_json["from"].empty() && _json["from"].is_string()) {
+		if (_json.count("from"))
+		{
+			std::string _from = TransactionSkeletonField(_json["from"]);
 			try {
-				ret.from = jsToAddress(_json["from"]);
+				ret.from = jsToAddress(_from);
 			}
 			catch (...) {
 				BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidAccountFrom());
 			}
 		}
 
-		if (_json.count("to") && !_json["to"].empty() && _json["to"].is_string()) {
-			try {
-				ret.to = jsToAddress(_json["to"]);
-			}
-			catch (...) {
-				BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidAccountTo());
+		if (_json.count("to")) 
+		{
+			if (!_json["to"].is_null())///null is create contract.
+			{
+				std::string _to = TransactionSkeletonField(_json["to"]);
+				try {
+					ret.to = jsToAddress(_to);
+				}
+				catch (...) {
+					BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidAccountTo());
+				}
 			}
 		}
 
-		if (_json.count("value") && !_json["value"].empty() && _json["value"].is_string()) {
-			ret.value = jsToU256(_json["value"]);
-		}
+		if (_json.count("value")) 
+			ret.value = jsToU256(TransactionSkeletonField(_json["value"]));
 
-		if (_json.count("gas") && !_json["gas"].empty() && _json["gas"].is_string())
-			ret.gas = jsToU256(_json["gas"]);
+		if (_json.count("gas"))
+			ret.gas = jsToU256(TransactionSkeletonField(_json["gas"]));
 
-		if (_json.count("gasPrice") && !_json["gasPrice"].empty() && _json["gasPrice"].is_string())
-			ret.gasPrice = jsToU256(_json["gasPrice"]);
+		if (_json.count("gasPrice"))
+			ret.gasPrice = jsToU256(TransactionSkeletonField(_json["gasPrice"]));
 
-		if (_json.count("data") && !_json["data"].empty() && _json["data"].is_string()) {
+		if (_json.count("data")) 
+		{
+			std::string _data = TransactionSkeletonField(_json["data"]);
 			try {
-				ret.data = jsToBytes(_json["data"], OnFailed::Throw);
+				ret.data = jsToBytes(_data, OnFailed::Throw);
 			}
 			catch (...) {
 				BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidData());
 			}
 		}
 
-		if (_json.count("nonce") && !_json["nonce"].empty() && _json["nonce"].is_string())
-			ret.nonce = jsToU256(_json["nonce"]);
+		if (_json.count("nonce"))
+			ret.nonce = jsToU256(TransactionSkeletonField(_json["nonce"]));
 
 		return ret;
 	}
