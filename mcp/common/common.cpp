@@ -15,20 +15,10 @@ namespace mcp
 	fast_steady_clock SteadyClock;
 }
 
-int mcp::encry::encryption(unsigned char *c, const unsigned char *m,
-	unsigned long long mlen, const unsigned char *n,
-	const unsigned char *ek) {
-	CryptoPP::AES::Encryption alg(ek, 32);
-	CryptoPP::CTR_Mode_ExternalCipher::Encryption enc(alg, n);
-	enc.ProcessData(c, m, mlen);
-	return 0;
-}
+int mcp::encry::aesCTRXOR(dev::h256& _result, dev::h128 const& _k, dev::h128 const& _iv, dev::bytesConstRef& _sec) {
+	CryptoPP::AES::Encryption alg(_k.data(), _k.size);
+	CryptoPP::CTR_Mode_ExternalCipher::Encryption enc(alg, _iv.data());
+	enc.ProcessData(_result.data(), _sec.data(), _sec.size());
 
-int mcp::encry::dencryption(unsigned char *m, const unsigned char *c,
-	unsigned long long clen, const unsigned char *n,
-	const unsigned char *ek) {
-	CryptoPP::AES::Encryption alg(ek, 32);
-	CryptoPP::CTR_Mode_ExternalCipher::Decryption dec(alg, n);
-	dec.ProcessData(m, c, clen);
 	return 0;
 }

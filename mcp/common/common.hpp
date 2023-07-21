@@ -148,12 +148,6 @@ namespace mcp
 
 	namespace encry
 	{
-		int encryption(unsigned char *c, const unsigned char *m,
-			unsigned long long mlen, const unsigned char *n,
-			const unsigned char *ek);
-
-		int dencryption(unsigned char *m, const unsigned char *c,
-			unsigned long long clen, const unsigned char *n,
-			const unsigned char *ek);
+		int aesCTRXOR(dev::h256& _result, dev::h128 const& _k, dev::h128 const& _iv, dev::bytesConstRef& _sec);
 	}
 }

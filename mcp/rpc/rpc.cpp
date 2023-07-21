@@ -204,14 +204,10 @@ mcp::rpc_handler::rpc_handler(mcp::rpc &rpc_a, std::string const &body_a, std::f
 																																				 m_background(rpc_a.m_background),
 																																				 m_store(rpc.m_store)
 {
-	//m_mcpRpcMethods["account_validate"] = &mcp::rpc_handler::account_validate;
 	m_mcpRpcMethods["account_remove"] = &mcp::rpc_handler::account_remove;
 	m_mcpRpcMethods["account_export"] = &mcp::rpc_handler::account_export;
 	m_mcpRpcMethods["account_import"] = &mcp::rpc_handler::account_import;
-	//m_mcpRpcMethods["account_password_change"] = &mcp::rpc_handler::account_password_change;
 	m_mcpRpcMethods["accounts_balances"] = &mcp::rpc_handler::accounts_balances;
-	//m_mcpRpcMethods["account_block_list"] = &mcp::rpc_handler::account_block_list;
-	//m_mcpRpcMethods["account_state_list"] = &mcp::rpc_handler::account_state_list;
 	m_mcpRpcMethods["block"] = &mcp::rpc_handler::block;
 	m_mcpRpcMethods["block_state"] = &mcp::rpc_handler::block_state;
 	m_mcpRpcMethods["block_states"] = &mcp::rpc_handler::block_states;
@@ -373,16 +369,22 @@ void mcp::rpc_handler::account_import(mcp::json &j_response, bool &)
 		BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_JsonParseError("Invalid Json"));
 	}
 
-	std::string json_text = request["json"];
-	bool gen_next_work_l(false);
-	mcp::key_content kc;
-
-	if (m_key_manager->import(json_text, kc, gen_next_work_l))
+	mcp::json js;
+	try
+	{
+		std::string json_text = request["json"];
+		js = mcp::json::parse(json_text);
+	}
+	catch (...)
 	{
 		BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_JsonParseError("Invalid Json"));
 	}
 
-	j_response["result"] = kc.account.hexPrefixed();
+	mcp::key_content kc;
+	if (!m_key_manager->import(js, kc))
+		BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidParams("Invalid Account"));
+
+	j_response["result"] = kc.address.hexPrefixed();
 }
 
 void mcp::rpc_handler::accounts_balances(mcp::json &j_response, bool &)
@@ -809,11 +811,10 @@ void mcp::rpc_handler::nodes(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::witness_list(mcp::json &j_response, bool &)
 {
-	Epoch epoch = m_chain->last_epoch();
-	if (request.count("epoch") && request["epoch"].is_string())
-	{
-		epoch = (uint64_t)jsToULl(request["epoch"]);
-	}
+	if (!request.count("epoch") || !request["epoch"].is_string())
+		BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidParams("Invalid Params"));
+
+	Epoch epoch = (uint64_t)jsToULl(request["epoch"]);
 
 	if (epoch > m_chain->last_epoch())
 	{
@@ -1250,7 +1251,7 @@ void mcp::rpc_handler::eth_getBlockByNumber(mcp::json &j_response, bool &)
 		}
 		else
 		{
-			j_block["transactions"].push_back(th.hexPrefixed());
+			j_block["transactions"].push_back(toJS(th));
 		}
 	}
 	j_block["gasUsed"] = toJS(gasUsed);
@@ -1301,7 +1302,7 @@ void mcp::rpc_handler::eth_getBlockByHash(mcp::json &j_response, bool &)
 			}
 			else
 			{
-				j_block["transactions"].push_back(th.hexPrefixed());
+				j_block["transactions"].push_back(toJS(th));
 			}
 		}
 		j_block["gasUsed"] = toJS(gasUsed);
@@ -1546,7 +1547,7 @@ void mcp::rpc_handler::eth_getTransactionByHash(mcp::json &j_response, bool &)
 			BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidArgument(""));
 		}
 
-		j_transaction["blockHash"] = td->blockHash.hexPrefixed();
+		j_transaction["blockHash"] = toJS(td->blockHash);
 		j_transaction["transactionIndex"] = toJS(td->index);
 
 		uint64_t block_number = 0;
@@ -1834,10 +1835,10 @@ void mcp::rpc_handler::eth_getBalance(mcp::json &j_response, bool &)
 void mcp::rpc_handler::eth_accounts(mcp::json &j_response, bool &)
 {
 	mcp::json j_accounts = mcp::json::array();
-	std::list<dev::Address> account_list(m_key_manager->list());
+	Addresses account_list(m_key_manager->list());
 	for (auto account : account_list)
 	{
-		j_accounts.push_back(account.hexPrefixed());
+		j_accounts.push_back(toJS(account));
 	}
 	j_response["result"] = j_accounts;
 }
@@ -1867,17 +1868,21 @@ void mcp::rpc_handler::eth_sign(mcp::json &j_response, bool &)
 		BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidParams("Invalid Data"));
 	}
 
-	mcp::Secret prv;
-	if (!m_key_manager->find_unlocked_prv(account, prv))
+	try
 	{
-		BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidParams("Locked Account"));
+		/// throw exception if locked or unknown.
+		std::pair<bool, Secret> ar = m_key_manager->authenticate(account);
+
+		dev::h256 hash;
+		get_eth_signed_msg(data, hash);
+
+		dev::Signature signature = dev::sign(ar.second, hash);
+		j_response["result"] = toJS(signature);
 	}
-
-	dev::h256 hash;
-	get_eth_signed_msg(data, hash);
-
-	dev::Signature signature = dev::sign(prv, hash);
-	j_response["result"] = signature.hexPrefixed();
+	catch (dev::Exception &e)
+	{
+		toRpcExceptionEthJson(e, j_response);
+	}
 }
 
 void mcp::rpc_handler::eth_signTransaction(mcp::json &j_response, bool &)
@@ -1894,23 +1899,26 @@ void mcp::rpc_handler::eth_signTransaction(mcp::json &j_response, bool &)
 		BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidParams("Invalid Account"));
 	}
 
-	dev::Secret prv;
-	if (!m_key_manager->find_unlocked_prv(ts.from, prv))
+	try
 	{
-		BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidParams("Locked Account"));
+		/// throw exception if locked or unknown.
+		std::pair<bool, Secret> ar = m_key_manager->authenticate(ts.from);
+		m_wallet->populateTransactionWithDefaults(ts);
+
+		Transaction t(ts, ar.second);
+		mcp::json result;
+
+		RLPStream s;
+		t.streamRLP(s);
+		result["raw"] = toJS(s.out());
+		result["tx"] = toJson(t);
+
+		j_response["result"] = result;
 	}
-
-	m_wallet->populateTransactionWithDefaults(ts);
-
-	Transaction t(ts, prv);
-	mcp::json result;
-
-	RLPStream s;
-	t.streamRLP(s);
-	result["raw"] = toJS(s.out());
-	result["tx"] = toJson(t);
-
-	j_response["result"] = result;
+	catch (dev::Exception &e)
+	{
+		toRpcExceptionEthJson(e, j_response);
+	}
 }
 
 void mcp::rpc_handler::eth_protocolVersion(mcp::json &j_response, bool &)
@@ -2217,16 +2225,16 @@ void mcp::rpc_handler::personal_importRawKey(mcp::json &j_response, bool &)
 	}
 
 	mcp::key_content kc = m_key_manager->importRawKey(prv, password);
-	j_response["result"] = kc.account.hexPrefixed();
+	j_response["result"] = toJS(kc.address);
 }
 
 void mcp::rpc_handler::personal_listAccounts(mcp::json &j_response, bool &)
 {
 	mcp::json j_accounts = mcp::json::array();
-	std::list<dev::Address> account_list(m_key_manager->list());
+	Addresses account_list(m_key_manager->list());
 	for (auto account : account_list)
 	{
-		j_accounts.push_back(account.hexPrefixed());
+		j_accounts.push_back(toJS(account));
 	}
 	j_response["result"] = j_accounts;
 }
@@ -2264,8 +2272,8 @@ void mcp::rpc_handler::personal_newAccount(mcp::json &j_response, bool &)
 		BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidParams("Invalid Password"));
 	}
 
-	dev::Address account = m_key_manager->create(password, false, true);
-	j_response["result"] = account.hexPrefixed();
+	dev::Address account = m_key_manager->create(password);
+	j_response["result"] = toJS(account);
 }
 
 void mcp::rpc_handler::personal_unlockAccount(mcp::json &j_response, bool &)
@@ -2282,7 +2290,7 @@ void mcp::rpc_handler::personal_unlockAccount(mcp::json &j_response, bool &)
 	{
 		dev::Address account = jsToAddress(params[0]);
 		if (m_key_manager->exists(account) &&
-			!m_key_manager->unlock(account, params[1]))
+			m_key_manager->unlock(account, params[1]))
 		{
 			j_response["result"] = true;
 		}
@@ -2344,17 +2352,15 @@ void mcp::rpc_handler::personal_sign(mcp::json &j_response, bool &)
 		BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidParams("Invalid Account"));
 	}
 
-	mcp::Secret prv;
-	if (m_key_manager->decrypt_prv(account, params[2], prv))
-	{
-		BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidParams("Invalid Password"));
-	}
+	std::pair<bool, Secret> _k = m_key_manager->DecryptKey(account, params[2]);
+	if (!_k.first)
+		BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidParams("Invalid Passwords"));
 
 	dev::h256 hash;
 	get_eth_signed_msg(data, hash);
 
-	dev::Signature signature = dev::sign(prv, hash);
-	j_response["result"] = signature.hexPrefixed();
+	dev::Signature signature = dev::sign(_k.second, hash);
+	j_response["result"] = toJS(signature);
 }
 
 void mcp::rpc_handler::personal_ecRecover(mcp::json &j_response, bool &)
@@ -2385,7 +2391,7 @@ void mcp::rpc_handler::personal_ecRecover(mcp::json &j_response, bool &)
 	get_eth_signed_msg(data, hash);
 
 	dev::Address from = dev::toAddress(dev::recover(sig, hash));
-	j_response["result"] = from.hexPrefixed();
+	j_response["result"] = toJS(from);
 }
 
 void mcp::rpc_handler::get_eth_signed_msg(dev::bytes &data, dev::h256 &hash)
@@ -2424,9 +2430,9 @@ void mcp::rpc_handler::epoch_approves(mcp::json &j_response, bool &)
 		auto approve = m_cache->approve_get(transaction, hash);
 		if (approve) {
 			mcp::json approve_l;
-			approve_l["hash"] = approve->sha3().hexPrefixed();
-			approve_l["from"] = approve->sender().hexPrefixed();
-			approve_l["proof"] = approve->proof().hexPrefixed();
+			approve_l["hash"] = toJS(approve->sha3());
+			approve_l["from"] = toJS(approve->sender());
+			approve_l["proof"] = toJS(approve->proof());
 			approves_l.push_back(approve_l);
 		}
 		else {
@@ -2453,7 +2459,7 @@ void mcp::rpc_handler::epoch_work_transaction(mcp::json &j_response, bool &)
 	h256 _h;
 	m_store.epoch_work_transaction_get(transaction, epoch, _h);
 
-	j_response["result"] = _h.hexPrefixed();
+	j_response["result"] = toJS(_h);
 }
 
 void mcp::rpc_handler::approve_receipt(mcp::json &j_response, bool &)
