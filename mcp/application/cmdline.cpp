@@ -9,12 +9,12 @@ bool mcp::handle_node_options(boost::program_options::variables_map & vm)
 	{
 		std::string password = mcp::createPassword("Enter a passphrase with which to secure this account:");
 		vm_instance instance(data_path);
-		auto account(instance.key_manager->create(password, true));
+		auto account(instance.key_manager->create(password));
 		std::cout << boost::str(boost::format("\nAccount: %1%\n") % dev::Address(account).hexPrefixed());
 	}
 	else if (vm.count("account_remove"))
 	{
-		if (vm.count("account") == 1)
+		if (vm.count("account"))
 		{
 			std::string password = mcp::getPassword("Enter the current passphrase for the remove account:");
 			vm_instance instance(data_path);
@@ -25,8 +25,7 @@ bool mcp::handle_node_options(boost::program_options::variables_map & vm)
 				bool exists(instance.key_manager->exists(account));
 				if (exists)
 				{
-					auto error(instance.key_manager->remove(account, password));
-					if (error)
+					if (!instance.key_manager->remove(account, password))
 					{
 						std::cerr << "Wrong password\n";
 					}
@@ -48,7 +47,7 @@ bool mcp::handle_node_options(boost::program_options::variables_map & vm)
 	}
 	else if (vm.count("account_import"))
 	{
-		if (vm.count("file") == 1)
+		if (vm.count("file"))
 		{
 			std::string filename(vm["file"].as<std::string>());
 			std::ifstream stream;
@@ -57,18 +56,22 @@ bool mcp::handle_node_options(boost::program_options::variables_map & vm)
 			{
 				std::stringstream contents;
 				contents << stream.rdbuf();
-
-				vm_instance instance(data_path);
-				mcp::key_content kc;
-				bool error(instance.key_manager->import(contents.str(), kc, true));
-				if (!error)
+				try
 				{
-					std::cerr << "Import account " << kc.account.hexPrefixed() << std::endl;
-					result = false;
+					vm_instance instance(data_path);
+					mcp::key_content kc;
+					mcp::json js = mcp::json::parse(contents.str());
+					if (instance.key_manager->import(js, kc))
+					{
+						std::cerr << "Import account " << kc.address.hexPrefixed() << std::endl;
+						result = false;
+					}
+					else
+						std::cerr << "Unable to import account\n";
 				}
-				else
+				catch (...)
 				{
-					std::cerr << "Unable to import account\n";
+					std::cerr << "Unable to parse json\n";
 				}
 			}
 			else
@@ -84,7 +87,7 @@ bool mcp::handle_node_options(boost::program_options::variables_map & vm)
 	else if (vm.count("account_list"))
 	{
 		vm_instance instance(data_path);
-		std::list<dev::Address> account_list(instance.key_manager->list());
+		Addresses account_list(instance.key_manager->list());
 		for (dev::Address account : account_list)
 		{
 			std::cout << account.hexPrefixed() << '\n';

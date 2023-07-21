@@ -7,6 +7,14 @@
 
 namespace mcp
 {
+	inline std::string TransactionSkeletonField(mcp::json const& _json)
+	{
+		if (!_json.is_string())
+			BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
+		std::string _a = _json;
+		return _a;
+	}
+
 	TransactionSkeleton toTransactionSkeletonForEth(mcp::json const& _json)
 	{
 		TransactionSkeleton ret;
@@ -16,45 +24,53 @@ namespace mcp
 		if (!_json.is_object() || _json.empty())
 			return ret;
 
-		if (_json.count("from") && !_json["from"].empty() && _json["from"].is_string()) {
+		if (_json.count("from"))
+		{
+			std::string _from = TransactionSkeletonField(_json["from"]);
 			try {
-				ret.from = jsToAddress(_json["from"]);
+				ret.from = jsToAddress(_from);
 			}
 			catch (...) {
 				BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidAccountFrom());
 			}
 		}
 
-		if (_json.count("to") && !_json["to"].empty() && _json["to"].is_string()) {
-			try {
-				ret.to = jsToAddress(_json["to"]);
-			}
-			catch (...) {
-				BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidAccountTo());
+		if (_json.count("to")) 
+		{
+			if (!_json["to"].is_null())///null is create contract.
+			{
+				std::string _to = TransactionSkeletonField(_json["to"]);
+				try {
+					ret.to = jsToAddress(_to);
+				}
+				catch (...) {
+					BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidAccountTo());
+				}
 			}
 		}
 
-		if (_json.count("value") && !_json["value"].empty() && _json["value"].is_string()) {
-			ret.value = jsToU256(_json["value"]);
-		}
+		if (_json.count("value")) 
+			ret.value = jsToU256(TransactionSkeletonField(_json["value"]));
 
-		if (_json.count("gas") && !_json["gas"].empty() && _json["gas"].is_string())
-			ret.gas = jsToU256(_json["gas"]);
+		if (_json.count("gas"))
+			ret.gas = jsToU256(TransactionSkeletonField(_json["gas"]));
 
-		if (_json.count("gasPrice") && !_json["gasPrice"].empty() && _json["gasPrice"].is_string())
-			ret.gasPrice = jsToU256(_json["gasPrice"]);
+		if (_json.count("gasPrice"))
+			ret.gasPrice = jsToU256(TransactionSkeletonField(_json["gasPrice"]));
 
-		if (_json.count("data") && !_json["data"].empty() && _json["data"].is_string()) {
+		if (_json.count("data")) 
+		{
+			std::string _data = TransactionSkeletonField(_json["data"]);
 			try {
-				ret.data = jsToBytes(_json["data"], OnFailed::Throw);
+				ret.data = jsToBytes(_data, OnFailed::Throw);
 			}
 			catch (...) {
 				BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidData());
 			}
 		}
 
-		if (_json.count("nonce") && !_json["nonce"].empty() && _json["nonce"].is_string())
-			ret.nonce = jsToU256(_json["nonce"]);
+		if (_json.count("nonce"))
+			ret.nonce = jsToU256(TransactionSkeletonField(_json["nonce"]));
 
 		return ret;
 	}
@@ -108,7 +124,7 @@ namespace mcp
 				res["blockNumber"] = nullptr;
 			}
 			else {
-				res["blockHash"] = _t.blockHash().hexPrefixed();
+				res["blockHash"] = toJS(_t.blockHash());
 				res["transactionIndex"] = toJS(_t.transactionIndex());
 				res["blockNumber"] = toJS(_t.blockNumber());
 			}
@@ -124,7 +140,7 @@ namespace mcp
 		mcp::json res;
 		res["transactionHash"] = toJS(_t.hash());
 		res["transactionIndex"] = toJS(_t.transactionIndex());
-		res["blockHash"] = _t.blockHash().hexPrefixed();
+		res["blockHash"] = toJS(_t.blockHash());
 		res["blockNumber"] = toJS(_t.blockNumber());
 		res["from"] = toJS(_t.from());
 		if (_t.to() == dev::Address(0)) {
@@ -157,9 +173,9 @@ namespace mcp
 				rs = toJson(static_cast<mcp::log_entry const&>(r));
 				rs["type"] = "mined";
 				rs["blockNumber"] = toJS(r.blockNumber);
-				rs["blockHash"] = r.blockHash.hexPrefixed();
-				rs["logIndex"] = r.logIndex;
-				rs["transactionHash"] = r.transactionHash.hexPrefixed();
+				rs["blockHash"] = toJS(r.blockHash);
+				rs["logIndex"] = toJS(r.logIndex);
+				rs["transactionHash"] = toJS(r.transactionHash);
 				rs["transactionIndex"] = toJS(r.transactionIndex);
 			}
 			res.push_back(rs);
@@ -178,9 +194,9 @@ namespace mcp
 				res = toJson(static_cast<mcp::log_entry const&>(_e));
 				res["type"] = "mined";
 				res["blockNumber"] = toJS(_e.blockNumber);
-				res["blockHash"] = _e.blockHash.hexPrefixed();
-				res["logIndex"] = _e.logIndex;
-				res["transactionHash"] = _e.transactionHash.hexPrefixed();
+				res["blockHash"] = toJS(_e.blockHash);
+				res["logIndex"] = toJS(_e.logIndex);
+				res["transactionHash"] = toJS(_e.transactionHash);
 				res["transactionIndex"] = toJS(_e.transactionIndex);
 			}
 			
@@ -209,7 +225,7 @@ namespace mcp
 			res["nonce"] = nullptr;
 			res["extraData"] = "0x00";
 			res["hash"] = _b.hash().hexPrefixed();
-			res["parentHash"] = _b.previous().hexPrefixed();
+			res["parentHash"] = toJS(_b.previous());
 			res["gasUsed"] = 0;
 			res["minGasPrice"] = 0;
 			res["gasLimit"] = toJS(mcp::tx_max_gas);
@@ -218,14 +234,14 @@ namespace mcp
 			res["miner"] = _b.from().hexPrefixed();
 		}
 		else {
-			res["hash"] = _b.hash().hexPrefixed();
-			res["from"] = _b.from().hexPrefixed();
-			res["previous"] = _b.previous().hexPrefixed();
+			res["hash"] = toJS(_b.hash());
+			res["from"] = toJS(_b.from());
+			res["previous"] = toJS(_b.previous());
 
 			mcp::json j_parents = mcp::json::array();
 			for (auto & p : _b.parents())
 			{
-				j_parents.push_back(p.hexPrefixed());
+				j_parents.push_back(toJS(p));
 			}
 			res["parents"] = j_parents;
 
@@ -239,12 +255,12 @@ namespace mcp
 				j_approves.push_back(toJS(l));
 			res["approves"] = j_approves;
 
-			res["last_summary"] = _b.last_summary().hexPrefixed();
-			res["last_summary_block"] = _b.last_summary_block().hexPrefixed();
-			res["last_stable_block"] = _b.last_stable_block().hexPrefixed();
+			res["last_summary"] = toJS(_b.last_summary());
+			res["last_summary_block"] = toJS(_b.last_summary_block());
+			res["last_stable_block"] = toJS(_b.last_stable_block());
 			res["timestamp"] = _b.exec_timestamp();
 			res["gasLimit"] = toJS(mcp::tx_max_gas);
-			res["signature"] = ((Signature)_b.signature()).hexPrefixed();
+			res["signature"] = toJS((Signature)_b.signature());
 		}
 
 		return res;
@@ -254,7 +270,7 @@ namespace mcp
 	{
 		mcp::json res;
 
-		res["from"] = _a.from().hexPrefixed();
+		res["from"] = toJS(_a.from());
 		res["output"] = toJS(_a.output());
 		res["status"] = toJS(_a.statusCode());
 

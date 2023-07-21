@@ -264,14 +264,14 @@ int main(int argc, char * const * argv)
 	// test_x25519();
 
 	//test_create_account();
-	// test_account_encoding();
+	 //test_account_encoding();
 	 //test_secp256k1();
 
 	//test_secure_string();
 
 	//test_number
 
-	// test_account_decrypt();
+	 //test_account_decrypt();
 
 	// test_signature();
 	//test_sha3();
