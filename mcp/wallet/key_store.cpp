@@ -1,5 +1,4 @@
 #include "key_store.hpp"
-#include <mcp/common/Exceptions.h>
 #include <libdevcore/CommonJS.h>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
@@ -7,7 +6,7 @@
 mcp::cipherparamsJSON::cipherparamsJSON(dev::RLP const & _r)
 {
 	if (!_r.isList())
-		BOOST_THROW_EXCEPTION(dev::eth::InvalidKeyContentFormat() << errinfo_comment("Key RLP must be a list"));
+		BOOST_THROW_EXCEPTION(InvalidKeyContentFormat() << errinfo_comment("Key RLP must be a list"));
 	if (_r.itemCount() != 1)
 		BOOST_THROW_EXCEPTION(InvalidBlockFormat() << errinfo_comment("too many or to low fields in the Key RLP"));
 
@@ -17,7 +16,7 @@ mcp::cipherparamsJSON::cipherparamsJSON(dev::RLP const & _r)
 mcp::cipherparamsJSON::cipherparamsJSON(mcp::json const & json_a)
 {
 	if (!json_a.count("iv"))
-		BOOST_THROW_EXCEPTION(dev::eth::InvalidKeyContentFormat() << errinfo_comment("The required fields are missing"));
+		BOOST_THROW_EXCEPTION(InvalidKeyContentFormat() << errinfo_comment("The required fields are missing"));
 
 	IV = dev::h128(json_a["iv"].get<std::string>());
 }
@@ -38,7 +37,7 @@ mcp::json mcp::cipherparamsJSON::to_json() const
 mcp::scryptParamsJSON::scryptParamsJSON(dev::RLP const & _r)
 {
 	if (!_r.isList())
-		BOOST_THROW_EXCEPTION(dev::eth::InvalidKeyContentFormat() << errinfo_comment("Key RLP must be a list"));
+		BOOST_THROW_EXCEPTION(InvalidKeyContentFormat() << errinfo_comment("Key RLP must be a list"));
 	if (_r.itemCount() != 5)
 		BOOST_THROW_EXCEPTION(InvalidBlockFormat() << errinfo_comment("too many or to low fields in the Key RLP"));
 
@@ -54,7 +53,7 @@ mcp::scryptParamsJSON::scryptParamsJSON(mcp::json const & json_a)
 	if (!json_a.count("n") || !json_a.count("r") ||
 		!json_a.count("p") || !json_a.count("dklen") ||
 		!json_a.count("salt"))
-		BOOST_THROW_EXCEPTION(dev::eth::InvalidKeyContentFormat() << errinfo_comment("The required fields are missing"));
+		BOOST_THROW_EXCEPTION(InvalidKeyContentFormat() << errinfo_comment("The required fields are missing"));
 
 	N = json_a["n"].get<int>();
 	R = json_a["r"].get<int>();
@@ -83,7 +82,7 @@ mcp::json mcp::scryptParamsJSON::to_json() const
 mcp::CryptoJSON::CryptoJSON(dev::RLP const & _r)
 {
 	if (!_r.isList())
-		BOOST_THROW_EXCEPTION(dev::eth::InvalidKeyContentFormat() << errinfo_comment("Key RLP must be a list"));
+		BOOST_THROW_EXCEPTION(InvalidKeyContentFormat() << errinfo_comment("Key RLP must be a list"));
 	if (_r.itemCount() != 6)
 		BOOST_THROW_EXCEPTION(InvalidBlockFormat() << errinfo_comment("too many or to low fields in the Key RLP"));
 
@@ -100,7 +99,7 @@ mcp::CryptoJSON::CryptoJSON(mcp::json const & json_a)
 	if (!json_a.count("cipher") || !json_a.count("ciphertext") ||
 		!json_a.count("kdf") || !json_a.count("mac") ||
 		!json_a.count("cipherparams") || !json_a.count("kdfparams"))
-		BOOST_THROW_EXCEPTION(dev::eth::InvalidKeyContentFormat() << errinfo_comment("The required fields are missing"));
+		BOOST_THROW_EXCEPTION(InvalidKeyContentFormat() << errinfo_comment("The required fields are missing"));
 
 	Cipher = json_a["cipher"].get<std::string>();
 	CipherText = dev::h256(json_a["ciphertext"].get<std::string>());
@@ -133,7 +132,7 @@ mcp::json mcp::CryptoJSON::to_json() const
 mcp::key_content::key_content(dev::RLP const & _r)
 {
 	if (!_r.isList())
-		BOOST_THROW_EXCEPTION(dev::eth::InvalidKeyContentFormat() << errinfo_comment("Key RLP must be a list"));
+		BOOST_THROW_EXCEPTION(InvalidKeyContentFormat() << errinfo_comment("Key RLP must be a list"));
 	if (_r.itemCount() != 4)
 		BOOST_THROW_EXCEPTION(InvalidBlockFormat() << errinfo_comment("too many or to low fields in the Key RLP"));
 
@@ -147,7 +146,7 @@ mcp::key_content::key_content(mcp::json const & json_a)
 {
 	if (!json_a.count("address") || !json_a.count("id") || 
 		!json_a.count("version") || !json_a.count("crypto"))
-		BOOST_THROW_EXCEPTION(dev::eth::InvalidKeyContentFormat() << errinfo_comment("The required fields are missing"));
+		BOOST_THROW_EXCEPTION(InvalidKeyContentFormat() << errinfo_comment("The required fields are missing"));
 
 	address = dev::Address(json_a["address"].get<std::string>());
 	Id = boost::uuids::string_generator()(json_a["id"].get<std::string>());

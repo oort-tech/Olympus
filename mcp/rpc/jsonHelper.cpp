@@ -3,7 +3,6 @@
 #include <libdevcore/CommonJS.h>
 #include <mcp/core/config.hpp>
 #include "jsonHelper.hpp"
-//#include "exceptions.hpp"
 
 namespace mcp
 {
