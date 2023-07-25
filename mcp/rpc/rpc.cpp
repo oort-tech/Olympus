@@ -12,8 +12,6 @@
 #include <libdevcore/CommonData.h>
 #include <libdevcore/TrieHash.h>
 
-#include <iostream>
-
 #include "exceptions.hpp"
 #include "jsonHelper.hpp"
 
@@ -33,7 +31,6 @@ void mcp::rpc_config::serialize_json(mcp::json &json_a) const
 	json_a["rpc"] = rpc_enable ? "true" : "false";
 	json_a["rpc_addr"] = address.to_string();
 	json_a["rpc_port"] = port;
-	//json_a["rpc_control"] = enable_control ? "true" : "false";
 }
 
 bool mcp::rpc_config::deserialize_json(mcp::json const &json_a)
@@ -83,15 +80,6 @@ bool mcp::rpc_config::deserialize_json(mcp::json const &json_a)
 			{
 				error = true;
 			}
-
-			// if (json_a.count("rpc_control") && json_a["rpc_control"].is_string())
-			// {
-			// 	enable_control = (json_a["rpc_control"].get<std::string>() == "true" ? true : false);
-			// }
-			// else
-			// {
-			// 	error = true;
-			// }
 		}
 	}
 	catch (std::runtime_error const &)
@@ -434,12 +422,13 @@ void mcp::rpc_handler::block(mcp::json &j_response, bool &)
 		if (block == nullptr)
 		{
 			//throw "cannot get block";
-			BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidArgument(""));
+			BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidParams_No_Result(""));
+			
 		}
 
 		j_response["result"] = toJson(*block, false);
 	}
-	catch(mcp::RpcEthException_No_Result const & err)
+	catch(mcp::NEW_RPC_Eth_Error_InvalidParams_No_Result const & err)
 	{
 		j_response["result"] = nullptr;
 	}
@@ -467,14 +456,14 @@ void mcp::rpc_handler::block_state(mcp::json &j_response, bool &)
 		auto block = m_cache->block_get(transaction, block_hash);
 		if (block == nullptr)
 		{
-			BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidArgument(""));
+			BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidParams_No_Result(""));
 		}
 		std::shared_ptr<mcp::block_state> state(m_store.block_state_get(transaction, block_hash));
 		mcp::json block_state_l;
 		state->serialize_json(block_state_l);
 		j_response["result"] = block_state_l;
 	}
-	catch(mcp::RpcEthException_No_Result const &err)
+	catch(mcp::NEW_RPC_Eth_Error_InvalidParams_No_Result const &err)
 	{
 		j_response["result"] = nullptr;
 	}
@@ -759,12 +748,6 @@ void mcp::rpc_handler::status(mcp::json &j_response, bool &)
 	uint64_t last_stable_index(m_chain->last_stable_index());
 
 	json result;
-	// j_response["syncing"] = mcp::node_sync::is_syncing() ? 1 : 0;
-	// j_response["last_stable_mci"] = last_stable_mci;
-	// j_response["last_mci"] = last_mci;
-	// j_response["last_stable_block_index"] = last_stable_index;
-	// j_response["epoch"] = m_chain->last_epoch();
-	// j_response["epoch_period"] = mcp::epoch_period;
 	result["syncing"] = mcp::node_sync::is_syncing() ? 1 : 0;
 	result["last_stable_mci"] = last_stable_mci;
 	result["last_mci"] = last_mci;
@@ -1016,12 +999,7 @@ void mcp::rpc_handler::process_request()
 	}
 
 	try
-	{
-		// if (!rpc.config.enable_control)
-		// {
-		// 	BOOST_THROW_EXCEPTION(RPC_Error_Disabled());
-		// }
-		
+	{		
 		LOG(m_log.debug) << "REQUEST:" << request;
 		if (!request.count("id") ||
 					!request.count("jsonrpc"))
@@ -1042,10 +1020,6 @@ void mcp::rpc_handler::process_request()
 			auto pointer = m_mcpRpcMethods.find(request["action"]);
 			if (pointer != m_mcpRpcMethods.end())
 			{
-				// j_response["id"] = request["id"];
-				// j_response["jsonrpc"] = request["jsonrpc"];
-				//j_response["code"] = 0;
-				//j_response["msg"] = "OK";
 				(this->*(pointer->second))(j_response, async);
 			}
 			else
@@ -1058,9 +1032,6 @@ void mcp::rpc_handler::process_request()
 			auto pointer = m_ethRpcMethods.find(request["method"]);
 			if (pointer != m_ethRpcMethods.end())
 			{
-				// j_response["id"] = request["id"];
-				// j_response["jsonrpc"] = request["jsonrpc"];
-				//j_response["result"] = nullptr;
 				(this->*(pointer->second))(j_response, async);
 			}
 			else
@@ -1078,19 +1049,14 @@ void mcp::rpc_handler::process_request()
 	{
 		err.toJson(j_response);
 	}
-	catch(mcp::RpcEthException_No_Result const &err)
+	catch(mcp::NEW_RPC_Eth_Error_InvalidParams_No_Result const &err)
 	{
 		j_response["result"] = nullptr;
 	}
 	catch (std::exception const &e)
 	{
-		toRpcExceptionEthInvalidArgument(e, j_response);
+		toRpcExceptionEthJson(e, j_response);
 	}
-	// catch (mcp::RpcException const &err)
-	// {
-	// 	err.toJson(j_response);
-	// }
-
 	catch (...)
 	{
 		
@@ -1277,7 +1243,7 @@ void mcp::rpc_handler::eth_getBlockByHash(mcp::json &j_response, bool &)
 		uint64_t block_number;
 		if (block == nullptr)
 		{
-			BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidArgument(""));
+			BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidParams_No_Result(""));
 			//throw "cannot get block";
 		}
 
@@ -1310,7 +1276,7 @@ void mcp::rpc_handler::eth_getBlockByHash(mcp::json &j_response, bool &)
 
 		j_response["result"] = j_block;
 	}
-	catch(mcp::RpcEthException_No_Result const & e){
+	catch(mcp::NEW_RPC_Eth_Error_InvalidParams_No_Result const & e){
 		j_response["result"] = nullptr;
 	}
 	catch (...)
@@ -1536,7 +1502,7 @@ void mcp::rpc_handler::eth_getTransactionByHash(mcp::json &j_response, bool &)
 		if (t == nullptr)
 		{
 			//throw "cannot get transaction";
-			BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidArgument(""));
+			BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidParams_No_Result(""));
 		}
 		auto lt = LocalisedTransaction(*t, mcp::block_hash(0), 0, 0);
 		mcp::json j_transaction = toJson(lt);
@@ -1544,7 +1510,7 @@ void mcp::rpc_handler::eth_getTransactionByHash(mcp::json &j_response, bool &)
 		auto td = m_cache->transaction_address_get(transaction, hash);
 		if (td == nullptr)
 		{
-			BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidArgument(""));
+			BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidParams_No_Result(""));
 		}
 
 		j_transaction["blockHash"] = toJS(td->blockHash);
@@ -1558,10 +1524,6 @@ void mcp::rpc_handler::eth_getTransactionByHash(mcp::json &j_response, bool &)
 
 		j_response["result"] = j_transaction;
 	}
-	// catch(mcp::RpcEthException_No_Result const &err)
-	// {
-	// 	j_response["result"] = nullptr;
-	// }
 	catch (...)
 	{
 		throw;
@@ -1589,7 +1551,7 @@ void mcp::rpc_handler::eth_getTransactionByBlockHashAndIndex(mcp::json &j_respon
 			index >= block->links().size())
 		{
 			//throw "cannot get block, block number or index is too large";
-			BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidArgument(""));
+			BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidParams_No_Result(""));
 		}
 
 		dev::h256 hash = block->links().at(index);
@@ -1597,15 +1559,11 @@ void mcp::rpc_handler::eth_getTransactionByBlockHashAndIndex(mcp::json &j_respon
 		if (t == nullptr)
 		{
 			//throw "cannot get transaction";
-			BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidArgument(""));
+			BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidParams_No_Result(""));
 		}
 
 		auto lt = LocalisedTransaction(*t, block->hash(), index, block_number);
 		j_response["result"] = toJson(lt);
-	}
-	catch (mcp::RpcEthException_No_Result const &err)
-	{
-		j_response["result"] = nullptr;
 	}
 	catch (...)
 	{
@@ -1644,14 +1602,14 @@ void mcp::rpc_handler::eth_getTransactionByBlockNumberAndIndex(mcp::json &j_resp
 		if (m_cache->block_number_get(transaction, block_number, block_hash))// do not use main_chain_get
 		{
 			//throw "cannot get block hash";
-			BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidArgument(""));
+			BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidParams_No_Result(""));
 		}
 
 		auto block(m_cache->block_get(transaction, block_hash));
 		if (block == nullptr || index >= block->links().size())
 		{
 			//throw "cannot get block or index is too large";
-			BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidArgument(""));
+			BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidParams_No_Result(""));
 		}
 
 		dev::h256 hash = block->links().at(index);
@@ -1659,16 +1617,12 @@ void mcp::rpc_handler::eth_getTransactionByBlockNumberAndIndex(mcp::json &j_resp
 		if (t == nullptr)
 		{
 			//throw "cannot get transaction";
-			BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidArgument(""));
+			BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidParams_No_Result(""));
 		}
 
 		auto lt = LocalisedTransaction(*t, block_hash, index, block_number);
 		j_response["result"] = toJson(lt);
 	}
-	// catch(mcp::RpcEthException_No_Result const &err)
-	// {
-	// 	j_response["result"] = nullptr;
-	// }
 	catch (...)
 	{
 		throw;
@@ -1693,13 +1647,13 @@ void mcp::rpc_handler::eth_getTransactionReceipt(mcp::json &j_response, bool &)
 
 		if (t == nullptr || tr == nullptr || td == nullptr)
 		{
-			BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidArgument(""));
+			BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidParams_No_Result(""));
 		}
 
 		uint64_t block_number = 0;
 		if (m_cache->block_number_get(transaction, td->blockHash, block_number))
 		{
-			BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidArgument(""));
+			BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidParams_No_Result(""));
 		}
 
 		auto lt = dev::eth::LocalisedTransactionReceipt(
@@ -1714,15 +1668,6 @@ void mcp::rpc_handler::eth_getTransactionReceipt(mcp::json &j_response, bool &)
 
 		j_response["result"] = toJson(lt);
 	}
-	// catch(mcp::RpcEthException_No_Result const &err)
-	// {
-	// 	j_response["result"] = nullptr;
-	// }
-	// catch(mcp::json::exception &err)
-	// {
-	// 	//std::cout<<err.what()<<std::endl;
-	// 	BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidParams(err.what()));
-	// }
 	catch (...)
 	{
 		throw;
@@ -1746,15 +1691,11 @@ void mcp::rpc_handler::eth_getBlockTransactionCountByHash(mcp::json &j_response,
 		if (block == nullptr)
 		{
 			//throw "cannot get block";
-			BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidArgument(""));
+			BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidParams_No_Result(""));
 		}
 
 		j_response["result"] = toJS(block->links().size());
 	}
-	// catch(mcp::RpcEthException_No_Result const & err)
-	// {
-	// 	j_response["result"] = nullptr;
-	// }
 	catch (...)
 	{
 		throw;
@@ -1791,22 +1732,18 @@ void mcp::rpc_handler::eth_getBlockTransactionCountByNumber(mcp::json &j_respons
 		if (m_store.main_chain_get(transaction, block_number, block_hash))
 		{
 			//throw "cannot get block hash";
-			BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidArgument(""));
+			BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidParams_No_Result(""));
 		}
 
 		auto block(m_cache->block_get(transaction, block_hash));
 		if (block == nullptr)
 		{
 			//throw "cannot get block";
-			BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidArgument(""));
+			BOOST_THROW_EXCEPTION(NEW_RPC_Eth_Error_InvalidParams_No_Result(""));
 		}
 
 		j_response["result"] = toJS(block->links().size());
 	}
-	// catch(mcp::RpcEthException_No_Result const & err)
-	// {
-	// 	j_response["result"] = 0;
-	// }
 	catch (...)
 	{
 		throw;
