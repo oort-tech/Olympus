@@ -20,7 +20,7 @@ namespace mcp
 	inline u128 jsToU128(std::string const& _s) { 
 		uint64_t ans = (uint64_t)jsToInt<16>(_s);
 		if(ans == 0 && _s != "0" && _s != "0x0"){
-			BOOST_THROW_EXCEPTION(RPC_Eth_Error_InvalidParams("Invalid Argument: not an uint_128 number"));
+			BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Argument: not an uint_128 number"));
 		}
 		return ans;
 	}
@@ -28,7 +28,7 @@ namespace mcp
 	inline u64 jsToU64(std::string const& _s) { 
 		uint64_t ans = (uint64_t)jsToInt<8>(_s);
 		if(ans == 0 && _s != "0" && _s != "0x0"){
-			BOOST_THROW_EXCEPTION(RPC_Eth_Error_InvalidParams("Invalid Argument: not an uint_64 number"));
+			BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Argument: not an uint_64 number"));
 		}
 		return ans;
 	}
