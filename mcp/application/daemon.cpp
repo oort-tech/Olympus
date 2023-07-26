@@ -380,15 +380,13 @@ void mcp_daemon::add_options(boost::program_options::options_description & descr
     description_a.add_options()
         ("rpc", "Enable the HTTP-RPC server")
         ("rpc_addr", boost::program_options::value<std::string>(), "HTTP-RPC server listening interface (default: 127.0.0.1)")
-        ("rpc_port", boost::program_options::value<uint16_t>(), "HTTP-RPC server listening port (default: 8765)")
-        ("rpc_control", "Enable the HTTP-RPC write permission");
+        ("rpc_port", boost::program_options::value<uint16_t>(), "HTTP-RPC server listening port (default: 8765)");
 
     //ws_rpc
     description_a.add_options()
         ("ws", "Enable the WS-RPC server")
         ("ws_addr", boost::program_options::value<std::string>(), "WS-RPC server listening interface (default: 127.0.0.1)")
-        ("ws_port", boost::program_options::value<uint16_t>(), "WS-RPC server listening port (default: 8764)")
-        ("ws_control", "Enable the WS-RPC write permission");
+        ("ws_port", boost::program_options::value<uint16_t>(), "WS-RPC server listening port (default: 8764)");
 
     //log
     description_a.add_options()
@@ -412,9 +410,7 @@ void mcp_daemon::add_options(boost::program_options::options_description & descr
     description_a.add_options()
         ("witness", "Enable witness pattern")
         ("witness_account", boost::program_options::value<std::string>(), "Witness account or account file")
-        ("password", boost::program_options::value<std::string>(), "Witness account password")
-        ("last_block", boost::program_options::value<std::string>(), "Current witness account last block hash")
-		("gas_price", boost::program_options::value<std::string>(), "witness account lowest gas price");
+        ("password", boost::program_options::value<std::string>(), "Witness account password");
 
 	//database
 	description_a.add_options()
@@ -427,25 +423,25 @@ bool mcp_daemon::parse_command_to_config(mcp_daemon::daemon_config & config_a, b
     bool error(false);
 
     //node
-    if (vm_a.count("io_threads") > 0)
+    if (vm_a.count("io_threads"))
     {
         config_a.node.io_threads = vm_a["io_threads"].as<uint16_t>();
     }
-    if (vm_a.count("bg_threads") > 0)
+    if (vm_a.count("bg_threads"))
     {
         config_a.node.bg_threads = vm_a["bg_threads"].as<uint16_t>();
     }
-    if (vm_a.count("sync_threads") > 0)
+    if (vm_a.count("sync_threads"))
     {
         config_a.node.sync_threads = vm_a["sync_threads"].as<uint16_t>();
     }
-    if (vm_a.count("work_threads") > 0)
+    if (vm_a.count("work_threads"))
     {
         config_a.node.work_threads = vm_a["work_threads"].as<uint16_t>();
     }
 
     //rpc
-    if (vm_a.count("rpc")>0)
+    if (vm_a.count("rpc"))
     {
         config_a.rpc.rpc_enable = true;
     }
@@ -462,14 +458,10 @@ bool mcp_daemon::parse_command_to_config(mcp_daemon::daemon_config & config_a, b
     if (vm_a.count("rpc_port"))
     {
         config_a.rpc.port = vm_a["rpc_port"].as<uint16_t>();
-    }
-    if (vm_a.count("rpc_control")>0)
-    {
-        config_a.rpc.enable_control = true;
-    }    
+    }   
 
     //ws
-    if (vm_a.count("ws")>0)
+    if (vm_a.count("ws"))
     {
         config_a.rpc_ws.rpc_ws_enable = true;
     }
@@ -487,13 +479,9 @@ bool mcp_daemon::parse_command_to_config(mcp_daemon::daemon_config & config_a, b
     {
         config_a.rpc_ws.port = vm_a["ws_port"].as<uint16_t>();
     }
-    if (vm_a.count("ws_control")>0)
-    {
-        config_a.rpc_ws.enable_control = true;
-    }
 
     //log
-    if (vm_a.count("console") > 0)
+    if (vm_a.count("console"))
     {
         config_a.logging.log_to_console_value = true;
     }
@@ -557,7 +545,7 @@ bool mcp_daemon::parse_command_to_config(mcp_daemon::daemon_config & config_a, b
 	}
 
     //witness
-    if (vm_a.count("witness")>0)
+    if (vm_a.count("witness"))
     {
         config_a.witness.is_witness = true;
     }
@@ -585,7 +573,7 @@ bool mcp_daemon::parse_command_to_config(mcp_daemon::daemon_config & config_a, b
 
 std::string mcp_daemon::get_home_directory(std::string path)
 {
-    if (path.size() > 0 && path[0] == '~')
+    if (path.size() && path[0] == '~')
     {
         char const* home = getenv("HOME");
         if (home || getenv("USERPROFILE") == home)
@@ -610,7 +598,7 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
     boost::filesystem::create_directories(data_path);
 
 	boost::filesystem::path config_path;
-	bool is_config_file(vm.count("config") > 0);
+	bool is_config_file(vm.count("config"));
 	if (is_config_file)
 	{
 		std::string config_path_str(get_home_directory(vm["config"].as<std::string>()));
@@ -629,7 +617,7 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 		config_path = data_path / "config.json";
 	
 	mcp_daemon::daemon_config config;
-	if (vm.count("network") > 0)
+	if (vm.count("network"))
 	{
 		config.set_network((mcp::mcp_networks)vm["network"].as<unsigned>());
 	}
@@ -643,11 +631,11 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 		return;
 	}
 
-	//init log
+	///init log
 	config.logging.init(data_path);
 	mcp::log::init(config.logging);
 
-	//default bootstrap nodes
+	///default bootstrap nodes
 	if (config.p2p.bootstrap_nodes.empty())
     {
         switch (mcp::mcp_network)
@@ -674,7 +662,7 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 
     }
     
-	//witness 	
+	///witness 	
 	if (config.witness.is_witness)
 	{
 		if (config.witness.account_or_file.empty())
@@ -713,7 +701,7 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 
 	try
 	{
-		//node key
+		///node key
 		boost::filesystem::path nodekey_path(data_path / "nodekey");
 		std::string nodekey_str;
 		config.readfile2string(nodekey_str, nodekey_path);
@@ -797,7 +785,7 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 
 		///wallet
 		std::shared_ptr<mcp::wallet> wallet(std::make_shared<mcp::wallet>(chain_store, cache, key_manager, TQ));
-		//host
+		///host
 		std::shared_ptr<mcp::p2p::host> host(std::make_shared<mcp::p2p::host>(error, config.p2p, io_service, seed, data_path));
 		if (error)
 		{
@@ -807,7 +795,7 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 		host->register_capability(capability);
 		host->start();
 
-		//witness node start
+		///witness node start
 		std::shared_ptr<mcp::witness> witness = nullptr;
 		if (config.witness.is_witness)
 		{

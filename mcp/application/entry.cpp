@@ -19,8 +19,8 @@ int main(int argc, char * const * argv)
     mcp_daemon::add_options(description);
 
 	description.add_options()
-		("help", "Print out options")
-		("version", "Prints out version")
+		("help", "Print options")
+		("version", "Print client version")
 		("daemon", "Start node daemon");
 
 	boost::program_options::variables_map vm;

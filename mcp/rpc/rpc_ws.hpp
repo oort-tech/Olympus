@@ -32,8 +32,6 @@ namespace mcp
 	public:
 		rpc_ws_config();
 
-		rpc_ws_config(bool enable_control_a);
-
         void serialize_json(mcp::json & json_a) const;
 
         bool deserialize_json(mcp::json const & json_a);
@@ -42,7 +40,6 @@ namespace mcp
 
 		boost::asio::ip::address address;
 		uint16_t port;
-		bool enable_control;
         bool rpc_ws_enable;
 	};
 

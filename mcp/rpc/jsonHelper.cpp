@@ -9,7 +9,7 @@ namespace mcp
 	inline std::string TransactionSkeletonField(mcp::json const& _json)
 	{
 		if (!_json.is_string())
-			BOOST_THROW_EXCEPTION(RPC_Eth_Error_InvalidParams("Invalid Params"));
+			BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Params"));
 		std::string _a = _json;
 		return _a;
 	}
@@ -30,7 +30,7 @@ namespace mcp
 				ret.from = jsToAddress(_from);
 			}
 			catch (...) {
-				BOOST_THROW_EXCEPTION(RPC_Eth_Error_InvalidParams("Invalid Account From"));
+				BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Account From"));
 			}
 		}
 
@@ -43,7 +43,7 @@ namespace mcp
 					ret.to = jsToAddress(_to);
 				}
 				catch (...) {
-					BOOST_THROW_EXCEPTION(RPC_Eth_Error_InvalidParams("Invalid Account To"));
+					BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Account To"));
 				}
 			}
 		}
@@ -64,7 +64,7 @@ namespace mcp
 				ret.data = jsToBytes(_data, OnFailed::Throw);
 			}
 			catch (...) {
-				BOOST_THROW_EXCEPTION(RPC_Eth_Error_InvalidParams("Invalid Data"));
+				BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Data"));
 			}
 		}
 
