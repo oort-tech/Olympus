@@ -15,14 +15,9 @@
 #include "exceptions.hpp"
 #include "jsonHelper.hpp"
 
-mcp::rpc_config::rpc_config() : rpc_config(false)
-{
-}
-
-mcp::rpc_config::rpc_config(bool enable_rpc_a) : address(boost::asio::ip::address_v4::loopback()),
+mcp::rpc_config::rpc_config() : address(boost::asio::ip::address_v4::loopback()),
 													 port(8765),
-													 //enable_control(enable_control_a),
-													 rpc_enable(enable_rpc_a)
+													 rpc_enable(false)
 {
 }
 
@@ -154,7 +149,6 @@ void mcp::rpc::start()
 	acceptor.listen();
 
 	LOG(m_log.info) << "HTTP RPC started, http://" << endpoint;
-	//LOG(m_log.info) << "HTTP RPC control is " << (config.enable_control ? "enabled" : "disabled");
 
 	accept();
 }

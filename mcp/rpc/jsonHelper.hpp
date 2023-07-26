@@ -50,8 +50,6 @@ namespace mcp
 			return (BlockNumber)jsToInt(_js);
 	}
 
-	uint64_t jsToULl(std::string const& _s);
-
 	mcp::json toJson(Transaction const& _t);
 
 	mcp::json toJson(LocalisedTransaction const& _t);

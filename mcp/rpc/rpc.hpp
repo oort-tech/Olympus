@@ -21,14 +21,12 @@ class rpc_config
 {
 public:
 	rpc_config ();
-	rpc_config (bool);
     void serialize_json(mcp::json &) const;
     bool deserialize_json(mcp::json const &);
     bool parse_old_version_data(mcp::json const &, uint64_t const&);
 
 	boost::asio::ip::address address;
 	uint16_t port;
-	bool enable_control;
     bool rpc_enable;
 };
 
@@ -84,14 +82,10 @@ public:
     rpc_handler(mcp::rpc &, std::string const &, std::function<void(mcp::json const &)>const & ,int m_cap);
     void process_request();
 
-	//void account_validate(mcp::json & j_response, bool & async);
 	void account_remove(mcp::json & j_response, bool & async);
 	void account_export(mcp::json & j_response, bool & async);
 	void account_import(mcp::json & j_response, bool & async);
-	//void account_password_change(mcp::json & j_response, bool & async);
 	void accounts_balances(mcp::json & j_response, bool & async);
-	//void account_block_list(mcp::json & j_response, bool & async);
-	//void account_state_list(mcp::json & j_response, bool & async);
 
 	void block(mcp::json & j_response, bool & async);
 	void block_state(mcp::json & j_response, bool & async);

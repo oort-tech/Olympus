@@ -3,15 +3,6 @@
 mcp::rpc_ws_config::rpc_ws_config() :
 	address(boost::asio::ip::address_v4::loopback()),
 	port(mcp::rpc_ws::rpc_ws_port),
-	enable_control(false),
-    rpc_ws_enable(false)
-{
-}
-
-mcp::rpc_ws_config::rpc_ws_config(bool enable_control_a) :
-	address(boost::asio::ip::address_v4::loopback()),
-	port(mcp::rpc_ws::rpc_ws_port),
-	enable_control(enable_control_a),
     rpc_ws_enable(false)
 {
 }
@@ -21,7 +12,6 @@ void mcp::rpc_ws_config::serialize_json(mcp::json & json_a) const
     json_a["ws"] = rpc_ws_enable ? "true" : "false";
     json_a["ws_addr"] =  address.to_string();
     json_a["ws_port"] = port;
-    json_a["ws_control"] =  enable_control ? "true" : "false";
 }
 
 bool mcp::rpc_ws_config::deserialize_json(mcp::json const & json_a)
@@ -66,15 +56,6 @@ bool mcp::rpc_ws_config::deserialize_json(mcp::json const & json_a)
                 {
                     error = true;
                 }
-            }
-            else
-            {
-                error = true;
-            }
-
-            if (json_a.count("ws_control") && json_a["ws_control"].is_string())
-            {
-                enable_control = (json_a["ws_control"].get<std::string>() == "true" ? true : false);
             }
             else
             {
@@ -352,7 +333,6 @@ void mcp::rpc_ws::start()
 	acceptor.listen();
 
     LOG(m_log.info) << "WebSocket RPC started, http://" << endpoint;
-    LOG(m_log.info) << "WebSocket RPC control is " << (config.enable_control ? "enabled" : "disabled");
 	
 	accept();
 }

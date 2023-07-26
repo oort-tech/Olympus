@@ -46,35 +46,6 @@ namespace mcp
 		return dynamic_cast<const Base*>(ptr) != nullptr;
 	}
 
-	inline void toRpcExceptionJson(Exception const & e, json & j_response) {
-		if (instanceof<dev::GasPriceTooLow>(&e) ||
-			instanceof<dev::BlockGasLimitReached>(&e) ||
-			instanceof<dev::GasPriceTooLow>(&e)) {
-			RPC_Eth_Error_InvalidParams("Invalid Gas").toJson(j_response);
-		}
-		else if (instanceof<dev::NotEnoughCash>(&e)) {
-			RPC_Eth_Error_ServerProcedureSpecificationNotFound("Insufficient Balance").toJson(j_response);
-		}
-		else if (instanceof<dev::PendingTransactionAlreadyExists>(&e)) {
-			RPC_Eth_Error_InternalError("Pending Transaction Already Exists").toJson(j_response);
-		}
-		else if (instanceof<dev::TransactionAlreadyInChain>(&e)) {
-			RPC_Eth_Error_InternalError("Transaction already exists in chain").toJson(j_response);
-		}
-		else if (instanceof<dev::UnknownTransactionValidationError>(&e)) {
-			RPC_Eth_Error_InternalError("Validation Error").toJson(j_response);
-		}
-		else if (instanceof<dev::AccountLocked>(&e)) {
-			RPC_Eth_Error_InvalidParams("Account Locked").toJson(j_response);
-		}
-		else if (instanceof<dev::UnknownAccount>(&e)) {
-			RPC_Eth_Error_InvalidParams("Invalid Account").toJson(j_response);
-		}
-		else {
-			RPC_Eth_Error_InvalidParams("Invalid Params").toJson(j_response);
-		}
-	}
-
 	inline void toRpcExceptionEthJson(std::exception const & e, json & j_response) {
 		if (instanceof<dev::OutOfGasIntrinsic>(&e)) {
 			RPC_Eth_Error_InvalidParams("Out of Gas Instrinsic").toJson(j_response);

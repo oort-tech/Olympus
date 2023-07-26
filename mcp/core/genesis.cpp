@@ -100,7 +100,6 @@ std::pair<bool, mcp::Transactions> mcp::genesis::try_initialize(mcp::db::db_tran
 	bool exists(!store_a.genesis_hash_get(transaction_a, genesis_hash));
 	if (exists)
 	{
-		std::cout << block_hash .hex() << ":" << genesis_hash.hex() << std::endl;
 		if(genesis_hash != block_hash)
 			throw std::runtime_error("genesis block changed");
 
