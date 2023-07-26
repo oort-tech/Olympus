@@ -6,7 +6,6 @@
 namespace mcp
 {
 	struct RpcEthException : virtual Exception
-	struct RpcEthException : virtual Exception
 	{
 		const char* what() const noexcept override { return "OK"; }
 		const int virtual code() const noexcept { return 0; }
@@ -19,16 +18,11 @@ namespace mcp
 	};
 
 #define RPC_ETH_ERROR_EXCEPTION(X, C)  \
-#define RPC_ETH_ERROR_EXCEPTION(X, C)  \
     struct X : virtual RpcEthException \
     {                            \
 		X(const char* m) : message(m) {} \
 		const char* what() const noexcept override { return message; }\
-		X(const char* m) : message(m) {} \
-		const char* what() const noexcept override { return message; }\
 		const int code() const noexcept override { return C; } \
-	private: \
-        const char* message; \
 	private: \
         const char* message; \
     }
