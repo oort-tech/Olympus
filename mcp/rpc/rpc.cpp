@@ -186,26 +186,26 @@ mcp::rpc_handler::rpc_handler(mcp::rpc &rpc_a, std::string const &body_a, std::f
 																																				 m_background(rpc_a.m_background),
 																																				 m_store(rpc.m_store)
 {
-	m_mcpRpcMethods["account_remove"] = &mcp::rpc_handler::account_remove;
-	m_mcpRpcMethods["account_export"] = &mcp::rpc_handler::account_export;
-	m_mcpRpcMethods["account_import"] = &mcp::rpc_handler::account_import;
-	m_mcpRpcMethods["accounts_balances"] = &mcp::rpc_handler::accounts_balances;
-	m_mcpRpcMethods["block"] = &mcp::rpc_handler::block;
-	m_mcpRpcMethods["block_state"] = &mcp::rpc_handler::block_state;
-	m_mcpRpcMethods["block_states"] = &mcp::rpc_handler::block_states;
-	m_mcpRpcMethods["block_traces"] = &mcp::rpc_handler::block_traces;
-	m_mcpRpcMethods["stable_blocks"] = &mcp::rpc_handler::stable_blocks;
-	m_mcpRpcMethods["block_summary"] = &mcp::rpc_handler::block_summary;
-	m_mcpRpcMethods["version"] = &mcp::rpc_handler::version;
-	m_mcpRpcMethods["status"] = &mcp::rpc_handler::status;
-	m_mcpRpcMethods["peers"] = &mcp::rpc_handler::peers;
-	m_mcpRpcMethods["nodes"] = &mcp::rpc_handler::nodes;
-	m_mcpRpcMethods["witness_list"] = &mcp::rpc_handler::witness_list;
-	m_mcpRpcMethods["debug_storage_range_at"] = &mcp::rpc_handler::debug_storage_range_at;
+	m_ethRpcMethods["account_remove"] = &mcp::rpc_handler::account_remove;
+	m_ethRpcMethods["account_export"] = &mcp::rpc_handler::account_export;
+	m_ethRpcMethods["account_import"] = &mcp::rpc_handler::account_import;
+	m_ethRpcMethods["accounts_balances"] = &mcp::rpc_handler::accounts_balances;
+	m_ethRpcMethods["block"] = &mcp::rpc_handler::block;
+	m_ethRpcMethods["block_state"] = &mcp::rpc_handler::block_state;
+	m_ethRpcMethods["block_states"] = &mcp::rpc_handler::block_states;
+	m_ethRpcMethods["block_traces"] = &mcp::rpc_handler::block_traces;
+	m_ethRpcMethods["stable_blocks"] = &mcp::rpc_handler::stable_blocks;
+	m_ethRpcMethods["block_summary"] = &mcp::rpc_handler::block_summary;
+	m_ethRpcMethods["version"] = &mcp::rpc_handler::version;
+	m_ethRpcMethods["status"] = &mcp::rpc_handler::status;
+	m_ethRpcMethods["peers"] = &mcp::rpc_handler::peers;
+	m_ethRpcMethods["nodes"] = &mcp::rpc_handler::nodes;
+	m_ethRpcMethods["witness_list"] = &mcp::rpc_handler::witness_list;
+	m_ethRpcMethods["debug_storage_range_at"] = &mcp::rpc_handler::debug_storage_range_at;
 
-	m_mcpRpcMethods["epoch_approves"] = &mcp::rpc_handler::epoch_approves;
-	m_mcpRpcMethods["approve_receipt"] = &mcp::rpc_handler::approve_receipt;
-	m_mcpRpcMethods["epoch_work_transaction"] = &mcp::rpc_handler::epoch_work_transaction;
+	m_ethRpcMethods["epoch_approves"] = &mcp::rpc_handler::epoch_approves;
+	m_ethRpcMethods["approve_receipt"] = &mcp::rpc_handler::approve_receipt;
+	m_ethRpcMethods["epoch_work_transaction"] = &mcp::rpc_handler::epoch_work_transaction;
 
 	m_ethRpcMethods["net_version"] = &mcp::rpc_handler::net_version;
 	m_ethRpcMethods["net_listening"] = &mcp::rpc_handler::net_listening;
@@ -287,12 +287,14 @@ bool mcp::rpc_handler::try_get_mc_info(dev::eth::McInfo &mc_info_a, uint64_t &bl
 
 void mcp::rpc_handler::account_remove(mcp::json &j_response, bool &)
 {
-	if (!request.count("account") || !request["account"].is_string())
+	mcp::json params = request["params"];
+	if ( params.size() < 2 || !params[0].is_string() || !params[1].is_string())
 	{
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Account"));
 	}
 
-	std::string account_text = request["account"];
+	
+	std::string account_text = params[0];
 	if (!mcp::isAddress(account_text))
 	{
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Account"));
@@ -304,12 +306,7 @@ void mcp::rpc_handler::account_remove(mcp::json &j_response, bool &)
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Account Not Exist"));
 	}
 
-	if (!request.count("password") || !request["password"].is_string())
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Password"));
-	}
-
-	std::string password_text = request["password"];
+	std::string password_text = params[1];
 	if (password_text.empty())
 	{
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Empty Password"));
@@ -323,12 +320,13 @@ void mcp::rpc_handler::account_remove(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::account_export(mcp::json &j_response, bool &)
 {
-	if (!request.count("account") || !request["account"].is_string())
+	mcp::json params = request["params"];
+	if (params.size() < 1 || !params[0].is_string())
 	{
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Account"));
 	}
 
-	std::string account_text = request["account"];
+	std::string account_text = params[0];
 	if (!mcp::isAddress(account_text))
 	{
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Account"));
@@ -346,7 +344,8 @@ void mcp::rpc_handler::account_export(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::account_import(mcp::json &j_response, bool &)
 {
-	if (!request.count("json") || !request["json"].is_string())
+	mcp::json params = request["params"];
+	if (params.size() < 1 || !params[0].is_string())
 	{
 		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError("Invalid Json"));
 	}
@@ -354,7 +353,7 @@ void mcp::rpc_handler::account_import(mcp::json &j_response, bool &)
 	mcp::json js;
 	try
 	{
-		std::string json_text = request["json"];
+		std::string json_text = params[0];
 		js = mcp::json::parse(json_text);
 	}
 	catch (...)
@@ -372,12 +371,13 @@ void mcp::rpc_handler::account_import(mcp::json &j_response, bool &)
 void mcp::rpc_handler::accounts_balances(mcp::json &j_response, bool &)
 {
 	mcp::json j_balances = mcp::json::array();
-	if (request.count("accounts") == 0)
+	mcp::json params = request["params"];
+	if (!params.is_array() || params.size() < 1)
 	{
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Account"));
 	}
 
-	for (mcp::json const &j_account : request["accounts"])
+	for (mcp::json const &j_account : params)
 	{
 		std::string account_text = j_account;
 		if (!mcp::isAddress(account_text))
@@ -400,13 +400,17 @@ void mcp::rpc_handler::accounts_balances(mcp::json &j_response, bool &)
 void mcp::rpc_handler::block(mcp::json &j_response, bool &)
 {
 	mcp::block_hash block_hash(0);
+	mcp::json params = request["params"];
+	if(params.size() < 1 || !params[0].is_string()){
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Params"));
+	}
 	try
 	{
-		block_hash = jsToHash(request["hash"]);
+		block_hash = jsToHash(params[0]);
 	}
 	catch (...)
 	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid"));
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Params"));
 	}
 
 	try
@@ -435,9 +439,13 @@ void mcp::rpc_handler::block(mcp::json &j_response, bool &)
 void mcp::rpc_handler::block_state(mcp::json &j_response, bool &)
 {
 	mcp::block_hash block_hash(0);
+	mcp::json params = request["params"];
+	if(params.size() < 1 || !params[0].is_string()){
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Params"));
+	}
 	try
 	{
-		block_hash = jsToHash(request["hash"]);
+		block_hash = jsToHash(params[0]);
 	}
 	catch (...)
 	{
@@ -475,7 +483,7 @@ void mcp::rpc_handler::block_states(mcp::json &j_response, bool &)
 	std::vector<std::string> hashes_l;
 	try
 	{
-		hashes_l = request["hashes"].get<std::vector<std::string>>();
+		hashes_l = request["params"].get<std::vector<std::string>>();
 	}
 	catch (...)
 	{
@@ -509,9 +517,13 @@ void mcp::rpc_handler::block_states(mcp::json &j_response, bool &)
 void mcp::rpc_handler::block_traces(mcp::json &j_response, bool &)
 {
 	mcp::block_hash block_hash(0);
+	mcp::json params = request["params"];
+	if(params.size() < 1 || !params[0].is_string()){
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Params"));
+	}
 	try
 	{
-		block_hash = jsToHash(request["hash"]);
+		block_hash = jsToHash(params[0]);
 	}
 	catch (...)
 	{
@@ -570,13 +582,12 @@ void mcp::rpc_handler::block_traces(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::stable_blocks(mcp::json &j_response, bool &)
 {
-	if (!request.count("index"))
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Index"));
-	uint64_t index = jsToULl(request["index"]);
-
-	if (!request.count("limit"))
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Limit"));
-	uint64_t limit_l = jsToULl(request["limit"]);
+	mcp::json params = request["params"];//0: index, 1: limit
+	if(params.size() < 2){
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Params"));
+	}
+	uint64_t index = jsToULl(params[0]);
+	uint64_t limit_l = jsToULl(params[1]);
 	if (limit_l > list_max_limit || !limit_l)///too big or zero.
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Limit"));
 
@@ -617,12 +628,11 @@ void mcp::rpc_handler::stable_blocks(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::block_summary(mcp::json &j_response, bool &)
 {
-	if (!request.count("hash") || (!request["hash"].is_string()))
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Hash"));
+	mcp::json params = request["params"];
+	if(params.size() < 1 || !params[0].is_string()){
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Params"));
 	}
-
-	std::string hash_text = request["hash"];
+	std::string hash_text = params[0];
 	mcp::block_hash hash;
 	try
 	{
@@ -788,10 +798,11 @@ void mcp::rpc_handler::nodes(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::witness_list(mcp::json &j_response, bool &)
 {
-	if (!request.count("epoch") || !request["epoch"].is_string())
+	mcp::json params = request["params"];
+	if(params.size() < 1 || !params[0].is_string()){
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Params"));
-
-	Epoch epoch = (uint64_t)jsToULl(request["epoch"]);
+	}
+	Epoch epoch = (uint64_t)jsToULl(params[0]);
 
 	if (epoch > m_chain->last_epoch())
 	{
@@ -810,12 +821,12 @@ void mcp::rpc_handler::witness_list(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::debug_storage_range_at(mcp::json &j_response, bool &)
 {
-	if (!request.count("hash") || !request["hash"].is_string())
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Hash"));
+	mcp::json params = request["params"];//this should be a json object, not an array
+	if(!params.count("hash") || !params["hash"].is_string()){
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Params"));
 	}
 
-	std::string hash_text = request["hash"];
+	std::string hash_text = params["hash"];
 	mcp::block_hash hash;
 	try
 	{
@@ -827,12 +838,12 @@ void mcp::rpc_handler::debug_storage_range_at(mcp::json &j_response, bool &)
 	}
 
 	dev::Address acct(0);
-	if (!request.count("account") || !request["account"].is_string())
+	if (!params.count("account") || !params["account"].is_string())
 	{
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Account"));
 	}
-	std::string account_text = request["account"];
-	if (!mcp::isAddress(request["account"]))
+	std::string account_text = params["account"];
+	if (!mcp::isAddress(params["account"]))
 	{
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Account"));
 	}
@@ -841,7 +852,7 @@ void mcp::rpc_handler::debug_storage_range_at(mcp::json &j_response, bool &)
 	h256 begin;
 	try
 	{
-		begin = jsToHash(request["begin"]);
+		begin = jsToHash(params["begin"]);
 	}
 	catch (...)
 	{
@@ -849,11 +860,11 @@ void mcp::rpc_handler::debug_storage_range_at(mcp::json &j_response, bool &)
 	}
 
 	uint64_t max_results(0);
-	if (!request.count("max_results"))
+	if (!params.count("max_results"))
 	{
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Begin"));
 	}
-	max_results = jsToULl(request["max_results"]);
+	max_results = jsToULl(params["max_results"]);
 
 	j_response["result"] = mcp::json::object();
 
@@ -1009,19 +1020,20 @@ void mcp::rpc_handler::process_request()
 		}
 		j_response["id"] = request["id"];
 		j_response["jsonrpc"] = request["jsonrpc"];
-		if (request.count("action"))
-		{
-			auto pointer = m_mcpRpcMethods.find(request["action"]);
-			if (pointer != m_mcpRpcMethods.end())
-			{
-				(this->*(pointer->second))(j_response, async);
-			}
-			else
-			{
-				BOOST_THROW_EXCEPTION(RPC_Error_MethodNotFound("Unknown Command"));
-			}
-		}
-		else if (request.count("method"))
+		// if (request.count("action"))
+		// {
+		// 	auto pointer = m_mcpRpcMethods.find(request["action"]);
+		// 	if (pointer != m_mcpRpcMethods.end())
+		// 	{
+		// 		(this->*(pointer->second))(j_response, async);
+		// 	}
+		// 	else
+		// 	{
+		// 		BOOST_THROW_EXCEPTION(RPC_Error_MethodNotFound("Unknown Command"));
+		// 	}
+		// }
+		// else 
+		if (request.count("method"))
 		{
 			auto pointer = m_ethRpcMethods.find(request["method"]);
 			if (pointer != m_ethRpcMethods.end())
