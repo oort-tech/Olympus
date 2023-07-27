@@ -444,7 +444,7 @@ void mcp::chain::ApplyWorkTransaction(mcp::timeout_db_transaction & timeout_tx_a
 	dev::eth::McInfo mc_info = GetMcInfo(timeout_tx_a, cache_a, mci);
 	Transaction _t = PackSystemContract(transaction_a, cache_a, _v);
 	std::pair<ExecutionResult, dev::eth::TransactionReceipt> result = execute(transaction_a, cache_a, _t, mc_info, Permanence::Committed, dev::eth::OnOpFunc());
-	assert_x(result.second.statusCode());//for test .deleted it--------------------------------------------------------
+	//assert_x(result.second.statusCode());//for test .
 	cache_a->transaction_put(transaction_a, std::make_shared<Transaction>(_t));
 	cache_a->account_nonce_put(transaction_a, _t.sender(), _t.nonce());
 	cache_a->transaction_receipt_put(transaction_a, _t.sha3(), std::make_shared<dev::eth::TransactionReceipt>(result.second));
