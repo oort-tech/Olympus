@@ -319,10 +319,17 @@ add_library (p2p
 add_library (rpc
 	mcp/rpc/rpc.cpp
 	mcp/rpc/rpc.hpp
+	mcp/rpc/config.cpp
+	mcp/rpc/config.hpp
+	mcp/rpc/connection.cpp
+	mcp/rpc/connection.hpp
+	mcp/rpc/handler.cpp
+	mcp/rpc/handler.hpp
 	mcp/rpc/rpc_ws.cpp
 	mcp/rpc/rpc_ws.hpp
 	mcp/rpc/jsonHelper.cpp
 	mcp/rpc/jsonHelper.hpp
+	mcp/rpc/exceptions.hpp
 	)
 	
 add_library (wallet
