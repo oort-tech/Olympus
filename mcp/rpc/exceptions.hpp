@@ -2,10 +2,40 @@
 
 #include <libdevcore/Exceptions.h>
 #include <mcp/common/Exceptions.h>
+#include <boost/beast.hpp>
 
 namespace mcp
 {
-	struct RpcEthException : virtual Exception
+	/***************************************************************************************************************************/
+	///http exception structure definition:
+	struct RpcHttpException : virtual Exception
+	{
+		const char* what() const noexcept override { return ""; }
+		const boost::beast::http::status virtual status() const noexcept { return boost::beast::http::status::ok; }
+	};
+
+	///bad request.
+	struct RPC_Http_Error_BadRequest : virtual RpcHttpException
+	{
+		RPC_Http_Error_BadRequest(const char* m) : message(m) {}
+		const char* what() const noexcept override { return message; }
+		const boost::beast::http::status status() const noexcept override { return boost::beast::http::status::bad_request; }
+	private: 
+		const char* message; 
+	};
+
+	///internal error.
+	struct RPC_Http_Error_Internal_Server_Error : virtual RpcHttpException
+	{
+		RPC_Http_Error_Internal_Server_Error(const char* m) : message(m) {}
+		const char* what() const noexcept override { return message; }
+		const boost::beast::http::status status() const noexcept override { return boost::beast::http::status::internal_server_error; }
+	private:
+		const char* message;
+	};
+
+	///system exception
+	struct RpcException : virtual Exception
 	{
 		const char* what() const noexcept override { return "OK"; }
 		const int virtual code() const noexcept { return 0; }
@@ -17,29 +47,29 @@ namespace mcp
 		}
 	};
 
-#define RPC_ETH_ERROR_EXCEPTION(X, C)  \
-    struct X : virtual RpcEthException \
+#define RPC_ERROR_EXCEPTION(X, C)  \
+    struct X : virtual RpcException \
     {                            \
 		X(const char* m) : message(m) {} \
 		const char* what() const noexcept override { return message; }\
 		const int code() const noexcept override { return C; } \
 	private: \
         const char* message; \
-    }
+    };
 	
 	/***************************************************************************************************************************/
-	//new rpc exception structure definition:
-	RPC_ETH_ERROR_EXCEPTION(RPC_Error_ServerProcedureSpecificationNotFound,-32000);//not used yet
-	RPC_ETH_ERROR_EXCEPTION(RPC_Error_ClientInvalidResponse,-32001);//not used yet
-	RPC_ETH_ERROR_EXCEPTION(RPC_Error_TimeOut,-32002);//not used yet
-	RPC_ETH_ERROR_EXCEPTION(RPC_Error_TransactionRejected,-32003);//not used yet
-	RPC_ETH_ERROR_EXCEPTION(RPC_Error_TooLargeSearchRange,-32005);
-	RPC_ETH_ERROR_EXCEPTION(RPC_Error_InvalidRequest,-32600);
-	RPC_ETH_ERROR_EXCEPTION(RPC_Error_MethodNotFound,-32601);
-	RPC_ETH_ERROR_EXCEPTION(RPC_Error_InvalidParams,-32602);
-	RPC_ETH_ERROR_EXCEPTION(RPC_Error_InvalidParams_No_Result,-32602);
-	RPC_ETH_ERROR_EXCEPTION(RPC_Error_InternalError,-32603);
-	RPC_ETH_ERROR_EXCEPTION(RPC_Error_JsonParseError,-32700);
+	//rpc exception structure definition:
+	RPC_ERROR_EXCEPTION(RPC_Error_ServerProcedureSpecificationNotFound,-32000);//not used yet
+	RPC_ERROR_EXCEPTION(RPC_Error_ClientInvalidResponse,-32001);//not used yet
+	RPC_ERROR_EXCEPTION(RPC_Error_TimeOut,-32002);//not used yet
+	RPC_ERROR_EXCEPTION(RPC_Error_TransactionRejected,-32003);//not used yet
+	RPC_ERROR_EXCEPTION(RPC_Error_TooLargeSearchRange,-32005);
+	RPC_ERROR_EXCEPTION(RPC_Error_InvalidRequest,-32600);
+	RPC_ERROR_EXCEPTION(RPC_Error_MethodNotFound,-32601);
+	RPC_ERROR_EXCEPTION(RPC_Error_InvalidParams,-32602);
+	RPC_ERROR_EXCEPTION(RPC_Error_InvalidParams_No_Result,-32602);
+	RPC_ERROR_EXCEPTION(RPC_Error_InternalError,-32603);
+	RPC_ERROR_EXCEPTION(RPC_Error_JsonParseError,-32700);
 
 	template<typename Base, typename T>
 	inline bool instanceof(const T *ptr) {
