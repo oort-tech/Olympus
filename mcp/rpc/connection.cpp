@@ -1,6 +1,7 @@
 #include "connection.hpp"
 #include "handler.hpp"
 #include "exceptions.hpp"
+#include <iostream>
 
 mcp::rpc_connection::rpc_connection(mcp::rpc &rpc_a) : rpc(rpc_a), socket(rpc_a.io_service)
 {

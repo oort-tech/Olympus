@@ -249,7 +249,7 @@ void mcp::rpc_handler::block_states(mcp::json &j_response, bool &)
 	std::vector<std::string> hashes_l;
 	try
 	{
-		hashes_l = request["params"].get<std::vector<std::string>>();
+		hashes_l = params.get<std::vector<std::string>>();
 	}
 	catch (...)
 	{
@@ -618,8 +618,18 @@ void mcp::rpc_handler::process_request()
 	mcp::json j_response;
 	bool async = false;
 	try
-	{		
+	{
 		request = mcp::json::parse(body);
+	}
+	catch (...)
+	{
+		BOOST_THROW_EXCEPTION(RPC_Http_Error_BadRequest("Unmarshal Json"));
+		response(j_response);
+		return;
+	}
+
+	try
+	{		
 		LOG(m_log.debug) << "REQUEST:" << request;
 		if (!request.count("id") ||
 					!request.count("jsonrpc") || !request.count("params"))
@@ -654,13 +664,13 @@ void mcp::rpc_handler::process_request()
 			BOOST_THROW_EXCEPTION(RPC_Error_MethodNotFound("Unknown Command"));
 		}
 	}
-	catch (mcp::RpcException const &err)
-	{
-		err.toJson(j_response);
-	}
 	catch(mcp::RPC_Error_InvalidParams_No_Result const &err)
 	{
 		j_response["result"] = nullptr;
+	}
+	catch (mcp::RpcException const &err)
+	{
+		err.toJson(j_response);
 	}
 	catch (std::exception const &e)
 	{
@@ -668,11 +678,7 @@ void mcp::rpc_handler::process_request()
 	}
 	catch (...)
 	{
-		
-		json error;
-		error["code"] = -32603;
-		error["message"] = "Internal server error in HTTP RPC";
-		j_response["error"] = error;
+		BOOST_THROW_EXCEPTION(RPC_Http_Error_Internal_Server_Error(""));
 	}
 
 	if (!async)
