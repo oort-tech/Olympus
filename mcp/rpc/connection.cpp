@@ -96,8 +96,9 @@ void mcp::rpc_connection::response(std::string const & body, unsigned version, b
 {
 	try
 	{
+		auto this_l(shared_from_this());
 		write_result(body, version, status);
-		boost::beast::http::async_write(socket, res, [](boost::system::error_code const & e, size_t size)
+		boost::beast::http::async_write(this_l->socket, this_l->res, [this_l](boost::system::error_code const & e, size_t size)
 		{
 		});
 	}
