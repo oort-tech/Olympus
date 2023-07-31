@@ -105,7 +105,6 @@ namespace mcp
 		std::shared_ptr<mcp::async_task> m_background;
 		mcp::block_store m_store;
 
-		std::map<std::string, RPCMethodPointer> m_mcpRpcMethods;
 		std::map<std::string, RPCMethodPointer> m_ethRpcMethods;
 
 		mcp::log m_log = { mcp::log("rpc") };
