@@ -70,5 +70,6 @@ Testing
 /build
 /build_release
 /build_debug
+/libdevcore
 
 /secp256k1/src/ecmult_static_context.h
