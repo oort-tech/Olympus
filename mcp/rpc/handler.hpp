@@ -91,7 +91,7 @@ namespace mcp
 
 		static const uint32_t list_max_limit = 100;
 
-		mcp::json request;
+		mcp::json params;
 		std::function<void(mcp::json const&)> response;
 
 	private:
@@ -104,7 +104,6 @@ namespace mcp
 		std::shared_ptr<mcp::async_task> m_background;
 		mcp::block_store m_store;
 
-		std::map<std::string, RPCMethodPointer> m_mcpRpcMethods;
 		std::map<std::string, RPCMethodPointer> m_ethRpcMethods;
 
 		mcp::log m_log = { mcp::log("rpc") };

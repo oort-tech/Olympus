@@ -18,26 +18,26 @@ mcp::rpc_handler::rpc_handler(mcp::rpc &rpc_a, std::string const &body_a, std::f
 																																				 m_background(rpc_a.m_background),
 																																				 m_store(rpc.m_store)
 {
-	m_mcpRpcMethods["account_remove"] = &mcp::rpc_handler::account_remove;
-	m_mcpRpcMethods["account_export"] = &mcp::rpc_handler::account_export;
-	m_mcpRpcMethods["account_import"] = &mcp::rpc_handler::account_import;
-	m_mcpRpcMethods["accounts_balances"] = &mcp::rpc_handler::accounts_balances;
-	m_mcpRpcMethods["block"] = &mcp::rpc_handler::block;
-	m_mcpRpcMethods["block_state"] = &mcp::rpc_handler::block_state;
-	m_mcpRpcMethods["block_states"] = &mcp::rpc_handler::block_states;
-	m_mcpRpcMethods["block_traces"] = &mcp::rpc_handler::block_traces;
-	m_mcpRpcMethods["stable_blocks"] = &mcp::rpc_handler::stable_blocks;
-	m_mcpRpcMethods["block_summary"] = &mcp::rpc_handler::block_summary;
-	m_mcpRpcMethods["version"] = &mcp::rpc_handler::version;
-	m_mcpRpcMethods["status"] = &mcp::rpc_handler::status;
-	m_mcpRpcMethods["peers"] = &mcp::rpc_handler::peers;
-	m_mcpRpcMethods["nodes"] = &mcp::rpc_handler::nodes;
-	m_mcpRpcMethods["witness_list"] = &mcp::rpc_handler::witness_list;
-	m_mcpRpcMethods["debug_storage_range_at"] = &mcp::rpc_handler::debug_storage_range_at;
+	m_ethRpcMethods["account_remove"] = &mcp::rpc_handler::account_remove;
+	m_ethRpcMethods["account_export"] = &mcp::rpc_handler::account_export;
+	m_ethRpcMethods["account_import"] = &mcp::rpc_handler::account_import;
+	m_ethRpcMethods["accounts_balances"] = &mcp::rpc_handler::accounts_balances;
+	m_ethRpcMethods["block"] = &mcp::rpc_handler::block;
+	m_ethRpcMethods["block_state"] = &mcp::rpc_handler::block_state;
+	m_ethRpcMethods["block_states"] = &mcp::rpc_handler::block_states;
+	m_ethRpcMethods["block_traces"] = &mcp::rpc_handler::block_traces;
+	m_ethRpcMethods["stable_blocks"] = &mcp::rpc_handler::stable_blocks;
+	m_ethRpcMethods["block_summary"] = &mcp::rpc_handler::block_summary;
+	m_ethRpcMethods["version"] = &mcp::rpc_handler::version;
+	m_ethRpcMethods["status"] = &mcp::rpc_handler::status;
+	m_ethRpcMethods["peers"] = &mcp::rpc_handler::peers;
+	m_ethRpcMethods["nodes"] = &mcp::rpc_handler::nodes;
+	m_ethRpcMethods["witness_list"] = &mcp::rpc_handler::witness_list;
+	m_ethRpcMethods["debug_storage_range_at"] = &mcp::rpc_handler::debug_storage_range_at;
 
-	m_mcpRpcMethods["epoch_approves"] = &mcp::rpc_handler::epoch_approves;
-	m_mcpRpcMethods["approve_receipt"] = &mcp::rpc_handler::approve_receipt;
-	m_mcpRpcMethods["epoch_work_transaction"] = &mcp::rpc_handler::epoch_work_transaction;
+	m_ethRpcMethods["epoch_approves"] = &mcp::rpc_handler::epoch_approves;
+	m_ethRpcMethods["approve_receipt"] = &mcp::rpc_handler::approve_receipt;
+	m_ethRpcMethods["epoch_work_transaction"] = &mcp::rpc_handler::epoch_work_transaction;
 
 	m_ethRpcMethods["net_version"] = &mcp::rpc_handler::net_version;
 	m_ethRpcMethods["net_listening"] = &mcp::rpc_handler::net_listening;
@@ -85,6 +85,7 @@ mcp::rpc_handler::rpc_handler(mcp::rpc &rpc_a, std::string const &body_a, std::f
 	m_ethRpcMethods["eth_requestAccounts"] = &mcp::rpc_handler::eth_accounts;
 }
 
+
 bool mcp::rpc_handler::try_get_mc_info(dev::eth::McInfo &mc_info_a, uint64_t &block_number)
 {
 	mcp::db::db_transaction transaction(m_store.create_transaction());
@@ -119,12 +120,8 @@ bool mcp::rpc_handler::try_get_mc_info(dev::eth::McInfo &mc_info_a, uint64_t &bl
 
 void mcp::rpc_handler::account_remove(mcp::json &j_response, bool &)
 {
-	if (!request.count("account") || !request["account"].is_string())
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Account"));
-	}
-
-	std::string account_text = request["account"];
+	//0: account, 1: password
+	std::string account_text = params[0];
 	if (!mcp::isAddress(account_text))
 	{
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Account"));
@@ -136,12 +133,7 @@ void mcp::rpc_handler::account_remove(mcp::json &j_response, bool &)
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Account Not Exist"));
 	}
 
-	if (!request.count("password") || !request["password"].is_string())
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Password"));
-	}
-
-	std::string password_text = request["password"];
+	std::string password_text = params[1];
 	if (password_text.empty())
 	{
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Empty Password"));
@@ -155,12 +147,8 @@ void mcp::rpc_handler::account_remove(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::account_export(mcp::json &j_response, bool &)
 {
-	if (!request.count("account") || !request["account"].is_string())
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Account"));
-	}
-
-	std::string account_text = request["account"];
+	//0: account
+	std::string account_text = params[0];
 	if (!mcp::isAddress(account_text))
 	{
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Account"));
@@ -178,22 +166,10 @@ void mcp::rpc_handler::account_export(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::account_import(mcp::json &j_response, bool &)
 {
-	if (!request.count("json") || !request["json"].is_string())
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError("Invalid Json"));
-	}
-
+	//0: jons_text
 	mcp::json js;
-	try
-	{
-		std::string json_text = request["json"];
-		js = mcp::json::parse(json_text);
-	}
-	catch (...)
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError("Invalid Json"));
-	}
-
+	std::string json_text = params[0];
+	js = mcp::json::parse(json_text);
 	mcp::key_content kc;
 	if (!m_key_manager->import(js, kc))
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Account"));
@@ -204,12 +180,14 @@ void mcp::rpc_handler::account_import(mcp::json &j_response, bool &)
 void mcp::rpc_handler::accounts_balances(mcp::json &j_response, bool &)
 {
 	mcp::json j_balances = mcp::json::array();
-	if (request.count("accounts") == 0)
+	
+	if (!params.is_array() || params.size() < 1)
 	{
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Account"));
 	}
 
-	for (mcp::json const &j_account : request["accounts"])
+	//0: account list
+	for (mcp::json const &j_account : params)
 	{
 		std::string account_text = j_account;
 		if (!mcp::isAddress(account_text))
@@ -232,71 +210,35 @@ void mcp::rpc_handler::accounts_balances(mcp::json &j_response, bool &)
 void mcp::rpc_handler::block(mcp::json &j_response, bool &)
 {
 	mcp::block_hash block_hash(0);
-	try
+	//0: block hash
+	block_hash = jsToHash(params[0]);
+	mcp::db::db_transaction transaction(m_store.create_transaction());
+	auto block(m_cache->block_get(transaction, block_hash));
+	if (block == nullptr)
 	{
-		block_hash = jsToHash(request["hash"]);
-	}
-	catch (...)
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid"));
+		//throw "cannot get block";
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams_No_Result(""));
+		
 	}
 
-	try
-	{
-		mcp::db::db_transaction transaction(m_store.create_transaction());
-		auto block(m_cache->block_get(transaction, block_hash));
-		if (block == nullptr)
-		{
-			//throw "cannot get block";
-			BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams_No_Result(""));
-			
-		}
-
-		j_response["result"] = toJson(*block, false);
-	}
-	catch(mcp::RPC_Error_InvalidParams_No_Result const & err)
-	{
-		j_response["result"] = nullptr;
-	}
-	catch (...)
-	{
-		throw;
-	}
+	j_response["result"] = toJson(*block, false);
 }
 
 void mcp::rpc_handler::block_state(mcp::json &j_response, bool &)
 {
 	mcp::block_hash block_hash(0);
-	try
+	//0: block hash
+	block_hash = jsToHash(params[0]);
+	mcp::db::db_transaction transaction(m_store.create_transaction());
+	auto block = m_cache->block_get(transaction, block_hash);
+	if (block == nullptr)
 	{
-		block_hash = jsToHash(request["hash"]);
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams_No_Result(""));
 	}
-	catch (...)
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Hash"));
-	}
-
-	try
-	{
-		mcp::db::db_transaction transaction(m_store.create_transaction());
-		auto block = m_cache->block_get(transaction, block_hash);
-		if (block == nullptr)
-		{
-			BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams_No_Result(""));
-		}
-		std::shared_ptr<mcp::block_state> state(m_store.block_state_get(transaction, block_hash));
-		mcp::json block_state_l;
-		state->serialize_json(block_state_l);
-		j_response["result"] = block_state_l;
-	}
-	catch(mcp::RPC_Error_InvalidParams_No_Result const &err)
-	{
-		j_response["result"] = nullptr;
-	}
-	catch (...)
-	{
-		throw;
-	}
+	std::shared_ptr<mcp::block_state> state(m_store.block_state_get(transaction, block_hash));
+	mcp::json block_state_l;
+	state->serialize_json(block_state_l);
+	j_response["result"] = block_state_l;
 }
 
 void mcp::rpc_handler::block_states(mcp::json &j_response, bool &)
@@ -307,7 +249,7 @@ void mcp::rpc_handler::block_states(mcp::json &j_response, bool &)
 	std::vector<std::string> hashes_l;
 	try
 	{
-		hashes_l = request["hashes"].get<std::vector<std::string>>();
+		hashes_l = params.get<std::vector<std::string>>();
 	}
 	catch (...)
 	{
@@ -316,14 +258,7 @@ void mcp::rpc_handler::block_states(mcp::json &j_response, bool &)
 	for (std::string const &hash_text : hashes_l)
 	{
 		mcp::block_hash block_hash(0);
-		try
-		{
-			block_hash = jsToHash(hash_text);
-		}
-		catch (...)
-		{
-			BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Hash"));
-		}
+		block_hash = jsToHash(hash_text);
 		mcp::json state_l;
 
 		auto block = m_cache->block_get(transaction, block_hash);
@@ -341,15 +276,8 @@ void mcp::rpc_handler::block_states(mcp::json &j_response, bool &)
 void mcp::rpc_handler::block_traces(mcp::json &j_response, bool &)
 {
 	mcp::block_hash block_hash(0);
-	try
-	{
-		block_hash = jsToHash(request["hash"]);
-	}
-	catch (...)
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Hash"));
-	}
-
+	block_hash = jsToHash(params[0]);
+	BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Hash"));
 	mcp::json response_l;
 	mcp::db::db_transaction transaction(m_store.create_transaction());
 	std::list<std::shared_ptr<mcp::trace>> traces;
@@ -402,13 +330,9 @@ void mcp::rpc_handler::block_traces(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::stable_blocks(mcp::json &j_response, bool &)
 {
-	if (!request.count("index"))
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Index"));
-	uint64_t index = jsToULl(request["index"]);
-
-	if (!request.count("limit"))
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Limit"));
-	uint64_t limit_l = jsToULl(request["limit"]);
+	//0: index, 1: limit
+	uint64_t index = jsToULl(params[0]);
+	uint64_t limit_l = jsToULl(params[1]);
 	if (limit_l > list_max_limit || !limit_l)///too big or zero.
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Limit"));
 
@@ -449,22 +373,9 @@ void mcp::rpc_handler::stable_blocks(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::block_summary(mcp::json &j_response, bool &)
 {
-	if (!request.count("hash") || (!request["hash"].is_string()))
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Hash"));
-	}
-
-	std::string hash_text = request["hash"];
+	std::string hash_text = params[0];
 	mcp::block_hash hash;
-	try
-	{
-		hash = jsToHash(hash_text);
-	}
-	catch (...)
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Hash"));
-	}
-
+	hash = jsToHash(hash_text);
 	mcp::db::db_transaction transaction(m_store.create_transaction());
 	mcp::summary_hash summary;
 	bool exists(!m_cache->block_summary_get(transaction, hash, summary));
@@ -620,10 +531,8 @@ void mcp::rpc_handler::nodes(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::witness_list(mcp::json &j_response, bool &)
 {
-	if (!request.count("epoch") || !request["epoch"].is_string())
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Params"));
-
-	Epoch epoch = (uint64_t)jsToULl(request["epoch"]);
+	
+	Epoch epoch = (uint64_t)jsToULl(params[0]);
 
 	if (epoch > m_chain->last_epoch())
 	{
@@ -642,50 +551,32 @@ void mcp::rpc_handler::witness_list(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::debug_storage_range_at(mcp::json &j_response, bool &)
 {
-	if (!request.count("hash") || !request["hash"].is_string())
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Hash"));
-	}
-
-	std::string hash_text = request["hash"];
+	//this should be a json object, not an array
+	std::string hash_text = params["hash"];
 	mcp::block_hash hash;
-	try
-	{
-		hash = jsToHash(hash_text);
-	}
-	catch (...)
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Hash"));
-	}
-
+	hash = jsToHash(hash_text);
 	dev::Address acct(0);
-	if (!request.count("account") || !request["account"].is_string())
+	if (!params.count("account") || !params["account"].is_string())
 	{
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Account"));
 	}
-	std::string account_text = request["account"];
-	if (!mcp::isAddress(request["account"]))
+	std::string account_text = params["account"];
+	if (!mcp::isAddress(params["account"]))
 	{
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Account"));
 	}
 	acct = dev::Address(account_text);
 
 	h256 begin;
-	try
-	{
-		begin = jsToHash(request["begin"]);
-	}
-	catch (...)
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Begin"));
-	}
+	begin = jsToHash(params["begin"]);
+	BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Begin"));
 
 	uint64_t max_results(0);
-	if (!request.count("max_results"))
+	if (!params.count("max_results"))
 	{
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Begin"));
 	}
-	max_results = jsToULl(request["max_results"]);
+	max_results = jsToULl(params["max_results"]);
 
 	j_response["result"] = mcp::json::object();
 
@@ -726,7 +617,7 @@ void mcp::rpc_handler::process_request()
 {
 	mcp::json j_response;
 	bool async = false;
-
+	mcp::json request;
 	try
 	{
 		request = mcp::json::parse(body);
@@ -734,13 +625,15 @@ void mcp::rpc_handler::process_request()
 	catch (...)
 	{
 		BOOST_THROW_EXCEPTION(RPC_Http_Error_BadRequest("Unmarshal Json"));
+		response(j_response);
+		return;
 	}
 
 	try
 	{		
 		LOG(m_log.debug) << "REQUEST:" << request;
 		if (!request.count("id") ||
-					!request.count("jsonrpc"))
+					!request.count("jsonrpc") || !request.count("params"))
 		{
 			/*
 			||
@@ -751,21 +644,10 @@ void mcp::rpc_handler::process_request()
 			j_response["jsonrpc"] = nullptr;
 			BOOST_THROW_EXCEPTION(RPC_Error_InvalidRequest("Invalid Request"));
 		}
+		params = request["params"];
 		j_response["id"] = request["id"];
 		j_response["jsonrpc"] = request["jsonrpc"];
-		if (request.count("action"))
-		{
-			auto pointer = m_mcpRpcMethods.find(request["action"]);
-			if (pointer != m_mcpRpcMethods.end())
-			{
-				(this->*(pointer->second))(j_response, async);
-			}
-			else
-			{
-				BOOST_THROW_EXCEPTION(RPC_Error_MethodNotFound("Unknown Command"));
-			}
-		}
-		else if (request.count("method"))
+		if (request.count("method"))
 		{
 			auto pointer = m_ethRpcMethods.find(request["method"]);
 			if (pointer != m_ethRpcMethods.end())
@@ -783,13 +665,13 @@ void mcp::rpc_handler::process_request()
 			BOOST_THROW_EXCEPTION(RPC_Error_MethodNotFound("Unknown Command"));
 		}
 	}
-	catch (mcp::RpcException const &err)
-	{
-		err.toJson(j_response);
-	}
 	catch(mcp::RPC_Error_InvalidParams_No_Result const &err)
 	{
 		j_response["result"] = nullptr;
+	}
+	catch (mcp::RpcException const &err)
+	{
+		err.toJson(j_response);
 	}
 	catch (std::exception const &e)
 	{
@@ -813,7 +695,7 @@ void mcp::rpc_handler::eth_blockNumber(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::eth_getTransactionCount(mcp::json &j_response, bool &)
 {
-	mcp::json params = request["params"];
+	
 	if (params.size() < 1 || !params[0].is_string())
 	{
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid params"));
@@ -851,11 +733,7 @@ void mcp::rpc_handler::eth_gasPrice(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::eth_estimateGas(mcp::json &j_response, bool &)
 {
-	mcp::json params = request["params"];
-	if (params.size() < 1 || !params[0].is_object())
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid params"));
-	}
+	
 	TransactionSkeleton ts = mcp::toTransactionSkeletonForEth(params[0]);
 
 	dev::eth::McInfo mc_info;
@@ -891,11 +769,7 @@ void mcp::rpc_handler::eth_estimateGas(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::eth_getBlockByNumber(mcp::json &j_response, bool &)
 {
-	mcp::json params = request["params"];
-	if (params.size() < 1 || !params[0].is_string())
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid params"));
-	}
+	
 	bool is_full = params[1].is_null() ? false : (bool)params[1];
 
 	uint64_t block_number = 0;
@@ -951,107 +825,71 @@ void mcp::rpc_handler::eth_getBlockByNumber(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::eth_getBlockByHash(mcp::json &j_response, bool &)
 {
-	mcp::json params = request["params"];
-	if (params.size() < 1 || !params[0].is_string())
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid params"));
-	}
+	
 	bool is_full = params[1].is_null() ? false : (bool)params[1];
 
-	try
+	mcp::block_hash block_hash = jsToHash(params[0]);
+
+	mcp::db::db_transaction transaction(m_store.create_transaction());
+	auto block = m_cache->block_get(transaction, block_hash);
+	uint64_t block_number;
+	if (block == nullptr)
 	{
-		mcp::block_hash block_hash = jsToHash(params[0]);
-
-		mcp::db::db_transaction transaction(m_store.create_transaction());
-		auto block = m_cache->block_get(transaction, block_hash);
-		uint64_t block_number;
-		if (block == nullptr)
-		{
-			BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams_No_Result(""));
-			//throw "cannot get block";
-		}
-
-		mcp::json j_block = toJson(*block, true);
-		if (!m_cache->block_number_get(transaction, block_hash, block_number))
-		{
-			j_block["number"] = toJS(block_number);
-		}
-
-		u256 gasUsed = 0;
-		u256 minGasPrice = 0;
-		for (auto &th : block->links())
-		{
-			auto t = m_cache->transaction_get(transaction, th);
-			gasUsed += t->gas();
-			minGasPrice = minGasPrice == 0 ? t->gasPrice() : std::min(minGasPrice, t->gasPrice());
-
-			auto td = m_store.transaction_address_get(transaction, th);
-			if (is_full)
-			{
-				j_block["transactions"].push_back(toJson(LocalisedTransaction(*t, block_hash, td->index, block_number)));
-			}
-			else
-			{
-				j_block["transactions"].push_back(toJS(th));
-			}
-		}
-		j_block["gasUsed"] = toJS(gasUsed);
-		j_block["minGasPrice"] = toJS(minGasPrice);
-
-		j_response["result"] = j_block;
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams_No_Result(""));
+		//throw "cannot get block";
 	}
-	catch(mcp::RPC_Error_InvalidParams_No_Result const & e){
-		j_response["result"] = nullptr;
-	}
-	catch (...)
+
+	mcp::json j_block = toJson(*block, true);
+	if (!m_cache->block_number_get(transaction, block_hash, block_number))
 	{
-		throw;
+		j_block["number"] = toJS(block_number);
 	}
+
+	u256 gasUsed = 0;
+	u256 minGasPrice = 0;
+	for (auto &th : block->links())
+	{
+		auto t = m_cache->transaction_get(transaction, th);
+		gasUsed += t->gas();
+		minGasPrice = minGasPrice == 0 ? t->gasPrice() : std::min(minGasPrice, t->gasPrice());
+
+		auto td = m_store.transaction_address_get(transaction, th);
+		if (is_full)
+		{
+			j_block["transactions"].push_back(toJson(LocalisedTransaction(*t, block_hash, td->index, block_number)));
+		}
+		else
+		{
+			j_block["transactions"].push_back(toJS(th));
+		}
+	}
+	j_block["gasUsed"] = toJS(gasUsed);
+	j_block["minGasPrice"] = toJS(minGasPrice);
+
+	j_response["result"] = j_block;
 }
 
 void mcp::rpc_handler::eth_sendRawTransaction(mcp::json &j_response, bool &)
 {
-	mcp::json params = request["params"];
-	if (params.size() < 1 || !params[0].is_string())
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid params"));
-	}
+	Transaction t(jsToBytes(params[0], OnFailed::Throw), CheckTransaction::None);
 
-	try
-	{
-		Transaction t(jsToBytes(params[0], OnFailed::Throw), CheckTransaction::None);
+	//LOG(m_log.info) << "m_nonce:" << t.nonce() 
+	//	<< " ,m_value:" << t.value() 
+	//	<< " ,m_receiveAddress:" << t.receiveAddress().hex()
+	//	<< " ,m_gasPrice:" << t.gasPrice()
+	//	<< " ,m_gas:" << t.gas()
+	//	<< " ,m_data:" << toHex(t.data())
+	//	<< " ,m_vrs v:" << (int)t.signature().v
+	//	<< " ,m_vrs r:" << t.signature().r.hex()
+	//	<< " ,m_vrs s:" << t.signature().s.hex()
+	//	<< " ,m_chainId:" << t.chainID();
 
-		//LOG(m_log.info) << "m_nonce:" << t.nonce() 
-		//	<< " ,m_value:" << t.value() 
-		//	<< " ,m_receiveAddress:" << t.receiveAddress().hex()
-		//	<< " ,m_gasPrice:" << t.gasPrice()
-		//	<< " ,m_gas:" << t.gas()
-		//	<< " ,m_data:" << toHex(t.data())
-		//	<< " ,m_vrs v:" << (int)t.signature().v
-		//	<< " ,m_vrs r:" << t.signature().r.hex()
-		//	<< " ,m_vrs s:" << t.signature().s.hex()
-		//	<< " ,m_chainId:" << t.chainID();
-
-		j_response["result"] = toJS(m_wallet->importTransaction(t));
-	}
-	catch (dev::Exception &e)
-	{
-		toRpcExceptionEthJson(e, j_response);
-	}
-	catch(...)
-	{
-		throw;
-	}
+	j_response["result"] = toJS(m_wallet->importTransaction(t));
 }
 
 void mcp::rpc_handler::eth_sendTransaction(mcp::json &j_response, bool &async)
 {
-	mcp::json params = request["params"];
-	if (params.size() < 1 || !params[0].is_object())
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid params"));
-	}
-
+	
 	TransactionSkeleton t = mcp::toTransactionSkeletonForEth(params[0]);
 
 	auto rpc_l(shared_from_this());
@@ -1075,62 +913,51 @@ void mcp::rpc_handler::eth_sendTransaction(mcp::json &j_response, bool &async)
 
 void mcp::rpc_handler::eth_call(mcp::json &j_response, bool &)
 {
-	mcp::json params = request["params"];
-	try
+	
+	if (params.size() < 2 || !params[0].is_object())
 	{
-		if (params.size() < 2 || !params[0].is_object())
-		{
-			BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid params"));
-		}
-		TransactionSkeleton ts = mcp::toTransactionSkeletonForEth(params[0]);
-		ts.gasPrice = 0;
-		ts.gas = mcp::tx_max_gas;
-		if (ts.nonce == Invalid256)
-			ts.nonce = m_wallet->getTransactionCount(ts.from);
-
-		Transaction t(ts);
-		t.setSignature(h256(0), h256(0), 0);
-
-		uint64_t block_number = 0;
-		std::string blockText = params[1];
-		if (blockText == "latest" || blockText == "pending")
-		{
-			block_number = m_chain->last_stable_index();
-		}
-		else if (blockText == "earliest")
-		{
-			block_number = 0;
-		}
-		else
-		{
-			block_number = jsToULl(blockText);
-		}
-
-		dev::eth::McInfo mc_info;
-		if (!try_get_mc_info(mc_info, block_number))
-		{
-			BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Block"));
-		}
-
-		mcp::db::db_transaction transaction(m_store.create_transaction());
-		std::pair<mcp::ExecutionResult, dev::eth::TransactionReceipt> result = m_chain->execute(
-			transaction,
-			m_cache,
-			t,
-			mc_info,
-			Permanence::Uncommitted,
-			dev::eth::OnOpFunc());
-
-		j_response["result"] = toJS(result.first.output);
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid params"));
 	}
-	catch(mcp::RpcException const &err)
+	TransactionSkeleton ts = mcp::toTransactionSkeletonForEth(params[0]);
+	ts.gasPrice = 0;
+	ts.gas = mcp::tx_max_gas;
+	if (ts.nonce == Invalid256)
+		ts.nonce = m_wallet->getTransactionCount(ts.from);
+
+	Transaction t(ts);
+	t.setSignature(h256(0), h256(0), 0);
+
+	uint64_t block_number = 0;
+	std::string blockText = params[1];
+	if (blockText == "latest" || blockText == "pending")
 	{
-		throw;
+		block_number = m_chain->last_stable_index();
 	}
-	catch(dev::Exception const &err)
+	else if (blockText == "earliest")
 	{
-		toRpcExceptionEthJson(err, j_response);
+		block_number = 0;
 	}
+	else
+	{
+		block_number = jsToULl(blockText);
+	}
+
+	dev::eth::McInfo mc_info;
+	if (!try_get_mc_info(mc_info, block_number))
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Block"));
+	}
+
+	mcp::db::db_transaction transaction(m_store.create_transaction());
+	std::pair<mcp::ExecutionResult, dev::eth::TransactionReceipt> result = m_chain->execute(
+		transaction,
+		m_cache,
+		t,
+		mc_info,
+		Permanence::Uncommitted,
+		dev::eth::OnOpFunc());
+
+	j_response["result"] = toJS(result.first.output);
 }
 
 void mcp::rpc_handler::net_version(mcp::json &j_response, bool &)
@@ -1155,19 +982,13 @@ void mcp::rpc_handler::web3_clientVersion(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::web3_sha3(mcp::json &j_response, bool &)
 {
-	mcp::json params = request["params"];
-	if (params.size() < 1 || !params[0].is_string())
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid params"));
-	}
-
 	dev::bytes msg = jsToBytes(params[0]);
 	j_response["result"] = toJS(dev::sha3(msg));
 }
 
 void mcp::rpc_handler::eth_getCode(mcp::json &j_response, bool &)
 {
-	mcp::json params = request["params"];
+	
 	mcp::db::db_transaction transaction(m_store.create_transaction());
 	chain_state c_state(transaction, 0, m_store, m_chain, m_cache);
 
@@ -1186,122 +1007,78 @@ void mcp::rpc_handler::eth_getCode(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::eth_getStorageAt(mcp::json &j_response, bool &)
 {
-	mcp::json params = request["params"];
-	if (params.size() < 2 ||
-		!params[0].is_string() ||
-		!params[1].is_string())
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid params"));
-	}
+	dev::Address account = jsToAddress(params[0]);
+	uint256_t position = jsToU256(params[1]);
 
-	try
-	{
-		dev::Address account = jsToAddress(params[0]);
-		uint256_t position = jsToU256(params[1]);
-
-		mcp::db::db_transaction transaction(m_store.create_transaction());
-		chain_state c_state(transaction, 0, m_store, m_chain, m_cache);
-		j_response["result"] = toJS(c_state.storage(account, position));
-	}
-	catch (...)
-	{
-		throw;
-	}
+	mcp::db::db_transaction transaction(m_store.create_transaction());
+	chain_state c_state(transaction, 0, m_store, m_chain, m_cache);
+	j_response["result"] = toJS(c_state.storage(account, position));
 }
 
 void mcp::rpc_handler::eth_getTransactionByHash(mcp::json &j_response, bool &)
 {
-	mcp::json params = request["params"];
-	if (params.size() < 1 || !params[0].is_string())
+	
+	h256 hash = jsToHash(params[0]);
+
+	auto transaction = m_store.create_transaction();
+	auto t = m_cache->transaction_get(transaction, hash);
+	if (t == nullptr)
 	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid params"));
+		//throw "cannot get transaction";
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams_No_Result(""));
+	}
+	auto lt = LocalisedTransaction(*t, mcp::block_hash(0), 0, 0);
+	mcp::json j_transaction = toJson(lt);
+
+	auto td = m_cache->transaction_address_get(transaction, hash);
+	if (td == nullptr)
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams_No_Result(""));
 	}
 
-	try
+	j_transaction["blockHash"] = toJS(td->blockHash);
+	j_transaction["transactionIndex"] = toJS(td->index);
+
+	uint64_t block_number = 0;
+	if (!m_cache->block_number_get(transaction, td->blockHash, block_number))
 	{
-		h256 hash = jsToHash(params[0]);
-
-		auto transaction = m_store.create_transaction();
-		auto t = m_cache->transaction_get(transaction, hash);
-		if (t == nullptr)
-		{
-			//throw "cannot get transaction";
-			BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams_No_Result(""));
-		}
-		auto lt = LocalisedTransaction(*t, mcp::block_hash(0), 0, 0);
-		mcp::json j_transaction = toJson(lt);
-
-		auto td = m_cache->transaction_address_get(transaction, hash);
-		if (td == nullptr)
-		{
-			BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams_No_Result(""));
-		}
-
-		j_transaction["blockHash"] = toJS(td->blockHash);
-		j_transaction["transactionIndex"] = toJS(td->index);
-
-		uint64_t block_number = 0;
-		if (!m_cache->block_number_get(transaction, td->blockHash, block_number))
-		{
-			j_transaction["blockNumber"] = toJS(block_number);
-		}
-
-		j_response["result"] = j_transaction;
+		j_transaction["blockNumber"] = toJS(block_number);
 	}
-	catch (...)
-	{
-		throw;
-	}
+
+	j_response["result"] = j_transaction;
 }
 
 void mcp::rpc_handler::eth_getTransactionByBlockHashAndIndex(mcp::json &j_response, bool &)
 {
-	mcp::json params = request["params"];
-	if (params.size() < 2)
+	
+	mcp::block_hash block_hash = jsToHash(params[0]);
+	uint64_t index = jsToULl(params[1]);
+
+	auto transaction = m_store.create_transaction();
+	auto block(m_cache->block_get(transaction, block_hash));
+	uint64_t block_number;
+	if (block == nullptr ||
+		m_cache->block_number_get(transaction, block_hash, block_number) ||
+		index >= block->links().size())
 	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid params"));
+		//throw "cannot get block, block number or index is too large";
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams_No_Result(""));
 	}
 
-	try
+	dev::h256 hash = block->links().at(index);
+	auto t = m_cache->transaction_get(transaction, hash);
+	if (t == nullptr)
 	{
-		mcp::block_hash block_hash = jsToHash(params[0]);
-		uint64_t index = jsToULl(params[1]);
-
-		auto transaction = m_store.create_transaction();
-		auto block(m_cache->block_get(transaction, block_hash));
-		uint64_t block_number;
-		if (block == nullptr ||
-			m_cache->block_number_get(transaction, block_hash, block_number) ||
-			index >= block->links().size())
-		{
-			//throw "cannot get block, block number or index is too large";
-			BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams_No_Result(""));
-		}
-
-		dev::h256 hash = block->links().at(index);
-		auto t = m_cache->transaction_get(transaction, hash);
-		if (t == nullptr)
-		{
-			//throw "cannot get transaction";
-			BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams_No_Result(""));
-		}
-
-		auto lt = LocalisedTransaction(*t, block->hash(), index, block_number);
-		j_response["result"] = toJson(lt);
+		//throw "cannot get transaction";
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams_No_Result(""));
 	}
-	catch (...)
-	{
-		throw;
-	}
+
+	auto lt = LocalisedTransaction(*t, block->hash(), index, block_number);
+	j_response["result"] = toJson(lt);
 }
 
 void mcp::rpc_handler::eth_getTransactionByBlockNumberAndIndex(mcp::json &j_response, bool &)
 {
-	mcp::json params = request["params"];
-	if (params.size() < 2)
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid params"));
-	}
 
 	uint64_t block_number = 0;
 	std::string blockText = params[0];
@@ -1318,121 +1095,83 @@ void mcp::rpc_handler::eth_getTransactionByBlockNumberAndIndex(mcp::json &j_resp
 		block_number = jsToULl(blockText);// add features
 	}
 	uint64_t index = jsToULl(params[1]);
-
-	try
+	mcp::db::db_transaction transaction(m_store.create_transaction());
+	mcp::block_hash block_hash;
+	if (m_cache->block_number_get(transaction, block_number, block_hash))// do not use main_chain_get
 	{
-		mcp::db::db_transaction transaction(m_store.create_transaction());
-		mcp::block_hash block_hash;
-		if (m_cache->block_number_get(transaction, block_number, block_hash))// do not use main_chain_get
-		{
-			//throw "cannot get block hash";
-			BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams_No_Result(""));
-		}
-
-		auto block(m_cache->block_get(transaction, block_hash));
-		if (block == nullptr || index >= block->links().size())
-		{
-			//throw "cannot get block or index is too large";
-			BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams_No_Result(""));
-		}
-
-		dev::h256 hash = block->links().at(index);
-		auto t = m_cache->transaction_get(transaction, hash);
-		if (t == nullptr)
-		{
-			//throw "cannot get transaction";
-			BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams_No_Result(""));
-		}
-
-		auto lt = LocalisedTransaction(*t, block_hash, index, block_number);
-		j_response["result"] = toJson(lt);
+		//throw "cannot get block hash";
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams_No_Result(""));
 	}
-	catch (...)
+
+	auto block(m_cache->block_get(transaction, block_hash));
+	if (block == nullptr || index >= block->links().size())
 	{
-		throw;
+		//throw "cannot get block or index is too large";
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams_No_Result(""));
 	}
+
+	dev::h256 hash = block->links().at(index);
+	auto t = m_cache->transaction_get(transaction, hash);
+	if (t == nullptr)
+	{
+		//throw "cannot get transaction";
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams_No_Result(""));
+	}
+
+	auto lt = LocalisedTransaction(*t, block_hash, index, block_number);
+	j_response["result"] = toJson(lt);
 }
 
 void mcp::rpc_handler::eth_getTransactionReceipt(mcp::json &j_response, bool &)
 {
-	mcp::json params = request["params"];
-	if (params.size() < 1)
+	h256 hash = jsToHash(params[0]);
+	auto transaction = m_store.create_transaction();
+	auto t = m_cache->transaction_get(transaction, hash);
+	auto tr = m_store.transaction_receipt_get(transaction, hash);
+	auto td = m_cache->transaction_address_get(transaction, hash);
+
+	if (t == nullptr || tr == nullptr || td == nullptr)
 	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid params"));
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams_No_Result(""));
 	}
-	try
+
+	uint64_t block_number = 0;
+	if (m_cache->block_number_get(transaction, td->blockHash, block_number))
 	{
-		
-		h256 hash = jsToHash(params[0]);
-		auto transaction = m_store.create_transaction();
-		auto t = m_cache->transaction_get(transaction, hash);
-		auto tr = m_store.transaction_receipt_get(transaction, hash);
-		auto td = m_cache->transaction_address_get(transaction, hash);
-
-		if (t == nullptr || tr == nullptr || td == nullptr)
-		{
-			BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams_No_Result(""));
-		}
-
-		uint64_t block_number = 0;
-		if (m_cache->block_number_get(transaction, td->blockHash, block_number))
-		{
-			BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams_No_Result(""));
-		}
-
-		auto lt = dev::eth::LocalisedTransactionReceipt(
-			*tr,
-			t->sha3(),
-			td->blockHash,
-			block_number,
-			t->from(),
-			t->to(),
-			td->index,
-			toAddress(t->from(), t->nonce()));
-
-		j_response["result"] = toJson(lt);
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams_No_Result(""));
 	}
-	catch (...)
-	{
-		throw;
-	}
+
+	auto lt = dev::eth::LocalisedTransactionReceipt(
+		*tr,
+		t->sha3(),
+		td->blockHash,
+		block_number,
+		t->from(),
+		t->to(),
+		td->index,
+		toAddress(t->from(), t->nonce()));
+
+	j_response["result"] = toJson(lt);
 }
 
 void mcp::rpc_handler::eth_getBlockTransactionCountByHash(mcp::json &j_response, bool &)
 {
-	mcp::json params = request["params"];
-	if (params.size() < 1)
+	
+	mcp::block_hash block_hash = jsToHash(params[0]);
+
+	mcp::db::db_transaction transaction(m_store.create_transaction());
+	auto block(m_cache->block_get(transaction, block_hash));
+	if (block == nullptr)
 	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid params"));
+		//throw "cannot get block";
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams_No_Result(""));
 	}
 
-	try
-	{
-		mcp::block_hash block_hash = jsToHash(params[0]);
-
-		mcp::db::db_transaction transaction(m_store.create_transaction());
-		auto block(m_cache->block_get(transaction, block_hash));
-		if (block == nullptr)
-		{
-			//throw "cannot get block";
-			BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams_No_Result(""));
-		}
-
-		j_response["result"] = toJS(block->links().size());
-	}
-	catch (...)
-	{
-		throw;
-	}
+	j_response["result"] = toJS(block->links().size());
 }
 
 void mcp::rpc_handler::eth_getBlockTransactionCountByNumber(mcp::json &j_response, bool &)
 {
-	mcp::json params = request["params"];
-	if (params.size() < 1)
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid params"));
-	}
 
 	uint64_t block_number = 0;
 	std::string blockText = params[0];
@@ -1449,48 +1188,31 @@ void mcp::rpc_handler::eth_getBlockTransactionCountByNumber(mcp::json &j_respons
 		block_number = jsToULl(blockText);
 	}
 
-	try
+	mcp::db::db_transaction transaction(m_store.create_transaction());
+	mcp::block_hash block_hash;
+	if (m_store.main_chain_get(transaction, block_number, block_hash))
 	{
-		mcp::db::db_transaction transaction(m_store.create_transaction());
-		mcp::block_hash block_hash;
-		if (m_store.main_chain_get(transaction, block_number, block_hash))
-		{
-			//throw "cannot get block hash";
-			BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams_No_Result(""));
-		}
-
-		auto block(m_cache->block_get(transaction, block_hash));
-		if (block == nullptr)
-		{
-			//throw "cannot get block";
-			BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams_No_Result(""));
-		}
-
-		j_response["result"] = toJS(block->links().size());
+		//throw "cannot get block hash";
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams_No_Result(""));
 	}
-	catch (...)
+
+	auto block(m_cache->block_get(transaction, block_hash));
+	if (block == nullptr)
 	{
-		throw;
+		//throw "cannot get block";
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams_No_Result(""));
 	}
+
+	j_response["result"] = toJS(block->links().size());
+
 }
 
 void mcp::rpc_handler::eth_getBalance(mcp::json &j_response, bool &)
 {
-	mcp::json params = request["params"];
-	if (params.size() < 1)
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid params"));
-	}
-	try
-	{
-		mcp::db::db_transaction transaction(m_store.create_transaction());
-		chain_state c_state(transaction, 0, m_store, m_chain, m_cache);
-		j_response["result"] = toJS(c_state.balance(jsToAddress(params[0])));
-	}
-	catch (...)
-	{
-		j_response["result"] = 0;
-	}
+	
+	mcp::db::db_transaction transaction(m_store.create_transaction());
+	chain_state c_state(transaction, 0, m_store, m_chain, m_cache);
+	j_response["result"] = toJS(c_state.balance(jsToAddress(params[0])));
 }
 
 void mcp::rpc_handler::eth_accounts(mcp::json &j_response, bool &)
@@ -1506,12 +1228,6 @@ void mcp::rpc_handler::eth_accounts(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::eth_sign(mcp::json &j_response, bool &)
 {
-	mcp::json params = request["params"];
-	if (params.size() < 2)
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid params"));
-	}
-
 	if (!mcp::isAddress(params[0]))
 	{
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Account"));
@@ -1529,57 +1245,36 @@ void mcp::rpc_handler::eth_sign(mcp::json &j_response, bool &)
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Data"));
 	}
 
-	try
-	{
 		/// throw exception if locked or unknown.
-		std::pair<bool, Secret> ar = m_key_manager->authenticate(account);
+	std::pair<bool, Secret> ar = m_key_manager->authenticate(account);
 
-		dev::h256 hash;
-		get_eth_signed_msg(data, hash);
+	dev::h256 hash;
+	get_eth_signed_msg(data, hash);
 
-		dev::Signature signature = dev::sign(ar.second, hash);
-		j_response["result"] = toJS(signature);
-	}
-	catch (dev::Exception &e)
-	{
-		toRpcExceptionEthJson(e, j_response);
-	}
+	dev::Signature signature = dev::sign(ar.second, hash);
+	j_response["result"] = toJS(signature);
 }
 
 void mcp::rpc_handler::eth_signTransaction(mcp::json &j_response, bool &)
 {
-	mcp::json params = request["params"];
-	if (params.size() < 1 || !params[0].is_object())
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid params"));
-	}
-
 	TransactionSkeleton ts = mcp::toTransactionSkeletonForEth(params[0]);
 	if (!m_key_manager->exists(ts.from))
 	{
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Account"));
 	}
+	/// throw exception if locked or unknown.
+	std::pair<bool, Secret> ar = m_key_manager->authenticate(ts.from);
+	m_wallet->populateTransactionWithDefaults(ts);
 
-	try
-	{
-		/// throw exception if locked or unknown.
-		std::pair<bool, Secret> ar = m_key_manager->authenticate(ts.from);
-		m_wallet->populateTransactionWithDefaults(ts);
+	Transaction t(ts, ar.second);
+	mcp::json result;
 
-		Transaction t(ts, ar.second);
-		mcp::json result;
+	RLPStream s;
+	t.streamRLP(s);
+	result["raw"] = toJS(s.out());
+	result["tx"] = toJson(t);
 
-		RLPStream s;
-		t.streamRLP(s);
-		result["raw"] = toJS(s.out());
-		result["tx"] = toJson(t);
-
-		j_response["result"] = result;
-	}
-	catch (dev::Exception &e)
-	{
-		toRpcExceptionEthJson(e, j_response);
-	}
+	j_response["result"] = result;
 }
 
 void mcp::rpc_handler::eth_protocolVersion(mcp::json &j_response, bool &)
@@ -1603,11 +1298,7 @@ void mcp::rpc_handler::eth_syncing(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::eth_getLogs(mcp::json &j_response, bool &)
 {
-	mcp::json params = request["params"];
-	if (params.size() < 1 || !params[0].is_object())
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid params"));
-	}
+	
 	params = params[0];
 	std::unordered_set<dev::Address> search_address;
 	if (params.count("address"))///is_null() or empty() invalid for string of json.
@@ -1773,22 +1464,10 @@ void mcp::rpc_handler::eth_getLogs(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::debug_traceTransaction(mcp::json &j_response, bool &)
 {
-	mcp::json params = request["params"];
-	if (params.size() < 2 || !params[0].is_string() || !params[1].is_object())
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid params"));
-	}
-
+	
 	std::string hash_text = params[0];
 	dev::h256 hash;
-	try
-	{
-		hash = jsToHash(hash_text);
-	}
-	catch (...)
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Hash"));
-	}
+	hash = jsToHash(hash_text);
 
 	mcp::db::db_transaction transaction(m_store.create_transaction());
 	auto _t = m_cache->transaction_get(transaction, hash);
@@ -1861,12 +1540,7 @@ void mcp::rpc_handler::debug_traceTransaction(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::personal_importRawKey(mcp::json &j_response, bool &)
 {
-	mcp::json params = request["params"];
-	if (params.size() < 2 || !params[0].is_string())
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid params"));
-	}
-
+	
 	dev::Secret prv;
 	try
 	{
@@ -1902,7 +1576,7 @@ void mcp::rpc_handler::personal_listAccounts(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::personal_lockAccount(mcp::json &j_response, bool &)
 {
-	mcp::json params = request["params"];
+	
 
 	j_response["result"] = false;
 
@@ -1919,11 +1593,7 @@ void mcp::rpc_handler::personal_lockAccount(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::personal_newAccount(mcp::json &j_response, bool &)
 {
-	mcp::json params = request["params"];
-	if (params.size() < 1)
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid params"));
-	}
+	
 
 	std::string password = params[0];
 	if (password.empty() ||
@@ -1939,12 +1609,6 @@ void mcp::rpc_handler::personal_newAccount(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::personal_unlockAccount(mcp::json &j_response, bool &)
 {
-	mcp::json params = request["params"];
-	if (params.size() < 2)
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid params"));
-	}
-
 	j_response["result"] = false;
 
 	if (mcp::isAddress(params[0]))
@@ -1960,11 +1624,6 @@ void mcp::rpc_handler::personal_unlockAccount(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::personal_sendTransaction(mcp::json &j_response, bool &async)
 {
-	mcp::json params = request["params"];
-	if (params.size() < 2 || !params[0].is_object() || !params[1].is_string())
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid params"));
-	}
 
 	TransactionSkeleton t = mcp::toTransactionSkeletonForEth(params[0]);
 	std::string password = params[1];
@@ -1990,12 +1649,6 @@ void mcp::rpc_handler::personal_sendTransaction(mcp::json &j_response, bool &asy
 
 void mcp::rpc_handler::personal_sign(mcp::json &j_response, bool &)
 {
-	mcp::json params = request["params"];
-	if (params.size() < 3)
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid params"));
-	}
-
 	dev::bytes data = jsToBytes(params[0]);
 	if (data.empty() || data.size() > mcp::max_data_size)
 	{
@@ -2026,11 +1679,6 @@ void mcp::rpc_handler::personal_sign(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::personal_ecRecover(mcp::json &j_response, bool &)
 {
-	mcp::json params = request["params"];
-	if (params.size() < 2)
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid params"));
-	}
 
 	dev::bytes data = jsToBytes(params[0]);
 	if (data.empty() || data.size() > mcp::max_data_size)
@@ -2071,9 +1719,9 @@ void mcp::rpc_handler::get_eth_signed_msg(dev::bytes &data, dev::h256 &hash)
 void mcp::rpc_handler::epoch_approves(mcp::json &j_response, bool &)
 {
 	Epoch epoch = m_chain->last_epoch();
-	if (request.count("epoch") && request["epoch"].is_string())
+	if (params.count("epoch") && params["epoch"].is_string())
 	{
-		epoch = (uint64_t)jsToULl(request["epoch"]);
+		epoch = (uint64_t)jsToULl(params["epoch"]);
 	}
 
 	if (epoch > m_chain->last_epoch())
@@ -2106,9 +1754,9 @@ void mcp::rpc_handler::epoch_approves(mcp::json &j_response, bool &)
 void mcp::rpc_handler::epoch_work_transaction(mcp::json &j_response, bool &)
 {
 	Epoch epoch = m_chain->last_epoch();
-	if (request.count("epoch") && request["epoch"].is_string())
+	if (params.count("epoch") && params["epoch"].is_string())
 	{
-		epoch = (uint64_t)jsToInt(request["epoch"]);
+		epoch = (uint64_t)jsToInt(params["epoch"]);
 	}
 
 	if (epoch >= m_chain->last_epoch())
@@ -2125,7 +1773,7 @@ void mcp::rpc_handler::epoch_work_transaction(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::approve_receipt(mcp::json &j_response, bool &)
 {
-	if (!request.count("hash") || (!request["hash"].is_string()))
+	if (!params.count("hash") || (!params["hash"].is_string()))
 	{
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Hash"));
 	}
@@ -2133,7 +1781,7 @@ void mcp::rpc_handler::approve_receipt(mcp::json &j_response, bool &)
 	h256 hash;
 	try
 	{
-		hash = jsToHash(request["hash"]);
+		hash = jsToHash(params["hash"]);
 	}
 	catch (...)
 	{
@@ -2153,8 +1801,4 @@ void mcp::rpc_handler::approve_receipt(mcp::json &j_response, bool &)
 		j_response["result"] = nullptr;
 	}
 
-	
-
-	
 }
-
