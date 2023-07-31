@@ -91,7 +91,6 @@ namespace mcp
 
 		static const uint32_t list_max_limit = 100;
 
-		mcp::json request;
 		mcp::json params;
 		std::function<void(mcp::json const&)> response;
 

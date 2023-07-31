@@ -617,6 +617,7 @@ void mcp::rpc_handler::process_request()
 {
 	mcp::json j_response;
 	bool async = false;
+	mcp::json request;
 	try
 	{
 		request = mcp::json::parse(body);
@@ -1718,9 +1719,9 @@ void mcp::rpc_handler::get_eth_signed_msg(dev::bytes &data, dev::h256 &hash)
 void mcp::rpc_handler::epoch_approves(mcp::json &j_response, bool &)
 {
 	Epoch epoch = m_chain->last_epoch();
-	if (request.count("epoch") && request["epoch"].is_string())
+	if (params.count("epoch") && params["epoch"].is_string())
 	{
-		epoch = (uint64_t)jsToULl(request["epoch"]);
+		epoch = (uint64_t)jsToULl(params["epoch"]);
 	}
 
 	if (epoch > m_chain->last_epoch())
@@ -1753,9 +1754,9 @@ void mcp::rpc_handler::epoch_approves(mcp::json &j_response, bool &)
 void mcp::rpc_handler::epoch_work_transaction(mcp::json &j_response, bool &)
 {
 	Epoch epoch = m_chain->last_epoch();
-	if (request.count("epoch") && request["epoch"].is_string())
+	if (params.count("epoch") && params["epoch"].is_string())
 	{
-		epoch = (uint64_t)jsToInt(request["epoch"]);
+		epoch = (uint64_t)jsToInt(params["epoch"]);
 	}
 
 	if (epoch >= m_chain->last_epoch())
@@ -1772,7 +1773,7 @@ void mcp::rpc_handler::epoch_work_transaction(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::approve_receipt(mcp::json &j_response, bool &)
 {
-	if (!request.count("hash") || (!request["hash"].is_string()))
+	if (!params.count("hash") || (!params["hash"].is_string()))
 	{
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Hash"));
 	}
@@ -1780,7 +1781,7 @@ void mcp::rpc_handler::approve_receipt(mcp::json &j_response, bool &)
 	h256 hash;
 	try
 	{
-		hash = jsToHash(request["hash"]);
+		hash = jsToHash(params["hash"]);
 	}
 	catch (...)
 	{
