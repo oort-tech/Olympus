@@ -4,6 +4,7 @@
 
 namespace mcp
 {
+	const std::string JsonrpcVersion = "2.0";
 	template <class I> using AbstractRPCMethodPointer = void(I::*)(mcp::json &, bool &);
 
 	class rpc_handler : public std::enable_shared_from_this<mcp::rpc_handler>
@@ -15,7 +16,6 @@ namespace mcp
 		void process_request();
 
 		void account_remove(mcp::json & j_response, bool & async);
-		void account_export(mcp::json & j_response, bool & async);
 		void account_import(mcp::json & j_response, bool & async);
 		void accounts_balances(mcp::json & j_response, bool & async);
 

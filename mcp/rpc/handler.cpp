@@ -19,7 +19,6 @@ mcp::rpc_handler::rpc_handler(mcp::rpc &rpc_a, std::string const &body_a, std::f
 																																				 m_store(rpc.m_store)
 {
 	m_ethRpcMethods["account_remove"] = &mcp::rpc_handler::account_remove;
-	m_ethRpcMethods["account_export"] = &mcp::rpc_handler::account_export;
 	m_ethRpcMethods["account_import"] = &mcp::rpc_handler::account_import;
 	m_ethRpcMethods["accounts_balances"] = &mcp::rpc_handler::accounts_balances;
 	m_ethRpcMethods["block"] = &mcp::rpc_handler::block;
@@ -123,45 +122,16 @@ void mcp::rpc_handler::account_remove(mcp::json &j_response, bool &)
 	//0: account, 1: password
 	std::string account_text = params[0];
 	if (!mcp::isAddress(account_text))
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Account"));
-	}
+		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError("Cannot wrap string value as a json-rpc type; strings must be prefixed with \"0x\", and do not contains invalid hex character."));
 
 	dev::Address account(account_text);
 	if (!m_key_manager->exists(account))
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Account Not Exist"));
-	}
+		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError("no key for given address or file."));
 
-	std::string password_text = params[1];
-	if (password_text.empty())
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Empty Password"));
-	}
+	if (!m_key_manager->remove(account, params[1]))
+		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError("could not decrypt key with given passphrase"));
 
-	if (m_key_manager->remove(account, password_text))
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Wrong Password"));
-	}
-}
-
-void mcp::rpc_handler::account_export(mcp::json &j_response, bool &)
-{
-	//0: account
-	std::string account_text = params[0];
-	if (!mcp::isAddress(account_text))
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Account"));
-	}
-
-	dev::Address account(account_text);
-	mcp::key_content kc;
-	if (!m_key_manager->find(account, kc))
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Account Not Exist"));
-	}
-
-	j_response["result"] = kc.to_json();
+	j_response["result"] = true;
 }
 
 void mcp::rpc_handler::account_import(mcp::json &j_response, bool &)
@@ -182,18 +152,14 @@ void mcp::rpc_handler::accounts_balances(mcp::json &j_response, bool &)
 	mcp::json j_balances = mcp::json::array();
 	
 	if (!params.is_array() || params.size() < 1)
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Account"));
-	}
+		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError("Cannot wrap inputs as a array type."));
 
 	//0: account list
 	for (mcp::json const &j_account : params)
 	{
 		std::string account_text = j_account;
 		if (!mcp::isAddress(account_text))
-		{
-			BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Account"));
-		}
+			BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Cannot wrap string value as a json-rpc type; strings must be prefixed with \"0x\", and do not contains invalid hex character."));
 
 		dev::Address account(account_text);
 		mcp::db::db_transaction transaction(m_store.create_transaction());
@@ -625,45 +591,25 @@ void mcp::rpc_handler::process_request()
 	catch (...)
 	{
 		BOOST_THROW_EXCEPTION(RPC_Http_Error_BadRequest("Unmarshal Json"));
-		response(j_response);
-		return;
 	}
+
+	j_response["id"] = nullptr;
+	if (request.count("id"))
+		j_response["id"] = request["id"];
+	j_response["jsonrpc"] = JsonrpcVersion;
 
 	try
 	{		
 		LOG(m_log.debug) << "REQUEST:" << request;
-		if (!request.count("id") ||
-					!request.count("jsonrpc") || !request.count("params"))
-		{
-			/*
-			||
-			!request.count("params") ||
-			!request["params"].is_array() was removed
-			*/
-			j_response["id"] = nullptr;
-			j_response["jsonrpc"] = nullptr;
-			BOOST_THROW_EXCEPTION(RPC_Error_InvalidRequest("Invalid Request"));
-		}
 		params = request["params"];
-		j_response["id"] = request["id"];
-		j_response["jsonrpc"] = request["jsonrpc"];
-		if (request.count("method"))
-		{
-			auto pointer = m_ethRpcMethods.find(request["method"]);
-			if (pointer != m_ethRpcMethods.end())
-			{
-				(this->*(pointer->second))(j_response, async);
-			}
-			else
-			{
-				BOOST_THROW_EXCEPTION(RPC_Error_MethodNotFound("Method Not Found"));
-			}
-		}
-		else
-		{
-
-			BOOST_THROW_EXCEPTION(RPC_Error_MethodNotFound("Unknown Command"));
-		}
+		if (!request.count("method"))
+			BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError("The method undefined does not exist/is not available"));
+		
+		auto pointer = m_ethRpcMethods.find(request["method"]);
+		if (pointer == m_ethRpcMethods.end())
+			BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError("The method undefined does not exist/is not available"));
+		
+		(this->*(pointer->second))(j_response, async);
 	}
 	catch(mcp::RPC_Error_InvalidParams_No_Result const &err)
 	{
