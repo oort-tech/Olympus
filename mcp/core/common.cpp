@@ -604,12 +604,16 @@ dev::Address mcp::slice_to_account(dev::Slice const & slice)
 
 bool mcp::isAddress(std::string const& _s)
 {
-	if (dev::isHex(_s)) {
-		return (_s.length() + (_s.substr(0, 2) == "0x" ? 0 : 2) == 42) ? true : false;
-	}
-	else {
+	if (_s.length() != 42 || _s.substr(0, 2) != "0x")
 		return false;
-	}
+	return dev::isHex(_s);
+}
+
+bool mcp::isH256(std::string const& _s)
+{
+	if (_s.length() != (h256::size * 2 + 2) || _s.substr(0, 2) != "0x")
+		return false;
+	return dev::isHex(_s);
 }
 
 mcp::call_trace_action::call_trace_action(bool & error_a, dev::RLP const & r)

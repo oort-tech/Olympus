@@ -580,6 +580,8 @@ namespace mcp
 
 	bool isAddress(std::string const& _s);
 
+	bool isH256(std::string const& _s);
+
 	// OS-specific way of finding a path to a home directory.
 	boost::filesystem::path working_path();
 	// Get a unique path within the home directory, used for testing

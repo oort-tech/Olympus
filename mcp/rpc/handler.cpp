@@ -6,6 +6,12 @@
 #include <mcp/common/pwd.hpp>
 #include <mcp/node/evm/Executive.hpp>
 
+const std::string JsonrpcVersion = "2.0";
+
+const char* BadHexFormat = "Cannot wrap string value as a json-rpc type; strings must be prefixed with \"0x\", cannot contains invalid hex character, and must be of the correct length.";
+const char* AddressNotExist = "no key for given address or file.";
+const char* AddressPwdError = "could not decrypt key with given passphrase.";
+
 mcp::rpc_handler::rpc_handler(mcp::rpc &rpc_a, std::string const &body_a, std::function<void(mcp::json const &)> const &response_a, int m_cap) : body(body_a),
 																																				 rpc(rpc_a),
 																																				 response(response_a),
@@ -122,27 +128,25 @@ void mcp::rpc_handler::account_remove(mcp::json &j_response, bool &)
 	//0: account, 1: password
 	std::string account_text = params[0];
 	if (!mcp::isAddress(account_text))
-		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError("Cannot wrap string value as a json-rpc type; strings must be prefixed with \"0x\", and do not contains invalid hex character."));
+		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
 
 	dev::Address account(account_text);
 	if (!m_key_manager->exists(account))
-		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError("no key for given address or file."));
+		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(AddressNotExist));
 
 	if (!m_key_manager->remove(account, params[1]))
-		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError("could not decrypt key with given passphrase"));
+		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(AddressPwdError));
 
 	j_response["result"] = true;
 }
 
 void mcp::rpc_handler::account_import(mcp::json &j_response, bool &)
 {
-	//0: jons_text
-	mcp::json js;
 	std::string json_text = params[0];
-	js = mcp::json::parse(json_text);
+	mcp::json js = mcp::json::parse(json_text);
 	mcp::key_content kc;
 	if (!m_key_manager->import(js, kc))
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Account"));
+		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError("Cannot wrap string value as a json-rpc type; only the v3 keystore file."));
 
 	j_response["result"] = kc.address.hexPrefixed();
 }
@@ -152,14 +156,14 @@ void mcp::rpc_handler::accounts_balances(mcp::json &j_response, bool &)
 	mcp::json j_balances = mcp::json::array();
 	
 	if (!params.is_array() || params.size() < 1)
-		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError("Cannot wrap inputs as a array type."));
+		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError("Cannot wrap string value as a json-rpc type; not array type or incorrect number of arguments."));
 
 	//0: account list
 	for (mcp::json const &j_account : params)
 	{
 		std::string account_text = j_account;
 		if (!mcp::isAddress(account_text))
-			BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Cannot wrap string value as a json-rpc type; strings must be prefixed with \"0x\", and do not contains invalid hex character."));
+			BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
 
 		dev::Address account(account_text);
 		mcp::db::db_transaction transaction(m_store.create_transaction());
@@ -175,17 +179,14 @@ void mcp::rpc_handler::accounts_balances(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::block(mcp::json &j_response, bool &)
 {
-	mcp::block_hash block_hash(0);
-	//0: block hash
-	block_hash = jsToHash(params[0]);
+	if (!mcp::isH256(params[0]))
+		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
+
+	dev::h256 block_hash = jsToHash(params[0]);
 	mcp::db::db_transaction transaction(m_store.create_transaction());
 	auto block(m_cache->block_get(transaction, block_hash));
 	if (block == nullptr)
-	{
-		//throw "cannot get block";
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams_No_Result(""));
-		
-	}
 
 	j_response["result"] = toJson(*block, false);
 }
