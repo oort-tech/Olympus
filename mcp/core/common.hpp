@@ -353,7 +353,6 @@ namespace mcp
 		block_state();
         block_state(bool & error_a, dev::RLP const & r);
         void stream_RLP(dev::RLPStream & s) const;
-		void serialize_json(mcp::json & json_a);
 
         mcp::block_status status;
 		bool is_stable;

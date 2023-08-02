@@ -311,38 +311,6 @@ void mcp::block_state::stream_RLP(dev::RLPStream & s) const
 	s << stable_index;
 }
 
-void mcp::block_state::serialize_json(mcp::json & json_a)
-{
-
-	mcp::json content_l = mcp::json::object();
-	content_l["level"] = level;
-	content_l["witnessed_level"] = witnessed_level;
-	content_l["best_parent"] = best_parent.hexPrefixed();
-	json_a["content"] = content_l;
-
-	json_a["is_stable"] = is_stable ? 1 : 0;
-	if (is_stable)
-	{
-		mcp::json stable_content_l = mcp::json::object();
-		stable_content_l["status"] = (uint8_t)status;
-		stable_content_l["stable_index"] = stable_index;
-		stable_content_l["stable_timestamp"] = stable_timestamp;
-
-		if (main_chain_index)
-			stable_content_l["mci"] = *main_chain_index;
-		else
-			stable_content_l["mci"] = nullptr;
-
-		stable_content_l["mc_timestamp"] = mc_timestamp;
-		stable_content_l["is_on_mc"] = is_on_main_chain ? 1 : 0;
-		stable_content_l["is_free"] = is_free ? 1 : 0;
-
-		json_a["stable_content"] = stable_content_l;
-	}
-	else
-		json_a["stable_content"] = nullptr;
-}
-
 mcp::free_key::free_key(uint64_t const & witnessed_level_a, uint64_t const & level_a, mcp::block_hash const & hash_a) :
     witnessed_level_desc(witnessed_level_a),
     level_desc(level_a),

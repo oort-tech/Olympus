@@ -265,6 +265,41 @@ namespace mcp
 		return res;
 	}
 
+	mcp::json toJson(mcp::block_state & _b)
+	{
+		mcp::json res;
+
+		mcp::json content = mcp::json::object();
+		content["level"] = _b.level;
+		content["witnessed_level"] = _b.witnessed_level;
+		content["best_parent"] = toJS(_b.best_parent);
+		res["content"] = content;
+
+		res["is_stable"] = _b.is_stable ? 1 : 0;
+		if (_b.is_stable)
+		{
+			mcp::json stable_content = mcp::json::object();
+			stable_content["status"] = (uint8_t)_b.status;
+			stable_content["stable_index"] = _b.stable_index;
+			stable_content["stable_timestamp"] = _b.stable_timestamp;
+
+			if (_b.main_chain_index)
+				stable_content["mci"] = *_b.main_chain_index;
+			else
+				stable_content["mci"] = nullptr;
+
+			stable_content["mc_timestamp"] = _b.mc_timestamp;
+			stable_content["is_on_mc"] = _b.is_on_main_chain ? 1 : 0;
+			stable_content["is_free"] = _b.is_free ? 1 : 0;
+
+			res["stable_content"] = stable_content;
+		}
+		else
+			res["stable_content"] = nullptr;
+
+		return res;
+	}
+
 	mcp::json toJson(dev::ApproveReceipt const& _a)
 	{
 		mcp::json res;

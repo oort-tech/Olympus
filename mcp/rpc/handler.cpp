@@ -159,6 +159,8 @@ void mcp::rpc_handler::accounts_balances(mcp::json &j_response, bool &)
 		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError("Cannot wrap string value as a json-rpc type; not array type or incorrect number of arguments."));
 
 	//0: account list
+	mcp::db::db_transaction transaction(m_store.create_transaction());
+	chain_state c_state(transaction, 0, m_store, m_chain, m_cache);
 	for (mcp::json const &j_account : params)
 	{
 		std::string account_text = j_account;
@@ -166,8 +168,6 @@ void mcp::rpc_handler::accounts_balances(mcp::json &j_response, bool &)
 			BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
 
 		dev::Address account(account_text);
-		mcp::db::db_transaction transaction(m_store.create_transaction());
-		chain_state c_state(transaction, 0, m_store, m_chain, m_cache);
 		auto balance(c_state.balance(account));
 		mcp::json acc_balance;
 		acc_balance[account_text] = balance;
@@ -193,59 +193,50 @@ void mcp::rpc_handler::block(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::block_state(mcp::json &j_response, bool &)
 {
-	mcp::block_hash block_hash(0);
-	//0: block hash
-	block_hash = jsToHash(params[0]);
+	if (!mcp::isH256(params[0]))
+		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
+
+	dev::h256 block_hash = jsToHash(params[0]);
 	mcp::db::db_transaction transaction(m_store.create_transaction());
-	auto block = m_cache->block_get(transaction, block_hash);
-	if (block == nullptr)
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams_No_Result(""));
-	}
 	std::shared_ptr<mcp::block_state> state(m_store.block_state_get(transaction, block_hash));
-	mcp::json block_state_l;
-	state->serialize_json(block_state_l);
-	j_response["result"] = block_state_l;
+	if (state == nullptr)
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams_No_Result(""));
+
+	j_response["result"] = toJson(*state);
 }
 
 void mcp::rpc_handler::block_states(mcp::json &j_response, bool &)
 {
+	if (!params.is_array() || params.size() < 1)
+		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError("Cannot wrap string value as a json-rpc type; not array type or incorrect number of arguments."));
+
 	mcp::json states_l = mcp::json::array();
 	mcp::db::db_transaction transaction(m_store.create_transaction());
 
-	std::vector<std::string> hashes_l;
-	try
+	for (mcp::json const &_p : params)
 	{
-		hashes_l = params.get<std::vector<std::string>>();
-	}
-	catch (...)
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Hash"));
-	}
-	for (std::string const &hash_text : hashes_l)
-	{
-		mcp::block_hash block_hash(0);
-		block_hash = jsToHash(hash_text);
-		mcp::json state_l;
+		std::string _blockHash = _p;
+		if (!mcp::isH256(_blockHash))
+			BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
 
-		auto block = m_cache->block_get(transaction, block_hash);
-		if (block == nullptr)
-		{
-			BOOST_THROW_EXCEPTION(RPC_Error_ClientInvalidResponse("Hash Not Found"));
-		}
+		dev::h256 block_hash = jsToHash(_blockHash);
 		std::shared_ptr<mcp::block_state> state(m_store.block_state_get(transaction, block_hash));
-		state->serialize_json(state_l);
-		states_l.push_back(state_l);
+		mcp::json _tmp;
+		if (state == nullptr)
+			_tmp[_blockHash] = nullptr;
+		else
+			_tmp[_blockHash] = toJson(*state);
+		states_l.push_back(_tmp);
 	}
 	j_response["result"] = states_l;
 }
 
 void mcp::rpc_handler::block_traces(mcp::json &j_response, bool &)
 {
-	mcp::block_hash block_hash(0);
-	block_hash = jsToHash(params[0]);
-	BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Hash"));
-	mcp::json response_l;
+	if (!mcp::isH256(params[0]))
+		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
+
+	dev::h256 block_hash = jsToHash(params[0]);
 	mcp::db::db_transaction transaction(m_store.create_transaction());
 	std::list<std::shared_ptr<mcp::trace>> traces;
 	m_store.traces_get(transaction, block_hash, traces);
@@ -340,99 +331,93 @@ void mcp::rpc_handler::stable_blocks(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::block_summary(mcp::json &j_response, bool &)
 {
-	std::string hash_text = params[0];
-	mcp::block_hash hash;
-	hash = jsToHash(hash_text);
+	if (!mcp::isH256(params[0]))
+		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
+	dev::h256 hash = jsToHash(params[0]);
 	mcp::db::db_transaction transaction(m_store.create_transaction());
 	mcp::summary_hash summary;
-	bool exists(!m_cache->block_summary_get(transaction, hash, summary));
+	if (m_cache->block_summary_get(transaction, hash, summary))
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams_No_Result(""));
+	
 	json result;
-	if (!exists)
+	result["summeries"] = toJS(summary);
+	auto block(m_cache->block_get(transaction, hash));
+	assert_x(block);
+	auto block_state(m_cache->block_state_get(transaction, hash));
+	assert_x(block_state);
+
+	// previous summary hash
+	mcp::summary_hash previous_summary_hash(0);
+	if (block->previous() != dev::h256(0))
 	{
-		result["summeries"] = nullptr;
+		bool previous_summary_hash_error(m_cache->block_summary_get(transaction, block->previous(), previous_summary_hash));
+		assert_x(!previous_summary_hash_error);
 	}
-	else
+	result["previous_summary"] = toJS(previous_summary_hash);
+
+	// parent summary hashs
+	mcp::json parent_summaries_l = mcp::json::array();
+	for (mcp::block_hash const &pblock_hash : block->parents())
 	{
-		result["summeries"] = summary.hexPrefixed();
+		mcp::summary_hash p_summary_hash;
+		bool p_summary_hash_error(m_cache->block_summary_get(transaction, pblock_hash, p_summary_hash));
+		assert_x(!p_summary_hash_error);
 
-		auto block(m_cache->block_get(transaction, hash));
-		assert_x(block);
-		auto block_state(m_cache->block_state_get(transaction, hash));
-		assert_x(block_state);
-
-		// previous summary hash
-		mcp::summary_hash previous_summary_hash(0);
-		if (block->previous() != dev::h256(0))
-		{
-			bool previous_summary_hash_error(m_cache->block_summary_get(transaction, block->previous(), previous_summary_hash));
-			assert_x(!previous_summary_hash_error);
-		}
-		result["previous_summary"] = previous_summary_hash.hexPrefixed();
-
-		// parent summary hashs
-		mcp::json parent_summaries_l = mcp::json::array();
-		for (mcp::block_hash const &pblock_hash : block->parents())
-		{
-			mcp::summary_hash p_summary_hash;
-			bool p_summary_hash_error(m_cache->block_summary_get(transaction, pblock_hash, p_summary_hash));
-			assert_x(!p_summary_hash_error);
-
-			parent_summaries_l.push_back(p_summary_hash.hexPrefixed());
-		}
-		result["parent_summaries"] = parent_summaries_l;
-
-		///High performance overhead.
-		/*/// receiptsRoot hash
-		std::vector<bytes> receipts;
-		for (auto _h : block->links())
-		{
-			auto receipt = m_cache->transaction_receipt_get(transaction, _h);
-			if (receipt)/// transaction maybe processed yet,but summary need used receipt even if it has been processed.
-			{
-				RLPStream receiptRLP;
-				receipt->streamRLP(receiptRLP);
-				receipts.push_back(receiptRLP.out());
-			}
-		}
-		for (auto _h : block->links())
-		{
-			auto receipt = m_cache->approve_receipt_get(transaction, _h);
-			if (receipt)
-			{
-				RLPStream receiptRLP;
-				receipt->streamRLP(receiptRLP);
-				receipts.push_back(receiptRLP.out());
-			}
-		}
-		h256 receiptsRoot = dev::orderedTrieRoot(receipts);
-		j_response["receiptsRoot"] = receiptsRoot.hexPrefixed();*/
-
-		// skip list
-		mcp::json skiplist_summaries_l = mcp::json::array();
-		if (block_state->is_on_main_chain)
-		{
-			std::set<mcp::summary_hash> summary_skiplist;
-			std::vector<uint64_t> skip_list_mcis = m_chain->cal_skip_list_mcis(*block_state->main_chain_index);
-			for (uint64_t &mci : skip_list_mcis)
-			{
-				mcp::block_hash sl_block_hash;
-				bool sl_block_hash_error(m_store.main_chain_get(transaction, mci, sl_block_hash));
-				assert_x(!sl_block_hash_error);
-
-				mcp::summary_hash sl_summary_hash;
-				bool sl_summary_hash_error(m_cache->block_summary_get(transaction, sl_block_hash, sl_summary_hash));
-				assert_x(!sl_summary_hash_error);
-				summary_skiplist.insert(sl_summary_hash);
-			}
-
-			for (mcp::summary_hash s : summary_skiplist)
-				skiplist_summaries_l.push_back(s.hexPrefixed());
-		}
-		result["skiplist_summaries"] = skiplist_summaries_l;
-
-		result["status"] = (uint64_t)block_state->status;
-		j_response["result"] = result;
+		parent_summaries_l.push_back(toJS(p_summary_hash));
 	}
+	result["parent_summaries"] = parent_summaries_l;
+
+	///High performance overhead.
+	/*/// receiptsRoot hash
+	std::vector<bytes> receipts;
+	for (auto _h : block->links())
+	{
+	auto receipt = m_cache->transaction_receipt_get(transaction, _h);
+	if (receipt)/// transaction maybe processed yet,but summary need used receipt even if it has been processed.
+	{
+	RLPStream receiptRLP;
+	receipt->streamRLP(receiptRLP);
+	receipts.push_back(receiptRLP.out());
+	}
+	}
+	for (auto _h : block->links())
+	{
+	auto receipt = m_cache->approve_receipt_get(transaction, _h);
+	if (receipt)
+	{
+	RLPStream receiptRLP;
+	receipt->streamRLP(receiptRLP);
+	receipts.push_back(receiptRLP.out());
+	}
+	}
+	h256 receiptsRoot = dev::orderedTrieRoot(receipts);
+	j_response["receiptsRoot"] = receiptsRoot.hexPrefixed();*/
+
+	// skip list
+	mcp::json skiplist_summaries_l = mcp::json::array();
+	if (block_state->is_on_main_chain)
+	{
+		std::set<mcp::summary_hash> summary_skiplist;
+		std::vector<uint64_t> skip_list_mcis = m_chain->cal_skip_list_mcis(*block_state->main_chain_index);
+		for (uint64_t &mci : skip_list_mcis)
+		{
+			mcp::block_hash sl_block_hash;
+			bool sl_block_hash_error(m_store.main_chain_get(transaction, mci, sl_block_hash));
+			assert_x(!sl_block_hash_error);
+
+			mcp::summary_hash sl_summary_hash;
+			bool sl_summary_hash_error(m_cache->block_summary_get(transaction, sl_block_hash, sl_summary_hash));
+			assert_x(!sl_summary_hash_error);
+			summary_skiplist.insert(sl_summary_hash);
+		}
+
+		for (mcp::summary_hash s : summary_skiplist)
+			skiplist_summaries_l.push_back(toJS(s));
+	}
+	result["skiplist_summaries"] = skiplist_summaries_l;
+
+	result["status"] = (uint64_t)block_state->status;
+	j_response["result"] = result;
 }
 
 void mcp::rpc_handler::version(mcp::json &j_response, bool &)
@@ -471,7 +456,7 @@ void mcp::rpc_handler::peers(mcp::json &j_response, bool &)
 		bi::tcp::endpoint endpoint(i.second);
 
 		mcp::json peer_l;
-		peer_l["id"] = id.hexPrefixed();
+		peer_l["id"] = toJS(id);
 		std::stringstream ss_endpoint;
 		ss_endpoint << endpoint;
 		peer_l["endpoint"] = ss_endpoint.str();
@@ -487,7 +472,7 @@ void mcp::rpc_handler::nodes(mcp::json &j_response, bool &)
 	for (p2p::node_info node : nodes)
 	{
 		mcp::json node_l;
-		node_l["id"] = node.id.hexPrefixed();
+		node_l["id"] = toJS(node.id);
 		std::stringstream ss_endpoint;
 		ss_endpoint << (bi::tcp::endpoint)node.endpoint;
 		node_l["endpoint"] = ss_endpoint.str();
@@ -498,13 +483,10 @@ void mcp::rpc_handler::nodes(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::witness_list(mcp::json &j_response, bool &)
 {
-	
-	Epoch epoch = (uint64_t)jsToULl(params[0]);
+	Epoch epoch = (uint64_t)jsToULl(params[0],"epoch");
 
 	if (epoch > m_chain->last_epoch())
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Epoch Too Big"));
-	}
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("The epoch has not yet completed."));
 
 	mcp::db::db_transaction transaction(m_store.create_transaction());
 	mcp::witness_param const &w_param(mcp::param::witness_param(transaction, epoch));
@@ -1665,16 +1647,10 @@ void mcp::rpc_handler::get_eth_signed_msg(dev::bytes &data, dev::h256 &hash)
 
 void mcp::rpc_handler::epoch_approves(mcp::json &j_response, bool &)
 {
-	Epoch epoch = m_chain->last_epoch();
-	if (params.count("epoch") && params["epoch"].is_string())
-	{
-		epoch = (uint64_t)jsToULl(params["epoch"]);
-	}
+	Epoch epoch = (uint64_t)jsToULl(params[0], "epoch");
 
 	if (epoch > m_chain->last_epoch())
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Epoch Too Big"));
-	}
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("The epoch has not yet completed."));
 
 	mcp::json approves_l = mcp::json::array();
 	mcp::db::db_transaction transaction(m_store.create_transaction());
@@ -1691,25 +1667,16 @@ void mcp::rpc_handler::epoch_approves(mcp::json &j_response, bool &)
 			approve_l["proof"] = toJS(approve->proof());
 			approves_l.push_back(approve_l);
 		}
-		else {
-			//throw JsonRpcException(exceptionToErrorMessage());
-		}
 	}
 	j_response["result"] = approves_l;
 }
 
 void mcp::rpc_handler::epoch_work_transaction(mcp::json &j_response, bool &)
 {
-	Epoch epoch = m_chain->last_epoch();
-	if (params.count("epoch") && params["epoch"].is_string())
-	{
-		epoch = (uint64_t)jsToInt(params["epoch"]);
-	}
+	Epoch epoch = (uint64_t)jsToULl(params[0], "epoch");
 
 	if (epoch >= m_chain->last_epoch())
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Epoch Too Big"));
-	}
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("The epoch has not yet completed."));
 
 	mcp::db::db_transaction transaction(m_store.create_transaction());
 	h256 _h;
@@ -1720,32 +1687,14 @@ void mcp::rpc_handler::epoch_work_transaction(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::approve_receipt(mcp::json &j_response, bool &)
 {
-	if (!params.count("hash") || (!params["hash"].is_string()))
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Hash"));
-	}
+	if (!mcp::isH256(params[0]))
+		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
 
-	h256 hash;
-	try
-	{
-		hash = jsToHash(params["hash"]);
-	}
-	catch (...)
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Hash"));
-	}
+	dev::h256 hash = jsToHash(params[0]);
 
-	try
-	{
-		mcp::db::db_transaction transaction(m_store.create_transaction());
-		auto _a = m_cache->approve_receipt_get(transaction, hash);
-		if (_a == nullptr)
-			throw "";
-		j_response["result"] = toJson(*_a);
-	}
-	catch (...)
-	{
-		j_response["result"] = nullptr;
-	}
-
+	mcp::db::db_transaction transaction(m_store.create_transaction());
+	auto _a = m_cache->approve_receipt_get(transaction, hash);
+	if (_a == nullptr)
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams_No_Result(""));
+	j_response["result"] = toJson(*_a);
 }
