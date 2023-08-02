@@ -129,7 +129,7 @@ namespace mcp
 			RPC_Error_InvalidParams("Invalid Argument: Bad Hex Character").toJson(j_response);
 		}
 		else if(instanceof<mcp::json::exception>(&e)){
-			RPC_Error_InvalidParams(e.what()).toJson(j_response);
+			RPC_Error_JsonParseError(e.what()).toJson(j_response);
 		}
 		else {
 			RPC_Error_InvalidParams("Invalid Param").toJson(j_response);

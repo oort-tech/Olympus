@@ -353,7 +353,6 @@ namespace mcp
 		block_state();
         block_state(bool & error_a, dev::RLP const & r);
         void stream_RLP(dev::RLPStream & s) const;
-		void serialize_json(mcp::json & json_a);
 
         mcp::block_status status;
 		bool is_stable;
@@ -579,6 +578,8 @@ namespace mcp
 	dev::Address slice_to_account(dev::Slice const & slice);
 
 	bool isAddress(std::string const& _s);
+
+	bool isH256(std::string const& _s);
 
 	// OS-specific way of finding a path to a home directory.
 	boost::filesystem::path working_path();

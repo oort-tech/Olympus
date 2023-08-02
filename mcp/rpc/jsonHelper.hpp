@@ -17,25 +17,26 @@ namespace mcp
 
 	inline Signature jsToSignature(std::string const& _s) { return jsToFixed<65>(_s); }
 
-	inline u128 jsToU128(std::string const& _s) { 
-		uint64_t ans = (uint64_t)jsToInt<16>(_s);
-		if(ans == 0 && _s != "0" && _s != "0x0"){
-			BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Argument: not an uint_128 number"));
-		}
-		return ans;
-	}
+	inline uint64_t jsToULl(std::string const & _s, std::string const & _errorMsg = "")
+	{
+		try
+		{
+			if (_s.substr(0, 2) == "0x")
+			{
+				// Hex
+				dev::bytes in = fromHex(_s.substr(2), WhenError::Throw);
+				return (uint64_t)fromBigEndian<boost::multiprecision::number<boost::multiprecision::cpp_int_backend<8 * 8, 8 * 8, boost::multiprecision::unsigned_magnitude, boost::multiprecision::checked, void>>>(in);
+			}
 
-	inline u64 jsToU64(std::string const& _s) { 
-		uint64_t ans = (uint64_t)jsToInt<8>(_s);
-		if(ans == 0 && _s != "0" && _s != "0x0"){
-			BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Argument: not an uint_64 number"));
-		}
-		return ans;
-	}
+			// Decimal
+			return (uint64_t)boost::multiprecision::number<boost::multiprecision::cpp_int_backend<8 * 8, 8 * 8, boost::multiprecision::unsigned_magnitude, boost::multiprecision::checked, void>>(_s);
 
-	inline uint64_t jsToULl(std::string const & _s){
-		uint64_t ans = (uint64_t)jsToU64(_s);
-		return ans;
+		}
+		catch (const std::exception&)
+		{
+			std::string _e = "Cannot wrap string value as a json-rpc type; params \"" + _errorMsg + "\" cannot be converted to uint64.";
+			BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(_e.c_str()));
+		}
 	}
 
 	inline BlockNumber jsToBlockNumber(std::string const& _js)
@@ -63,6 +64,8 @@ namespace mcp
 	mcp::json toJson(mcp::log_entry const& _e);
 
 	mcp::json toJson(mcp::block & _b, bool is_eth = false);
+
+	mcp::json toJson(mcp::block_state & _b);
 
 	mcp::json toJson(dev::ApproveReceipt const& _a);
 }

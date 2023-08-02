@@ -15,7 +15,6 @@ namespace mcp
 		void process_request();
 
 		void account_remove(mcp::json & j_response, bool & async);
-		void account_export(mcp::json & j_response, bool & async);
 		void account_import(mcp::json & j_response, bool & async);
 		void accounts_balances(mcp::json & j_response, bool & async);
 
