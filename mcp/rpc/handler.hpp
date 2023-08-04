@@ -32,8 +32,6 @@ namespace mcp
 		void nodes(mcp::json & j_response, bool & async);
 		void witness_list(mcp::json & j_response, bool & async);
 
-		void debug_storage_range_at(mcp::json & j_response, bool & async);
-
 		void get_eth_signed_msg(dev::bytes & data, dev::h256 & hash);
 		bool try_get_mc_info(dev::eth::McInfo &mc_info_a, uint64_t &block_number);
 
@@ -71,7 +69,8 @@ namespace mcp
 		void eth_accounts(mcp::json & j_response, bool & async);
 		void eth_sign(mcp::json & j_response, bool & async);
 		void eth_signTransaction(mcp::json & j_response, bool & async);
-		void debug_traceTransaction(mcp::json & j_response, bool & async);
+		//void debug_traceTransaction(mcp::json & j_response, bool & async);
+		//void debug_storageRangeAt(mcp::json & j_response, bool & async);
 		// related to personal
 		void personal_importRawKey(mcp::json & j_response, bool & async);
 		void personal_listAccounts(mcp::json & j_response, bool & async);
