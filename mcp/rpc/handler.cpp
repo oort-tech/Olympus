@@ -38,7 +38,6 @@ mcp::rpc_handler::rpc_handler(mcp::rpc &rpc_a, std::string const &body_a, std::f
 	m_ethRpcMethods["peers"] = &mcp::rpc_handler::peers;
 	m_ethRpcMethods["nodes"] = &mcp::rpc_handler::nodes;
 	m_ethRpcMethods["witness_list"] = &mcp::rpc_handler::witness_list;
-	m_ethRpcMethods["debug_storage_range_at"] = &mcp::rpc_handler::debug_storage_range_at;
 
 	m_ethRpcMethods["epoch_approves"] = &mcp::rpc_handler::epoch_approves;
 	m_ethRpcMethods["approve_receipt"] = &mcp::rpc_handler::approve_receipt;
@@ -76,7 +75,8 @@ mcp::rpc_handler::rpc_handler(mcp::rpc &rpc_a, std::string const &body_a, std::f
 	m_ethRpcMethods["eth_accounts"] = &mcp::rpc_handler::eth_accounts;
 	m_ethRpcMethods["eth_sign"] = &mcp::rpc_handler::eth_sign;
 	m_ethRpcMethods["eth_signTransaction"] = &mcp::rpc_handler::eth_signTransaction;
-	m_ethRpcMethods["debug_traceTransaction"] = &mcp::rpc_handler::debug_traceTransaction;
+	//m_ethRpcMethods["debug_traceTransaction"] = &mcp::rpc_handler::debug_traceTransaction;
+	//m_ethRpcMethods["debug_storageRangeAt"] = &mcp::rpc_handler::debug_storageRangeAt;
 
 	m_ethRpcMethods["personal_importRawKey"] = &mcp::rpc_handler::personal_importRawKey;
 	m_ethRpcMethods["personal_listAccounts"] = &mcp::rpc_handler::personal_listAccounts;
@@ -289,14 +289,14 @@ void mcp::rpc_handler::block_traces(mcp::json &j_response, bool &)
 void mcp::rpc_handler::stable_blocks(mcp::json &j_response, bool &)
 {
 	//0: index, 1: limit
-	uint64_t index = jsToULl(params[0]);
-	uint64_t limit_l = jsToULl(params[1]);
+	uint64_t index = jsToULl(params[0], "index");
+	uint64_t limit_l = jsToULl(params[1], "limit");
 	if (limit_l > list_max_limit || !limit_l)///too big or zero.
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Limit"));
+		BOOST_THROW_EXCEPTION(RPC_Error_TooLargeSearchRange("query returned more than 100 results or limit zero."));
 
 	uint64_t last_stable_index(m_chain->last_stable_index());
 	if (index > last_stable_index)///invalid index,bigger than stable index.
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Index"));
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("index bigger than max block number."));
 
 	mcp::db::db_transaction transaction(m_store.create_transaction());
 	mcp::json block_list_l = mcp::json::array();
@@ -304,20 +304,16 @@ void mcp::rpc_handler::stable_blocks(mcp::json &j_response, bool &)
 	for (uint64_t stable_index = index; stable_index <= last_stable_index; stable_index++)
 	{
 		mcp::block_hash block_hash_l;
-		bool exists(!m_store.stable_block_get(transaction, stable_index, block_hash_l));
-		assert_x(exists);
+		assert_x(!m_store.stable_block_get(transaction, stable_index, block_hash_l));
 
 		auto block = m_cache->block_get(transaction, block_hash_l);
 		assert_x(block);
-
-		mcp::json block_l = toJson(*block);
-		block_list_l.push_back(block_l);
-
+		block_list_l.push_back(toJson(*block));
 		blocks_count++;
 		if (blocks_count == limit_l)
 			break;
 	}
-	json result;
+	mcp::json result;
 
 	result["blocks"] = block_list_l;
 
@@ -496,73 +492,6 @@ void mcp::rpc_handler::witness_list(mcp::json &j_response, bool &)
 		witness_list_l.push_back(i.hexPrefixed());
 	}
 	j_response["result"] = witness_list_l;
-}
-
-void mcp::rpc_handler::debug_storage_range_at(mcp::json &j_response, bool &)
-{
-	//this should be a json object, not an array
-	std::string hash_text = params["blockHash"];
-	mcp::block_hash hash;
-	if(!mcp::isH256(hash_text))
-		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
-	hash = jsToHash(hash_text);
-	dev::Address acct(0);
-	if (!params.count("address") || !params["address"].is_string())
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid a=Address"));
-	}
-	std::string account_text = params["address"];
-	if (!mcp::isAddress(params["address"]))
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Address"));
-	}
-	acct = dev::Address(account_text);
-
-	h256 begin;
-	begin = jsToHash(params["startKey"]);
-	BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid startKey"));
-
-	uint64_t max_results(0);
-	if (!params.count("limit"))
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid limit"));
-	}
-	max_results = jsToULl(params["limit"]);
-
-	mcp::json result = mcp::json::object();
-
-	try
-	{
-		mcp::db::db_transaction transaction(m_store.create_transaction());
-		chain_state c_state(transaction, 0, m_store, m_chain, m_cache);
-
-		std::map<h256, std::pair<u256, u256>> const storage(c_state.storage(acct));
-
-		// begin is inclusive
-		auto itBegin = storage.lower_bound(begin);
-		for (auto it = itBegin; it != storage.end(); ++it)
-		{
-			if (result.size() == static_cast<unsigned>(max_results))
-			{
-				result["next_key"] = toCompactHexPrefixed(it->first, 32);
-				break;
-			}
-
-			mcp::json keyValue = mcp::json::object();
-			std::string hashedKey = toCompactHexPrefixed(it->first, 32);
-			keyValue["key"] = toCompactHexPrefixed(it->second.first, 32);
-			keyValue["value"] = toCompactHexPrefixed(it->second.second, 32);
-
-			result[hashedKey] = keyValue;
-		}
-		j_response["result"] = result;
-	}
-	catch (Exception const &_e)
-	{
-		cerror << "Unexpected exception in VM. There may be a bug in this implementation. "
-			   << diagnostic_information(_e);
-		exit(1);
-	}
 }
 
 void mcp::rpc_handler::process_request()
@@ -1402,82 +1331,142 @@ void mcp::rpc_handler::eth_getLogs(mcp::json &j_response, bool &)
 	j_response["result"] = logs_l;
 }
 
-void mcp::rpc_handler::debug_traceTransaction(mcp::json &j_response, bool &)
-{
-	if(!mcp::isH256(params[0]))
-		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
-	std::string hash_text = params[0];
-	dev::h256 hash;
-	hash = jsToHash(hash_text);
-
-	mcp::db::db_transaction transaction(m_store.create_transaction());
-	auto _t = m_cache->transaction_get(transaction, hash);
-	auto td = m_cache->transaction_address_get(transaction, hash);
-
-	if (_t == nullptr || td == nullptr)
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Hash"));
-	}
-
-	dev::eth::McInfo mc_info;
-	if (!m_chain->get_mc_info_from_block_hash(transaction, m_cache, td->blockHash, mc_info))
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Mci"));
-	}
-	mcp::json options;
-	options["disableStorage"] = true;
-	options["disableMemory"] = false;
-	options["disableStack"] = false;
-	options["full_storage"] = false;
-
-	mcp::json options_json = params[1];
-	if (options_json.count("disableStorage"))
-		options["disableStorage"] = options_json["disableStorage"];
-	if (options_json.count("disableMemory"))
-		options["disableMemory"] = options_json["disableMemory"];
-	if (options_json.count("disableStack"))
-		options["disableStack"] = options_json["disableStack"];
-	if (options_json.count("full_storage"))
-		options["full_storage"] = options_json["full_storage"];
-
-	try
-	{
-		dev::eth::EnvInfo env(transaction, m_store, m_cache, mc_info, mcp::chain_id);
-		auto block(m_cache->block_get(transaction, td->blockHash));
-		assert_x(block);
-		chain_state c_state(transaction, 0, m_store, m_chain, m_cache);
-		std::vector<h256> accout_state_hashs;
-		if(!m_store.transaction_previous_account_state_get(transaction, hash, accout_state_hashs))
-		{
-			BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Hash"));
-		}
-		c_state.ts = *_t;
-		c_state.set_defalut_account_state(accout_state_hashs);
-
-		//c_state should be used after set_defalut_account_state. Otherwise, account_state will be abnormal.
-		if (!_t->isCreation() && !c_state.addressHasCode(_t->receiveAddress()))
-		{
-			j_response["return_value"] = "Only contract transcation can debug.";
-			return;
-		}
-		mcp::ExecutionResult er;
-		std::list<std::shared_ptr<mcp::trace>> traces;
-		mcp::Executive e(c_state, env, traces);
-		e.setResultRecipient(er);
-
-		mcp::json trace = m_chain->traceTransaction(e, *_t, options);
-		j_response["return_value"] = toHexPrefixed(er.output);
-		j_response["struct_logs"] = trace;
-	}
-	catch (Exception const &_e)
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InternalError("Unexpected exception in VM. There may be a bug in this implementation."));
-	}
-	catch (std::exception const &_e)
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InternalError("Unknown Error"));
-	}
-}
+//void mcp::rpc_handler::debug_traceTransaction(mcp::json &j_response, bool &)
+//{
+//	
+//	std::string hash_text = params[0];
+//	dev::h256 hash;
+//	hash = jsToHash(hash_text);
+//
+//	mcp::db::db_transaction transaction(m_store.create_transaction());
+//	auto _t = m_cache->transaction_get(transaction, hash);
+//	auto td = m_cache->transaction_address_get(transaction, hash);
+//
+//	if (_t == nullptr || td == nullptr)
+//	{
+//		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Hash"));
+//	}
+//
+//	dev::eth::McInfo mc_info;
+//	if (!m_chain->get_mc_info_from_block_hash(transaction, m_cache, td->blockHash, mc_info))
+//	{
+//		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Mci"));
+//	}
+//	mcp::json options;
+//	options["disableStorage"] = true;
+//	options["disableMemory"] = false;
+//	options["disableStack"] = false;
+//	options["full_storage"] = false;
+//
+//	mcp::json options_json = params[1];
+//	if (options_json.count("disableStorage"))
+//		options["disableStorage"] = options_json["disableStorage"];
+//	if (options_json.count("disableMemory"))
+//		options["disableMemory"] = options_json["disableMemory"];
+//	if (options_json.count("disableStack"))
+//		options["disableStack"] = options_json["disableStack"];
+//	if (options_json.count("full_storage"))
+//		options["full_storage"] = options_json["full_storage"];
+//
+//	try
+//	{
+//		dev::eth::EnvInfo env(transaction, m_store, m_cache, mc_info, mcp::chain_id);
+//		auto block(m_cache->block_get(transaction, td->blockHash));
+//		assert_x(block);
+//		chain_state c_state(transaction, 0, m_store, m_chain, m_cache);
+//		std::vector<h256> accout_state_hashs;
+//		if(!m_store.transaction_previous_account_state_get(transaction, hash, accout_state_hashs))
+//		{
+//			BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Hash"));
+//		}
+//		c_state.ts = *_t;
+//		c_state.set_defalut_account_state(accout_state_hashs);
+//
+//		//c_state should be used after set_defalut_account_state. Otherwise, account_state will be abnormal.
+//		if (!_t->isCreation() && !c_state.addressHasCode(_t->receiveAddress()))
+//		{
+//			j_response["return_value"] = "Only contract transcation can debug.";
+//			return;
+//		}
+//		mcp::ExecutionResult er;
+//		std::list<std::shared_ptr<mcp::trace>> traces;
+//		mcp::Executive e(c_state, env, traces);
+//		e.setResultRecipient(er);
+//
+//		mcp::json trace = m_chain->traceTransaction(e, *_t, options);
+//		j_response["return_value"] = toHexPrefixed(er.output);
+//		j_response["struct_logs"] = trace;
+//	}
+//	catch (Exception const &_e)
+//	{
+//		BOOST_THROW_EXCEPTION(RPC_Error_InternalError("Unexpected exception in VM. There may be a bug in this implementation."));
+//	}
+//	catch (std::exception const &_e)
+//	{
+//		BOOST_THROW_EXCEPTION(RPC_Error_InternalError("Unknown Error"));
+//	}
+//}
+//
+//void mcp::rpc_handler::debug_storageRangeAt(mcp::json &j_response, bool &)
+//{
+//	//this should be a json object, not an array
+//	dev::Address acct(0);
+//	if (!params.count("account") || !params["account"].is_string())
+//	{
+//		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Account"));
+//	}
+//	std::string account_text = params["account"];
+//	if (!mcp::isAddress(params["account"]))
+//	{
+//		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Account"));
+//	}
+//	acct = dev::Address(account_text);
+//
+//	h256 begin;
+//	begin = jsToHash(params["begin"]);
+//	BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Begin"));
+//
+//	uint64_t max_results(0);
+//	if (!params.count("max_results"))
+//	{
+//		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Begin"));
+//	}
+//	max_results = jsToULl(params["max_results"]);
+//
+//	j_response["result"] = mcp::json::object();
+//
+//	try
+//	{
+//		mcp::db::db_transaction transaction(m_store.create_transaction());
+//		chain_state c_state(transaction, 0, m_store, m_chain, m_cache);
+//
+//		std::map<h256, std::pair<u256, u256>> const storage(c_state.storage(acct));
+//
+//		// begin is inclusive
+//		auto itBegin = storage.lower_bound(begin);
+//		for (auto it = itBegin; it != storage.end(); ++it)
+//		{
+//			if (j_response["result"].size() == static_cast<unsigned>(max_results))
+//			{
+//				j_response["next_key"] = toCompactHexPrefixed(it->first, 32);
+//				break;
+//			}
+//
+//			mcp::json keyValue = mcp::json::object();
+//			std::string hashedKey = toCompactHexPrefixed(it->first, 32);
+//			keyValue["key"] = toCompactHexPrefixed(it->second.first, 32);
+//			keyValue["value"] = toCompactHexPrefixed(it->second.second, 32);
+//
+//			j_response["result"][hashedKey] = keyValue;
+//		}
+//	}
+//	catch (Exception const &_e)
+//	{
+//		cerror << "Unexpected exception in VM. There may be a bug in this implementation. "
+//			<< diagnostic_information(_e);
+//		exit(1);
+//	}
+//}
 
 void mcp::rpc_handler::personal_importRawKey(mcp::json &j_response, bool &)
 {
