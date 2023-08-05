@@ -26,6 +26,8 @@ namespace mcp
 		if (_json.count("from"))
 		{
 			std::string _from = TransactionSkeletonField(_json["from"]);
+			// if(!mcp::isAddress(_from))
+			// 	BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
 			try {
 				ret.from = jsToAddress(_from);
 			}
@@ -39,6 +41,8 @@ namespace mcp
 			if (!_json["to"].is_null())///null is create contract.
 			{
 				std::string _to = TransactionSkeletonField(_json["to"]);
+				// if(!mcp::isAddress(_to))
+				// 	BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
 				try {
 					ret.to = jsToAddress(_to);
 				}

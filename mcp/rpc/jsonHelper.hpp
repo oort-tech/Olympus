@@ -48,7 +48,7 @@ namespace mcp
 		else if (_js == "pending")
 			return PendingBlock;
 		else
-			return (BlockNumber)jsToInt(_js);
+			return (BlockNumber)jsToULl(_js, _js);
 	}
 
 	mcp::json toJson(Transaction const& _t);

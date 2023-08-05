@@ -51,10 +51,10 @@ namespace mcp
     struct X : virtual RpcException \
     {                            \
 		X(const char* m) : message(m) {} \
-		const char* what() const noexcept override { return message; }\
+		const char* what() const noexcept override { return message.what(); }\
 		const int code() const noexcept override { return C; } \
 	private: \
-        const char* message; \
+        std::runtime_error message; \
     };
 	
 	/***************************************************************************************************************************/
