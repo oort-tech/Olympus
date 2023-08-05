@@ -649,7 +649,7 @@ void mcp::rpc_handler::eth_getBlockByNumber(mcp::json &j_response, bool &)
 	}
 	else
 	{
-		block_number = jsToULl(blockText,blockText);
+		block_number = jsToULl(blockText);
 	}
 
 	mcp::db::db_transaction transaction(m_store.create_transaction());
@@ -921,7 +921,7 @@ void mcp::rpc_handler::eth_getTransactionByBlockHashAndIndex(mcp::json &j_respon
 	if(!mcp::isH256(params[0]))
 		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
 	mcp::block_hash block_hash = jsToHash(params[0]);
-	uint64_t index = jsToULl(params[1], params[1]);
+	uint64_t index = jsToULl(params[1]);
 
 	auto transaction = m_store.create_transaction();
 	auto block(m_cache->block_get(transaction, block_hash));
@@ -961,9 +961,9 @@ void mcp::rpc_handler::eth_getTransactionByBlockNumberAndIndex(mcp::json &j_resp
 	}
 	else
 	{
-		block_number = jsToULl(blockText, blockText);// add features
+		block_number = jsToULl(blockText, "block number");// add features
 	}
-	uint64_t index = jsToULl(params[1]);
+	uint64_t index = jsToULl(params[1], "index");
 	mcp::db::db_transaction transaction(m_store.create_transaction());
 	mcp::block_hash block_hash;
 	if (m_cache->block_number_get(transaction, block_number, block_hash))// do not use main_chain_get
@@ -1084,6 +1084,8 @@ void mcp::rpc_handler::eth_getBalance(mcp::json &j_response, bool &)
 	
 	mcp::db::db_transaction transaction(m_store.create_transaction());
 	chain_state c_state(transaction, 0, m_store, m_chain, m_cache);
+	if(!mcp::isAddress(params[0]))
+		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
 	j_response["result"] = toJS(c_state.balance(jsToAddress(params[0])));
 }
 
@@ -1174,6 +1176,8 @@ void mcp::rpc_handler::eth_getLogs(mcp::json &j_response, bool &)
 	{
 		if (params["address"].is_string())
 		{
+			if(!mcp::isAddress(params["address"]))
+				BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
 			dev::Address _a = jsToAddress(params["address"]);
 			if (_a != dev::ZeroAddress)
 				search_address.insert(_a);
@@ -1183,6 +1187,8 @@ void mcp::rpc_handler::eth_getLogs(mcp::json &j_response, bool &)
 			std::vector<std::string> address_l = params["address"];
 			for (std::string const &address_text : address_l)
 			{
+				if(!mcp::isAddress(address_text))
+					BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
 				dev::Address _a = jsToAddress(address_text);
 				if (_a != dev::ZeroAddress)
 					search_address.insert(_a);
@@ -1201,6 +1207,8 @@ void mcp::rpc_handler::eth_getLogs(mcp::json &j_response, bool &)
 		std::vector<std::string> topics_l = params["topics"];
 		for (std::string const &topic_text : topics_l)
 		{
+			if(!mcp::isH256(topic_text))
+				BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
 			search_topics.insert(jsToHash(topic_text));
 		}
 	}
@@ -1210,7 +1218,11 @@ void mcp::rpc_handler::eth_getLogs(mcp::json &j_response, bool &)
 	/// If we're doing singleton block filtering, execute and return
 	mcp::block_hash block_hash(0);
 	if (params.count("blockhash"))
+	{
+		if(!mcp::isH256(params["blockhash"]))
+			BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
 		block_hash = jsToHash(params["blockhash"]);
+	}
 	if (block_hash != mcp::block_hash(0))///is_null() or empty() invalid for string of json.
 	{
 		auto state = m_cache->block_state_get(transaction, block_hash);
@@ -1263,7 +1275,7 @@ void mcp::rpc_handler::eth_getLogs(mcp::json &j_response, bool &)
 		}
 		else
 		{
-			fromBlock = jsToULl(blockText);
+			fromBlock = jsToULl(blockText, "fromBlock");
 		}
 	}
 
@@ -1281,7 +1293,7 @@ void mcp::rpc_handler::eth_getLogs(mcp::json &j_response, bool &)
 		}
 		else
 		{
-			toBlock = jsToULl(blockText);
+			toBlock = jsToULl(blockText, "toBlock");
 		}
 	}
 

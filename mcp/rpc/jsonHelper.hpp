@@ -21,6 +21,9 @@ namespace mcp
 	{
 		try
 		{
+			if (_s == ""){
+				throw std::invalid_argument("");
+			}
 			if (_s.substr(0, 2) == "0x")
 			{
 				// Hex
