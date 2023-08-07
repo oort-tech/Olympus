@@ -506,6 +506,8 @@ void mcp::rpc_handler::process_request()
 	catch (...)
 	{
 		BOOST_THROW_EXCEPTION(RPC_Http_Error_BadRequest("Unmarshal Json"));
+		response(j_response);
+		return;
 	}
 
 	j_response["id"] = nullptr;
@@ -557,17 +559,19 @@ void mcp::rpc_handler::eth_blockNumber(mcp::json &j_response, bool &)
 void mcp::rpc_handler::eth_getTransactionCount(mcp::json &j_response, bool &)
 {
 	
-	if (params.size() < 1 || !params[0].is_string())
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid params"));
-	}
+	// if (params.size() < 1 || !params[0].is_string())
+	// {
+	// 	BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid params"));
+	// }
+	if(!isAddress(params[0]))
+		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
 	BlockNumber blockTag = LatestBlock;
 	if (params.size() >= 2 && params[1].is_string())
 	{
 		blockTag = jsToBlockNumber(params[1]);
-		if(blockTag == 0 && params[1] != "0"){
-			BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Argument: not an uint_64 number"));
-		}
+		// if(blockTag == 0 && params[1] != "0"){
+		// 	BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Argument: not an uint_64 number"));
+		// }
 	}
 	try
 	{
@@ -689,6 +693,8 @@ void mcp::rpc_handler::eth_getBlockByHash(mcp::json &j_response, bool &)
 	
 	bool is_full = params[1].is_null() ? false : (bool)params[1];
 
+	if(!mcp::isH256(params[0]))
+		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
 	mcp::block_hash block_hash = jsToHash(params[0]);
 
 	mcp::db::db_transaction transaction(m_store.create_transaction());
@@ -775,10 +781,6 @@ void mcp::rpc_handler::eth_sendTransaction(mcp::json &j_response, bool &async)
 void mcp::rpc_handler::eth_call(mcp::json &j_response, bool &)
 {
 	
-	if (params.size() < 2 || !params[0].is_object())
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid params"));
-	}
 	TransactionSkeleton ts = mcp::toTransactionSkeletonForEth(params[0]);
 	ts.gasPrice = 0;
 	ts.gas = mcp::tx_max_gas;
@@ -800,7 +802,7 @@ void mcp::rpc_handler::eth_call(mcp::json &j_response, bool &)
 	}
 	else
 	{
-		block_number = jsToULl(blockText);
+		block_number = jsToULl(blockText, "blockTag");
 	}
 
 	dev::eth::McInfo mc_info;
@@ -852,7 +854,9 @@ void mcp::rpc_handler::eth_getCode(mcp::json &j_response, bool &)
 	
 	mcp::db::db_transaction transaction(m_store.create_transaction());
 	chain_state c_state(transaction, 0, m_store, m_chain, m_cache);
-
+	if(!mcp::isAddress(params[0])){
+		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
+	}
 	try
 	{
 		j_response["result"] = toJS(c_state.code(jsToAddress(params[0])));
@@ -868,6 +872,8 @@ void mcp::rpc_handler::eth_getCode(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::eth_getStorageAt(mcp::json &j_response, bool &)
 {
+	if(!mcp::isAddress(params[0]))
+		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
 	dev::Address account = jsToAddress(params[0]);
 	uint256_t position = jsToU256(params[1]);
 
@@ -878,7 +884,8 @@ void mcp::rpc_handler::eth_getStorageAt(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::eth_getTransactionByHash(mcp::json &j_response, bool &)
 {
-	
+	if(!mcp::isH256(params[0]))
+		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
 	h256 hash = jsToHash(params[0]);
 
 	auto transaction = m_store.create_transaction();
@@ -911,7 +918,8 @@ void mcp::rpc_handler::eth_getTransactionByHash(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::eth_getTransactionByBlockHashAndIndex(mcp::json &j_response, bool &)
 {
-	
+	if(!mcp::isH256(params[0]))
+		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
 	mcp::block_hash block_hash = jsToHash(params[0]);
 	uint64_t index = jsToULl(params[1]);
 
@@ -953,9 +961,9 @@ void mcp::rpc_handler::eth_getTransactionByBlockNumberAndIndex(mcp::json &j_resp
 	}
 	else
 	{
-		block_number = jsToULl(blockText);// add features
+		block_number = jsToULl(blockText, "block number");// add features
 	}
-	uint64_t index = jsToULl(params[1]);
+	uint64_t index = jsToULl(params[1], "index");
 	mcp::db::db_transaction transaction(m_store.create_transaction());
 	mcp::block_hash block_hash;
 	if (m_cache->block_number_get(transaction, block_number, block_hash))// do not use main_chain_get
@@ -985,6 +993,8 @@ void mcp::rpc_handler::eth_getTransactionByBlockNumberAndIndex(mcp::json &j_resp
 
 void mcp::rpc_handler::eth_getTransactionReceipt(mcp::json &j_response, bool &)
 {
+	if(!mcp::isH256(params[0]))
+		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
 	h256 hash = jsToHash(params[0]);
 	auto transaction = m_store.create_transaction();
 	auto t = m_cache->transaction_get(transaction, hash);
@@ -1017,7 +1027,8 @@ void mcp::rpc_handler::eth_getTransactionReceipt(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::eth_getBlockTransactionCountByHash(mcp::json &j_response, bool &)
 {
-	
+	if(!mcp::isH256(params[0]))
+		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
 	mcp::block_hash block_hash = jsToHash(params[0]);
 
 	mcp::db::db_transaction transaction(m_store.create_transaction());
@@ -1073,6 +1084,8 @@ void mcp::rpc_handler::eth_getBalance(mcp::json &j_response, bool &)
 	
 	mcp::db::db_transaction transaction(m_store.create_transaction());
 	chain_state c_state(transaction, 0, m_store, m_chain, m_cache);
+	if(!mcp::isAddress(params[0]))
+		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
 	j_response["result"] = toJS(c_state.balance(jsToAddress(params[0])));
 }
 
@@ -1090,10 +1103,7 @@ void mcp::rpc_handler::eth_accounts(mcp::json &j_response, bool &)
 void mcp::rpc_handler::eth_sign(mcp::json &j_response, bool &)
 {
 	if (!mcp::isAddress(params[0]))
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Account"));
-	}
-
+		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
 	dev::Address account = jsToAddress(params[0]);
 	if (!m_key_manager->exists(account))
 	{
@@ -1166,6 +1176,8 @@ void mcp::rpc_handler::eth_getLogs(mcp::json &j_response, bool &)
 	{
 		if (params["address"].is_string())
 		{
+			if(!mcp::isAddress(params["address"]))
+				BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
 			dev::Address _a = jsToAddress(params["address"]);
 			if (_a != dev::ZeroAddress)
 				search_address.insert(_a);
@@ -1175,6 +1187,8 @@ void mcp::rpc_handler::eth_getLogs(mcp::json &j_response, bool &)
 			std::vector<std::string> address_l = params["address"];
 			for (std::string const &address_text : address_l)
 			{
+				if(!mcp::isAddress(address_text))
+					BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
 				dev::Address _a = jsToAddress(address_text);
 				if (_a != dev::ZeroAddress)
 					search_address.insert(_a);
@@ -1193,6 +1207,8 @@ void mcp::rpc_handler::eth_getLogs(mcp::json &j_response, bool &)
 		std::vector<std::string> topics_l = params["topics"];
 		for (std::string const &topic_text : topics_l)
 		{
+			if(!mcp::isH256(topic_text))
+				BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
 			search_topics.insert(jsToHash(topic_text));
 		}
 	}
@@ -1202,7 +1218,11 @@ void mcp::rpc_handler::eth_getLogs(mcp::json &j_response, bool &)
 	/// If we're doing singleton block filtering, execute and return
 	mcp::block_hash block_hash(0);
 	if (params.count("blockhash"))
+	{
+		if(!mcp::isH256(params["blockhash"]))
+			BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
 		block_hash = jsToHash(params["blockhash"]);
+	}
 	if (block_hash != mcp::block_hash(0))///is_null() or empty() invalid for string of json.
 	{
 		auto state = m_cache->block_state_get(transaction, block_hash);
@@ -1255,7 +1275,7 @@ void mcp::rpc_handler::eth_getLogs(mcp::json &j_response, bool &)
 		}
 		else
 		{
-			fromBlock = jsToULl(blockText);
+			fromBlock = jsToULl(blockText, "fromBlock");
 		}
 	}
 
@@ -1273,7 +1293,7 @@ void mcp::rpc_handler::eth_getLogs(mcp::json &j_response, bool &)
 		}
 		else
 		{
-			toBlock = jsToULl(blockText);
+			toBlock = jsToULl(blockText, "toBlock");
 		}
 	}
 
@@ -1511,6 +1531,8 @@ void mcp::rpc_handler::personal_lockAccount(mcp::json &j_response, bool &)
 			j_response["result"] = true;
 		}
 	}
+	else
+		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
 }
 
 void mcp::rpc_handler::personal_newAccount(mcp::json &j_response, bool &)
@@ -1542,6 +1564,8 @@ void mcp::rpc_handler::personal_unlockAccount(mcp::json &j_response, bool &)
 			j_response["result"] = true;
 		}
 	}
+	else
+	BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
 }
 
 void mcp::rpc_handler::personal_sendTransaction(mcp::json &j_response, bool &async)
@@ -1578,10 +1602,7 @@ void mcp::rpc_handler::personal_sign(mcp::json &j_response, bool &)
 	}
 
 	if (!mcp::isAddress(params[1]))
-	{
-		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Account"));
-	}
-
+		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
 	dev::Address account = jsToAddress(params[1]);
 	if (!m_key_manager->exists(account))
 	{
