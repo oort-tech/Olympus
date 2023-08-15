@@ -9,6 +9,10 @@
 
 namespace mcp
 {
+	const static char* BadHexFormat = "cannot wrap string value as a json-rpc type; strings must be prefixed with \"0x\", cannot contains invalid hex character, and must be of the correct length.";
+	const static char* AddressNotExist = "no key for given address or file.";
+	const static char* AddressPwdError = "could not decrypt key with given passphrase.";
+
 	TransactionSkeleton toTransactionSkeletonForEth(mcp::json const& _json);
 
 	inline Address jsToAddress(std::string const& _s) { return jsToFixed<20>(_s); }
@@ -21,9 +25,9 @@ namespace mcp
 	{
 		try
 		{
-			if (_s == ""){
+			if (_s.empty())
 				throw std::invalid_argument("");
-			}
+
 			if (_s.substr(0, 2) == "0x")
 			{
 				// Hex
@@ -37,7 +41,7 @@ namespace mcp
 		}
 		catch (const std::exception&)
 		{
-			std::string _e = "Cannot wrap string value as a json-rpc type; params \"" + _errorMsg + "\" cannot be converted to uint64.";
+			std::string _e = "cannot wrap string value as a json-rpc type; params \"" + _errorMsg + "\" cannot be converted to uint64.";
 			BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(_e.c_str()));
 		}
 	}

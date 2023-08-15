@@ -9,7 +9,7 @@ namespace mcp
 	inline std::string TransactionSkeletonField(mcp::json const& _json)
 	{
 		if (!_json.is_string())
-			BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Params"));
+			BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError("Cannot wrap input as a json-rpc type."));
 		std::string _a = _json;
 		return _a;
 	}
@@ -21,17 +21,15 @@ namespace mcp
 		ret.to.clear();
 
 		if (!_json.is_object() || _json.empty())
-			return ret;
+			BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError("CreateTransaction called on non-object."));
 
 		if (_json.count("from"))
 		{
 			std::string _from = TransactionSkeletonField(_json["from"]);
-			try {
-				ret.from = jsToAddress(_from);
-			}
-			catch (...) {
-				BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Account From"));
-			}
+			if (!isAddress(_from))
+				BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
+
+			ret.from = jsToAddress(_from);
 		}
 
 		if (_json.count("to")) 
@@ -39,12 +37,10 @@ namespace mcp
 			if (!_json["to"].is_null())///null is create contract.
 			{
 				std::string _to = TransactionSkeletonField(_json["to"]);
-				try {
-					ret.to = jsToAddress(_to);
-				}
-				catch (...) {
-					BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Account To"));
-				}
+				if (!isAddress(_to))
+					BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
+
+				ret.to = jsToAddress(_to);
 			}
 		}
 
@@ -63,8 +59,8 @@ namespace mcp
 			try {
 				ret.data = jsToBytes(_data, OnFailed::Throw);
 			}
-			catch (...) {
-				BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Data"));
+			catch (const std::exception&) {
+				BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError("cannot wrap string value as a json-rpc type; the \"data\" contains invalid hex character."));
 			}
 		}
 
@@ -223,14 +219,14 @@ namespace mcp
 			res["number"] = nullptr;
 			res["nonce"] = nullptr;
 			res["extraData"] = "0x00";
-			res["hash"] = _b.hash().hexPrefixed();
+			res["hash"] = toJS(_b.hash());
 			res["parentHash"] = toJS(_b.previous());
 			res["gasUsed"] = 0;
 			res["minGasPrice"] = 0;
 			res["gasLimit"] = toJS(mcp::tx_max_gas);
 			res["timestamp"] = toJS(_b.exec_timestamp());
 			res["transactions"] = mcp::json::array();
-			res["miner"] = _b.from().hexPrefixed();
+			res["miner"] = toJS(_b.from());
 		}
 		else {
 			res["hash"] = toJS(_b.hash());
