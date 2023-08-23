@@ -3,7 +3,7 @@
 #include <libdevcore/Exceptions.h>
 #include <mcp/common/Exceptions.h>
 #include <boost/beast.hpp>
-
+#include <iostream>
 namespace mcp
 {
 	/***************************************************************************************************************************/
@@ -51,10 +51,10 @@ namespace mcp
     struct X : virtual RpcException \
     {                            \
 		X(const char* m = "") : message(m) {} \
-		const char* what() const noexcept override { return message.what(); }\
+		const char* what() const noexcept override {return message;}\
 		const int code() const noexcept override { return C; } \
 	private: \
-        std::runtime_error message; \
+        const char * message; \
     };
 	
 	/***************************************************************************************************************************/
