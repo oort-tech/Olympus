@@ -942,8 +942,6 @@ void mcp::rpc_handler::eth_getBalance(mcp::json &j_response, bool &)
 		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
 	mcp::db::db_transaction transaction(m_store.create_transaction());
 	chain_state c_state(transaction, 0, m_store, m_chain, m_cache);
-	if(!mcp::isAddress(params[0]))
-		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
 	j_response["result"] = toJS(c_state.balance(jsToAddress(params[0])));
 }
 
