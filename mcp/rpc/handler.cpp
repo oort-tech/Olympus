@@ -852,7 +852,7 @@ void mcp::rpc_handler::eth_getTransactionByBlockHashAndIndex(mcp::json &j_respon
 
 void mcp::rpc_handler::eth_getTransactionByBlockNumberAndIndex(mcp::json &j_response, bool &)
 {
-	BlockNumber block_number = jsToBlockNumber(params[1]);
+	BlockNumber block_number = jsToBlockNumber(params[0]);
 	if (block_number == LatestBlock || block_number == PendingBlock)
 		block_number = m_chain->last_stable_index();
 
