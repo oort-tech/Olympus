@@ -301,24 +301,24 @@ void mcp::chain::UpdateCommittee(mcp::timeout_db_transaction & timeout_tx_a, Epo
 	if (vrf_outputs[vrfepoch].size() < p_param.witness_count)
 	{
 		if (vrf_outputs.count(vrfepoch))
-			LOG(m_log.info) << "Not switch witness_list because elector's number is too short: " << vrf_outputs[vrfepoch].size() << " ,epoch:" << vrfepoch;
+			LOG(m_log.debug) << "Not switch witness_list because elector's number is too short: " << vrf_outputs[vrfepoch].size() << " ,epoch:" << vrfepoch;
 		else
-			LOG(m_log.info) << "Not switch witness_list because elector not found.epoch:" << vrfepoch;
+			LOG(m_log.debug) << "Not switch witness_list because elector not found.epoch:" << vrfepoch;
 		mcp::param::add_witness_param(transaction_a, useepoch, p_param);
 	}
 	else
 	{
 		p_param.witness_list.clear();
 		auto it = vrf_outputs[vrfepoch].rbegin();
-		///test start
-		for (auto i = vrf_outputs[vrfepoch].begin(); i != vrf_outputs[vrfepoch].end(); i++)
-		{
-			LOG(m_log.info) << "elect node: " << i->second.from().hexPrefixed();
-		}
-		///test end
+		/////test start
+		//for (auto i = vrf_outputs[vrfepoch].begin(); i != vrf_outputs[vrfepoch].end(); i++)
+		//{
+		//	LOG(m_log.info) << "elect node: " << i->second.from().hexPrefixed();
+		//}
+		/////test end
 		for (int i = 0; i<p_param.witness_count; i++) {
 			p_param.witness_list.insert(it->second.from());
-			LOG(m_log.info) << "elect " << it->second.from().hexPrefixed() << " output:" << it->first.hex();
+			//LOG(m_log.info) << "elect " << it->second.from().hexPrefixed() << " output:" << it->first.hex();
 			it++;
 		}
 		assert_x(p_param.witness_list.size() == p_param.witness_count);
