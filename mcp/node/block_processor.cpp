@@ -4,6 +4,11 @@
 #include <mcp/core/genesis.hpp>
 #include <libdevcore/CommonJS.h>
 
+constexpr uint32_t tx_timeout_ms = 1000;
+constexpr unsigned max_mt_count = 16;
+constexpr unsigned max_pending_size = 300;
+constexpr unsigned max_local_processing_size = 100;
+
 mcp::late_message_info::late_message_info(std::shared_ptr<mcp::block_processor_item> item_a) :
 	item(item_a),
 	timestamp(item_a->joint.block->exec_timestamp()),
@@ -77,7 +82,7 @@ mcp::block_processor::block_processor(bool & error_a,
 	std::shared_ptr<rocksdb::TransactionOptions> tx_option(mcp::db::db_transaction::default_trans_options());
 	tx_option->skip_concurrency_control = true;
 
-	mcp::timeout_db_transaction timeout_tx(m_store, m_tx_timeout_ms, write_option, tx_option,
+	mcp::timeout_db_transaction timeout_tx(m_store, tx_timeout_ms, write_option, tx_option,
 		std::bind(&block_processor::before_db_commit_event, this),
 		std::bind(&block_processor::after_db_commit_event, this));
 	try
@@ -149,7 +154,12 @@ void mcp::block_processor::stop()
 
 bool mcp::block_processor::is_full()
 {
-	return m_blocks_pending.size() >= m_max_pending_size;
+	return m_blocks_pending.size() >= max_pending_size;
+}
+
+bool mcp::block_processor::half_full()
+{
+	return m_blocks_pending.size() >= (max_pending_size /2);
 }
 
 void mcp::block_processor::add_item(std::shared_ptr<mcp::block_processor_item> item_a)
@@ -167,14 +177,19 @@ void mcp::block_processor::add_item(std::shared_ptr<mcp::block_processor_item> i
 	///throw if queue is full
 	if (item_a->is_broadCast() && (is_full() || BlockArrival.recent(block_hash)))
 		return;
-		
-	///throw if is syncing
-	if (!item_a->is_sync() && m_sync->is_syncing())
-		return;
 
-	if (!item_a->is_sync() && item_a->joint.summary_hash == mcp::summary_hash(0))
+	///broadcase,request,loacl
+	if (!item_a->is_sync())
 	{
-		BlockArrival.add(block_hash);
+		if (m_sync->is_syncing())
+		{
+			if (item_a->is_broadCast() || item_a->is_local())///throw broadcast and local block if syncing.
+				return;
+			if (half_full())///Cache the requested block until the cache reaches halfway.
+				return;
+		}
+		if (item_a->joint.summary_hash == mcp::summary_hash(0))
+			BlockArrival.add(block_hash);
 	}
 
 	if (item_a->is_local())
@@ -195,7 +210,7 @@ void mcp::block_processor::add_many_to_mt_process(std::queue<std::shared_ptr<mcp
 	{
 		unsigned count = 0;
 		std::lock_guard<std::mutex> lock(m_mt_process_mutex);
-		while (!items_a.empty() && count < m_max_mt_count)
+		while (!items_a.empty() && count < max_mt_count)
 		{
 			add_item(items_a.front());
 			items_a.pop();
@@ -230,7 +245,7 @@ void mcp::block_processor::mt_process_blocks()
 				try
 				{
 					std::list<std::shared_ptr<std::promise<mcp::validate_status>>> results;
-					unsigned count = std::min((unsigned)m_mt_blocks_processing.size(), m_max_mt_count);
+					unsigned count = std::min((unsigned)m_mt_blocks_processing.size(), max_mt_count);
 					for (unsigned i = 0; i < count; i++)
 					{
 						std::shared_ptr<mcp::block_processor_item> item(m_mt_blocks_processing[i]);
@@ -388,7 +403,7 @@ void mcp::block_processor::process_blocks()
 		std::shared_ptr<rocksdb::TransactionOptions> tx_option(mcp::db::db_transaction::default_trans_options());
 		tx_option->skip_concurrency_control = true;
 
-		mcp::timeout_db_transaction timeout_tx(m_store, m_tx_timeout_ms, write_option, tx_option,
+		mcp::timeout_db_transaction timeout_tx(m_store, tx_timeout_ms, write_option, tx_option,
 			std::bind(&block_processor::before_db_commit_event, this),
 			std::bind(&block_processor::after_db_commit_event, this));
 		try 
@@ -416,7 +431,7 @@ void mcp::block_processor::process_blocks()
 		std::deque<std::shared_ptr<mcp::block_processor_item>> to_processing;
 		if (!m_local_blocks_pending.empty() || !m_blocks_pending.empty())
 		{
-			while (to_processing.size() < m_max_local_processing_size)
+			while (to_processing.size() < max_local_processing_size)
 			{
 				if (!m_local_blocks_pending.empty())
 				{
@@ -519,7 +534,7 @@ void mcp::block_processor::do_process_one(std::shared_ptr<mcp::block_processor_i
 	std::shared_ptr<rocksdb::TransactionOptions> tx_option(mcp::db::db_transaction::default_trans_options());
 	tx_option->skip_concurrency_control = true;
 	std::shared_ptr<mcp::chain> chain(m_chain);
-	mcp::timeout_db_transaction timeout_tx(m_store, m_tx_timeout_ms, write_option, tx_option,
+	mcp::timeout_db_transaction timeout_tx(m_store, tx_timeout_ms, write_option, tx_option,
 		std::bind(&block_processor::before_db_commit_event, this),
 		std::bind(&block_processor::after_db_commit_event, this));
 

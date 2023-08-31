@@ -107,6 +107,7 @@ namespace mcp
 
 		std::string get_processor_info();
 	private:
+		bool half_full();
 		void add_item(std::shared_ptr<mcp::block_processor_item> item_a);
 
 		void mt_process_blocks();
@@ -142,18 +143,18 @@ namespace mcp
 		std::shared_ptr<mcp::process_block_cache> m_local_cache;
 		mcp::late_message_cache m_late_message_cache;
 
-		const uint32_t m_tx_timeout_ms = 1000;
+		//const uint32_t m_tx_timeout_ms = 1000;
 
 		bool m_stopped;
-		const unsigned m_max_mt_count = 16;
+		//const unsigned m_max_mt_count = 16;
 		std::mutex m_mt_process_mutex;
 		std::condition_variable m_mt_process_condition;
 		std::deque<std::shared_ptr<mcp::block_processor_item>> m_mt_blocks_pending;
 		std::deque<std::shared_ptr<mcp::block_processor_item>> m_mt_blocks_processing;
 		std::thread m_mt_process_block_thread;
 
-		const unsigned m_max_pending_size = 50000;
-		const unsigned m_max_local_processing_size = 1000;
+		//const unsigned m_max_pending_size = 50000;
+		//const unsigned m_max_local_processing_size = 1000;
 		std::mutex m_process_mutex;
 		std::condition_variable m_process_condition;
 		std::deque<std::shared_ptr<mcp::block_processor_item>> m_local_blocks_pending;
