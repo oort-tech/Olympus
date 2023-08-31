@@ -352,7 +352,7 @@ void mcp::block_processor::mt_process_blocks()
 	}
 }
 
-void mcp::block_processor::add_to_process(std::shared_ptr<mcp::block_processor_item> item_a, bool retry)
+void mcp::block_processor::add_to_process(std::shared_ptr<mcp::block_processor_item> item_a/*, bool retry*/)
 {
 	if (!item_a->is_sync() && item_a->joint.summary_hash != mcp::summary_hash(0))
 	{
@@ -372,8 +372,8 @@ void mcp::block_processor::add_to_process(std::shared_ptr<mcp::block_processor_i
 	else
 	{
 		m_blocks_pending.push_back(item_a);
-        if (!retry && item_a->is_sync())
-            blocks_pending_sync_size++;
+        //if (!retry && item_a->is_sync())
+        //    blocks_pending_sync_size++;
 	}
 	m_process_condition.notify_all();
 }
@@ -429,8 +429,8 @@ void mcp::block_processor::process_blocks()
 						break;
 					to_processing.push_back(m_blocks_pending.front());
 
-                    if (m_blocks_pending.front()->is_sync())
-                        blocks_pending_sync_size--;
+                    //if (m_blocks_pending.front()->is_sync())
+                    //    blocks_pending_sync_size--;
 
 					m_blocks_pending.pop_front();
 				}
@@ -790,8 +790,8 @@ void mcp::block_processor::try_process_unhandle(std::shared_ptr<mcp::block_proce
 			std::shared_ptr<mcp::block_processor_item> u_item(p);
 			m_blocks_pending.push_front(u_item);
 
-            if (u_item->is_sync())
-                blocks_pending_sync_size++;
+            //if (u_item->is_sync())
+            //    blocks_pending_sync_size++;
 		}
 	}
 }
@@ -915,9 +915,9 @@ void mcp::block_processor::after_db_commit_event()
 std::string mcp::block_processor::get_processor_info()
 {
 	std::string str = "m_blocks_pending:" + std::to_string(m_blocks_pending.size())
-        + " ,m_blocks_pending_sync:" + std::to_string(blocks_pending_sync_size)
+        //+ " ,m_blocks_pending_sync:" + std::to_string(blocks_pending_sync_size)
         //+ " ,blocks_missing_size:" + std::to_string(blocks_missing_size)
-        + " ,blocks_missing_throw_size:" + std::to_string(blocks_missing_throw_size)
+        //+ " ,blocks_missing_throw_size:" + std::to_string(blocks_missing_throw_size)
 		+ " ,m_local_blocks_pending:" + std::to_string(m_local_blocks_pending.size())
 		+ " ,m_blocks_processing:" + std::to_string(m_blocks_processing.size())
 		+ " ,m_mt_blocks_pending:" + std::to_string(m_mt_blocks_pending.size())
@@ -926,11 +926,13 @@ std::string mcp::block_processor::get_processor_info()
 		+ " ,ok:" + std::to_string(block_processor_add)
 		//+ ", recent block:" + std::to_string(block_processor_recent_block_size)
 		+ ", invalid:" + std::to_string(InvalidBlockCache.size())
-		+ ", block arrival, " + std::to_string(BlockArrival.arrival.size())
+		+ ", block arrival: " + std::to_string(BlockArrival.arrival.size())
+		+ ", dag_old_size: " + std::to_string(dag_old_size)
+		+ ", base_validate_old_size: " + std::to_string(base_validate_old_size)
 		;
 
-    blocks_missing_size = 0;
-    blocks_missing_throw_size = 0;
+    //blocks_missing_size = 0;
+    //blocks_missing_throw_size = 0;
 	return str;
 }
 

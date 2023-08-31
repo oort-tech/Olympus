@@ -726,6 +726,7 @@ void mcp::node_capability::broadcast_block(mcp::joint_message const & message)
 {
 	try
 	{
+		mcp::CapMetricsSend.broadcast_joint++;
 		mcp::block_hash block_hash(message.block->hash());
 		std::lock_guard<std::mutex> lock(m_peers_mutex);
 		for (auto it = m_peers.begin(); it != m_peers.end();)
@@ -736,8 +737,6 @@ void mcp::node_capability::broadcast_block(mcp::joint_message const & message)
 				it++;
 				if (pi.is_known_block(block_hash))
 					continue;
-
-				mcp::CapMetricsSend.broadcast_joint++;
 
 				dev::RLPStream s;
 				p->prep(s, pi.offset + (unsigned)mcp::sub_packet_type::joint, 1);
@@ -759,6 +758,7 @@ void mcp::node_capability::broadcast_transaction(mcp::Transaction const & messag
 {
 	try
 	{
+		mcp::CapMetricsSend.broadcast_transaction++;
 		auto hash(message.sha3());
 		std::lock_guard<std::mutex> lock(m_peers_mutex);
 		for (auto it = m_peers.begin(); it != m_peers.end();)
@@ -769,8 +769,6 @@ void mcp::node_capability::broadcast_transaction(mcp::Transaction const & messag
 				it++;
 				if (pi.is_known_transaction(hash))
 					continue;
-
-				mcp::CapMetricsSend.broadcast_transaction++;
 
 				dev::RLPStream s;
 				p->prep(s, pi.offset + (unsigned)mcp::sub_packet_type::transaction, 1);
@@ -792,6 +790,7 @@ void mcp::node_capability::broadcast_approve(mcp::approve const & message)
 {
 	try
 	{
+		mcp::CapMetricsSend.broadcast_approve++;
 		auto hash(message.sha3());
 		std::lock_guard<std::mutex> lock(m_peers_mutex);
 		for (auto it = m_peers.begin(); it != m_peers.end();)
@@ -802,8 +801,6 @@ void mcp::node_capability::broadcast_approve(mcp::approve const & message)
 				it++;
 				if (pi.is_known_approve(hash))
 					continue;
-
-				mcp::CapMetricsSend.broadcast_approve++;
 
 				dev::RLPStream s;
 				p->prep(s, pi.offset + (unsigned)mcp::sub_packet_type::approve, 1);

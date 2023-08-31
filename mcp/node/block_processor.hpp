@@ -53,19 +53,19 @@ namespace mcp
 		size_t capacity;
 	};
 
-	class put_clear_item
-	{
-	public:
-		put_clear_item() = default;
-		put_clear_item(uint64_t const & time_a, mcp::block_hash const& hash_a):
-			m_time(time_a),
-			m_clear_block_hash(hash_a)
-		{
-		}
+	//class put_clear_item
+	//{
+	//public:
+	//	put_clear_item() = default;
+	//	put_clear_item(uint64_t const & time_a, mcp::block_hash const& hash_a):
+	//		m_time(time_a),
+	//		m_clear_block_hash(hash_a)
+	//	{
+	//	}
 
-		uint64_t				m_time;
-		mcp::block_hash			m_clear_block_hash;
-	};
+	//	uint64_t				m_time;
+	//	mcp::block_hash			m_clear_block_hash;
+	//};
 
 	class chain;
 	class node_sync;
@@ -90,7 +90,7 @@ namespace mcp
 
 		void add_many_to_mt_process(std::queue<std::shared_ptr<mcp::block_processor_item>> items_a);
 		void add_to_mt_process(std::shared_ptr<mcp::block_processor_item> item_a);
-		void add_to_process(std::shared_ptr<mcp::block_processor_item> item_a,bool retry = false);
+		void add_to_process(std::shared_ptr<mcp::block_processor_item> item_a/*,bool retry = false*/);
 		
 		void on_sync_completed(mcp::p2p::node_id const & remote_node_id_a);
 
@@ -106,9 +106,6 @@ namespace mcp
 		std::shared_ptr<mcp::unhandle_cache> unhandle;
 
 		std::string get_processor_info();
-		uint64_t dag_old_size = 0;
-		uint64_t light_old_size = 0;
-		uint64_t base_validate_old_size = 0;
 	private:
 		void add_item(std::shared_ptr<mcp::block_processor_item> item_a);
 
@@ -178,9 +175,9 @@ namespace mcp
 
 		Signal<ImportResult, p2p::node_id const&> m_onImport;			///< Called for each import attempt. Arguments are result.
 
-        std::atomic<uint64_t> blocks_pending_sync_size = { 0 };
-        std::atomic<uint64_t> blocks_missing_size = { 0 };
-        std::atomic<uint64_t> blocks_missing_throw_size = { 0 };
+        //std::atomic<uint64_t> blocks_pending_sync_size = { 0 };
+        //std::atomic<uint64_t> blocks_missing_size = { 0 };
+        //std::atomic<uint64_t> blocks_missing_throw_size = { 0 };
 
 		std::thread m_process_block_thread;
 
@@ -189,7 +186,10 @@ namespace mcp
 
 		//info
 		std::atomic<uint64_t> block_processor_add = { 0 };
-		std::atomic<uint64_t> block_processor_recent_block_size = { 0 };
+		uint64_t dag_old_size = 0;
+		//uint64_t light_old_size = 0;
+		uint64_t base_validate_old_size = 0;
+		//std::atomic<uint64_t> block_processor_recent_block_size = { 0 };
 
 		mcp::log m_log = { mcp::log("node") };
 	};
