@@ -285,18 +285,17 @@ bool mcp::node_capability::read_packet(std::shared_ptr<p2p::peer> peer_a, unsign
 				return true;
 			}
 
-			std::shared_ptr<mcp::block_processor_item> block_item_l(std::make_shared<mcp::block_processor_item>(joint, peer_a->remote_node_id()));
+			auto _f = source::broadcast;
 			mcp::block_hash block_hash(joint.block->hash());
 			{
 				if (RequestingMageger.try_erase(joint.request_id)) /// is missing blocks,it's doesn't matter whether it's broadcast or requested 
 				{
-					block_item_l->joint.level = mcp::joint_processor_level::request; ///if block processor full also need add this block
-					block_item_l->set_missing();
+					_f = source::request;
 					if (joint.request_id != mcp::sync_request_hash(0))
 						joint.request_id.clear(); ///broadcast do not need id
 				}
 			}
-			
+			std::shared_ptr<mcp::block_processor_item> block_item_l(std::make_shared<mcp::block_processor_item>(joint, peer_a->remote_node_id(), _f));	
 			m_block_processor->add_to_mt_process(block_item_l);
 
             //LOG(m_log.info) << "Joint message, block hash: " << block_hash.hex();

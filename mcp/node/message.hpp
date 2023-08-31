@@ -13,6 +13,15 @@ namespace mcp
 
 bool parse_port(std::string const & string_a, uint16_t & port_a);
 
+/// data source
+enum class source
+{
+	local = 0,
+	broadcast,
+	request,
+	sync
+};
+
 enum requesting_block_cause
 {
 	new_unknown = 0,
@@ -29,11 +38,11 @@ public:
 	std::string msg="";
 };
 
-enum joint_processor_level
-{
-	broadcast = 0,
-	request
-};
+//enum joint_processor_level
+//{
+//	broadcast = 0,
+//	request
+//};
 
 class joint_message
 {
@@ -47,55 +56,51 @@ class joint_message
 	mcp::sync_request_hash request_id = mcp::sync_request_hash(0);
 	std::shared_ptr<mcp::block> block;
 	mcp::summary_hash summary_hash = mcp::summary_hash(0);
-	mcp::joint_processor_level level = mcp::joint_processor_level::broadcast;
+	//mcp::joint_processor_level level = mcp::joint_processor_level::broadcast;
 };
 
-enum class remote_type
-{
-	none = 0,
-	sync = 1,
-	missing = 2
-};
+//enum class remote_type
+//{
+//	none = 0,
+//	sync = 1,
+//	missing = 2
+//};
 
 class block_processor_item
 {
   public:
 	block_processor_item() = default;
+	///for witness compose message
 	block_processor_item(mcp::joint_message const &joint_a, std::shared_ptr<std::promise<mcp::validate_status>> local_promise_a) :
 		joint(joint_a),
 		block_hash(joint_a.block->hash()),
 		m_remote_node_id(0),
-		m_remote_type(mcp::remote_type::none),
+		m_source(mcp::source::local),
 		m_local_promise(local_promise_a)
 	{
 	}
-
-	block_processor_item(mcp::joint_message const &joint_a, p2p::node_id const &remote_node_id_a, mcp::remote_type const & remote_type_a = mcp::remote_type::none) :
+	///sync,broadcast,request message
+	block_processor_item(mcp::joint_message const &joint_a, p2p::node_id const &remote_node_id_a, mcp::source const & source_a) :
 		joint(joint_a),
 		block_hash(joint_a.block->hash()),
 		m_remote_node_id(remote_node_id_a),
-		m_remote_type(remote_type_a)
+		m_source(source_a)
 	{
 	}
-
+	
 	bool is_sync() const
 	{
-		return m_remote_type == mcp::remote_type::sync;
+		return m_source == mcp::source::sync;
 	}
 
-    void set_missing()
-    {
-        m_remote_type = mcp::remote_type::missing;
-    }
-
-	bool is_missing() const
+	bool is_broadCast() const
 	{
-		return m_remote_type == mcp::remote_type::missing;
+		return m_source == mcp::source::broadcast;
 	}
 
 	bool is_local() const
 	{
-		return m_remote_node_id == mcp::p2p::node_id(0);
+		return m_source == mcp::source::local;
 	}
 
 	mcp::p2p::node_id remote_node_id() const
@@ -121,7 +126,7 @@ class block_processor_item
 	bool is_successor = false;
 private:
 	p2p::node_id m_remote_node_id;
-	mcp::remote_type m_remote_type;
+	mcp::source m_source;
 	std::shared_ptr<std::promise<mcp::validate_status>> m_local_promise;
 };
 

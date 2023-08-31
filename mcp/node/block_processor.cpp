@@ -164,35 +164,16 @@ void mcp::block_processor::add_item(std::shared_ptr<mcp::block_processor_item> i
 	if (block_hash == mcp::genesis::block_hash)
 		return;
 
-	if (!item_a->is_sync()
-		&& !item_a->is_local())
-	{
-		//not processing broadcast block when syncing
-        if (item_a->is_missing())
-            blocks_missing_size++;
-        if (m_sync->is_syncing())
-        {
-            if (item_a->is_missing())
-                blocks_missing_throw_size++;
-            return;
-        }
-
-		if (is_full() && item_a->joint.level != mcp::joint_processor_level::request)
-			return;
-
-		if (BlockArrival.recent(block_hash) && item_a->joint.level != mcp::joint_processor_level::request)
-		{
-			//LOG(m_log.debug) << "Recent block:" << block_hash.hex();
-
-			block_processor_recent_block_size++;
-			return;
-		}
-	}
+	///throw if queue is full
+	if (item_a->is_broadCast() && (is_full() || BlockArrival.recent(block_hash)))
+		return;
+		
+	///throw if is syncing
+	if (!item_a->is_sync() && m_sync->is_syncing())
+		return;
 
 	if (!item_a->is_sync() && item_a->joint.summary_hash == mcp::summary_hash(0))
 	{
-		//LOG(m_log.debug) << "Add recent block:" << block_hash.hex();
-
 		BlockArrival.add(block_hash);
 	}
 
@@ -935,7 +916,7 @@ std::string mcp::block_processor::get_processor_info()
 {
 	std::string str = "m_blocks_pending:" + std::to_string(m_blocks_pending.size())
         + " ,m_blocks_pending_sync:" + std::to_string(blocks_pending_sync_size)
-        + " ,blocks_missing_size:" + std::to_string(blocks_missing_size)
+        //+ " ,blocks_missing_size:" + std::to_string(blocks_missing_size)
         + " ,blocks_missing_throw_size:" + std::to_string(blocks_missing_throw_size)
 		+ " ,m_local_blocks_pending:" + std::to_string(m_local_blocks_pending.size())
 		+ " ,m_blocks_processing:" + std::to_string(m_blocks_processing.size())
@@ -943,7 +924,7 @@ std::string mcp::block_processor::get_processor_info()
 		+ " ,m_mt_blocks_processing:" + std::to_string(m_mt_blocks_processing.size())
 		+ " ,m_ok_local_dag_promises:" + std::to_string(m_ok_local_promises.size())
 		+ " ,ok:" + std::to_string(block_processor_add)
-		+ ", recent block:" + std::to_string(block_processor_recent_block_size)
+		//+ ", recent block:" + std::to_string(block_processor_recent_block_size)
 		+ ", invalid:" + std::to_string(InvalidBlockCache.size())
 		+ ", block arrival, " + std::to_string(BlockArrival.arrival.size())
 		;

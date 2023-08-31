@@ -1520,7 +1520,7 @@ void mcp::node_sync::process_hash_tree(p2p::node_id const &id, mcp::hash_tree_re
 			add_hash_tree_summary(tx, it->summary);
 
 			mcp::joint_message joint(s_item.block, s_item.summary);
-			std::shared_ptr<mcp::block_processor_item> item(std::make_shared<mcp::block_processor_item>(std::move(joint), id, mcp::remote_type::sync));
+			std::shared_ptr<mcp::block_processor_item> item(std::make_shared<mcp::block_processor_item>(std::move(joint), id, mcp::source::sync));
 			items.push(item);
 			try
 			{

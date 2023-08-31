@@ -86,7 +86,7 @@ namespace mcp
 			//prinf();
 		}
 
-		if (ImportResult::Success == ret)/// first import && successed,broadcast it
+		if (ImportResult::Success == ret && _in != source::sync)/// first import && successed,broadcast it
 		{
 			m_async_task->sync_async([this, _transaction]() {
 				m_capability->broadcast_transaction(*_transaction);
