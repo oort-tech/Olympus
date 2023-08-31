@@ -103,11 +103,6 @@ class block_processor_item
 		return m_source == mcp::source::local;
 	}
 
-	bool is_request() const
-	{
-		return m_source == mcp::source::request;
-	}
-
 	mcp::p2p::node_id remote_node_id() const
 	{
 		assert_x(!is_local());

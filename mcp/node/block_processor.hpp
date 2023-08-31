@@ -107,7 +107,6 @@ namespace mcp
 
 		std::string get_processor_info();
 	private:
-		bool half_full();
 		void add_item(std::shared_ptr<mcp::block_processor_item> item_a);
 
 		void mt_process_blocks();

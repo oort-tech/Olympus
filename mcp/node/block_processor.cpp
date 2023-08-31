@@ -8,6 +8,7 @@ constexpr uint32_t tx_timeout_ms = 1000;
 constexpr unsigned max_mt_count = 16;
 constexpr unsigned max_pending_size = 300;
 constexpr unsigned max_local_processing_size = 100;
+constexpr unsigned max_cache_unhandle_size = 100;
 
 mcp::late_message_info::late_message_info(std::shared_ptr<mcp::block_processor_item> item_a) :
 	item(item_a),
@@ -157,11 +158,6 @@ bool mcp::block_processor::is_full()
 	return m_blocks_pending.size() >= max_pending_size;
 }
 
-bool mcp::block_processor::half_full()
-{
-	return m_blocks_pending.size() >= (max_pending_size /2);
-}
-
 void mcp::block_processor::add_item(std::shared_ptr<mcp::block_processor_item> item_a)
 {
 	if (!item_a->joint.block)
@@ -185,7 +181,7 @@ void mcp::block_processor::add_item(std::shared_ptr<mcp::block_processor_item> i
 		{
 			if (item_a->is_broadCast() || item_a->is_local())///throw broadcast and local block if syncing.
 				return;
-			if (half_full())///Cache the requested block until the cache reaches halfway.
+			if (unhandle->unhandlde_size() >= max_cache_unhandle_size)///Cache the requested block until the cache reaches halfway.
 				return;
 		}
 		if (item_a->joint.summary_hash == mcp::summary_hash(0))
