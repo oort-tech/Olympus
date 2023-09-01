@@ -38,12 +38,6 @@ public:
 	std::string msg="";
 };
 
-//enum joint_processor_level
-//{
-//	broadcast = 0,
-//	request
-//};
-
 class joint_message
 {
   public:
@@ -56,15 +50,7 @@ class joint_message
 	mcp::sync_request_hash request_id = mcp::sync_request_hash(0);
 	std::shared_ptr<mcp::block> block;
 	mcp::summary_hash summary_hash = mcp::summary_hash(0);
-	//mcp::joint_processor_level level = mcp::joint_processor_level::broadcast;
 };
-
-//enum class remote_type
-//{
-//	none = 0,
-//	sync = 1,
-//	missing = 2
-//};
 
 class block_processor_item
 {
