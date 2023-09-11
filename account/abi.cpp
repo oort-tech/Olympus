@@ -57,12 +57,12 @@ namespace dev
 					BOOST_THROW_EXCEPTION(dev::FailedABI());
 				Receive = NewMethod("", "", FunctionType::Receive, field.StateMutability, field.Constant, field.Payable, Arguments(), Arguments());
 			}
-			//else if ("event" == field.Type)///do it in the future
-			//{
-			//}
-			//else if ("error" == field.Type)///do it in the future
-			//{
-			//}
+			else if ("event" == field.Type)///do it in the future
+			{
+			}
+			else if ("error" == field.Type)///do it in the future
+			{
+			}
 			else
 				BOOST_THROW_EXCEPTION(dev::FailedABI());
 		}
