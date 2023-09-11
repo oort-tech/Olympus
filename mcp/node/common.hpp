@@ -8,15 +8,6 @@
 
 namespace mcp
 {
-	/// data source
-	enum class source
-	{
-		local = 0,
-		broadcast,
-		request,
-		sync
-	};
-
 	enum class sub_packet_type
 	{
 		joint = 0,

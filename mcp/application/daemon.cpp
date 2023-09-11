@@ -894,11 +894,8 @@ void mcp_daemon::ongoing_report(
 		}
 	}
 
-	//io service sync
-	LOG(log.info) << "sync_async: " << sync_async->get_size();
-	//io service background
-	LOG(log.info) << "background: " << background->get_size();
-
+	//io service
+	LOG(log.info) << "task sync_async: " << sync_async->get_size() << " ,background: " << background->get_size();
 
 	LOG(log.info) << "block cache: " << cache->report_cache_size();
 
@@ -915,10 +912,6 @@ void mcp_daemon::ongoing_report(
 		<< ", approve_missing_size:" << processor->unhandle->approve_missing_size()
 		<< ", tips_size:" << processor->unhandle->tips_size();
 
-	LOG(log.info) << "block_processor dag_old_size: " << processor->dag_old_size
-		<< " , light_old_size : " << processor->light_old_size
-		<< " , base_validate_old_size : " << processor->base_validate_old_size;
-
 	LOG(log.info) << "RequestingMageger info: " << mcp::RequestingMageger.get_info();
 
 	LOG(log.info) << "peer count:" << host->peers().size();
@@ -926,25 +919,16 @@ void mcp_daemon::ongoing_report(
 	mcp::db::db_transaction transaction(store.create_transaction());
 	size_t block_count(store.block_count(transaction));
 	size_t stable_count(store.stable_block_count(transaction));
-	size_t transaction_unstable_count(store.transaction_unstable_count(transaction));
-	size_t transaction_count(store.transaction_count(transaction));
-	size_t approve_unstable_count(store.approve_unstable_count(transaction));
-	size_t approve_count(store.approve_count(transaction));
-	size_t dag_free_count(store.dag_free_count(transaction));
-
-	uint64_t last_mci = chain->last_mci();
-	uint64_t last_stable_mci = chain->last_stable_mci();
-
 	LOG(log.info) << "block:" << block_count
 		<< ", unstable block:" << block_count - stable_count
 		<< ", stable block:" << stable_count
-		<< ", unstable transaction:" << transaction_unstable_count
-		<< ", transaction:" << transaction_count
-		<< ", unstable approve:" << approve_unstable_count
-		<< ", approve:" << approve_count
-		<< ", dag free:" << dag_free_count
-		<< ", last_stable_mci:" << last_stable_mci
-		<< ", last_mci:" << last_mci;
+		<< ", unstable transaction:" << store.transaction_unstable_count(transaction)
+		<< ", transaction:" << store.transaction_count(transaction)
+		<< ", unstable approve:" << store.approve_unstable_count(transaction)
+		<< ", approve:" << store.approve_count(transaction)
+		<< ", dag free:" << store.dag_free_count(transaction)
+		<< ", last_stable_mci:" << chain->last_stable_mci()
+		<< ", last_mci:" << chain->last_mci();
 
 	LOG(log.info) << "TQ:" << tq->getInfo();
 	LOG(log.info) << "AQ:" << aq->getInfo();

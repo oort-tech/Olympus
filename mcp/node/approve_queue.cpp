@@ -125,7 +125,7 @@ namespace mcp
 			}
 		}
 
-		if (ImportResult::Success == ir)/// first import && successed,broadcast it
+		if (ImportResult::Success == ir && _in != source::sync)/// first import && successed,broadcast it
 		{
 			m_async_task->sync_async([this, _approve]() {
 				m_capability->broadcast_approve(*_approve);

@@ -53,20 +53,6 @@ namespace mcp
 		size_t capacity;
 	};
 
-	class put_clear_item
-	{
-	public:
-		put_clear_item() = default;
-		put_clear_item(uint64_t const & time_a, mcp::block_hash const& hash_a):
-			m_time(time_a),
-			m_clear_block_hash(hash_a)
-		{
-		}
-
-		uint64_t				m_time;
-		mcp::block_hash			m_clear_block_hash;
-	};
-
 	class chain;
 	class node_sync;
 	class node_capability;
@@ -90,7 +76,7 @@ namespace mcp
 
 		void add_many_to_mt_process(std::queue<std::shared_ptr<mcp::block_processor_item>> items_a);
 		void add_to_mt_process(std::shared_ptr<mcp::block_processor_item> item_a);
-		void add_to_process(std::shared_ptr<mcp::block_processor_item> item_a,bool retry = false);
+		void add_to_process(std::shared_ptr<mcp::block_processor_item> item_a);
 		
 		void on_sync_completed(mcp::p2p::node_id const & remote_node_id_a);
 
@@ -106,9 +92,6 @@ namespace mcp
 		std::shared_ptr<mcp::unhandle_cache> unhandle;
 
 		std::string get_processor_info();
-		uint64_t dag_old_size = 0;
-		uint64_t light_old_size = 0;
-		uint64_t base_validate_old_size = 0;
 	private:
 		void add_item(std::shared_ptr<mcp::block_processor_item> item_a);
 
@@ -145,18 +128,13 @@ namespace mcp
 		std::shared_ptr<mcp::process_block_cache> m_local_cache;
 		mcp::late_message_cache m_late_message_cache;
 
-		const uint32_t m_tx_timeout_ms = 1000;
-
 		bool m_stopped;
-		const unsigned m_max_mt_count = 16;
 		std::mutex m_mt_process_mutex;
 		std::condition_variable m_mt_process_condition;
 		std::deque<std::shared_ptr<mcp::block_processor_item>> m_mt_blocks_pending;
 		std::deque<std::shared_ptr<mcp::block_processor_item>> m_mt_blocks_processing;
 		std::thread m_mt_process_block_thread;
 
-		const unsigned m_max_pending_size = 50000;
-		const unsigned m_max_local_processing_size = 1000;
 		std::mutex m_process_mutex;
 		std::condition_variable m_process_condition;
 		std::deque<std::shared_ptr<mcp::block_processor_item>> m_local_blocks_pending;
@@ -178,10 +156,6 @@ namespace mcp
 
 		Signal<ImportResult, p2p::node_id const&> m_onImport;			///< Called for each import attempt. Arguments are result.
 
-        std::atomic<uint64_t> blocks_pending_sync_size = { 0 };
-        std::atomic<uint64_t> blocks_missing_size = { 0 };
-        std::atomic<uint64_t> blocks_missing_throw_size = { 0 };
-
 		std::thread m_process_block_thread;
 
 		std::deque<std::shared_ptr<std::promise<mcp::validate_status>>> m_ok_local_promises;
@@ -189,7 +163,8 @@ namespace mcp
 
 		//info
 		std::atomic<uint64_t> block_processor_add = { 0 };
-		std::atomic<uint64_t> block_processor_recent_block_size = { 0 };
+		uint64_t dag_old_size = 0;
+		uint64_t base_validate_old_size = 0;
 
 		mcp::log m_log = { mcp::log("node") };
 	};
