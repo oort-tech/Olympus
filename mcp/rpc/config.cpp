@@ -1,7 +1,7 @@
 #include "config.hpp"
 
 mcp::rpc_config::rpc_config() : address(boost::asio::ip::address_v4::loopback()),
-													 port(8766),
+													 port(8765),
 													 rpc_enable(false)
 {
 }
