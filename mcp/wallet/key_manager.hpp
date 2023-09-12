@@ -18,7 +18,7 @@ namespace mcp
 		bool exists(dev::Address const& _address);
 		bool find(dev::Address const& _address, mcp::key_content & _kc);
 		Addresses list();
-		dev::Address create(std::string const& _auth, bool const& _backup = true);
+		dev::Address create(std::string const& _auth, bool const& _backup = false);
 		bool remove(dev::Address const& _address, std::string const& _auth);
 		bool import(mcp::json const& _json, key_content & _kc);
 		mcp::key_content importRawKey(dev::Secret & _prv, std::string const& _auth);
@@ -28,7 +28,7 @@ namespace mcp
 		void lock(dev::Address const& _address);
 		std::pair<bool, Secret> authenticate(dev::Address const& _address, boost::optional<std::string> const& _auth = boost::none);
 	private:
-		void add_or_update_key(mcp::key_content const& _kc, bool const& _backup = true);
+		void add_or_update_key(mcp::key_content const& _kc, bool const& _backup = false);
 
 		boost::filesystem::path m_backup_path;
 
