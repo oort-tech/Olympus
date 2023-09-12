@@ -33,7 +33,7 @@ bool is_test_network();
 mcp::uint256_t chainID();
 Epoch epoch(uint64_t last_summary_mci);
 
-uint64_t const epoch_period = 300; ///Advance 100 mci switching epochs
+uint64_t const epoch_period = 10000; ///Advance 10000 mci switching epochs
 size_t const static max_data_size(131072); //128k
 size_t const static skiplist_divisor(10);
 uint64_t const static tx_max_gas(50000000);

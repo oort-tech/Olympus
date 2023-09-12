@@ -254,7 +254,7 @@ namespace dev
 		/// calculate offset if any
 		for (size_t i = 0; i < size; i++)
 		{
-			int index = i * 32;
+			int index = Elem->getTypeSize() * i;
 			TY v;
 			Elem->Unpack(index, in, v);
 			_value.push_back(v);

@@ -4,6 +4,12 @@
 #include <mcp/core/genesis.hpp>
 #include <libdevcore/CommonJS.h>
 
+constexpr uint32_t tx_timeout_ms = 1000;
+constexpr unsigned max_mt_count = 16;
+constexpr unsigned max_pending_size = 300;
+constexpr unsigned max_local_processing_size = 100;
+constexpr unsigned max_cache_unhandle_size = 100;
+
 mcp::late_message_info::late_message_info(std::shared_ptr<mcp::block_processor_item> item_a) :
 	item(item_a),
 	timestamp(item_a->joint.block->exec_timestamp()),
@@ -77,7 +83,7 @@ mcp::block_processor::block_processor(bool & error_a,
 	std::shared_ptr<rocksdb::TransactionOptions> tx_option(mcp::db::db_transaction::default_trans_options());
 	tx_option->skip_concurrency_control = true;
 
-	mcp::timeout_db_transaction timeout_tx(m_store, m_tx_timeout_ms, write_option, tx_option,
+	mcp::timeout_db_transaction timeout_tx(m_store, tx_timeout_ms, write_option, tx_option,
 		std::bind(&block_processor::before_db_commit_event, this),
 		std::bind(&block_processor::after_db_commit_event, this));
 	try
@@ -149,7 +155,7 @@ void mcp::block_processor::stop()
 
 bool mcp::block_processor::is_full()
 {
-	return m_blocks_pending.size() >= m_max_pending_size;
+	return m_blocks_pending.size() >= max_pending_size;
 }
 
 void mcp::block_processor::add_item(std::shared_ptr<mcp::block_processor_item> item_a)
@@ -164,36 +170,22 @@ void mcp::block_processor::add_item(std::shared_ptr<mcp::block_processor_item> i
 	if (block_hash == mcp::genesis::block_hash)
 		return;
 
-	if (!item_a->is_sync()
-		&& !item_a->is_local())
+	///throw if queue is full
+	if (item_a->is_broadCast() && (is_full() || BlockArrival.recent(block_hash)))
+		return;
+
+	///broadcase,request,loacl
+	if (!item_a->is_sync())
 	{
-		//not processing broadcast block when syncing
-        if (item_a->is_missing())
-            blocks_missing_size++;
-        if (m_sync->is_syncing())
-        {
-            if (item_a->is_missing())
-                blocks_missing_throw_size++;
-            return;
-        }
-
-		if (is_full() && item_a->joint.level != mcp::joint_processor_level::request)
-			return;
-
-		if (BlockArrival.recent(block_hash) && item_a->joint.level != mcp::joint_processor_level::request)
+		if (m_sync->is_syncing())
 		{
-			//LOG(m_log.debug) << "Recent block:" << block_hash.hex();
-
-			block_processor_recent_block_size++;
-			return;
+			if (item_a->is_broadCast() || item_a->is_local())///throw broadcast and local block if syncing.
+				return;
+			if (unhandle->unhandlde_size() >= max_cache_unhandle_size)///Cache the requested block until the cache reaches halfway.
+				return;
 		}
-	}
-
-	if (!item_a->is_sync() && item_a->joint.summary_hash == mcp::summary_hash(0))
-	{
-		//LOG(m_log.debug) << "Add recent block:" << block_hash.hex();
-
-		BlockArrival.add(block_hash);
+		if (item_a->joint.summary_hash == mcp::summary_hash(0))
+			BlockArrival.add(block_hash);
 	}
 
 	if (item_a->is_local())
@@ -214,7 +206,7 @@ void mcp::block_processor::add_many_to_mt_process(std::queue<std::shared_ptr<mcp
 	{
 		unsigned count = 0;
 		std::lock_guard<std::mutex> lock(m_mt_process_mutex);
-		while (!items_a.empty() && count < m_max_mt_count)
+		while (!items_a.empty() && count < max_mt_count)
 		{
 			add_item(items_a.front());
 			items_a.pop();
@@ -249,7 +241,7 @@ void mcp::block_processor::mt_process_blocks()
 				try
 				{
 					std::list<std::shared_ptr<std::promise<mcp::validate_status>>> results;
-					unsigned count = std::min((unsigned)m_mt_blocks_processing.size(), m_max_mt_count);
+					unsigned count = std::min((unsigned)m_mt_blocks_processing.size(), max_mt_count);
 					for (unsigned i = 0; i < count; i++)
 					{
 						std::shared_ptr<mcp::block_processor_item> item(m_mt_blocks_processing[i]);
@@ -371,7 +363,7 @@ void mcp::block_processor::mt_process_blocks()
 	}
 }
 
-void mcp::block_processor::add_to_process(std::shared_ptr<mcp::block_processor_item> item_a, bool retry)
+void mcp::block_processor::add_to_process(std::shared_ptr<mcp::block_processor_item> item_a)
 {
 	if (!item_a->is_sync() && item_a->joint.summary_hash != mcp::summary_hash(0))
 	{
@@ -391,8 +383,6 @@ void mcp::block_processor::add_to_process(std::shared_ptr<mcp::block_processor_i
 	else
 	{
 		m_blocks_pending.push_back(item_a);
-        if (!retry && item_a->is_sync())
-            blocks_pending_sync_size++;
 	}
 	m_process_condition.notify_all();
 }
@@ -407,7 +397,7 @@ void mcp::block_processor::process_blocks()
 		std::shared_ptr<rocksdb::TransactionOptions> tx_option(mcp::db::db_transaction::default_trans_options());
 		tx_option->skip_concurrency_control = true;
 
-		mcp::timeout_db_transaction timeout_tx(m_store, m_tx_timeout_ms, write_option, tx_option,
+		mcp::timeout_db_transaction timeout_tx(m_store, tx_timeout_ms, write_option, tx_option,
 			std::bind(&block_processor::before_db_commit_event, this),
 			std::bind(&block_processor::after_db_commit_event, this));
 		try 
@@ -435,7 +425,7 @@ void mcp::block_processor::process_blocks()
 		std::deque<std::shared_ptr<mcp::block_processor_item>> to_processing;
 		if (!m_local_blocks_pending.empty() || !m_blocks_pending.empty())
 		{
-			while (to_processing.size() < m_max_local_processing_size)
+			while (to_processing.size() < max_local_processing_size)
 			{
 				if (!m_local_blocks_pending.empty())
 				{
@@ -447,9 +437,6 @@ void mcp::block_processor::process_blocks()
 					if (m_blocks_pending.empty())
 						break;
 					to_processing.push_back(m_blocks_pending.front());
-
-                    if (m_blocks_pending.front()->is_sync())
-                        blocks_pending_sync_size--;
 
 					m_blocks_pending.pop_front();
 				}
@@ -538,7 +525,7 @@ void mcp::block_processor::do_process_one(std::shared_ptr<mcp::block_processor_i
 	std::shared_ptr<rocksdb::TransactionOptions> tx_option(mcp::db::db_transaction::default_trans_options());
 	tx_option->skip_concurrency_control = true;
 	std::shared_ptr<mcp::chain> chain(m_chain);
-	mcp::timeout_db_transaction timeout_tx(m_store, m_tx_timeout_ms, write_option, tx_option,
+	mcp::timeout_db_transaction timeout_tx(m_store, tx_timeout_ms, write_option, tx_option,
 		std::bind(&block_processor::before_db_commit_event, this),
 		std::bind(&block_processor::after_db_commit_event, this));
 
@@ -808,9 +795,6 @@ void mcp::block_processor::try_process_unhandle(std::shared_ptr<mcp::block_proce
 		{
 			std::shared_ptr<mcp::block_processor_item> u_item(p);
 			m_blocks_pending.push_front(u_item);
-
-            if (u_item->is_sync())
-                blocks_pending_sync_size++;
 		}
 	}
 }
@@ -934,22 +918,18 @@ void mcp::block_processor::after_db_commit_event()
 std::string mcp::block_processor::get_processor_info()
 {
 	std::string str = "m_blocks_pending:" + std::to_string(m_blocks_pending.size())
-        + " ,m_blocks_pending_sync:" + std::to_string(blocks_pending_sync_size)
-        + " ,blocks_missing_size:" + std::to_string(blocks_missing_size)
-        + " ,blocks_missing_throw_size:" + std::to_string(blocks_missing_throw_size)
 		+ " ,m_local_blocks_pending:" + std::to_string(m_local_blocks_pending.size())
 		+ " ,m_blocks_processing:" + std::to_string(m_blocks_processing.size())
 		+ " ,m_mt_blocks_pending:" + std::to_string(m_mt_blocks_pending.size())
 		+ " ,m_mt_blocks_processing:" + std::to_string(m_mt_blocks_processing.size())
 		+ " ,m_ok_local_dag_promises:" + std::to_string(m_ok_local_promises.size())
 		+ " ,ok:" + std::to_string(block_processor_add)
-		+ ", recent block:" + std::to_string(block_processor_recent_block_size)
 		+ ", invalid:" + std::to_string(InvalidBlockCache.size())
-		+ ", block arrival, " + std::to_string(BlockArrival.arrival.size())
+		+ ", block arrival: " + std::to_string(BlockArrival.arrival.size())
+		+ ", dag_old_size: " + std::to_string(dag_old_size)
+		+ ", base_validate_old_size: " + std::to_string(base_validate_old_size)
 		;
 
-    blocks_missing_size = 0;
-    blocks_missing_throw_size = 0;
 	return str;
 }
 

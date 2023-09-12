@@ -53,7 +53,8 @@ namespace mcp
 		StackUnderflow,
 		RevertInstruction,
 		InvalidZeroSignatureFormat,
-		AddressAlreadyUsed
+		AddressAlreadyUsed,
+		OutOfGasPriceIntrinsic	///< Too little gas price for the base transaction cost.
 	};
 	TransactionException toTransactionException(Exception const& _e);
 
