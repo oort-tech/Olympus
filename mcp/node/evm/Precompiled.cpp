@@ -59,13 +59,13 @@ namespace
 			h256 s;
 		} in;
 
-		memcpy(&in, _in.data(), min(_in.size(), sizeof(in)));
+		memcpy(&in, _in.data(), std::min(_in.size(), sizeof(in)));
 
 		h256 ret;
 		u256 v = (u256)in.v;
 		if (v >= 27 && v <= 28)
 		{
-			SignatureStruct sig(in.r, in.s, (byte)((int)v - 27));
+			SignatureStruct sig(in.r, in.s, (CryptoPP::byte)((int)v - 27));
 			if (sig.isValid())
 			{
 				try
@@ -110,7 +110,7 @@ namespace
 		size_t const count{ _count };
 
 		// crop _in, not going beyond its size
-		bytesConstRef cropped = _in.cropped(begin, min(count, _in.count() - begin));
+		bytesConstRef cropped = _in.cropped(begin, std::min(count, _in.count() - begin));
 
 		bigint ret = fromBigEndian<bigint>(cropped);
 		// shift as if we had right-padding zeroes
@@ -181,7 +181,7 @@ namespace
 		bigint const maxLength(max(modLength, baseLength));
 		bigint const adjustedExpLength(expLengthAdjust(baseLength + 96, expLength, _in));
 
-		return multComplexity(maxLength) * max<bigint>(adjustedExpLength, 1) / 20;
+		return multComplexity(maxLength) * std::max<bigint>(adjustedExpLength, 1) / 20;
 	}
 
 	ETH_REGISTER_PRECOMPILED(alt_bn128_G1_add)(bytesConstRef _in)

@@ -9,7 +9,7 @@
 #include <mcp/db/db_iterator.hpp>
 #include <mcp/db/column.hpp>
 #include <mcp/common/log.hpp>
-#include <rocksdb/cache.h>
+#include <rocksdb/advanced_cache.h>
 #include <rocksdb/sst_file_manager.h>
 #include <rocksdb/rate_limiter.h>
 #include <rocksdb/slice_transform.h>
