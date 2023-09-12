@@ -18,20 +18,20 @@ namespace mcp
 	struct RPC_Http_Error_BadRequest : virtual RpcHttpException
 	{
 		RPC_Http_Error_BadRequest(const char* m = "") : message(m) {}
-		const char* what() const noexcept override { return message; }
+		const char* what() const noexcept override { return message.what(); }
 		const boost::beast::http::status status() const noexcept override { return boost::beast::http::status::bad_request; }
 	private: 
-		const char* message; 
+		std::runtime_error message;
 	};
 
 	///internal error.
 	struct RPC_Http_Error_Internal_Server_Error : virtual RpcHttpException
 	{
 		RPC_Http_Error_Internal_Server_Error(const char* m = "") : message(m) {}
-		const char* what() const noexcept override { return message; }
+		const char* what() const noexcept override { return message.what(); }
 		const boost::beast::http::status status() const noexcept override { return boost::beast::http::status::internal_server_error; }
 	private:
-		const char* message;
+		std::runtime_error message;
 	};
 
 	///system exception
@@ -51,10 +51,10 @@ namespace mcp
     struct X : virtual RpcException \
     {                            \
 		X(const char* m = "") : message(m) {} \
-		const char* what() const noexcept override { return message; }\
+		const char* what() const noexcept override { return message.what(); }\
 		const int code() const noexcept override { return C; } \
 	private: \
-        const char* message; \
+        std::runtime_error message; \
     };
 	
 	/***************************************************************************************************************************/

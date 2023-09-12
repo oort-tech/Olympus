@@ -61,7 +61,7 @@ void mcp::Executive::initialize(Transaction const& _transaction)
 
     if (m_s.balance(m_t.sender()) < totalCost)
     {
-		LOG(m_log.info) << "Not enough cash: Require > " << totalCost << " = " << m_t.gas()
+		LOG(m_log.debug) << "Not enough cash: Require > " << totalCost << " = " << m_t.gas()
 			<< " * " << m_t.gasPrice() << " + " << m_t.value() << " Got"
 			<< m_s.balance(m_t.sender()) << " for sender: " << m_t.sender().hexPrefixed();
 		m_excepted = TransactionException::NotEnoughCash;
@@ -73,13 +73,8 @@ void mcp::Executive::initialize(Transaction const& _transaction)
 bool mcp::Executive::execute()
 {
 	//mcp::stopwatch_guard sw("Executive:execute");
-
-    //// Pay...
-	//LOG(m_log.info) << "Paying " << m_gasCost << " from sender for gas ("
-	//	<< m_t.gas() << " gas at " << m_t.gasPrice() << ")";
     m_s.subBalance(m_t.sender(), m_gasCost);
-
-    assert_x(m_t.gas() >= (u256)m_baseGasRequired);
+	assert(m_t.gas() >= (u256)m_baseGasRequired);
     if (m_t.isCreation())
     {
         return create(m_t.sender(), m_t.value(), m_t.gasPrice(), m_t.gas() - (u256)m_baseGasRequired, &m_t.data(), m_t.sender());
@@ -252,7 +247,7 @@ bool mcp::Executive::executeCreate(Address const& _sender, u256 const& _endowmen
     bool accountAlreadyExist = (m_s.addressHasCode(m_newAddress) || m_s.getNonce(m_newAddress) >0);
     if (accountAlreadyExist)
     {
-		BOOST_LOG(m_log.info) << "Address already used: " << m_newAddress;
+		BOOST_LOG(m_log.debug) << "Address already used: " << m_newAddress;
         m_gas = 0;
         m_excepted = TransactionException::AddressAlreadyUsed;
         revert();
@@ -367,16 +362,12 @@ bool mcp::Executive::go(dev::eth::OnOpFunc const& _onOp)
         }
         catch (RevertInstruction& _e)
         {
-            if (m_depth != 0)
-                throw;
             revert();
             m_output = _e.output();
             m_excepted = TransactionException::RevertInstruction;
         }
         catch (VMException const& _e)
         {
-            if (m_depth != 0)
-                throw;
             BOOST_LOG(m_log.debug) << "Safe VM Exception. " << diagnostic_information(_e);
             m_gas = 0;
             m_excepted = toTransactionException(_e);
@@ -384,8 +375,6 @@ bool mcp::Executive::go(dev::eth::OnOpFunc const& _onOp)
         }
         catch (InternalVMError const& _e)
         {
-            if (m_depth != 0)
-                throw;
             cerror << "Internal VM Error (EVMC status code: "
                  << *boost::get_error_info<errinfo_evmcStatusCode>(_e) << ")";
             revert();
@@ -393,8 +382,6 @@ bool mcp::Executive::go(dev::eth::OnOpFunc const& _onOp)
         }
         catch (Exception const& _e)
         {
-            if (m_depth != 0)
-                throw;
             // TODO: AUDIT: check that this can never reasonably happen. Consider what to do if it does.
             cerror << "Unexpected exception in VM. There may be a bug in this implementation. "
                  << diagnostic_information(_e);
@@ -404,8 +391,6 @@ bool mcp::Executive::go(dev::eth::OnOpFunc const& _onOp)
         }
         catch (std::exception const& _e)
         {
-            if (m_depth != 0)
-                throw;
             // TODO: AUDIT: check that this can never reasonably happen. Consider what to do if it does.
             cerror << "Unexpected std::exception in VM. Not enough RAM? " << _e.what();
             exit(1);

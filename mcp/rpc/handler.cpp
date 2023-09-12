@@ -585,7 +585,7 @@ void mcp::rpc_handler::eth_estimateGas(mcp::json &j_response, bool &)
 
 	mcp::db::db_transaction transaction(m_store.create_transaction());
 
-	std::pair<u256, bool> result = m_chain->estimate_gas(
+	auto result = m_chain->estimate_gas(
 		transaction,
 		m_cache,
 		ts.from,
@@ -596,12 +596,10 @@ void mcp::rpc_handler::eth_estimateGas(mcp::json &j_response, bool &)
 		ts.gasPrice,
 		mc_info);
 
-	/// this error is reported if the gas less than 21000, the logic has not been confirmed, response other code ?
-	if (!result.second)
-		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError("Pending Transaction with Same Nonce but Higher Gas Price Exists."));
+	if (result.second.excepted != TransactionException::None)
+		BOOST_THROW_EXCEPTION(RPC_Error_RequestDenied(mcp::to_transaction_exception_messge(result.second.excepted).c_str()));
 
 	j_response["result"] = toJS(result.first);
-	
 }
 
 void mcp::rpc_handler::eth_getBlockByNumber(mcp::json &j_response, bool &)

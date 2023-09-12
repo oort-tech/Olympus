@@ -103,7 +103,7 @@ mcp::key_content mcp::key_manager::importRawKey(dev::Secret & _prv, std::string 
 	CryptoJSON cryptoStruct = EncryptDataV3(_prv, _auth, Key::StandardScryptN, Key::StandardScryptP);
 	boost::uuids::uuid id = boost::uuids::random_generator()();
 	mcp::key_content kc(dev::toAddress(dev::toPublic(_prv)), cryptoStruct, id, Key::version);
-	add_or_update_key(kc, true);
+	add_or_update_key(kc);
 	return kc;
 }
 

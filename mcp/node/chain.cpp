@@ -301,24 +301,24 @@ void mcp::chain::UpdateCommittee(mcp::timeout_db_transaction & timeout_tx_a, Epo
 	if (vrf_outputs[vrfepoch].size() < p_param.witness_count)
 	{
 		if (vrf_outputs.count(vrfepoch))
-			LOG(m_log.info) << "Not switch witness_list because elector's number is too short: " << vrf_outputs[vrfepoch].size() << " ,epoch:" << vrfepoch;
+			LOG(m_log.debug) << "Not switch witness_list because elector's number is too short: " << vrf_outputs[vrfepoch].size() << " ,epoch:" << vrfepoch;
 		else
-			LOG(m_log.info) << "Not switch witness_list because elector not found.epoch:" << vrfepoch;
+			LOG(m_log.debug) << "Not switch witness_list because elector not found.epoch:" << vrfepoch;
 		mcp::param::add_witness_param(transaction_a, useepoch, p_param);
 	}
 	else
 	{
 		p_param.witness_list.clear();
 		auto it = vrf_outputs[vrfepoch].rbegin();
-		///test start
-		for (auto i = vrf_outputs[vrfepoch].begin(); i != vrf_outputs[vrfepoch].end(); i++)
-		{
-			LOG(m_log.info) << "elect node: " << i->second.from().hexPrefixed();
-		}
-		///test end
+		/////test start
+		//for (auto i = vrf_outputs[vrfepoch].begin(); i != vrf_outputs[vrfepoch].end(); i++)
+		//{
+		//	LOG(m_log.info) << "elect node: " << i->second.from().hexPrefixed();
+		//}
+		/////test end
 		for (int i = 0; i<p_param.witness_count; i++) {
 			p_param.witness_list.insert(it->second.from());
-			LOG(m_log.info) << "elect " << it->second.from().hexPrefixed() << " output:" << it->first.hex();
+			//LOG(m_log.info) << "elect " << it->second.from().hexPrefixed() << " output:" << it->first.hex();
 			it++;
 		}
 		assert_x(p_param.witness_list.size() == p_param.witness_count);
@@ -444,7 +444,7 @@ void mcp::chain::ApplyWorkTransaction(mcp::timeout_db_transaction & timeout_tx_a
 	dev::eth::McInfo mc_info = GetMcInfo(timeout_tx_a, cache_a, mci);
 	Transaction _t = PackSystemContract(transaction_a, cache_a, _v);
 	std::pair<ExecutionResult, dev::eth::TransactionReceipt> result = execute(transaction_a, cache_a, _t, mc_info, Permanence::Committed, dev::eth::OnOpFunc());
-	assert_x(result.second.statusCode());//for test .deleted it--------------------------------------------------------
+	//assert_x(result.second.statusCode());//for test .
 	cache_a->transaction_put(transaction_a, std::make_shared<Transaction>(_t));
 	cache_a->account_nonce_put(transaction_a, _t.sender(), _t.nonce());
 	cache_a->transaction_receipt_put(transaction_a, _t.sha3(), std::make_shared<dev::eth::TransactionReceipt>(result.second));
@@ -1406,7 +1406,7 @@ bool mcp::chain::get_mc_info_from_block_hash(mcp::db::db_transaction & transacti
 //	}
 //}
 
-std::pair<u256, bool> mcp::chain::estimate_gas(mcp::db::db_transaction& transaction_a, std::shared_ptr<mcp::iblock_cache> cache_a,
+std::pair<u256, mcp::ExecutionResult> mcp::chain::estimate_gas(mcp::db::db_transaction& transaction_a, std::shared_ptr<mcp::iblock_cache> cache_a,
 	Address const& _from, u256 const& _value, Address const& _dest, bytes const& _data, int64_t const& _maxGas, u256 const& _gasPrice, dev::eth::McInfo const & mc_info_a, GasEstimationCallback const& _callback)
 {
 	try
@@ -1414,75 +1414,94 @@ std::pair<u256, bool> mcp::chain::estimate_gas(mcp::db::db_transaction& transact
 		int64_t upperBound = _maxGas;
 		if (upperBound == Invalid256 || upperBound > mcp::tx_max_gas)
 			upperBound = mcp::tx_max_gas;
-		//if (_maxGas == 0)
-		//	_maxGas = mcp::tx_max_gas;
 
 		int64_t lowerBound = Transaction::baseGasRequired(!_dest, &_data, dev::eth::EVMSchedule());
+        u256 gasPrice = _gasPrice == Invalid256 ? mcp::gas_price : _gasPrice;
+		ExecutionResult er;
 
-		///// if gas need used 50000,but input _maxGas ,it return zero ?
-		//if(_maxGas < lowerBound)
-		//	return std::make_pair(u256(), false);
-
-        //int64_t upperBound = _maxGas;
-        //if (upperBound == Invalid256 || upperBound > mcp::tx_max_gas)
-        //    upperBound = mcp::tx_max_gas;
-
-		// sichaoy: default gas price to be defined
-         u256 gasPrice = _gasPrice == Invalid256 ? mcp::gas_price : _gasPrice;
-        ExecutionResult er;
-        ExecutionResult lastGood;
-        bool good = false;
-
-		do
+		/// Pre calculate the gas needed for execution
+		if (upperBound < lowerBound)
 		{
-			int64_t mid = (lowerBound + upperBound) / 2;
-			dev::eth::EnvInfo env(transaction_a, m_store, cache_a, mc_info_a, mcp::chainID());
-			auto chain_ptr(shared_from_this());
-			chain_state c_state(transaction_a, 0, m_store, chain_ptr, cache_a);
+			er.excepted = TransactionException::OutOfGas;
+			return std::make_pair(u256(), er);;
+		}
+			
+		/// Avoid transactions that are less than the lower gas price limit.
+		if (gasPrice < mcp::gas_price)
+		{
+			er.excepted = TransactionException::OutOfGasPriceIntrinsic;
+			return std::make_pair(u256(), er);;
+		}
+
+		dev::eth::EnvInfo env(transaction_a, m_store, cache_a, mc_info_a, mcp::chainID());
+		auto chain_ptr(shared_from_this());
+		chain_state c_state(transaction_a, 0, m_store, chain_ptr, cache_a);
+
+		auto _T([this, c_state, _from, _value, _dest, _data, gasPrice](int64_t const & gas)
+		{
 			u256 n = c_state.getNonce(_from);
 			Transaction t;
 			if (_dest)
-				t = Transaction(_value, gasPrice, mid, _dest, _data, n);
+				t = Transaction(_value, gasPrice, gas, _dest, _data, n);
 			else
-				t = Transaction(_value, gasPrice, mid, _data, n);
+				t = Transaction(_value, gasPrice, gas, _data, n);
 			t.setSignature(h256(0), h256(0), 0);
 			t.forceSender(_from);
+			return t;
+		});
+
+		/// Reject the transaction as invalid if it still fails at the highest allowance
+		{
+			Transaction t = _T(upperBound);
+			c_state.ts = t;
+			c_state.addBalance(_from, upperBound * _gasPrice + _value);
+			er = c_state.execute(env, Permanence::Reverted, t, dev::eth::OnOpFunc()).first;
+			/// If the error is not nil(consensus error), it means the provided message
+			/// call or transaction will never be accepted no matter how much gas it is
+			/// assigned. Return the error directly, don't struggle any more.
+
+			if (er.excepted != TransactionException::None)
+				return std::make_pair(u256(), er);
+		}
+		/// Execute the binary search and hone in on an executable gas limit
+		while (lowerBound + 1 < upperBound)
+		{
+			int64_t mid = (lowerBound + upperBound) / 2;
+			Transaction t = _T(mid);
 			c_state.ts = t;
 			c_state.addBalance(_from, mid * _gasPrice + _value);
-			std::pair<mcp::ExecutionResult, dev::eth::TransactionReceipt> result = c_state.execute(env, Permanence::Reverted, t, dev::eth::OnOpFunc());
-			er = result.first;
-			if (er.excepted == TransactionException::OutOfGas ||
-				er.excepted == TransactionException::OutOfGasBase ||
-				er.excepted == TransactionException::OutOfGasIntrinsic ||
-				er.codeDeposit == CodeDeposit::Failed ||
-				er.excepted == TransactionException::BadJumpDestination)
-				lowerBound = lowerBound == mid ? upperBound : mid;
+
+			ExecutionResult result = c_state.execute(env, Permanence::Reverted, t, dev::eth::OnOpFunc()).first;
+			if (result.excepted != TransactionException::None
+				/*|| result.codeDeposit == CodeDeposit::Failed*/ /// throw exception if failed. not used yet?
+				)
+			{
+				lowerBound = mid;
+			}
 			else
 			{
-				lastGood = er;
-				upperBound = upperBound == mid ? lowerBound : mid;
-				good = true;
+				upperBound = mid;
+				er = result;
 			}
-
 			if (_callback)
 				_callback(GasEstimationProgress{ lowerBound, upperBound });
 		}
-		while (upperBound != lowerBound);
 
         if (_callback)
             _callback(GasEstimationProgress { lowerBound, upperBound });
-        return std::make_pair(upperBound, good);
+
+        return std::make_pair(upperBound, er);
     }
     catch (std::exception const & e)
     {
 		LOG(m_log.error) << "estimate_gas error:" << e.what();
-        return std::make_pair(u256(), false);
+        return std::make_pair(u256(), ExecutionResult());
     }
 	catch (...)
 	{
 		LOG(m_log.error) << "estimate_gas unknown error";
 		// TODO: Some sort of notification of failure.
-		return std::make_pair(u256(), false);
+		return std::make_pair(u256(), ExecutionResult());
 	}
 }
 

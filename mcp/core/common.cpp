@@ -77,13 +77,13 @@ std::string mcp::to_transaction_exception_messge(mcp::TransactionException const
 		error_msg = "Block Gas Limit Reached";
 		break;
 	case mcp::TransactionException::BadInstruction:
-		error_msg = "Bad Instruction";
+		error_msg = "invalid code: must not begin with 0xef";
 		break;
 	case mcp::TransactionException::BadJumpDestination:
-		error_msg = "Bad Jump Destination";
+		error_msg = "invalid jump destination";
 		break;
 	case mcp::TransactionException::OutOfGas:
-		error_msg = "Out Of Gas";
+		error_msg = "Gas required exceeds allowance";
 		break;
 	case mcp::TransactionException::OutOfStack:
 		error_msg = "Out Of Stack";
@@ -92,7 +92,7 @@ std::string mcp::to_transaction_exception_messge(mcp::TransactionException const
 		error_msg = "Stack Under flow";
 		break;
 	case mcp::TransactionException::RevertInstruction:
-		error_msg = "Revert Instruction";
+		error_msg = "execution reverted";
 		break;
 	case mcp::TransactionException::InvalidZeroSignatureFormat:
 		error_msg = "Invalid Zero Signature Format";
@@ -100,11 +100,11 @@ std::string mcp::to_transaction_exception_messge(mcp::TransactionException const
 	case mcp::TransactionException::AddressAlreadyUsed:
 		error_msg = "Address Already Used";
 		break;
-	case mcp::TransactionException::Unknown:
-		error_msg = "Unknown Error";
+	case mcp::TransactionException::OutOfGasPriceIntrinsic:
+		error_msg = "Intrinsic gas price too low";
 		break;
 	default:
-		assert_x_msg(false, "Invalid TransactionException")
+		error_msg = "Unknown Error";
 		break;
 	}
 
