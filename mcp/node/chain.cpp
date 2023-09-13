@@ -1289,6 +1289,8 @@ void mcp::chain::search_stable_block(mcp::db::db_transaction & transaction_a, st
 std::vector<uint64_t> mcp::chain::cal_skip_list_mcis(uint64_t const &mci)
 {
 	std::vector<uint64_t> skip_list_mcis;
+	if (mci == 0) ///return empty
+		return skip_list_mcis;
 	uint64_t divisor = mcp::skiplist_divisor;
 	while (true)
 	{
