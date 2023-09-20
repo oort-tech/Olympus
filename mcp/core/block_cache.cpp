@@ -35,9 +35,11 @@ std::shared_ptr<mcp::block> mcp::block_cache::block_get(mcp::db::db_transaction 
 	{
 		bool exists = m_blocks.tryGet(block_hash_a, block);
 		if (!exists)
+		{
 			block = m_store.block_get(transaction_a, block_hash_a);
-
-		m_blocks.insert(block_hash_a, block);
+			if (block)
+				m_blocks.insert(block_hash_a, block);
+		}
 	}
 	else
 		block = m_store.block_get(transaction_a, block_hash_a);
@@ -57,9 +59,11 @@ std::shared_ptr<mcp::block> mcp::block_cache::block_get(mcp::db::db_transaction 
 	{
 		bool exists = m_blocks.tryGet(bh, block);
 		if (!exists)
+		{
 			block = m_store.block_get(transaction_a, bh);
-
-		m_blocks.insert(bh, block);
+			if (block)
+				m_blocks.insert(bh, block);
+		}
 	}
 	else
 		block = m_store.block_get(transaction_a, bh);

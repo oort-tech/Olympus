@@ -32,7 +32,7 @@ void mcp::chain::init(bool & error_a, mcp::timeout_db_transaction & timeout_tx_a
 	{
 		std::pair<bool, mcp::Transactions> ret = mcp::genesis::try_initialize(transaction, m_store);
 
-		// Init precompiled contract account
+		/// Init precompiled contract account
 		if (ret.first)
 		{
 			AccountMap precompiled_accounts;
@@ -51,20 +51,6 @@ void mcp::chain::init(bool & error_a, mcp::timeout_db_transaction & timeout_tx_a
 			///init staking
 			for (auto _t : ret.second)
 			{
-				/////test
-				//{
-				//	LOG(m_log.info) << "hash: " << _t.sha3().hexPrefixed() << " ,m_nonce:" << _t.nonce()
-				//		<< " ,m_value:" << _t.value()
-				//		<< " ,m_receiveAddress:" << _t.receiveAddress().hex()
-				//		<< " ,m_gasPrice:" << _t.gasPrice()
-				//		<< " ,m_gas:" << _t.gas()
-				//		<< " ,m_data:" << toHex(_t.data())
-				//		<< " ,m_vrs v:" << (int)_t.signature().v
-				//		<< " ,m_vrs r:" << _t.signature().r.hex()
-				//		<< " ,m_vrs s:" << _t.signature().s.hex()
-				//		<< " ,m_chainId:" << _t.chainID()
-				//		<< " ,sender:" << _t.sender().hex();
-				//}
 				std::pair<ExecutionResult, dev::eth::TransactionReceipt> result = execute(transaction, cache_a, _t, mc_info, Permanence::Committed, dev::eth::OnOpFunc());
 				assert_x(result.second.statusCode());
 				cache_a->transaction_put(transaction, std::make_shared<Transaction>(_t));
@@ -88,7 +74,7 @@ void mcp::chain::init(bool & error_a, mcp::timeout_db_transaction & timeout_tx_a
 	}
 	LOG(m_log.info) << "Genesis block:" << mcp::genesis::block_hash.hex();
 
-	// Setup default precompiled contracts as equal to genesis of Frontier.
+	/// Setup default precompiled contracts as equal to genesis of Frontier.
 	m_precompiled.insert(std::make_pair(Address(1), dev::eth::PrecompiledContract(3000, 0, dev::eth::PrecompiledRegistrar::executor("ecrecover"))));
 	m_precompiled.insert(std::make_pair(Address(2), dev::eth::PrecompiledContract(60, 12, dev::eth::PrecompiledRegistrar::executor("sha256"))));
 	m_precompiled.insert(std::make_pair(Address(3), dev::eth::PrecompiledContract(600, 120, dev::eth::PrecompiledRegistrar::executor("ripemd160"))));
@@ -98,7 +84,7 @@ void mcp::chain::init(bool & error_a, mcp::timeout_db_transaction & timeout_tx_a
 	m_precompiled.insert(std::make_pair(Address(7), dev::eth::PrecompiledContract(40000, 0, dev::eth::PrecompiledRegistrar::executor("alt_bn128_G1_mul"))));
 	m_precompiled.insert(std::make_pair(Address(8), dev::eth::PrecompiledContract(dev::eth::PrecompiledRegistrar::pricer("alt_bn128_pairing_product"), dev::eth::PrecompiledRegistrar::executor("alt_bn128_pairing_product"))));
 
-	//get init data
+	///get init data
 	m_last_mci_internal = m_store.last_mci_get(transaction);
 	m_last_stable_mci_internal = m_store.last_stable_mci_get(transaction);
 
@@ -151,7 +137,7 @@ void mcp::chain::save_dag_block(mcp::timeout_db_transaction & timeout_tx_a, std:
 			{
 				//mcp::stopwatch_guard sw("save_block:best_free");
 
-				//search best free block by witnessed_level desc, level asc, block hash asc
+				///search best free block by witnessed_level desc, level asc, block hash asc
 				mcp::db::forward_iterator free_iter(m_store.dag_free_begin(transaction));
 				assert_x(free_iter.valid());
 				mcp::free_key free_key(free_iter.key());
@@ -310,15 +296,8 @@ void mcp::chain::UpdateCommittee(mcp::timeout_db_transaction & timeout_tx_a, Epo
 	{
 		p_param.witness_list.clear();
 		auto it = vrf_outputs[vrfepoch].rbegin();
-		/////test start
-		//for (auto i = vrf_outputs[vrfepoch].begin(); i != vrf_outputs[vrfepoch].end(); i++)
-		//{
-		//	LOG(m_log.info) << "elect node: " << i->second.from().hexPrefixed();
-		//}
-		/////test end
 		for (int i = 0; i<p_param.witness_count; i++) {
 			p_param.witness_list.insert(it->second.from());
-			//LOG(m_log.info) << "elect " << it->second.from().hexPrefixed() << " output:" << it->first.hex();
 			it++;
 		}
 		assert_x(p_param.witness_list.size() == p_param.witness_count);
@@ -403,7 +382,6 @@ void mcp::chain::ApplyWorkTransaction(mcp::timeout_db_transaction & timeout_tx_a
 	mcp::db::db_transaction & transaction_a(timeout_tx_a.get_transaction());
 	///call contract, get aword
 	MainInfo _m = MainCaller.GetMainInfo();
-	//LOG(m_log.info) << "total:" << _m.amount << " ,OnMci:" << _m.onMci << " ,NotOnMci:" << _m.notOnMci;
 
 	uint32_t total = 0;
 	std::map<dev::Address, uint32_t> details;
@@ -412,14 +390,12 @@ void mcp::chain::ApplyWorkTransaction(mcp::timeout_db_transaction & timeout_tx_a
 		///Collect statistics about the epoch. Ignore the address of the last epoch.
 		if (!mcp::param::is_witness(transaction_a, epoch-1, it.first))
 		{
-			//LOG(m_log.info) << " ApplyWorkTransaction not witness: " << it.first.hexPrefixed();
 			continue;
 		}
 		
 		uint32_t t = (it.second.OnMci * _m.onMci) + (it.second.NotOnMci * _m.notOnMci);
 		details[it.first] = t;
 		total += t;
-		//LOG(m_log.info) << "OnMci:" << it.second.OnMci << " ,NotOnMci:" << it.second.NotOnMci << " ,total:" << total << " ,t:" << t;
 	}
 	std::map<dev::Address, u256> _v;
 	u256 precision = (u256)1e13;
@@ -434,10 +410,7 @@ void mcp::chain::ApplyWorkTransaction(mcp::timeout_db_transaction & timeout_tx_a
 		_v.insert(std::make_pair(it.first, a * precision));
 
 		testamount = testamount + (a * precision);
-		//LOG(m_log.info) << it.first.hexPrefixed() << " : " << a * precision;
 	}
-
-	//LOG(m_log.info) << " total: " << testamount;
 
 	m_statistics.clear();
 
@@ -476,15 +449,6 @@ void mcp::chain::UpdateStaking(mcp::timeout_db_transaction & timeout_tx_a, Epoch
 	static const int batchSize = 500;
 	auto _all = MainCaller.GetWitnesses();
 	int total = batchSize;
-	////test start
-	//auto _r = MainCaller.GetWitnesses();
-	//_all.first.insert(_r.first.begin(), _r.first.end());
-	//LOG(m_log.info) << "test:" << _r.first.size() << " ,get size: " << _all.second;
-	//for (auto v : _r.first)
-	//{
-	//	LOG(m_log.info) << "test:" << epoch << " ,account: " << v.first.hexPrefixed();
-	//}
-	////test end
 
 	while (total < _all.second)
 	{
@@ -494,18 +458,6 @@ void mcp::chain::UpdateStaking(mcp::timeout_db_transaction & timeout_tx_a, Epoch
 	}
 	mcp::db::db_transaction & transaction_a(timeout_tx_a.get_transaction());
 	m_cache->PutStakingList(transaction_a, epoch, _all.first);
-
-	////LOG(m_log.info) << "11 size:" << _all.first.size() << " ,get size: " << _all.second;
-	//for (auto v : _all.first)
-	//{
-	//	LOG(m_log.info) << "11 epoch:" << epoch << " ,account: " << v.first.hexPrefixed() << " ,balance: " << v.second;
-	//}
-	//auto aa = m_store.GetStakingList(transaction_a, epoch);
-	//LOG(m_log.info) << "size:" << _all.first.size();
-	//for (auto v : aa)
-	//{
-	//	LOG(m_log.info) << "epoch:" << epoch << " ,account: " << v.first.hexPrefixed();
-	//}
 }
 
 void mcp::chain::EpochFinalize(mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a, uint64_t const &mci, mcp::block_hash const& hash)
@@ -568,7 +520,6 @@ void mcp::chain::try_advance(mcp::timeout_db_transaction & timeout_tx_a, std::sh
 
 bool mcp::chain::IsStakingList(mcp::db::db_transaction & _transaction, Epoch const& _epoch, dev::Address const & _address)
 {
-	//LOG(m_log.info) << "_epoch:" << _epoch << " ,m_last_stable_epoch:" << m_last_stable_epoch << " ,_address: " << _address.hexPrefixed();
 	auto sl = m_cache->GetStakingList(_transaction, _epoch);
 	return sl.count(_address);
 }
@@ -578,7 +529,7 @@ void mcp::chain::write_dag_block(mcp::db::db_transaction & transaction_a, std::s
 {
 	mcp::block_hash const &block_hash = block_a->hash();
 
-	//save block, need put first
+	///save block, need put first
 	cache_a->block_put(transaction_a, block_hash, block_a);
 
 	mcp::block_hash const & root(block_a->root());
@@ -596,12 +547,12 @@ void mcp::chain::write_dag_block(mcp::db::db_transaction & transaction_a, std::s
 
 		if (pblock_state->is_free)
 		{
-			//make a copy for not changing value in cache
+			///make a copy for not changing value in cache
 			std::shared_ptr<mcp::block_state> pblock_state_copy(std::make_shared<mcp::block_state>(*pblock_state));
 			pblock_state_copy->is_free = false;
 			cache_a->block_state_put(transaction_a, pblock_hash, pblock_state_copy);
 
-			//remove parent block from dag free
+			///remove parent block from dag free
 			mcp::free_key f_key(pblock_state->witnessed_level, pblock_state->level, pblock_hash);
 			m_store.dag_free_del(transaction_a, f_key);
 		}
@@ -620,11 +571,11 @@ void mcp::chain::write_dag_block(mcp::db::db_transaction & transaction_a, std::s
 	uint64_t const & last_summary_mci(*last_summary_block_state->main_chain_index);
 	mcp::witness_param const & w_param(mcp::param::witness_param(transaction_a,mcp::epoch(last_summary_mci)));
 
-	//best parent
+	///best parent
 	mcp::block_hash best_pblock_hash(Ledger.determine_best_parent(transaction_a, cache_a, block_a->parents()));
-	//level
+	///level
 	level = Ledger.calc_level(transaction_a, cache_a, best_pblock_hash);
-	//witnessed level
+	///witnessed level
 	uint64_t witnessed_level(Ledger.calc_witnessed_level(w_param, level));
 
 	std::shared_ptr<mcp::block_state> state(std::make_shared<mcp::block_state>());
@@ -651,7 +602,7 @@ void mcp::chain::find_main_chain_changes(mcp::db::db_transaction & transaction_a
 	{
 		new_mc_block_hashs.push_front(prev_mc_block_hash);
 
-		//get previous best parent block
+		///get previous best parent block
 		prev_mc_block_hash = prev_mc_block_state->best_parent;
 		prev_mc_block_state = cache_a->block_state_get(transaction_a, prev_mc_block_hash);
 		assert_x(prev_mc_block_state);
@@ -662,7 +613,7 @@ void mcp::chain::find_main_chain_changes(mcp::db::db_transaction & transaction_a
 	retreat_level = prev_mc_block_state->level;
 	is_mci_retreat = retreat_mci < old_last_mci;
 
-	//check stable mci not retreat
+	///check stable mci not retreat
 	if (retreat_mci < m_last_stable_mci_internal)
 	{
 		std::string msg(boost::str(boost::format("stable mci retreat, last added block: %1%, retreat mci: %2%, last stable mci: %3%") 
@@ -690,7 +641,7 @@ void mcp::chain::update_mci(mcp::db::db_transaction & transaction_a, std::shared
 
 		std::shared_ptr<mcp::block_state> old_mci_block_state_in_cache(cache_a->block_state_get(transaction_a, old_last_mc_block_hash));
 		assert_x(old_mci_block_state_in_cache);
-		//make a copy for not changing value in cache
+		///make a copy for not changing value in cache
 		std::shared_ptr<mcp::block_state> old_mci_block_state_copy(std::make_shared<mcp::block_state>(*old_mci_block_state_in_cache));
 		assert_x(!old_mci_block_state_copy->is_stable);
 		if (old_mci_block_state_copy->is_on_main_chain)
@@ -698,7 +649,7 @@ void mcp::chain::update_mci(mcp::db::db_transaction & transaction_a, std::shared
 		old_mci_block_state_copy->main_chain_index = boost::none;
 		cache_a->block_state_put(transaction_a, old_last_mc_block_hash, old_mci_block_state_copy);
 
-		//delete old main chian block
+		///delete old main chian block
 		m_store.main_chain_del(transaction_a, old_mci);
 
 		old_mci--;
@@ -721,7 +672,7 @@ void mcp::chain::update_mci(mcp::db::db_transaction & transaction_a, std::shared
 
 		std::shared_ptr<mcp::block_state> new_mc_block_state_in_cache(cache_a->block_state_get(transaction_a, new_mc_block_hash));
 		assert_x(new_mc_block_state_in_cache);
-		//make a copy for not changing value in cache
+		///make a copy for not changing value in cache
 		std::shared_ptr<mcp::block_state> new_mc_block_state_copy(std::make_shared<mcp::block_state>(*new_mc_block_state_in_cache));
 		new_mc_block_state_copy->is_on_main_chain = true;
 		new_mc_block_state_copy->main_chain_index = new_mci;
@@ -793,11 +744,11 @@ void mcp::chain::update_latest_included_mci(mcp::db::db_transaction & transactio
 	{
 		//mcp::stopwatch_guard sw2("update_latest_included_mci2");
 
-		//get from unstable blocks where main_chain_index > last_main_chain_index or main_chain_index == null
+		///get from unstable blocks where main_chain_index > last_main_chain_index or main_chain_index == null
 		auto end = to_update_hashs.end();
 		for (auto u_it(to_update_hashs.begin()); u_it != end; u_it++)
 		{
-			//mcp::stopwatch_guard sw3("update_latest_included_mci3");
+			///mcp::stopwatch_guard sw3("update_latest_included_mci3");
 			std::unordered_set<mcp::block_hash> & u_hashs(u_it->second);
 			for (auto it(u_hashs.begin()); it != u_hashs.end(); it++)
 			{
@@ -807,7 +758,7 @@ void mcp::chain::update_latest_included_mci(mcp::db::db_transaction & transactio
 
 				std::shared_ptr<mcp::block_state> u_block_state_in_cache(cache_a->block_state_get(transaction_a, u_block_hash));
 				assert_x(u_block_state_in_cache);
-				//make a copy for not changing value in cache
+				///make a copy for not changing value in cache
 				std::shared_ptr<mcp::block_state> u_block_state_copy(std::make_shared<mcp::block_state>(*u_block_state_in_cache));
 
 				if (!u_block_state_copy->main_chain_index || (*u_block_state_copy->main_chain_index) > retreat_mci)
@@ -845,7 +796,7 @@ void mcp::chain::update_latest_included_mci(mcp::db::db_transaction & transactio
 								max_limci = u_pblock_state->latest_included_mc_index;
 						}
 
-						//best parent limci
+						///best parent limci
 						if (u_pblock_hash == u_block_state_copy->best_parent)
 						{
 							if (u_pblock_state->is_on_main_chain)
@@ -874,12 +825,12 @@ void mcp::chain::update_latest_included_mci(mcp::db::db_transaction & transactio
 						if (!u_pblock_state->is_on_main_chain)
 						{
 							assert_x(u_pblock_state->latest_bp_included_mc_index);
-							//max_bp_limci
+							///max_bp_limci
 							if (*max_bp_limci < *u_pblock_state->latest_bp_included_mc_index)
 								max_bp_limci = u_pblock_state->latest_bp_included_mc_index;
 
 							assert_x(u_pblock_state->earliest_bp_included_mc_index);
-							//min_bp_limci
+							///min_bp_limci
 							if (*min_bp_limci > *u_pblock_state->earliest_bp_included_mc_index)
 								min_bp_limci = u_pblock_state->earliest_bp_included_mc_index;
 						}
@@ -941,7 +892,7 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 			{
 				//mcp::stopwatch_guard sw("advance_stable_mci2_1");
 
-				//handle dag stable block 
+				///handle dag stable block 
 				std::shared_ptr<mcp::block> dag_stable_block = cache_a->block_get(transaction_a, dag_stable_block_hash);
 				assert_x(dag_stable_block);
 
@@ -973,14 +924,6 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 						//mcp::stopwatch_guard sw("set_block_stable2_1");
 						std::pair<ExecutionResult, dev::eth::TransactionReceipt> result = execute(transaction_a, cache_a, *_t, mc_info, Permanence::Committed, dev::eth::OnOpFunc());
 
-						//// check if the execution is successful
-						//if (result.second.statusCode() == 0)
-						//{
-						//	//std::cerr << "TransactionException: " << static_cast<std::underlying_type<mcp::TransactionException>::type>(result.first.excepted) << " "
-						//	//	<< "Output: " << toHex(result.first.output) << std::endl;
-						//	is_fail = true;
-						//}
-
 						/// commit transaction receipt
 						/// the account states were committed in Executive::go()
 						cache_a->transaction_receipt_put(transaction_a, link_hash, std::make_shared<dev::eth::TransactionReceipt>(result.second));
@@ -1004,7 +947,6 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 							<< ", to: " << dev::toJS(_t->to())
 							<< ", value: " << _t->value();
 						invalid = true;
-						//assert_x(false);
 					}
 					//catch (Exception const& _e)
 					//{
@@ -1098,7 +1040,7 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 				}
 			}
 
-			// set block stable
+			/// set block stable
 			{
 				h256 receiptsRoot = dev::orderedTrieRoot(receipts);
 				//mcp::stopwatch_guard sw("advance_stable_mci2_2");
@@ -1120,10 +1062,10 @@ void mcp::chain::set_block_stable(mcp::timeout_db_transaction & timeout_tx_a, st
 
 		std::shared_ptr<mcp::block_state> stable_block_state_in_cache(cache_a->block_state_get(transaction_a, stable_block_hash));
 		assert_x(stable_block_state_in_cache);
-		//make a copy for not changing value in cache
+		///make a copy for not changing value in cache
 		std::shared_ptr<mcp::block_state> stable_block_state_copy(std::make_shared<mcp::block_state>(*stable_block_state_in_cache));
 
-		//has set
+		///has set
 		if (stable_block_state_copy->is_stable)
 		{
 			assert_x(false);
@@ -1192,7 +1134,7 @@ void mcp::chain::set_block_stable(mcp::timeout_db_transaction & timeout_tx_a, st
 
 #pragma region summary
 
-			//previous summary hash
+			///previous summary hash
 			mcp::summary_hash previous_summary_hash(0);
 			if (stable_block->previous() != mcp::block_hash(0))
 			{
@@ -1200,7 +1142,7 @@ void mcp::chain::set_block_stable(mcp::timeout_db_transaction & timeout_tx_a, st
 				assert_x(!previous_summary_hash_error);
 			}
 
-			//parent summary hashs
+			///parent summary hashs
 			std::list<mcp::summary_hash> p_summary_hashs;
 			for (mcp::block_hash const & pblock_hash : stable_block->parents())
 			{
@@ -1211,7 +1153,7 @@ void mcp::chain::set_block_stable(mcp::timeout_db_transaction & timeout_tx_a, st
 				p_summary_hashs.push_back(p_summary_hash);
 			}
 
-			//skip list
+			///skip list
 			std::set<mcp::block_hash> block_skiplist;
 			std::set<mcp::summary_hash> summary_skiplist;
 			if (stable_block_state_copy->is_on_main_chain)
@@ -1502,17 +1444,17 @@ std::pair<u256, mcp::ExecutionResult> mcp::chain::estimate_gas(mcp::db::db_trans
 	catch (...)
 	{
 		LOG(m_log.error) << "estimate_gas unknown error";
-		// TODO: Some sort of notification of failure.
+		/// TODO: Some sort of notification of failure.
 		return std::make_pair(u256(), ExecutionResult());
 	}
 }
 
-// This is the top function to be called by js call(). The reason to have this extra wrapper is to have this function
-// be called other methods except chain::set_block_stable
+/// This is the top function to be called by js call(). The reason to have this extra wrapper is to have this function
+/// be called other methods except chain::set_block_stable
 std::pair<mcp::ExecutionResult, dev::eth::TransactionReceipt> mcp::chain::execute(mcp::db::db_transaction& transaction_a, std::shared_ptr<mcp::iblock_cache> cache_a, Transaction const& _t, dev::eth::McInfo const & mc_info_a, Permanence _p, dev::eth::OnOpFunc const& _onOp)
 {
 	dev::eth::EnvInfo env(transaction_a, m_store, cache_a, mc_info_a, mcp::chainID());
-	// sichaoy: startNonce = 0
+	/// sichaoy: startNonce = 0
 	auto chain_ptr(shared_from_this());
 	chain_state c_state(transaction_a, 0, m_store, chain_ptr, cache_a);
 
