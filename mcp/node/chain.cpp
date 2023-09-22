@@ -368,7 +368,6 @@ void mcp::chain::InitWork(mcp::db::db_transaction & transaction_a, std::shared_p
 		if (state->main_chain_index < start)///previous epoch
 			continue;
 
-		LOG(m_log.info) << block_hash.hexPrefixed() << state->main_chain_index;
 		std::shared_ptr<mcp::block> block(cache_a->block_get(transaction_a, block_hash));
 		m_statistics.Insert(block->from(), state->is_on_main_chain);
 		for (mcp::block_hash const &pblock_hash : block->parents())
