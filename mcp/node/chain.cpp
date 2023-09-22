@@ -353,7 +353,7 @@ void mcp::chain::InitWork(mcp::db::db_transaction & transaction_a, std::shared_p
 	mcp::block_hash mc_stable_hash;
 	bool mc_stable_hash_error(m_store.main_chain_get(transaction_a, m_last_stable_mci_internal, mc_stable_hash));
 	assert_x(!mc_stable_hash_error);
-
+	h256Hash hashes;
 	std::queue<mcp::block_hash> queue;
 	queue.push(mc_stable_hash);
 	while (!queue.empty())
@@ -368,10 +368,14 @@ void mcp::chain::InitWork(mcp::db::db_transaction & transaction_a, std::shared_p
 		if (state->main_chain_index < start)///previous epoch
 			continue;
 
+		LOG(m_log.info) << block_hash.hexPrefixed() << state->main_chain_index;
 		std::shared_ptr<mcp::block> block(cache_a->block_get(transaction_a, block_hash));
 		m_statistics.Insert(block->from(), state->is_on_main_chain);
 		for (mcp::block_hash const &pblock_hash : block->parents())
-			queue.push(pblock_hash);
+		{
+			if (hashes.insert(pblock_hash).second)///Filter duplicate.
+				queue.push(pblock_hash);
+		}
 	}
 }
 
