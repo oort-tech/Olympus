@@ -594,7 +594,9 @@ std::string mcp::block_cache::report_cache_size()
 		<< " , m_block_states:" << m_block_states.size()
 		<< " , m_latest_account_states:" << m_latest_account_states.size()
 		<< " , m_successors:" << m_successors.size()
-		<< " , m_block_summarys:" << m_block_summarys.size();
+		<< " , m_block_summarys:" << m_block_summarys.size()
+		<< " , m_transactions:" << m_transactions.size()
+		<< " , m_transaction_receipts:" << m_transaction_receipts.size();
 
 	return s.str();
 }
