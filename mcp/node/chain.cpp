@@ -348,7 +348,7 @@ dev::eth::McInfo mcp::chain::GetMcInfo(mcp::timeout_db_transaction & timeout_tx_
 
 void mcp::chain::InitWork(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a)
 {
-	uint64_t start = mcp::epoch(m_last_stable_mci_internal) * mcp::epoch_period;
+	uint64_t start = mcp::epoch(m_last_stable_mci_internal) * mcp::epoch_period + 1;///include start
 
 	mcp::block_hash mc_stable_hash;
 	bool mc_stable_hash_error(m_store.main_chain_get(transaction_a, m_last_stable_mci_internal, mc_stable_hash));
@@ -404,15 +404,10 @@ void mcp::chain::ApplyWorkTransaction(mcp::timeout_db_transaction & timeout_tx_a
 	u256 precision = (u256)1e13;
 	u256 _precisionAmount = _m.amount / precision;
 
-	///test
-	u256 testamount = 0;
-
 	for (auto it : details)
 	{
 		u256 a = it.second * _precisionAmount / total;
 		_v.insert(std::make_pair(it.first, a * precision));
-
-		testamount = testamount + (a * precision);
 	}
 
 	m_statistics.clear();
@@ -1114,11 +1109,7 @@ void mcp::chain::set_block_stable(mcp::timeout_db_transaction & timeout_tx_a, st
 			m_store.dag_account_get(transaction_a, account, info);
 			info.latest_stable_block = stable_block_hash;
 			m_store.dag_account_put(transaction_a, account, info);
-
-			///Statistical witness block
-			///if fork, this block was sent much later than the other nodes, invalid.
-			m_statistics.Insert(stable_block->from(),stable_block_state_copy->is_on_main_chain);
-		}		
+		}
 
 		{
 			//mcp::stopwatch_guard sw("set_block_stable3");
@@ -1188,6 +1179,9 @@ void mcp::chain::set_block_stable(mcp::timeout_db_transaction & timeout_tx_a, st
 
 #pragma endregion
 
+			///Statistical witness block
+			///if fork, this block was sent much later than the other nodes, invalid.
+			m_statistics.Insert(stable_block->from(), stable_block_state_copy->is_on_main_chain);
 		}
 
 		//m_stable_blocks.push(stable_block);
