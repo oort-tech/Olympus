@@ -14,34 +14,23 @@ https://camo.githubusercontent.com/915b7be44ada53c290eb157634330494ebe3e30a/6874
 ### Linux
 
 Prerequisite:
-* g++ version >= 5. Use command `g++ -v` to check current version.
+* g++ version >= 9. Use command `g++ -v` to check current version.
 * Install `git`, `cmake`, `wget` and `unzip`.
   ```
   apt-get install -y git cmake wget unzip
 * Install ```boost```.
   ```
-  wget https://boostorg.jfrog.io/artifactory/main/release/1.66.0/source/boost_1_66_0_rc2.tar.bz2
-  tar --bzip2 -xf  boost_1_66_0.tar.bz2
-  cd boost_1_66_0
+  wget https://boostorg.jfrog.io/artifactory/main/release/1.81.0/source/boost_1_81_0_rc1.tar.bz2
+  tar --bzip2 -xf  boost_1_81_0.tar.bz2
+  cd boost_1_81_0
   ./bootstrap.sh --prefix=/usr/local
-  ./b2 -j$(nproc) --with-atomic --with-chrono --with-date_time --with-filesystem --with-log \
-      --with-program_options --with-regex --with-system --with-thread link=static install
-  cd .. && rm -rf boost_1_66_0 boost_1_66_0.tar.bz2
+  ./b2 -j$(nproc)
+  cd .. && rm -rf boost_1_81_0 boost_1_81_0.tar.bz2
   ```
 * Install libraries required by rocksdb. The output libraries are `liblz4.a` `libzstd.a` `libz.a`.
   ```
   apt-get install -y liblz4-dev libzstd-dev zlib1g-dev
   ```
-* Install `sodium`.
-  ```
-  wget https://download.libsodium.org/libsodium/releases/libsodium-1.0.17-stable.tar.gz
-  tar --gzip -xf  libsodium-1.0.17-stable.tar.gz
-  cd libsodium-stable
-  ./configure
-  make -j$(nproc)
-  make install
-  cd .. && rm -rf libsodium-stable libsodium-1.0.17-stable.tar.gz
-	```
 * Install `rocksdb`. The installed library name is `librocksdb.a`.
   ```
   wget https://github.com/facebook/rocksdb/archive/v5.18.3.zip
