@@ -4,6 +4,7 @@
 #include <atomic>
 #include <condition_variable>
 #include <type_traits>
+#include <fstream>
 
 #include <boost/optional/optional_io.hpp>
 #include <boost/filesystem.hpp>

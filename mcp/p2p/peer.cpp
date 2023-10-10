@@ -1,10 +1,10 @@
 #include "peer.hpp"
 using namespace mcp::p2p;
 
-peer::peer(std::shared_ptr<bi::tcp::socket> const & socket_a, node_id const & node_id_a, std::shared_ptr<peer_manager> peer_manager_a, std::unique_ptr<RLPXFrameCoder>&& _io) :
+peer::peer(std::shared_ptr<bi::tcp::socket> const & socket_a, node_id const & node_id_a, std::shared_ptr<peer_manager> peer_manager_a, std::unique_ptr<RLPXFrameCoder>&& _io, ba::io_service& io) :
 	socket(socket_a),
 	m_node_id(node_id_a),
-	m_io_service(socket_a->get_io_service()),
+	m_io_service(std::ref(io)),
 	m_peer_manager(peer_manager_a),
 	is_dropped(false),
 	m_pmetrics(std::make_shared<peer_metrics>()),

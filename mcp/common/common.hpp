@@ -11,6 +11,7 @@
 #include <string>
 #include <sstream>
 #include <iostream>
+#include <fstream>
 #include <condition_variable>
 
 #include <boost/multi_index_container.hpp>

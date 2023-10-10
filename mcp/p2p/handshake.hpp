@@ -41,7 +41,7 @@ namespace mcp
 				m_remote(_remote),
 				m_originated(_remote),
 				m_socket(_socket),
-				m_idleTimer(m_socket->get_io_service()),
+				m_idleTimer(m_socket->get_executor()),
 				m_failureReason{ HandshakeFailureReason::NoFailure }
 			{
 				crypto::Nonce::get().ref().copyTo(m_nonce.ref());

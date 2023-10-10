@@ -69,18 +69,19 @@ void mcp::rpc_connection::read()
 					}
 					catch (mcp::RpcHttpException const & e)
 					{
-						std::string str = std::to_string((unsigned)e.status()) + " " + 
-							boost::beast::http::obsolete_reason(e.status()).to_string();						
+						std::ostringstream stream;
+						stream << std::to_string((unsigned)e.status()) << " " << e.status();						
 						if (std::strlen(e.what()))
-							str = str + ": " + e.what();
-						this_l->response(str, version, e.status());
+							stream  << ": " << e.what();
+						this_l->response(stream.str(), version, e.status());
 					}
 				}
 				else
 				{
 					boost::beast::http::status code = boost::beast::http::status::not_found;
-					std::string str = std::to_string((unsigned)code) + " " + boost::beast::http::obsolete_reason(code).to_string();
-					this_l->response(str, version, boost::beast::http::status::not_found);
+					std::ostringstream stream;
+					stream << std::to_string((unsigned)code) << " " << code;
+					this_l->response(stream.str(), version, boost::beast::http::status::not_found);
 				}
 			});
 		}

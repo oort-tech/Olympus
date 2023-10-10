@@ -1,5 +1,6 @@
 #pragma once
 #include <boost/beast/websocket.hpp>
+#include <boost/beast/core/buffers_range.hpp>
 #include <boost/asio.hpp>
 #include <boost/thread/shared_mutex.hpp>
 #include <boost/thread.hpp>
@@ -133,7 +134,7 @@ namespace mcp
 
 
 		boost::beast::websocket::stream<bi::tcp::socket> ws;
-		ba::strand<ba::io_service::executor_type> strand;
+		//ba::strand<ba::io_service::executor_type> strand;
 		boost::beast::multi_buffer buffer;
 		std::string data;
 		mcp::rpc_ws & rpc_ws;

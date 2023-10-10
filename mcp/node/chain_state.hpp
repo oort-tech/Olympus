@@ -10,7 +10,7 @@
 #include <mcp/core/transaction.hpp>
 #include <mcp/core/approve.hpp>
 #include <mcp/common/log.hpp>
-
+#include <mcp/common/CodeSizeCache.h>
 #include <set>
 #include <unordered_set>
 
@@ -252,7 +252,69 @@ private:
     mcp::log m_log = { mcp::log("node") };
 };
 
+// Diff from commit in aleth, here we
+// 1. insert code into db if it's available
+// 2. commit storageDB to DB
+// 3. commit the cached account_state to DB
 template <class DB>
-AddressHash commit(mcp::db::db_transaction & transaction_a, AccountMap const& _cache, DB* db, std::shared_ptr<mcp::process_block_cache> block_cache, mcp::block_store& store, h256 const& ts);
+AddressHash commit(mcp::db::db_transaction & transaction_a, AccountMap const& _cache, DB* db, std::shared_ptr<mcp::process_block_cache> block_cache, mcp::block_store& store,h256 const& ts)
+{
+	//mcp::stopwatch_guard sw("chain state:commit");
+
+	AddressHash ret;
+    for (auto const& i: _cache)
+    {
+        if (i.second->isDirty())
+        {
+            if (i.second->hasNewCode())
+            {
+                h256 ch = i.second->codeHash();
+                // sichaoy: why do we need CodeSizeCache?
+                // Store the size of the code
+                dev::eth::CodeSizeCache::instance().store(ch, i.second->code().size());
+                db->insert(ch, &i.second->code());
+            }
+
+            std::shared_ptr<mcp::account_state> state(i.second);
+            if (i.second->storageOverlay().empty())
+            {
+                assert_x(i.second->baseRoot());
+                state->setStorageRoot(i.second->baseRoot());
+            }
+            else
+            {
+                //mcp::stopwatch_guard sw("chain state:commit1");
+
+                dev::eth::SecureTrieDB<h256, DB> storageDB(db, i.second->baseRoot());
+                for (auto const& j: i.second->storageOverlay())
+                    if (j.second)
+                        storageDB.insert(j.first, rlp(j.second));
+                    else
+                        storageDB.remove(j.first);
+                assert_x(storageDB.root());
+                state->setStorageRoot(storageDB.root());
+            }
+
+            {
+                //mcp::stopwatch_guard sw("chain state:commit2");
+
+                // commit the account_state to DB
+                db->commit();
+
+				//// Update account_state  previous and block hash
+				state->setPrevious();
+				state->setTs(ts);
+				state->record_init_hash();
+				state->clear_temp_state();
+
+				block_cache->latest_account_state_put(transaction_a, i.first, state);
+            }
+
+            ret.insert(i.first);
+        }
+    }
+
+    return ret;
+}
 
 }

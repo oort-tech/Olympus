@@ -417,8 +417,7 @@ void mcp::rpc_ws::close_ws(mcp::rpc_ws_connection & conn)
 
 /*deal websocket connection */
 mcp::rpc_ws_connection::rpc_ws_connection(bi::tcp::socket sock, mcp::rpc_ws & rpc_ws_a) :
-	ws(std::move(sock)),
-	strand(ws.get_executor()),
+	ws(boost::asio::make_strand(sock.get_executor())),
 	rpc_ws(rpc_ws_a)
 {
 
@@ -427,23 +426,16 @@ mcp::rpc_ws_connection::rpc_ws_connection(bi::tcp::socket sock, mcp::rpc_ws & rp
 template<class ConstBufferSequence>
 std::string mcp::rpc_ws_connection::to_string(ConstBufferSequence const& bs)
 {
-	std::string s;
-	s.reserve(buffer_size(bs));
-	for (auto b : boost::beast::detail::buffers_range(bs))
-		s.append(reinterpret_cast<char const*>(b.data()),
-			b.size());
-	return s;
+	return buffers_to_string(bs);
 }
 
 void mcp::rpc_ws_connection::runloop()
 {
 	ws.async_accept(
-		ba::bind_executor(
-			strand,
 			std::bind(
 				&rpc_ws_connection::on_accept,
 				shared_from_this(),
-				std::placeholders::_1)));
+				std::placeholders::_1));
 }
 
 void mcp::rpc_ws_connection::on_accept(boost::system::error_code ec)
@@ -463,13 +455,11 @@ void mcp::rpc_ws_connection::do_read()
 	// Read a message into our buffer
 	ws.async_read(
 		buffer,
-		boost::asio::bind_executor(
-			strand,
 			std::bind(
 				&rpc_ws_connection::on_read,
 				shared_from_this(),
 				std::placeholders::_1,
-				std::placeholders::_2)));
+				std::placeholders::_2));
 }
 
 void mcp::rpc_ws_connection::on_read(
@@ -501,13 +491,11 @@ void mcp::rpc_ws_connection::on_read(
 
 		ws.async_write(
 			buffer.data(),
-			boost::asio::bind_executor(
-				strand,
 				std::bind(
 					&rpc_ws_connection::on_write,
 					shared_from_this(),
 					std::placeholders::_1,
-					std::placeholders::_2)));
+					std::placeholders::_2));
 	}
 	else
 	{

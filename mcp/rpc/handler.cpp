@@ -164,9 +164,9 @@ void mcp::rpc_handler::accounts_balances(mcp::json &j_response, bool &)
 			BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
 
 		dev::Address account(account_text);
-		auto balance(c_state.balance(account));
+		mcp::uint256_t balance(c_state.balance(account));
 		mcp::json acc_balance;
-		acc_balance[account_text] = balance;
+		acc_balance[account_text] = toJS(balance);
 		j_balances.push_back(acc_balance);
 	}
 
