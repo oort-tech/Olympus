@@ -501,7 +501,7 @@ void host::start_peer(mcp::p2p::node_id const& _id, dev::RLP const& _rlp, std::u
 		
 		{
 			std::lock_guard<std::mutex> lock(m_peers_mutex);
-			std::shared_ptr<peer> new_peer(std::make_shared<peer>(socket, remote_node_id, m_peer_manager, move(_io)));
+			std::shared_ptr<peer> new_peer(std::make_shared<peer>(socket, remote_node_id, m_peer_manager, move(_io), io_service));
 			//check self connect
 			if (remote_node_id == id())
 			{

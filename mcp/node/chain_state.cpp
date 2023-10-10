@@ -211,7 +211,8 @@ void mcp::chain_state::commit()
     }
     removeEmptyAccounts();
 	std::shared_ptr<mcp::process_block_cache> process_block_cache = std::dynamic_pointer_cast<mcp::process_block_cache>(block_cache);
-    m_touched += mcp::commit(transaction, m_cache, &m_db, process_block_cache, store, ts.sha3());
+    auto t = mcp::commit(transaction, m_cache, &m_db, process_block_cache, store, ts.sha3());
+    m_touched += t;
     m_changeLog.clear();
     m_cache.clear();
     m_unchangedCacheEntries.clear();
@@ -241,72 +242,6 @@ void mcp::chain_state::save_previous_account_state()
         }
     }
     store.transaction_previous_account_state_put(transaction, ts.sha3(), hs);
-}
-
-
-// Diff from commit in aleth, here we
-// 1. insert code into db if it's available
-// 2. commit storageDB to DB
-// 3. commit the cached account_state to DB
-template <class DB>
-AddressHash mcp::commit(mcp::db::db_transaction & transaction_a, mcp::AccountMap const& _cache, DB* db, std::shared_ptr<mcp::process_block_cache> block_cache, mcp::block_store& store,h256 const& ts)
-{
-	//mcp::stopwatch_guard sw("chain state:commit");
-
-	AddressHash ret;
-    for (auto const& i: _cache)
-    {
-        if (i.second->isDirty())
-        {
-            if (i.second->hasNewCode())
-            {
-                h256 ch = i.second->codeHash();
-                // sichaoy: why do we need CodeSizeCache?
-                // Store the size of the code
-                CodeSizeCache::instance().store(ch, i.second->code().size());
-                db->insert(ch, &i.second->code());
-            }
-
-            std::shared_ptr<mcp::account_state> state(i.second);
-            if (i.second->storageOverlay().empty())
-            {
-                assert_x(i.second->baseRoot());
-                state->setStorageRoot(i.second->baseRoot());
-            }
-            else
-            {
-                //mcp::stopwatch_guard sw("chain state:commit1");
-
-                SecureTrieDB<h256, DB> storageDB(db, i.second->baseRoot());
-                for (auto const& j: i.second->storageOverlay())
-                    if (j.second)
-                        storageDB.insert(j.first, rlp(j.second));
-                    else
-                        storageDB.remove(j.first);
-                assert_x(storageDB.root());
-                state->setStorageRoot(storageDB.root());
-            }
-
-            {
-                //mcp::stopwatch_guard sw("chain state:commit2");
-
-                // commit the account_state to DB
-                db->commit();
-
-				//// Update account_state  previous and block hash
-				state->setPrevious();
-				state->setTs(ts);
-				state->record_init_hash();
-				state->clear_temp_state();
-
-				block_cache->latest_account_state_put(transaction_a, i.first, state);
-            }
-
-            ret.insert(i.first);
-        }
-    }
-
-    return ret;
 }
 
 bool mcp::chain_state::addressHasCode(Address const& _id) const
@@ -545,3 +480,5 @@ void mcp::chain_state::set_defalut_account_state(std::vector<h256>& accout_state
         }
     }
 }
+
+template AddressHash mcp::commit(mcp::db::db_transaction & transaction_a, mcp::AccountMap const& _cache, mcp::overlay_db* db, std::shared_ptr<mcp::process_block_cache> block_cache, mcp::block_store& store,h256 const& ts);

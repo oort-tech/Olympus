@@ -8,6 +8,7 @@
 #include <mcp/p2p/peer_store.hpp>
 #include <mcp/common/utility.hpp>
 #include <mcp/core/config.hpp>
+#include <boost/integer/static_log2.hpp>
 
 namespace mcp
 {

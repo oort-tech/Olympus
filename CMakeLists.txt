@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 2.8.11)
+cmake_minimum_required (VERSION 3.5.1)
 
 project (mcp)
 
@@ -38,7 +38,7 @@ endif (WIN32)
 if (WIN32)
 	set (PLATFORM_CXX_FLAGS "/bigobj /MP /wd4086 /wd4996 /wd4503 /wd4267 /wd4180 /wd4290 /wd4297 /wd4244 /wd4800")
 else (WIN32)
-	set (PLATFORM_CXX_FLAGS "-std=c++14 ")
+	set (PLATFORM_CXX_FLAGS "-std=c++17 ")
 endif (WIN32)
 
 if (WIN32)
@@ -52,7 +52,7 @@ if (APPLE)
 elseif (WIN32)
 	set (PLATFORM_LINK_FLAGS "")
 else ()
-	set (PLATFORM_LINK_FLAGS "-static-libgcc -static-libstdc++")
+	set (PLATFORM_LINK_FLAGS "-g -static-libgcc -static-libstdc++")
 endif (APPLE)
 
 include(ProjectLibFF)
@@ -66,7 +66,7 @@ if (BOOST_CUSTOM)
     list(APPEND CMAKE_MODULE_PATH ".\\" ${CMAKE_SOURCE_PATH})
 endif (BOOST_CUSTOM)
 
-find_package (Boost 1.66.0 REQUIRED COMPONENTS date_time filesystem system log log_setup thread program_options regex chrono atomic)
+find_package (Boost 1.81.0 REQUIRED COMPONENTS date_time filesystem system log log_setup thread program_options regex chrono atomic)
 include_directories (${Boost_INCLUDE_DIR})
 
 set(rocksdb_INCLUDE_DIR "" CACHE PATH "rocksdb include directory")

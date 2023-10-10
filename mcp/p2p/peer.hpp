@@ -41,7 +41,7 @@ namespace mcp
         {
 			friend class host;
         public:
-			peer(std::shared_ptr<bi::tcp::socket> const & socket_a, node_id const & node_id_a, std::shared_ptr<peer_manager> peer_manager_a, std::unique_ptr<RLPXFrameCoder>&& _io);
+			peer(std::shared_ptr<bi::tcp::socket> const & socket_a, node_id const & node_id_a, std::shared_ptr<peer_manager> peer_manager_a, std::unique_ptr<RLPXFrameCoder>&& _io, ba::io_service& io);
             ~peer();
             void register_capability(std::shared_ptr<peer_capability> const & cap);
             void start();
