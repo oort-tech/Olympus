@@ -1,4 +1,9 @@
 ### Install
+
+### Requirements
+Node =<18
+yarn
+
 Go to the source directory and open terminal, please run this command.<br>
 > yarn install
 ### Compile
