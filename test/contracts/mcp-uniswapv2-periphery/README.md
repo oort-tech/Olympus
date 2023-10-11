@@ -1,6 +1,7 @@
 # Local Development
 
-The following assumes the use of `node@>=10`.
+# Requirement
+- `node@>=10`.
 
 ## Install Dependencies
 
@@ -12,4 +13,4 @@ The following assumes the use of `node@>=10`.
 
 ## Run Tests
 
-`npx hardhat run --network ccnbeta .\test\main.js`
+`npx hardhat run --network ccnbeta ./test/main.js`
