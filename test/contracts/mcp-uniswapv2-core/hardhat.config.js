@@ -28,18 +28,10 @@ module.exports = {
       accounts: [process.env.BSC_TEST_PRIVATE_KEY, process.env.BSC_OTHER_KEY]
     },
     ccnbeta: {
-      chainid: 971,
+      chainid: 9700,
       url: process.env.CCNBETA_END_POINT,
       accounts: [process.env.CCNBETA_PRIVATE_KEY, process.env.CCNBETA_OTHER_KEY]
     },
-    huygens_test: {
-      url: process.env.HUYGENS_TEST_END_POINT,
-      accounts: [process.env.HUYGENS_TEST_PRIVATE_KEY, process.env.HUYGENS_TEST_OTHER_KEY]
-    },
-    huygens_p2p: {
-      url: process.env.HUYGENS_TEST_P2P,
-      accounts: [process.env.HUYGENS_TEST_PRIVATE_KEY, process.env.HUYGENS_TEST_OTHER_KEY]
-    }
   },
   etherscan: {
     apiKey: process.env.ETHERSCAN_API_KEY
