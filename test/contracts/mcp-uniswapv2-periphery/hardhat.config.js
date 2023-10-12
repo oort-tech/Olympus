@@ -19,7 +19,7 @@ module.exports = {
     hardhat: {
     },
     ccnbeta: {
-      chainid: 971,
+      chainid: 9700,
       url: process.env.CCNBETA_END_POINT,
       accounts: [process.env.CCNBETA_PRIVATE_KEY, process.env.CCNBETA_OTHER_KEY]
     }
