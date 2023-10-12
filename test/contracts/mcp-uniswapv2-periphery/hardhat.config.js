@@ -24,6 +24,9 @@ module.exports = {
       accounts: [process.env.CCNBETA_PRIVATE_KEY, process.env.CCNBETA_OTHER_KEY]
     }
   },
+  mocha: {
+    timeout: 2000000000000
+  },
   etherscan: {
     apiKey: process.env.ETHERSCAN_API_KEY
   },
