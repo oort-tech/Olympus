@@ -11,6 +11,10 @@
 
 `yarn compile`
 
+## Set enviroment
+
+Copy .env.example to .env (do not rename) and fill the fields
+
 ## Run Tests
 
 `npx hardhat run --network ccnbeta ./test/main.js`
