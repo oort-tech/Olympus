@@ -1,5 +1,4 @@
 #include "chain_state.hpp"
-#include <mcp/common/CodeSizeCache.h>
 #include <mcp/node/evm/Executive.hpp>
 #include <mcp/common/Exceptions.h>
 #include <mcp/common/stopwatch.hpp>
@@ -211,8 +210,7 @@ void mcp::chain_state::commit()
     }
     removeEmptyAccounts();
 	std::shared_ptr<mcp::process_block_cache> process_block_cache = std::dynamic_pointer_cast<mcp::process_block_cache>(block_cache);
-    auto t = mcp::commit(transaction, m_cache, &m_db, process_block_cache, store, ts.sha3());
-    m_touched += t;
+    m_touched += mcp::commit(transaction, m_cache, &m_db, process_block_cache, store, ts.sha3());
     m_changeLog.clear();
     m_cache.clear();
     m_unchangedCacheEntries.clear();
@@ -480,5 +478,3 @@ void mcp::chain_state::set_defalut_account_state(std::vector<h256>& accout_state
         }
     }
 }
-
-template AddressHash mcp::commit(mcp::db::db_transaction & transaction_a, mcp::AccountMap const& _cache, mcp::overlay_db* db, std::shared_ptr<mcp::process_block_cache> block_cache, mcp::block_store& store,h256 const& ts);
