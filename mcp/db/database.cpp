@@ -252,7 +252,7 @@ void mcp::db::database::del_range(int const& index, dev::Slice const& start, dev
 	if (nullptr == write_ops)
 		write_ops = m_write_options;
 
-	rocksdb::Status status = m_db->DeleteRange(
+	rocksdb::Status status = m_db->GetBaseDB()->DeleteRange(
 		*write_ops,
 		handle,
 		rocksdb::Slice(key_start.data(), key_start.size()),
