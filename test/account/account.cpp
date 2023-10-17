@@ -26,7 +26,7 @@ void test_create_account()
 	std::cout << "-------------test_create_account---------------" << std::endl;
 
 	dev::Secret prv;
-	mcp::random_pool.GenerateBlock((byte*)prv.data(), prv.size);
+	mcp::random_pool.GenerateBlock((dev::byte*)prv.data(), prv.size);
 	// prv = dev::Secret("D79703A37D55FD5AFC17FA4BF98047F9C6592559ABE107D01FAD13F8CDD0CD2A");
 
 	///KDF salt
@@ -41,8 +41,8 @@ void test_create_account()
 
 	dev::Secret derivedKey;
 	CryptoPP::Scrypt scrypt;
-	scrypt.DeriveKey((byte*)derivedKey.data(), derivedKey.size,
-		(byte*)_auth.data(), _auth.length(),
+	scrypt.DeriveKey((dev::byte*)derivedKey.data(), derivedKey.size,
+		(dev::byte*)_auth.data(), _auth.length(),
 		salt.data(), salt.size,
 		N,
 		P,
@@ -81,8 +81,8 @@ void test_account_encoding()
 	
 	dev::Secret derived;
 	CryptoPP::Scrypt scrypt;
-	scrypt.DeriveKey((byte*)derived.data(), derived.size, 
-		(byte*)pass.data(), pass.length(),
+	scrypt.DeriveKey((dev::byte*)derived.data(), derived.size,
+		(dev::byte*)pass.data(), pass.length(),
 		salt.data(), salt.size, 
 		N, 
 		R, 

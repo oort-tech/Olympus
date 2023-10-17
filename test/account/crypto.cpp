@@ -16,7 +16,7 @@
 #include <cryptopp/cryptlib.h>
 #include <cryptopp/keccak.h>
 
-
+using namespace dev;
 
 void test_sha3()
 {
@@ -175,7 +175,7 @@ void test_secp256k1()
 
 		std::cout << "PublicCompressed to rawPubkey:" << dev::toHex(dev::bytesRef(rawPubkey.data, 64)) << std::endl;
 
-		std::array<byte, 65> serializedPubkey;
+		std::array<dev::byte, 65> serializedPubkey;
 		auto serializedPubkeySize = serializedPubkey.size();
 		secp256k1_ec_pubkey_serialize(
 			ctx, serializedPubkey.data(), &serializedPubkeySize, &rawPubkey, SECP256K1_EC_UNCOMPRESSED);
@@ -196,7 +196,7 @@ void test_secp256k1()
 		};
 		auto* ctx = s_ctx.get();
 
-		std::array<byte, 65> p;
+		std::array<dev::byte, 65> p;
 		p[0] = 0x04;
 		_public.ref().copyTo(dev::bytesRef(&p[1], 64));
 
@@ -237,7 +237,7 @@ void test_eth_sign()
 	
 	dev::bytes digest;
 	CryptoPP::Keccak_256 hash;
-	hash.Update((const byte*) msg.data(), msg.size());
+	hash.Update((const dev::byte*) msg.data(), msg.size());
 	digest.resize(hash.DigestSize());
 	hash.Final(digest.data());
 
