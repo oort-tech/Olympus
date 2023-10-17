@@ -47,7 +47,7 @@ Compile MCP
 
 * Download source code
   ```
-  git clone https://github.com/computecoin-network/mcp.git --recursive
+  git clone https://github.com/oort-tech/Olympus.git --recursive
   cd mcp && mkdir -p build && cd build
   ```
 * CMake configuration
@@ -60,11 +60,11 @@ Compile MCP
   ```
 Note: If compilation fails because some libraries can not be found, first check if libraries exist in `/usr/local/lib`. Check if `make install` has been run for all installed libraries. If the libraries are installed to other directories, these directories can be specified as a `cmake` option as following.
   ```
-  cmake -Dsodium_INCLUDE_DIR=/usr/local/include -Dsodium_LIBRARY_RELEASE=/usr/local/lib/libsodium.a
+  cmake -Drocksdb_INCLUDE_DIR=/usr/local/include -Drocksdb_LIBRARY_RELEASE=/usr/local/lib/librocksdb.a
   ```
 Next is a list of all configurable parameters in `cmake`：
   ```
-  -Dsodium_INCLUDE_DIR=... -Dsodium_LIBRARY_RELEASE=.../libsodium.a -Dsodium_LIBRARY_DEBUG=.../libsodium.a
+  -DBOOST_ROOT=...
   -Drocksdb_INCLUDE_DIR=... -Drocksdb_LIBRARY_RELEASE=.../librocksdb.a -Drocksdb_LIBRARY_DEBUG=.../librocksdb.a
   -Dlz4_LIBRARY_DEBUG=.../liblz4.a -Dlz4_LIBRARY_RELEASE=.../liblz4.a
   -DZSTD_LIBRARY_DEBUG=.../libzstd.a -DZSTD_LIBRARY_RELEASE=.../libzstd.a
@@ -146,7 +146,7 @@ Compile MCP
 
 * Download source code
   ```
-  git clone https://github.com/computecoin-network/mcp.git --recursive
+  git clone https://github.com/oort-tech/Olympus.git --recursive
   cd mcp && mkdir -p build && cd build
   cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo \
   -DBOOST_ROOT=c:\dependence\boost \

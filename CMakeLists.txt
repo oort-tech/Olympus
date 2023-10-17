@@ -399,6 +399,7 @@ add_executable (test_account
 	test/account/account.cpp
 	test/account/crypto.cpp
 	test/account/abi.cpp
+	test/account/vrf.cpp
 	test/account/secure_string.cpp)
 
 set (UPNPC_BUILD_SHARED OFF CACHE BOOL "")
