@@ -49,7 +49,7 @@ void mcp::p2p::hankshake::send(dev::bytes const& data)
 {
 	if (data.empty())
 	{
-		LOG(m_log.info) << "p2p send data empty, handshake failed.";
+		LOG(m_log.debug) << "p2p send data empty, handshake failed.";
 		m_nextState = Error;
 		transition();
 		return;
@@ -188,7 +188,7 @@ void hankshake::readAuth()
 	else
 	{
 		boost::system::error_code ec;
-		LOG(m_log.info) << "p2p.connect.ingress readAuth decryptECIES error. " << m_socket->remote_endpoint(ec);
+		LOG(m_log.debug) << "p2p.connect.ingress readAuth decryptECIES error. " << m_socket->remote_endpoint(ec);
 		m_failureReason = HandshakeFailureReason::FrameDecryptionFailure;
 		m_nextState = Error;
 	}
@@ -206,7 +206,7 @@ void hankshake::readAck()
 	else
 	{
 		boost::system::error_code ec;
-		LOG(m_log.info) << "p2p.connect.ingress readAck decryptECIES error. " << m_socket->remote_endpoint(ec);
+		LOG(m_log.debug) << "p2p.connect.ingress readAck decryptECIES error. " << m_socket->remote_endpoint(ec);
 		m_failureReason = HandshakeFailureReason::FrameDecryptionFailure;
 		m_nextState = Error;
 	}
@@ -238,9 +238,9 @@ void hankshake::error()
 	auto connected = m_socket->is_open();
 	boost::system::error_code ec;
 	if (connected && !m_socket->remote_endpoint(ec).address().is_unspecified())
-        LOG(m_log.info) << "Disconnecting " << m_socket->remote_endpoint(ec) << " (Handshake Failed)";
+        LOG(m_log.debug) << "Disconnecting " << m_socket->remote_endpoint(ec) << " (Handshake Failed)";
 	else
-        LOG(m_log.info) << "Handshake Failed (Connection reset by peer)";
+        LOG(m_log.debug) << "Handshake Failed (Connection reset by peer)";
 
 	cancel();
 }
@@ -269,7 +269,7 @@ void hankshake::transition(boost::system::error_code _ech)
 		{
 			boost::system::error_code e;
 			if (!m_socket->remote_endpoint(e).address().is_unspecified())
-                LOG(m_log.info) << "Disconnecting " << m_socket->remote_endpoint(e)
+                LOG(m_log.debug) << "Disconnecting " << m_socket->remote_endpoint(e)
 				<< " (Handshake Timeout)";
 
 			m_failureReason = HandshakeFailureReason::Timeout;
@@ -334,7 +334,7 @@ void hankshake::transition(boost::system::error_code _ech)
 			{
 				if (!m_io)
 				{
-                    LOG(m_log.info) << "Internal error in handshake: frame coder disappeared.";
+                    LOG(m_log.debug) << "Internal error in handshake: frame coder disappeared.";
 					m_failureReason = HandshakeFailureReason::InternalError;
 					m_nextState = Error;
 					transition();
@@ -359,7 +359,7 @@ void hankshake::transition(boost::system::error_code _ech)
 
 				if (frameSize > expectedFrameSizeBytes || frameSize == 0)
 				{
-                    LOG(m_log.info)
+                    LOG(m_log.debug)
 						<< (m_originated ? "p2p.connect.egress" : "p2p.connect.ingress")
 						<< " hello frame is too large " << frameSize;
 					m_failureReason = HandshakeFailureReason::ProtocolError;
@@ -382,7 +382,7 @@ void hankshake::transition(boost::system::error_code _ech)
 					{
 						if (!m_io)
 						{
-                            LOG(m_log.info) << "Internal error in handshake: frame coder disappeared.";
+                            LOG(m_log.debug) << "Internal error in handshake: frame coder disappeared.";
 							m_failureReason = HandshakeFailureReason::InternalError;
 							m_nextState = Error;
 							transition();
@@ -392,7 +392,7 @@ void hankshake::transition(boost::system::error_code _ech)
 
 						if (!m_io->authAndDecryptFrame(bytesRef(&m_handshakeInBuffer)))
 						{
-                            LOG(m_log.info)
+                            LOG(m_log.debug)
 								<< (m_originated ? "p2p.connect.egress" : "p2p.connect.ingress")
 								<< " hello frame: decrypt failed";
 							m_failureReason = HandshakeFailureReason::FrameDecryptionFailure;
@@ -405,7 +405,7 @@ void hankshake::transition(boost::system::error_code _ech)
 						packet_type packetType = (packet_type)frame[0];
 						if (packetType != packet_type::ack)
 						{
-                            LOG(m_log.info)
+                            LOG(m_log.debug)
 								<< (m_originated ? "p2p.connect.egress" : "p2p.connect.ingress")
 								<< " hello frame: invalid packet type";
 							m_failureReason = HandshakeFailureReason::DisconnectRequested;
@@ -422,7 +422,7 @@ void hankshake::transition(boost::system::error_code _ech)
 						}
 						catch (std::exception const& _e)
 						{
-                            LOG(m_log.info) << "Handshake causing an exception: " << _e.what();
+                            LOG(m_log.debug) << "Handshake causing an exception: " << _e.what();
 							m_failureReason = HandshakeFailureReason::UnknownFailure;
 							m_nextState = Error;
 							transition();

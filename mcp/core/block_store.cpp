@@ -1185,6 +1185,7 @@ mcp::StakingList mcp::block_store::GetStakingList(mcp::db::db_transaction & _tra
 		assert_x(r.isList());
 		for (dev::RLP _r : r)
 		{
+			assert_x(_r.itemCount() == 2);
 			auto _a = (dev::Address)_r[0];
 			auto _b = _r[1].toInt<dev::u256>();
 			ret[_a] = _b;

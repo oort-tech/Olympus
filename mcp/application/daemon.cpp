@@ -904,13 +904,7 @@ void mcp_daemon::ongoing_report(
 
 	LOG(log.info) << "sync info:" << sync->get_sync_info();
 
-	LOG(log.info) << "unhandle: "
-		<< "unhandlde_size:" << processor->unhandle->unhandlde_size()
-		<< ", dependency_size:" << processor->unhandle->dependency_size()
-		<< ", missing_size:" << processor->unhandle->missing_size()
-		<< ", light_missing_size:" << processor->unhandle->light_missing_size()
-		<< ", approve_missing_size:" << processor->unhandle->approve_missing_size()
-		<< ", tips_size:" << processor->unhandle->tips_size();
+	LOG(log.info) << "unhandle: " << processor->unhandle->getInfo();
 
 	LOG(log.info) << "RequestingMageger info: " << mcp::RequestingMageger.get_info();
 

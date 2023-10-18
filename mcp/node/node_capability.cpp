@@ -288,7 +288,7 @@ bool mcp::node_capability::read_packet(std::shared_ptr<p2p::peer> peer_a, unsign
 			auto _f = source::broadcast;
 			mcp::block_hash block_hash(joint.block->hash());
 			{
-				if (RequestingMageger.try_erase(joint.request_id)) /// is missing blocks,it's doesn't matter whether it's broadcast or requested 
+				if (RequestingMageger.try_erase(block_hash)) /// is missing blocks,it's doesn't matter whether it's broadcast or requested 
 				{
 					_f = source::request;
 					if (joint.request_id != mcp::sync_request_hash(0))

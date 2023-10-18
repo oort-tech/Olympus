@@ -16,6 +16,9 @@ namespace mcp
 {
 	enum unhandle_add_result : int
 	{
+		/// clear cache, go to sync
+		Nothing,
+
 		/// block in unhandle,need request exist missing,not block missing
 		Exist,
 
@@ -30,64 +33,56 @@ class unhandle_item
 {
   public:
 	unhandle_item() = default;
-	unhandle_item(mcp::block_hash const &unhandle_hash_a, std::shared_ptr<mcp::block_processor_item> item_a, std::unordered_set<mcp::block_hash> const &dependency_hashs_a, h256Hash const &transactions_a, h256Hash const &approves_a);
-	mcp::block_hash unhandle_hash;
+	unhandle_item(std::shared_ptr<mcp::block_processor_item> item_a,
+		h256Hash const &bks_a, h256Hash const &txs_a, h256Hash const &aps_a
+	):item(item_a), bks(bks_a), txs(txs_a), aps(aps_a) {}
+
+	bool ready() { return bks.empty() && txs.empty() && aps.empty(); }
 	std::shared_ptr<mcp::block_processor_item> item;
-	std::unordered_set<mcp::block_hash> dependency_hashs;
-	h256Hash transactions;
-	h256Hash approves;
+	h256Hash bks;
+	h256Hash txs;
+	h256Hash aps;
 };
 
 class unhandle_cache
 {
   public:
-	unhandle_cache(std::shared_ptr<TransactionQueue> tq, std::shared_ptr<ApproveQueue> aq, size_t const &capacity_a = 1000);
+	  unhandle_cache(std::shared_ptr<TransactionQueue> tq, std::shared_ptr<ApproveQueue> aq):
+		  m_tq(tq),m_aq(aq) {}
 
-	unhandle_add_result add(mcp::block_hash const &hash_a, std::unordered_set<mcp::block_hash> const &dependency_hashs_a, h256Hash const &transactions, h256Hash const &approves, std::shared_ptr<mcp::block_processor_item> item_a);
+	unhandle_add_result add(std::shared_ptr<mcp::block_processor_item> item_a, h256Hash const &bks, h256Hash const &transactions, h256Hash const &approves);
 	std::unordered_set<std::shared_ptr<mcp::block_processor_item>> release_dependency(mcp::block_hash const &dependency_hash_a);
 	std::unordered_set<std::shared_ptr<mcp::block_processor_item>> release_transaction_dependency(h256Hash const &hashs);
 	std::unordered_set<std::shared_ptr<mcp::block_processor_item>> release_approve_dependency(h256Hash const &hashs);
 	void get_missings(size_t const & missing_limit_a, std::vector<mcp::block_hash>& missings_a, std::vector<h256>& light_missings_a, std::vector<h256>& approve_missings_a);
 
 	bool exists(mcp::block_hash const & block_hash_a);
-
-	size_t unhandlde_size() const;
-	size_t dependency_size() const;
-    size_t missing_size() const;
-	size_t light_missing_size() const;
-	size_t approve_missing_size() const;
-    size_t tips_size() const;
-   
-    uint64_t add_unhandle_ok_count = 0;
-    uint64_t unhandle_full_count = 0;
-    uint64_t unhandle_exist_count = 0;
-
+	bool is_full();
+	std::string getInfo();
   private:
-	void del_unhandle_in_dependencies(mcp::block_hash const &unhandle_a);
-
 	/// unhandle hash -> unhandle item
-	std::unordered_map<mcp::block_hash, mcp::unhandle_item> m_unhandles;
+	std::unordered_map<mcp::block_hash, mcp::unhandle_item> m_pending;
 	/// dependency hash -> unhandle block hashs
 	/// All blocks that depend on the block. such as, the parent of block C is block A, and the previous of block D is block A too.
-	std::unordered_map<mcp::block_hash, std::shared_ptr<std::unordered_set<mcp::block_hash>>> m_dependencies;
+	std::unordered_map<mcp::block_hash, h256Hash> m_dependencies;
 	/// dependency hash -> unhandle transaction hashs
 	/// All blocks that depend on the transaction. maybe block A depend on T1,and block B depend on T1 too.
-	std::unordered_map<h256, std::shared_ptr<std::unordered_set<mcp::block_hash>>> m_transactions;
+	std::unordered_map<h256, h256Hash> m_transactions;
 	/// dependency hash -> unhandle approve hashs
 	/// All blocks that depend on the approve. maybe block A depend on approve1,and block B depend on approve1 too.
-	std::unordered_map<h256, std::shared_ptr<std::unordered_set<mcp::block_hash>>> m_approves;
+	std::unordered_map<h256, h256Hash> m_approves;
 
-	std::unordered_set<mcp::block_hash> m_missings;
-	std::unordered_set<h256> m_light_missings;
-	std::unordered_set<h256> m_approve_missings;
-	std::unordered_set<mcp::block_hash> m_tips;/// No other blocks depend on this block ,like free.
+	h256Hash m_missings;
+	h256Hash m_light_missings;
+	h256Hash m_approve_missings;
 
-	size_t m_capacity;
-    const int m_max_search_count = 100;
 	std::mutex m_mutux;
 	std::shared_ptr<TransactionQueue> m_tq;                  ///< Maintains a list of incoming transactions not yet in a block on the blockchain.
 	std::shared_ptr<ApproveQueue> m_aq;                  ///< Maintains a list of incoming approves not yet in a block on the blockchain.
 
+	uint64_t add_unhandle_ok_count = 0;
+	uint64_t unhandle_full_count = 0;
+	uint64_t unhandle_exist_count = 0;
     mcp::log m_log = { mcp::log("node") };
 };
 

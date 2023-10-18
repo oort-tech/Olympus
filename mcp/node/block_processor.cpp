@@ -8,7 +8,6 @@ constexpr uint32_t tx_timeout_ms = 1000;
 constexpr unsigned max_mt_count = 16;
 constexpr unsigned max_pending_size = 300;
 constexpr unsigned max_local_processing_size = 100;
-constexpr unsigned max_cache_unhandle_size = 100;
 
 mcp::late_message_info::late_message_info(std::shared_ptr<mcp::block_processor_item> item_a) :
 	item(item_a),
@@ -171,7 +170,7 @@ void mcp::block_processor::add_item(std::shared_ptr<mcp::block_processor_item> i
 		return;
 
 	///throw if queue is full
-	if (item_a->is_broadCast() && (is_full() || BlockArrival.recent(block_hash)))
+	if (item_a->is_broadCast() && (is_full() || unhandle->is_full() || BlockArrival.recent(block_hash)))
 		return;
 
 	///broadcase,request,loacl
@@ -180,8 +179,6 @@ void mcp::block_processor::add_item(std::shared_ptr<mcp::block_processor_item> i
 		if (m_sync->is_syncing())
 		{
 			if (item_a->is_broadCast() || item_a->is_local())///throw broadcast and local block if syncing.
-				return;
-			if (unhandle->unhandlde_size() >= max_cache_unhandle_size)///Cache the requested block until the cache reaches halfway.
 				return;
 		}
 		if (item_a->joint.summary_hash == mcp::summary_hash(0))
@@ -697,10 +694,14 @@ void mcp::block_processor::do_process_dag_item(mcp::timeout_db_transaction & tim
 
 void mcp::block_processor::process_missing(std::shared_ptr<mcp::block_processor_item> item_a, std::unordered_set<mcp::block_hash> const & missings, h256Hash const & transactions, h256Hash const & approves)
 {
-	unhandle_add_result r(unhandle->add(item_a->block_hash, missings, transactions, approves, item_a));
+	unhandle_add_result r(unhandle->add(item_a, missings, transactions, approves));
 	/// if the block links too much,request_catchup exec before this function, modify_syncing status, ensures that the block's missing transactions are requested.
 	if (m_sync->is_syncing())
 		return;
+	if (r == unhandle_add_result::Nothing)
+	{
+		return;
+	}
 	if (r == unhandle_add_result::Success)
 	{
 		//to request missing_parents_and_previous
