@@ -20,14 +20,8 @@ require("@tenderly/hardhat-tenderly");
 module.exports = {
   defaultNetwork: "hardhat",
   networks: {
-    hardhat: {
-      // forking: {
-      //   url: "https://data-seed-prebsc-1-s1.binance.org:8545",
-      // },
-      // chainId: 1337,
-    },
     ccnbeta: {
-      chainid: 971,
+      chainid: 9700,
       url: process.env.CCNBETA_END_POINT,
       accounts: [process.env.CCNBETA_PRIVATE_KEY, process.env.CCNBETA_OTHER_KEY]
     }
@@ -76,7 +70,7 @@ module.exports = {
     timeout: 200000,
   },
   tenderly: {
-    project: "Open-Protocol Testnet",
-    username: "v9hstk",
+    project: "",
+    username: "",
   },
 };
