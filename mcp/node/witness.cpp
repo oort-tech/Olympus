@@ -136,10 +136,14 @@ void mcp::witness::check_and_witness()
 	{
 		std::shared_ptr<mcp::block> mc_block(m_cache->block_get(transaction, mc_block_hash));
 		std::shared_ptr<mcp::block_state> last_summary_block_state(m_cache->block_state_get(transaction, mc_block->last_stable_block()));
-		assert_x(last_summary_block_state
-			&& last_summary_block_state->is_stable
-			&& last_summary_block_state->is_on_main_chain
-			&& last_summary_block_state->main_chain_index);
+		assert_x(last_summary_block_state);
+		assert_x(last_summary_block_state->is_stable);
+		assert_x(last_summary_block_state->is_on_main_chain);
+		assert_x(last_summary_block_state->main_chain_index);
+		//assert_x(last_summary_block_state
+		//	&& last_summary_block_state->is_stable
+		//	&& last_summary_block_state->is_on_main_chain
+		//	&& last_summary_block_state->main_chain_index);
 
 		last_summary_mci = *last_summary_block_state->main_chain_index;
 	}

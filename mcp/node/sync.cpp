@@ -280,6 +280,10 @@ void mcp::node_sync::request_catchup(p2p::node_id const& id)
                     {
                         m_store.catchup_index_del(transaction);
                         m_store.catchup_max_index_del(transaction);
+
+						m_store.catchup_chain_summaries_clear(write_option);
+						m_store.catchup_chain_summary_block_clear(write_option);
+						m_store.catchup_chain_block_summary_clear(write_option);
                     }
                     catch (std::exception const & e)
                     {

@@ -61,8 +61,8 @@ namespace dev
 	template<typename ...Args>
 	inline dev::bytes BoundContract::Call(CallOpts * opts, std::string const & method, Args const & ...args)
 	{
-		if (opts == nullptr)
-			opts = new CallOpts;
+		//if (opts == nullptr)
+		//	opts = new CallOpts;
 		dev::bytes input = abi.Pack(method, args...);
 		dev::bytes output;
 		caller(opts->From, address, input, output);

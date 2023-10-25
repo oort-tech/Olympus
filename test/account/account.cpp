@@ -23,54 +23,51 @@
 
 void test_create_account()
 {
-	//std::cout << "-------------test_create_account---------------" << std::endl;
+	std::cout << "-------------test_create_account---------------" << std::endl;
 
-	//dev::h128 kdf_salt;
-	//mcp::random_pool.GenerateBlock((byte*)kdf_salt.data(), kdf_salt.size);
-	//// kdf_salt = dev::h128("59555A1474D77707BC6CF1FA7DE67199");
+	dev::Secret prv;
+	mcp::random_pool.GenerateBlock((dev::byte*)prv.data(), prv.size);
+	// prv = dev::Secret("D79703A37D55FD5AFC17FA4BF98047F9C6592559ABE107D01FAD13F8CDD0CD2A");
 
-	//dev::h128 iv;
-	//mcp::random_pool.GenerateBlock((byte*)iv.data(), iv.size);
-	//// iv = dev::h128("E9A53520669C4131592E581CA81E873C");
+	///KDF salt
+	dev::h256 salt;
+	mcp::random_pool.GenerateBlock(salt.data(), salt.size);
+	// kdf_salt = dev::h128("59555A1474D77707BC6CF1FA7DE67199");
 
-	//dev::h256 prv;
-	//mcp::random_pool.GenerateBlock((byte*)prv.data(), prv.size);
-	//// prv = dev::Secret("D79703A37D55FD5AFC17FA4BF98047F9C6592559ABE107D01FAD13F8CDD0CD2A");
+	int N = 131072;
+	int R = 8;
+	int P = 1;
+	std::string _auth = "12345678";
 
-	//std::string password = "12345678";
+	dev::Secret derivedKey;
+	CryptoPP::Scrypt scrypt;
+	scrypt.DeriveKey((dev::byte*)derivedKey.data(), derivedKey.size,
+		(dev::byte*)_auth.data(), _auth.length(),
+		salt.data(), salt.size,
+		N,
+		P,
+		P);
 
-	//std::chrono::time_point<std::chrono::high_resolution_clock> start = std::chrono::high_resolution_clock::now();
+	///aes encrypt key
+	dev::h128 encryptKey(derivedKey.ref().cropped(0, dev::h128::size));
+	///aes iv
+	dev::h128 iv;
+	mcp::random_pool.GenerateBlock(iv.data(), iv.size);
+	// iv = dev::h128("E9A53520669C4131592E581CA81E873C");
 
-	//dev::Secret derive_pwd;
-	//mcp::kdf kdf_v;
-	//kdf_v.phs(derive_pwd, password, kdf_salt);
+	/// aes encrypt
+	dev::h256 ciphertext;
+	bytesConstRef _dataRef = prv.ref();
+	mcp::encry::aesCTRXOR(ciphertext, encryptKey, iv, _dataRef);
+	///
+	dev::h256 mac = dev::sha3(dev::h128(derivedKey.ref().cropped(dev::h128::size)).asBytes() + ciphertext.asBytes());
 
-	//dev::h256 ciphertext;
-	//mcp::encry::encryption(ciphertext.data(), prv.data(), prv.size, iv.data(), derive_pwd.data());
-	//
-	//dev::Public pub = dev::toPublic(dev::Secret(prv));
+	dev::Public pub = dev::toPublic(prv);
 
-	//std::chrono::nanoseconds dur = std::chrono::duration_cast<std::chrono::nanoseconds> (std::chrono::high_resolution_clock::now() - start);
-	//std::cout << "duration:" << dur.count() / 1000000 << "ms" << std::endl;
-
-	//std::cout << "kdf_salt:" << kdf_salt.hex() << std::endl;
-	//std::cout << "password:" << password << std::endl;
-	//std::cout << "iv:" << iv.hex() << std::endl;
-	//std::cout << std::endl;
-	//std::cout << "ciphertext:" << ciphertext.hex() << std::endl;
-	//std::cout << "prv:" << prv.hex() << std::endl;
-	//std::cout << "pub:" << pub.hex() << std::endl;
-	//std::cout << "account:" << toAddress(pub).hexPrefixed() << std::endl;
-	//
-	//std::cout << "------------------------------------------------------" << std::endl;
-
-	//mcp::json js;
-	//js["account"] = toAddress(pub).hexPrefixed();
-	//js["kdf_salt"] = kdf_salt.hex();
-	//js["iv"] = iv.hex();
-	//js["ciphertext"] = ciphertext.hex();
-
-	//std::cout << js.dump() << std::endl;
+	std::cout << "ciphertext:" << ciphertext.hex() << std::endl;
+	std::cout << "prv:" << toHex(prv.ref()) << std::endl;
+	std::cout << "pub:" << pub.hex() << std::endl;
+	std::cout << "account:" << toAddress(pub).hexPrefixed() << std::endl;
 }
 
 void test_account_encoding()
@@ -84,8 +81,8 @@ void test_account_encoding()
 	
 	dev::Secret derived;
 	CryptoPP::Scrypt scrypt;
-	scrypt.DeriveKey((byte*)derived.data(), derived.size, 
-		(byte*)pass.data(), pass.length(),
+	scrypt.DeriveKey((dev::byte*)derived.data(), derived.size,
+		(dev::byte*)pass.data(), pass.length(),
 		salt.data(), salt.size, 
 		N, 
 		R, 

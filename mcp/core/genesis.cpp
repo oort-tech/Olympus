@@ -64,6 +64,8 @@ std::pair<bool, mcp::Transactions> mcp::genesis::try_initialize(mcp::db::db_tran
 	case mcp::mcp_networks::mcp_live_network:
 		genesis_data = live_genesis_data;
 		break;
+	default:
+		throw std::runtime_error("Invalid network");
 	}
 
 	mcp::json json = mcp::json::parse(genesis_data);
