@@ -80,19 +80,19 @@ private:
 		{
 		case mcp::mcp_networks::mcp_mini_test_network:
 		{
-			chain_id = (uint64_t)9700;
+			chain_id = (uint64_t)9900;
 			gas_price = 10000000;
 			break;
 		}
 		case mcp::mcp_networks::mcp_test_network:
 		{
-			chain_id = (uint64_t)9700;
+			chain_id = (uint64_t)9800;
 			gas_price = 10000000;
 			break;
 		}
 		case mcp::mcp_networks::mcp_beta_network:
 		{
-			chain_id = (uint64_t)972;// Ascraeus 972; huygens 971
+			chain_id = (uint64_t)9700;// Ascraeus 972; huygens 971; dev 9700
 			gas_price = 10000000;
 			break;
 		}
