@@ -20,7 +20,6 @@ const BigNumber = require('bignumber.js');
 
 const {
   isDevNetwork,
-  isKovan,
   isMainNet,
   isDocker,
 } = require('./helpers');
@@ -75,11 +74,6 @@ async function setupProtocol(deployer, network, accounts) {
     getOracles(network),
     getSetters(network),
   ]);
-
-  if (isKovan(network)) {
-    const testPriceOracle = await TestPriceOracle.deployed();
-    await testPriceOracle.setPrice(tokens[2].address, ONE_DOLLAR.times('0.3').toFixed(0)); // ZRX
-  }
 
   if (isDocker(network)) {
     // issue tokens to accounts

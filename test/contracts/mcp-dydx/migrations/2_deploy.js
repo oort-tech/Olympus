@@ -18,9 +18,7 @@
 
 const {
   isDevNetwork,
-  isKovan,
   isMainNet,
-  isGoerli,
   isHuygensDev,
   getPolynomialParams,
   getDoubleExponentParams,
@@ -136,7 +134,7 @@ async function deployBaseProtocol(deployer, network) {
   let soloMargin;
   if (isDevNetwork(network)) {
     soloMargin = TestSoloMargin;
-  } else if (isKovan(network) || isMainNet(network) || isGoerli(network) || isHuygensDev(network)) {
+  } else if (isMainNet(network) || isHuygensDev(network)) {
     soloMargin = SoloMargin;
   } else {
     throw new Error('Cannot deploy SoloMargin');
@@ -164,8 +162,7 @@ console.log('deployed polynomialinterest & doubleExponent');
 
 async function deployPriceOracles(deployer, network, accounts) {
   if (
-    isDevNetwork(network)
-    || isKovan(network) || isHuygensDev(network)
+    isDevNetwork(network) || isHuygensDev(network)
     ) {
     await deployer.deploy(TestPriceOracle);
   }
@@ -318,9 +315,6 @@ function getMedianizerAddress(network) {
   if (isMainNet(network)) {
     return '0x29a199a49af8d657c110418c2b0d2f932b025de7';
   }
-  if (isKovan(network)) {
-    return '0xa5aA4e07F5255E14F02B385b1f04b35cC50bdb66';
-  }
   throw new Error('Cannot find Medianizer');
 }
 
@@ -330,9 +324,6 @@ function getDaiAddress(network) {
   }
   if (isMainNet(network)) {
     return '0x6b175474e89094c44da98b954eedeac495271d0f';
-  }
-  if (isKovan(network)) {
-    return '0x5944413037920674d39049ec4844117a031eaa74';
   }
   throw new Error('Cannot find Dai');
 }
@@ -373,12 +364,6 @@ function getWethAddress(network) {
   }
   if (isMainNet(network)) {
     return '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2';
-  }
-  if (isKovan(network)) {
-    return '0xd0a1e359811322d97991e03f863a0c30c2cf029c';
-  }
-  if (isGoerli(network)) {
-    return accounts[5]
   }
   if (isHuygensDev(network)) {
     return accounts[5]

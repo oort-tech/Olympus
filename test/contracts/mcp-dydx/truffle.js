@@ -49,31 +49,6 @@ module.exports = {
       from: process.env.DEPLOYER_ACCOUNT,
       timeoutBlocks: 500,
     },
-    kovan: {
-      network_id: '42',
-      provider: () => new HDWalletProvider(
-        [process.env.DEPLOYER_PRIVATE_KEY],
-        process.env.ETHEREUM_NODE_KOVAN,
-        0,
-        1,
-      ),
-      gasPrice: 10000000000, // 10 gwei
-      gas: 6900000,
-      from: process.env.DEPLOYER_ACCOUNT,
-      timeoutBlocks: 500,
-    },
-    goerli: {
-      network_id: '5',
-      provider: () => new HDWalletProvider (
-        "",
-        ""
-      ),
-      gasPrice: 25000000000,
-      gas: 6900000,
-      from: "",
-      timeoutBlocks: 100,
-      skipDryRun: true
-    },
     huygens_dev: {
       network_id: '828',
       provider: new HDWalletProvider (
