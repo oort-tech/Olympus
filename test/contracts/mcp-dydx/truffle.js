@@ -49,8 +49,8 @@ module.exports = {
       from: process.env.DEPLOYER_ACCOUNT,
       timeoutBlocks: 500,
     },
-    huygens_dev: {
-      network_id: '828',
+    ccnbeta: {
+      network_id: '9700',
       provider: new HDWalletProvider (
         "",
         ""

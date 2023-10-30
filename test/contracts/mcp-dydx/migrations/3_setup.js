@@ -140,13 +140,6 @@ async function getTokens(network) {
       TokenC.deployed(),
     ]);
   }
-  if (isKovan(network)) {
-    return [
-      { address: '0xd0a1e359811322d97991e03f863a0c30c2cf029c' }, // Kovan WETH
-      { address: '0xc4375b7de8af5a38a93548eb8453a498222c4ff2' }, // Kovan DAI
-      { address: '0x03226d9241875DbFBfE0e814ADF54151e4F3fd4B' }, // Kovan USDC
-    ];
-  }
   if (isMainNet(network)) {
     return [
       { address: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2' }, // Main WETH
@@ -165,13 +158,6 @@ async function getOracles(network) {
       { address: TestPriceOracle.address },
     ]);
   }
-  if (isKovan(network)) {
-    return [
-      { address: WethPriceOracle.address },
-      { address: '0x8a6629fEba4196E0A61B8E8C94D4905e525bc055' },
-      { address: UsdcPriceOracle.address },
-    ];
-  }
   if (isMainNet(network)) {
     return [
       { address: WethPriceOracle.address },
@@ -189,13 +175,6 @@ async function getSetters(network) {
       { address: PolynomialInterestSetter.address },
       { address: PolynomialInterestSetter.address },
     ]);
-  }
-  if (isKovan(network)) {
-    return [
-      { address: PolynomialInterestSetter.address },
-      { address: PolynomialInterestSetter.address },
-      { address: PolynomialInterestSetter.address },
-    ];
   }
   if (isMainNet(network)) {
     return [

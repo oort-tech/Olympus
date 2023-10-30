@@ -33,9 +33,6 @@ function getChainId(network) {
   if (isMainNet(network)) {
     return 1;
   }
-  if (network.startsWith('goerli')) {
-    return 5;
-  }
   if (network.startsWith('huygens_dev')) {
     return 828;
   }
