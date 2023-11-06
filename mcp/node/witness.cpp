@@ -191,6 +191,8 @@ void mcp::witness::do_witness()
 		}
 		else
 		{
+			uint32_t r_interval = mcp::random_pool.GenerateWord32(m_min_witness_interval, m_max_witness_interval);
+			m_witness_interval = std::chrono::milliseconds(r_interval);
 			LOG(m_log.info) << "Do witness ok";
 		}
 		m_last_witness_time = std::chrono::steady_clock::now();
