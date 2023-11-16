@@ -392,7 +392,7 @@ namespace mcp
 		bool queued = false;
 		{
 			Guard l(x_queue);
-			if (m_unverified.size() >= c_maxVerificationQueueSize)
+			if (m_unverified.size() >= c_maxVerificationQueueSize && source::broadcast == _in)
 			{
 				LOG(m_log.debug) << "Transaction verification queue is full. Dropping transactions";
 				return;
@@ -421,6 +421,7 @@ namespace mcp
 			while (!works.empty())
 			{
 				UnverifiedTransaction work = std::move(works.front());
+				works.pop_front();
 				try
 				{
 					if (all.size() > c_maxReadyTransactionCount/2 && work.in == source::broadcast)///only process request or sync transactions.
@@ -443,8 +444,6 @@ namespace mcp
 					LOG(m_log.error) << "verifierBody Bad transaction:" << boost::current_exception_diagnostic_information();
 					m_onImport(ImportResult::Malformed, work.nodeId);///  Notify capability and P2P to process peer. diconnect peer if bad transaction  
 				}
-
-				works.pop_front();
 			}
 		}
 	}
@@ -536,24 +535,37 @@ namespace mcp
 
 	std::string TransactionQueue::getInfo()
 	{
-		int queuesize = 0;
-		for (auto it = queue.begin(); it != queue.end(); it++)
+		int allSize = 0;
+		int queueSize = 0;
+		int pendingSize = 0;
+		int queueAccountSize = 0;
+		int pendingAccountSize = 0;
+		int knownSize = 0;
+		int dropSize = 0;
 		{
-			queuesize += it->second.size();
-		}
-		int pendingsize = 0;
-		for (auto it = pending.begin(); it != pending.end(); it++)
-		{
-			pendingsize += it->second.size();
+			ReadGuard l(m_lock);
+			allSize = all.size();
+			queueAccountSize = queue.size();
+			pendingAccountSize = pending.size();
+			knownSize = m_known.size();
+			dropSize = m_dropped.size();
+			for (auto it = queue.begin(); it != queue.end(); it++)
+			{
+				queueSize += it->second.size();
+			}
+			for (auto it = pending.begin(); it != pending.end(); it++)
+			{
+				pendingSize += it->second.size();
+			}
 		}
 
-		std::string str = "transactionQueue all txs:" + std::to_string(all.size())
-			+ " ,queue  account:" + std::to_string(queue.size())
-			+ " ,pending account:" + std::to_string(pending.size())
-			+ " ,queue txs:" + std::to_string(queuesize)
-			+ " ,pending txs:" + std::to_string(pendingsize)
-			+ " ,m_known:" + std::to_string(m_known.size())
-			+ " ,m_dropped:" + std::to_string(m_dropped.size())
+		std::string str = "transactionQueue all txs:" + std::to_string(allSize)
+			+ " ,queue  account:" + std::to_string(queueAccountSize)
+			+ " ,pending account:" + std::to_string(pendingAccountSize)
+			+ " ,queue txs:" + std::to_string(queueSize)
+			+ " ,pending txs:" + std::to_string(pendingSize)
+			+ " ,m_known:" + std::to_string(knownSize)
+			+ " ,m_dropped:" + std::to_string(dropSize)
 			+ " ,m_pendingSize:" + std::to_string(m_pendingSize)
 			;
 

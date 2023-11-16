@@ -182,9 +182,6 @@ namespace mcp
 		std::thread m_processSuperfluousThread;
 		std::chrono::minutes m_clear_time = std::chrono::minutes(1);
 
-		// recieve count
-		std::atomic<uint64_t> receive_transaction_count = { 0 };
-
 		mcp::block_store & m_store;
 		std::shared_ptr<mcp::iblock_cache> m_cache;
 		std::shared_ptr<mcp::chain> m_chain;
