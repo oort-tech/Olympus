@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "test-main": "npx hardhat run scripts/1_main.js --network ccnbeta",
-    "test-bridge": "npx hardhat run scripts/2_bridge.js --network ccnbeta"
+    "test-bridge": "npx hardhat run scripts/2_bridge.js --network ccnbeta",
+    "test-dwdn": "npx hardhat run scripts/3_dwdn.js --network ccnbeta",
+    "test-test": "npx hardhat run scripts/4_test.js --network ccnbeta"
   },
   "author": "",
   "license": "ISC",

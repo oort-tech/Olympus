@@ -20,7 +20,17 @@ Copy .env.example to .env and open it, then fill the ccnbetas url and accounts p
 
 ### Run test Individually
 
-Test [main]()
+Test [main](https://github.com/molecula451/Olympus/blob/some-fixes/test/contracts/mcp-upgradable-test/scripts/1_main.js)
+
 > yarn run test-main
-Test [bridge]()
-> yarn run test-bridge
+
+Test [bridge](https://github.com/molecula451/Olympus/blob/some-fixes/test/contracts/mcp-upgradable-test/scripts/2_bridge.js)
+
+yarn run test-bridge
+
+Test [DWDN](https://github.com/molecula451/Olympus/blob/some-fixes/test/contracts/mcp-upgradable-test/scripts/3_dwdn.js)
+
+yarn run test-dwdn
+Test Test Script
+
+yarn run test-test
