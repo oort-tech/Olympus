@@ -8,10 +8,10 @@ Go to the source directory and open terminal, please run this command.<br>
 > yarn
 
 ### Compile
-> npx hardhat compile
+> npx hardhat compile (unless you want to manually compiled as yarn run does this under the hood)
 
 ### Config
-Copy .env.example to .env and open it, then fill the ccnbeta's url and account private key.<br>
+Copy .env.example to .env and open it, then fill the ccnbetas url and accounts private key.<br> (All fields must be filled with different private keys)
 
 ### Test
 
