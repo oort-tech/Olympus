@@ -17,7 +17,7 @@ Copy .env.example to .env and open it, then fill the ccnbetas url and accounts p
 
 ### Run all test at once
 
-> yarn run test
+> yarn run test-all
 
 ### Run test Individually
 
