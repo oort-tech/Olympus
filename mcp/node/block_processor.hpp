@@ -76,7 +76,7 @@ namespace mcp
 
 		void add_many_to_mt_process(std::queue<std::shared_ptr<mcp::block_processor_item>> items_a);
 		void add_to_mt_process(std::shared_ptr<mcp::block_processor_item> item_a);
-		void add_to_process(std::shared_ptr<mcp::block_processor_item> item_a);
+		void add_to_process(std::shared_ptr<mcp::block_processor_item> item_a, bool ready = false);
 		
 		void on_sync_completed(mcp::p2p::node_id const & remote_node_id_a);
 
@@ -139,7 +139,6 @@ namespace mcp
 		std::condition_variable m_process_condition;
 		std::deque<std::shared_ptr<mcp::block_processor_item>> m_local_blocks_pending;
 		std::deque<std::shared_ptr<mcp::block_processor_item>> m_blocks_pending;
-		std::deque<std::shared_ptr<mcp::block>> m_blocks_processing;
 
 		///transaction ready
 		enum hashType

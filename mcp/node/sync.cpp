@@ -946,7 +946,7 @@ mcp::sync_result mcp::node_sync::process_catchup_chain(mcp::catchup_response_mes
 			{
 				std::shared_ptr<mcp::block> block = joint.block;
 				dev::Public p = dev::recover(block->signature(), block->hash());
-				if (dev::toAddress(p) != block->from())   //todo used eth sign----------------------------------------
+				if (dev::toAddress(p) != block->from())
 				{
 					LOG(log_sync.info) << "process_catchup_chain_error:invalid signature";
 					process_catchup_result = mcp::sync_result::catchup_chain_summary_check_fail;
@@ -1202,7 +1202,7 @@ void mcp::node_sync::read_hash_tree(mcp::hash_tree_request_message const& hash_t
 	//	<< ",to_summary = " << hash_tree_request.to_summary.to_string()
 	//	<< ",from_index = " << from_index << ",to_index = " << to_index;
 
-	uint64_t all_link_size = 0;
+	dev::h256Hash _tmp;///deduplicate.
 	uint64_t all_approve_size = 0;
 	for (uint64_t index = from_index; index <= to_index; index++)
 	{
@@ -1211,7 +1211,7 @@ void mcp::node_sync::read_hash_tree(mcp::hash_tree_request_message const& hash_t
 		assert_x(exists);
 
 		if (hash_tree_response.arr_summaries.size() >= mcp::p2p::max_summary_items
-			|| all_link_size > 1024 || all_approve_size > 1024)
+			|| _tmp.size() > 4096 || all_approve_size > 4096)
 		{
 			hash_tree_response.next_start_index = index;
 			//LOG(log_sync.debug) << "read_hash_tree_next:" << "index:" << index;
@@ -1249,50 +1249,25 @@ void mcp::node_sync::read_hash_tree(mcp::hash_tree_request_message const& hash_t
 		}
 
 		// check if all the links have summaries
-		std::vector<bytes> receipts;
 		std::vector<std::shared_ptr<Transaction>> trannsactions;
 		auto links(block_ptr->links());
 		for (auto it : block_ptr->links())
 		{
-			mcp::summary_hash sh;
-			auto receipt = m_cache->transaction_receipt_get(transaction, it);
-			if (receipt == nullptr)
-			{
-				LOG(log_sync.info) << "read_hash_tree: some receipt have no summaries";
-				receipts.clear();
-				return;
-			}
-			RLPStream receiptRLP;
-			receipt->streamRLP(receiptRLP);
-			receipts.push_back(receiptRLP.out());
-
+			if (!_tmp.insert(it).second)///transmitted
+				continue;
 			auto t = m_cache->transaction_get(transaction, it);
 			if (t == nullptr)
 			{
 				LOG(log_sync.info) << "read_hash_tree: some transactions have no summaries";
-				receipts.clear();
 				return;
 			}
 			trannsactions.push_back(t);
 		}
-		all_link_size += links.size();
 
 		// check if all the approves have summaries
 		std::vector<std::shared_ptr<approve>> approves;
 		for (auto it : block_ptr->approves())
 		{
-			mcp::summary_hash sh;
-			auto receipt = m_cache->approve_receipt_get(transaction, it);
-			if (receipt == nullptr)
-			{
-				LOG(log_sync.info) << "read_hash_tree: some approve receipt have no summaries";
-				receipts.clear();
-				return;
-			}
-			RLPStream receiptRLP;
-			receipt->streamRLP(receiptRLP);
-			receipts.push_back(receiptRLP.out());
-
 			auto t = m_cache->approve_get(transaction, it);
 			if (t == nullptr)
 			{
@@ -1302,7 +1277,13 @@ void mcp::node_sync::read_hash_tree(mcp::hash_tree_request_message const& hash_t
 			approves.push_back(t);
 		}
 		all_approve_size += block_ptr->approves().size();
-		h256 receiptsRoot = dev::orderedTrieRoot(receipts);
+
+		h256 receiptsRoot;
+		if (!m_store.GetBlockReceiptsRoot(transaction, bh, receiptsRoot))
+		{
+			LOG(log_sync.info) << "read_hash_tree: transaction receiptRoot have no summaries";
+			return;
+		}
 
 		// check if all the blocks on skiplist have summaries
 		mcp::skiplist_info s_info;
@@ -1858,9 +1839,9 @@ void mcp::node_sync::add_task_sync_request_timer(p2p::node_id const & request_no
 {
 	m_sync_requests[m_sync_request_id] = mcp::sync_request_status(request_node_id_a, request_type_a);
 	if (mcp::sub_packet_type::hash_tree_request == request_type_a)
-		m_sync_request_timer->expires_from_now(boost::posix_time::seconds(10));
+		m_sync_request_timer->expires_from_now(boost::posix_time::seconds(30));
 	else
-		m_sync_request_timer->expires_from_now(boost::posix_time::seconds(6));
+		m_sync_request_timer->expires_from_now(boost::posix_time::seconds(15));
 	m_task_clear_flag = false;
 	m_sync_request_timer->async_wait([this, request_node_id_a](boost::system::error_code const & error)
 	{

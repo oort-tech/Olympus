@@ -99,7 +99,7 @@ private:
 		case mcp::mcp_networks::mcp_live_network:
 		{
 			chain_id = (uint64_t)970;
-			gas_price = (uint256_t)5e13;
+			gas_price = (uint256_t)1e11;
 			break;
 		}
 		default:

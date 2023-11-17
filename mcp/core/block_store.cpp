@@ -44,7 +44,8 @@ mcp::block_store::block_store(bool & error_a, boost::filesystem::path const & pa
 	epoch_param(0),
 	transaction_account_state(0),
 	epoch_work_transaction(0),
-	stakingList(0)
+	stakingList(0),
+	receiptsRoot(0)
 {
 	if (error_a)
 		return;
@@ -95,6 +96,7 @@ mcp::block_store::block_store(bool & error_a, boost::filesystem::path const & pa
 	transaction_account_state = m_db->set_column_family(default_col, "033");
 	epoch_work_transaction = m_db->set_column_family(default_col, "034");
 	stakingList = m_db->set_column_family(default_col, "035");
+	receiptsRoot = m_db->set_column_family(default_col, "036");
 
 	//use iterator
 	dag_free = m_db->set_column_family(default_col, "101");
@@ -1208,6 +1210,20 @@ void mcp::block_store::PutStakingList(mcp::db::db_transaction & _transaction, Ep
 
 	dev::Slice s_value((char *)b_value.data(), b_value.size());
 	_transaction.put(stakingList, mcp::h64_to_slice(h64(_epoch)), s_value);
+}
+
+bool mcp::block_store::GetBlockReceiptsRoot(mcp::db::db_transaction& transaction_a, mcp::block_hash const& block_hash_a, dev::h256& root_a)
+{
+	std::string value;
+	bool exists(transaction_a.get(receiptsRoot, mcp::h256_to_slice(block_hash_a), value));
+	if (exists)
+		root_a = mcp::slice_to_h256(value);
+	return exists;
+}
+
+void mcp::block_store::PutBlockReceiptsRoot(mcp::db::db_transaction& transaction_a, mcp::block_hash const& block_hash_a, dev::h256 const& root_a)
+{
+	transaction_a.put(receiptsRoot, mcp::h256_to_slice(block_hash_a), mcp::h256_to_slice(root_a));
 }
 
 dev::h256 const mcp::block_store::version_key(0);

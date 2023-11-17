@@ -136,10 +136,26 @@ void mcp::witness::check_and_witness()
 	{
 		std::shared_ptr<mcp::block> mc_block(m_cache->block_get(transaction, mc_block_hash));
 		std::shared_ptr<mcp::block_state> last_summary_block_state(m_cache->block_state_get(transaction, mc_block->last_stable_block()));
-		assert_x(last_summary_block_state);
-		assert_x(last_summary_block_state->is_stable);
-		assert_x(last_summary_block_state->is_on_main_chain);
-		assert_x(last_summary_block_state->main_chain_index);
+		if (!(last_summary_block_state && last_summary_block_state->is_stable 
+			&& last_summary_block_state->is_on_main_chain && last_summary_block_state->main_chain_index))
+		{
+			std::shared_ptr<mcp::block_state> _state(m_store.block_state_get(transaction, mc_block->last_stable_block()));
+			LOG(m_log.info) << "last_mci:" << m_chain->last_mci();
+			LOG(m_log.info) << "1 mc_block_hash:" << mc_block_hash.hexPrefixed()
+				<< " ,stable:" << last_summary_block_state->is_stable
+				<< " ,is_on_main_chain:" << last_summary_block_state->is_on_main_chain
+				<< " ,main_chain_index:" << last_summary_block_state->main_chain_index;
+			LOG(m_log.info) << "2 mc_block_hash:" << mc_block_hash.hexPrefixed()
+				<< " ,stable:" << _state->is_stable
+				<< " ,is_on_main_chain:" << _state->is_on_main_chain
+				<< " ,main_chain_index:" << _state->main_chain_index;
+
+			assert_x(false);
+		}
+		//assert_x(last_summary_block_state);
+		//assert_x(last_summary_block_state->is_stable);
+		//assert_x(last_summary_block_state->is_on_main_chain);
+		//assert_x(last_summary_block_state->main_chain_index);
 		//assert_x(last_summary_block_state
 		//	&& last_summary_block_state->is_stable
 		//	&& last_summary_block_state->is_on_main_chain

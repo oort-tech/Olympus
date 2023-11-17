@@ -6,7 +6,7 @@
 
 constexpr uint32_t tx_timeout_ms = 1000;
 constexpr unsigned max_mt_count = 16;
-constexpr unsigned max_pending_size = 300;
+constexpr unsigned max_pending_size = 5000;
 constexpr unsigned max_local_processing_size = 100;
 
 mcp::late_message_info::late_message_info(std::shared_ptr<mcp::block_processor_item> item_a) :
@@ -178,7 +178,7 @@ void mcp::block_processor::add_item(std::shared_ptr<mcp::block_processor_item> i
 	{
 		if (m_sync->is_syncing())
 		{
-			if (item_a->is_broadCast() || item_a->is_local())///throw broadcast and local block if syncing.
+			//if (item_a->is_broadCast() || item_a->is_local())///throw broadcast and local block if syncing.
 				return;
 		}
 		if (item_a->joint.summary_hash == mcp::summary_hash(0))
@@ -281,6 +281,7 @@ void mcp::block_processor::mt_process_blocks()
 								}
 								case base_validate_result_codes::old:
 								{
+									ok = false;
 									base_validate_old_size++;
 									break;
 								}
@@ -360,7 +361,7 @@ void mcp::block_processor::mt_process_blocks()
 	}
 }
 
-void mcp::block_processor::add_to_process(std::shared_ptr<mcp::block_processor_item> item_a)
+void mcp::block_processor::add_to_process(std::shared_ptr<mcp::block_processor_item> item_a, bool ready)
 {
 	if (!item_a->is_sync() && item_a->joint.summary_hash != mcp::summary_hash(0))
 	{
@@ -379,7 +380,10 @@ void mcp::block_processor::add_to_process(std::shared_ptr<mcp::block_processor_i
 	}
 	else
 	{
-		m_blocks_pending.push_back(item_a);
+		if (ready)
+			m_blocks_pending.push_front(item_a);
+		else
+			m_blocks_pending.push_back(item_a);
 	}
 	m_process_condition.notify_all();
 }
@@ -558,7 +562,7 @@ void mcp::block_processor::do_process_one(std::shared_ptr<mcp::block_processor_i
 		case mcp::validate_result_codes::missing_parents_and_previous:
 		{
 			assert_x(!(item->is_local() && result.missing_links.size() > 0));
-
+			assert_x(!item->is_sync());
 			if (result.missing_parents_and_previous.size() > 0 || result.missing_links.size() > 0 || result.missing_approves.size() > 0)
 			{
 				if (result.missing_parents_and_previous.size() > 0)
@@ -667,7 +671,7 @@ void mcp::block_processor::do_process_dag_item(mcp::timeout_db_transaction & tim
 	mcp::block_hash const & block_hash(block->hash());
 	for (auto const & link_hash : block->links())
 	{
-		/// Unprocessed transactions cannot be discarded because the cache is full.  todo zhouyou
+		/// Unprocessed transactions cannot be discarded because the cache is full.
 		auto t = m_tq->get(link_hash);
 		if (t == nullptr || m_local_cache->transaction_exists(transaction, link_hash)) /// transaction maybe processed yet
 		{
@@ -678,7 +682,7 @@ void mcp::block_processor::do_process_dag_item(mcp::timeout_db_transaction & tim
 
 	for (auto const & approve_hash : block->approves())
 	{
-		/// Unprocessed transactions cannot be discarded because the cache is full.  todo zhouyou
+		/// Unprocessed transactions cannot be discarded because the cache is full.
 		auto t = m_aq->get(approve_hash);
 		if (t == nullptr || m_local_cache->approve_exists(transaction, approve_hash)) /// transaction maybe processed yet
 		{
@@ -737,6 +741,8 @@ void mcp::block_processor::process_missing(std::shared_ptr<mcp::block_processor_
 
 void mcp::block_processor::process_existing_missing(mcp::p2p::node_id const & remote_node_id)
 {
+	if (m_sync->is_syncing())
+		return;
 	//remove block arrival
 	auto now = std::chrono::steady_clock::now();
 	if (now - m_last_request_unknown_missing_time >= std::chrono::seconds(1))
@@ -861,7 +867,7 @@ void mcp::block_processor::process_ready_func()
 				{
 					for (auto const & p : unhandle_items)
 					{
-						add_to_process(p);
+						add_to_process(p,true);
 					}
 				}
 			}
@@ -872,7 +878,7 @@ void mcp::block_processor::process_ready_func()
 				{
 					for (auto const & p : unhandle_items)
 					{
-						add_to_process(p);
+						add_to_process(p, true);
 					}
 				}
 			}
@@ -920,7 +926,6 @@ std::string mcp::block_processor::get_processor_info()
 {
 	std::string str = "m_blocks_pending:" + std::to_string(m_blocks_pending.size())
 		+ " ,m_local_blocks_pending:" + std::to_string(m_local_blocks_pending.size())
-		+ " ,m_blocks_processing:" + std::to_string(m_blocks_processing.size())
 		+ " ,m_mt_blocks_pending:" + std::to_string(m_mt_blocks_pending.size())
 		+ " ,m_mt_blocks_processing:" + std::to_string(m_mt_blocks_processing.size())
 		+ " ,m_ok_local_dag_promises:" + std::to_string(m_ok_local_promises.size())

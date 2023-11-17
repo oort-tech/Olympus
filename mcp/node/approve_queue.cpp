@@ -116,9 +116,13 @@ namespace mcp
 			if (ir != ImportResult::Success)
 				return ir;
 			_approve->sender();
-			ir = checkApprove(_approve, _in);
-			if (ir != ImportResult::Success)
-				return ir;
+			if (_in != source::request && _in != source::sync)///approve liked,do not check
+			{
+				ir = checkApprove(_approve, _in);
+				if (ir != ImportResult::Success)
+					return ir;
+			}
+			
 			{
 				UpgradeGuard ul(l);
 				ir = manageImport_WITH_LOCK(_approve);
@@ -175,7 +179,6 @@ namespace mcp
 			return nullptr;
 
 		return t->second;
-		return nullptr;
 	}
 
 	h256s ApproveQueue::topApproves(unsigned _limit, h256Hash const& _avoid) const
@@ -258,6 +261,7 @@ namespace mcp
 			while (!works.empty())
 			{
 				UnverifiedApprove work = std::move(works.front());
+				works.pop_front();
 				try
 				{
 					auto ir = import(work.ap, work.in);
@@ -272,8 +276,6 @@ namespace mcp
 					LOG(m_log.error) << "Bad approve:" << boost::current_exception_diagnostic_information();
 					m_onImport(ImportResult::Malformed, work.nodeId);///  Notify capability and P2P to process peer. diconnect peer if bad transaction 
 				}
-				
-				works.pop_front();
 			}
 		}
 	}

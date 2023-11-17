@@ -1176,6 +1176,7 @@ void mcp::chain::set_block_stable(mcp::timeout_db_transaction & timeout_tx_a, st
 
 			cache_a->block_summary_put(transaction_a, stable_block_hash, summary_hash);
 			m_store.summary_block_put(transaction_a, summary_hash, stable_block_hash);
+			m_store.PutBlockReceiptsRoot(transaction_a, stable_block_hash, receiptsRoot);
 
 #pragma endregion
 

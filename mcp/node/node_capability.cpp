@@ -295,6 +295,8 @@ bool mcp::node_capability::read_packet(std::shared_ptr<p2p::peer> peer_a, unsign
 						joint.request_id.clear(); ///broadcast do not need id
 				}
 			}
+			if (mcp::node_sync::is_syncing() && _f == source::broadcast)
+				return true;
 			std::shared_ptr<mcp::block_processor_item> block_item_l(std::make_shared<mcp::block_processor_item>(joint, peer_a->remote_node_id(), _f));	
 			m_block_processor->add_to_mt_process(block_item_l);
 

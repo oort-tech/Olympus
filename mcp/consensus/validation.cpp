@@ -198,7 +198,6 @@ mcp::validate_result mcp::validation::dag_validate(mcp::db::db_transaction & tra
 			t = cache_a->transaction_get(transaction_a, link);
 			if (nullptr == t) /// not existed, missing
 			{
-				/// todo zhouyou invalid transactions
 				//if (m_invalid_block_cache.contains(link))
 				//{
 				//	result.code = mcp::validate_result_codes::parents_and_previous_include_invalid_block;
