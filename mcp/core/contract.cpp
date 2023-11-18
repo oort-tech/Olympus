@@ -75,31 +75,21 @@ namespace mcp
 	{
 		int count = mcp::param::genesis_witness_param().witness_count;
 		WitnessList list = mcp::param::genesis_witness_param().witness_list;
+		dev::u256 _base = jsToU256("1000000000000000000");
+		dev::u256 _stakeAmount = 800000 * _base;
 
 		Transactions _r;
-		///50000 for system contract gas. 2000000 * count for staking.
+		///100000 for system contract gas. 800000 * count for staking.
 		TransactionSkeleton _tsInit;
 		_tsInit.from = mcp::genesis::GenesisAddress;
 		_tsInit.to = MainCallcAddress;
 		_tsInit.gasPrice = mcp::gas_price;
-		_tsInit.value = jsToU256("2000000000000000000000000") * count + jsToU256("50000000000000000000000");
+		_tsInit.value = _stakeAmount * count + (100000*_base);
 		_tsInit.gas = mcp::tx_max_gas;
 		_tsInit.nonce = 1;
 		Transaction _tInit(_tsInit);
 		_tInit.setSignature(h256(0), h256(0), 0);
 		_r.push_back(_tInit);
-
-		///Admin contract
-		TransactionSkeleton _tsAdmin;
-		_tsAdmin.from = MainCallcAddress;
-		_tsAdmin.data = MainContractByteCodeAdmin;
-		_tsAdmin.gasPrice = 10000000;
-		_tsAdmin.value = 0;
-		_tsAdmin.gas = mcp::tx_max_gas;
-		_tsAdmin.nonce = 0;
-		Transaction _tAdmin(_tsAdmin);
-		_tAdmin.setSignature(h256(0), h256(0), 0);
-		_r.push_back(_tAdmin);
 
 		///Deposit contract
 		TransactionSkeleton _tsDeposit;
@@ -108,10 +98,22 @@ namespace mcp
 		_tsDeposit.gasPrice = mcp::gas_price;
 		_tsDeposit.value = 0;
 		_tsDeposit.gas = mcp::tx_max_gas;
-		_tsDeposit.nonce = 1;
+		_tsDeposit.nonce = 0;
 		Transaction _tDeposit(_tsDeposit);
 		_tDeposit.setSignature(h256(0), h256(0), 0);
 		_r.push_back(_tDeposit);
+
+		///Admin contract
+		TransactionSkeleton _tsAdmin;
+		_tsAdmin.from = MainCallcAddress;
+		_tsAdmin.data = MainContractByteCodeAdmin;
+		_tsAdmin.gasPrice = mcp::gas_price;
+		_tsAdmin.value = 0;
+		_tsAdmin.gas = mcp::tx_max_gas;
+		_tsAdmin.nonce = 1;
+		Transaction _tAdmin(_tsAdmin);
+		_tAdmin.setSignature(h256(0), h256(0), 0);
+		_r.push_back(_tAdmin);
 
 		///Proxy contract
 		TransactionSkeleton _tsProxy;
@@ -131,19 +133,19 @@ namespace mcp
 		_tsStaking.to = MainContractAddress;
 		_tsStaking.data = MainCaller.InitWitnesses(list);
 		_tsStaking.gasPrice = mcp::gas_price;
-		_tsStaking.value = jsToU256("2000000000000000000000000") * count;
+		_tsStaking.value = _stakeAmount * count;
 		_tsStaking.gas = mcp::tx_max_gas;
 		_tsStaking.nonce = 3;
 		Transaction _tStaking(_tsStaking);
 		_tStaking.setSignature(h256(0), h256(0), 0);
 		_r.push_back(_tStaking);
 
-		///1000000 for contract reword.
+		///10000000 for contract reword.
 		TransactionSkeleton _tsr;
 		_tsr.from = mcp::genesis::GenesisAddress;
 		_tsr.to = MainContractAddress;
 		_tsr.gasPrice = mcp::gas_price;
-		_tsr.value = jsToU256("1000000000000000000000000");
+		_tsr.value = 10000000 * _base;
 		_tsr.gas = mcp::tx_max_gas;
 		_tsr.nonce = 2;
 		Transaction _tr(_tsr);
