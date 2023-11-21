@@ -1,4 +1,4 @@
-## Olympus (The blockchain layer in Computecoin)
+## Olympus (The blockchain layer in Oort)
 Official C++ implementation of the Olympus protocol.
 
 To understand the consensus algorithm in Olympus, refer to the CCN yellow paper.\
