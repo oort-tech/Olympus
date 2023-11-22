@@ -76,10 +76,10 @@ namespace mcp
 		int count = mcp::param::genesis_witness_param().witness_count;
 		WitnessList list = mcp::param::genesis_witness_param().witness_list;
 		dev::u256 _base = jsToU256("1000000000000000000");
-		dev::u256 _stakeAmount = 800000 * _base;
+		dev::u256 _stakeAmount = 500000 * _base;
 
 		Transactions _r;
-		///100000 for system contract gas. 800000 * count for staking.
+		///100000 for system contract gas. 500000 * count for staking.
 		TransactionSkeleton _tsInit;
 		_tsInit.from = mcp::genesis::GenesisAddress;
 		_tsInit.to = MainCallcAddress;
