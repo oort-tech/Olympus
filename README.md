@@ -48,7 +48,10 @@ Compile MCP
 * Download source code
   ```
   git clone https://github.com/oort-tech/Olympus.git --recursive
-  cd mcp && mkdir -p build && cd build
+  cd Olympus
+  git submodule init
+  git submodule update
+  mkdir -p build && cd build
   ```
 * CMake configuration
   ```
