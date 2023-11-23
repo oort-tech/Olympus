@@ -36,7 +36,7 @@ module.exports = {
       gasPrice: 1,
       //network_id: '1001',
     },
-    mainnet: {
+    /*mainnet: {
       network_id: '1',
       provider: () => new HDWalletProvider(
         [process.env.DEPLOYER_PRIVATE_KEY],
@@ -48,12 +48,12 @@ module.exports = {
       gas: 6900000,
       from: process.env.DEPLOYER_ACCOUNT,
       timeoutBlocks: 500,
-    },
+    },*/
     ccnbeta: {
       network_id: '9700',
       provider: new HDWalletProvider (
-        "",
-        ""
+        [process.env.CCNBETA_PRIVATE_KEY],
+        [process.env.CCNBETA_END_POINT]
       ),
       gasPrice: 10000, // 0.01 gwei
       //from: "",
