@@ -650,6 +650,9 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
         }
         case mcp::mcp_networks::mcp_live_network:
         {
+			config.p2p.bootstrap_nodes.push_back("mcpnode://e649f5ab7da79ba14e4158773d62016062c1a0bd2470a82a4a014296c46b6759dbb1d9b3cd4a05f2c025b64f650f45641874561115bc77f106ed125257489a27@170.106.197.53:30601");
+			config.p2p.bootstrap_nodes.push_back("mcpnode://8ee6461b3c826370c0803236fc3f2e58c2cbd173ca0635accbb07d61e067368b1bf6f63bc41e97b5b65f90781878bdf9245007c0ac7c32300880058a54bc6b65@43.157.113.77:30601");
+			config.p2p.bootstrap_nodes.push_back("mcpnode://9be6bafaca8268ab9d74cbb1aacb0ca61060a9c50fe7e1041f5153d522c6eee7a7456b39190a9d407e3a9d74abb7940531d84dfea59618edefb306784cc0128e@43.159.54.28:30601");
             break;
         }
         case mcp::mcp_networks::mcp_beta_network:

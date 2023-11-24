@@ -11,7 +11,7 @@ std::string const mini_test_genesis_data = R"%%%({
     "to":"0x1144B522F45265C2DFDBAEE8E324719E63A1694C",
     "value":"2000000000000000000000000000",
     "data":"",
-	"exec_timestamp":"1514764800"
+	"exec_timestamp":"1700625600"
 })%%%";
 
 std::string const test_genesis_data = R"%%%({
@@ -19,7 +19,7 @@ std::string const test_genesis_data = R"%%%({
     "to":"0x1144B522F45265C2DFDBAEE8E324719E63A1694C",
     "value":"2000000000000000000000000000",
     "data":"",
-	"exec_timestamp":"1514764800"
+	"exec_timestamp":"1700625600"
 })%%%";
 
 //// for huygens
@@ -36,15 +36,15 @@ std::string const beta_genesis_data = R"%%%({
     "to":"0x68B2c790B17b13C1217c31f7d8782C852109a2a5",
     "value":"2000000000000000000000000000",
     "data":"",
-	"exec_timestamp":"1675240217"
+	"exec_timestamp":"1700625600"
 })%%%";
 
 std::string const live_genesis_data = R"%%%({
-    "from":"0x1144B522F45265C2DFDBAEE8E324719E63A1694C",
-    "to":"0x1144B522F45265C2DFDBAEE8E324719E63A1694C",
+    "from":"0x8e0f9ae2eb92f2f7e03d3706d6b899931c6b81e4",
+    "to":"0x8e0f9ae2eb92f2f7e03d3706d6b899931c6b81e4",
     "value":"2000000000000000000000000000",
     "data":"",
-	"exec_timestamp":"1562288400"
+	"exec_timestamp":"1700625600"
 })%%%";
 
 std::pair<bool, mcp::Transactions> mcp::genesis::try_initialize(mcp::db::db_transaction & transaction_a, mcp::block_store & store_a)
