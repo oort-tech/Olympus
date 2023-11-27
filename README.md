@@ -49,8 +49,6 @@ Compile MCP
   ```
   git clone https://github.com/oort-tech/Olympus.git --recursive
   cd Olympus
-  git submodule init
-  git submodule update
   mkdir -p build && cd build
   ```
 * CMake configuration
@@ -166,3 +164,13 @@ Compile MCP
   msbuild mcp.sln /p:Configuration=Debug /p:Platform=x64
   msbuild mcp.sln /p:Configuration=Release /p:Platform=x64
   ```
+
+## Run a node
+### Read Help
+./mcp --help
+### Run a node as an ordinary node
+./mcp --daemon --console --data_path=\<Your data path\>
+### Run a node as a witness
+./mcp --daemon --console --data_path=\<Your data path\> --witness --witness_account=\<Witness account keystore file\> --password=\<Password for the keystore file\>
+
+Once the mcp is running, you can change other configuration items in the config.json file in the data path specified. 
