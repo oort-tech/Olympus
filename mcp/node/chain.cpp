@@ -1372,7 +1372,7 @@ std::pair<u256, mcp::ExecutionResult> mcp::chain::estimate_gas(mcp::db::db_trans
 		if (gasPrice < mcp::gas_price)
 		{
 			er.excepted = TransactionException::OutOfGasPriceIntrinsic;
-			return std::make_pair(u256(), er);;
+			return std::make_pair(u256(), er);
 		}
 
 		dev::eth::EnvInfo env(transaction_a, m_store, cache_a, mc_info_a, mcp::chainID());
@@ -1391,6 +1391,16 @@ std::pair<u256, mcp::ExecutionResult> mcp::chain::estimate_gas(mcp::db::db_trans
 			t.forceSender(_from);
 			return t;
 		});
+
+		/// return if used lowerBound successed.
+		{
+			Transaction t = _T(lowerBound);
+			c_state.ts = t;
+			c_state.addBalance(_from, lowerBound * _gasPrice + _value);
+			er = c_state.execute(env, Permanence::Reverted, t, dev::eth::OnOpFunc()).first;
+			if (er.excepted == TransactionException::None)
+				return std::make_pair(lowerBound, er);
+		}
 
 		/// Reject the transaction as invalid if it still fails at the highest allowance
 		{
