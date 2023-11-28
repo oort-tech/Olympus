@@ -93,7 +93,7 @@ private:
 		case mcp::mcp_networks::mcp_beta_network:
 		{
 			chain_id = (uint64_t)9700;// Ascraeus 972; huygens 971; dev 9700
-			gas_price = 10000000;
+			gas_price = (uint256_t)1e11;
 			break;
 		}
 		case mcp::mcp_networks::mcp_live_network:
@@ -156,7 +156,7 @@ private:
 				"0xc757c14c4e20d604227c27935cd9f37150d27626",
 				"0xd4c19e0c6a219e3a0e0b7249667cea21a69a6fdc",
 				"0xdf691895cf79f2ca139b3e5d0714280877971eea"
-			};*/
+			};
 			witness_str_list_v0 = { //for ascraeus
 				"0x0cefadfedc6b2d21b1a3c5b58b0ccc1d3cdff6f2",
 				"0x0ede6b6ca19f6bb7ce5be21546beae64c6762b6b",
@@ -172,6 +172,22 @@ private:
 				"0x442f16643aeb9d466add91a464d9aa6acd63625d",
 				"0x49eb9d07b82dbdc6efd3ca14b71336a6a56d2962",
 				"0x4a625c5ddceb732a9e73d30e98f52e87bf53d8ee"
+			};*/
+			witness_str_list_v0 = { //for dev
+				"0x3a6a7279f855753642b70ba212732cd8f07a76a5",
+				"0x4b0a1c92d99eb6f14ad8bb1d44e39ed82e93607f",
+				"0x6af0346951232ee7ed0b292c6298618785f44aef",
+				"0x8b1828360976a9b65013ba5f7d5cccbf100f63cd",
+				"0x36ebfd1cb3b6aa9fc956be32d2254b38ae54a602",
+				"0x89d2b24c241868c4beeab34066cbdf03292d557e",
+				"0x316a3e5402760f54559113f1f1edd41e20a40564",
+				"0x330893a10dc64279dd9075dcabf154422639e04e",
+				"0x505151dc304a045b0d33bf70f97508d60d75fc3d",
+				"0x8799220389860e5a19f3212d23f29bcdadfae467",
+				"0xc717a0cd56547c6f5dd11ed63db434ef33cc81d5",
+				"0xd64d32432e60e41a2dfb53133f6ab4aaa0cb91b7",
+				"0xdc558615973c0b4c5b50af47b07f7afcade10a4a",
+				"0xe1abd49612e5d5e4f756b9e86b1b42fe1f4fc5dc"
 			};
 			break;
 		}
