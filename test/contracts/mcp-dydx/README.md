@@ -11,7 +11,7 @@
 
 ### Deploy to local testnet
 
-```npx truffle migrate --network dev```
+```npx truffle migrate --network ccnbeta```
 
 ### Run some tests
 

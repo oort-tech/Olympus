@@ -1,4 +1,6 @@
-# Uniswap V2
+![Horizontal Logo (TM)](https://github.com/oort-tech/Huygens_smartcontract_101/assets/90715387/675970c2-5ecd-4132-a9f4-66460d5f2e03)
+
+# Uniswap V2 on Oort
 
 Uniswap V2 on CCN
 

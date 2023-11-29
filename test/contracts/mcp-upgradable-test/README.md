@@ -1,5 +1,7 @@
 # Upgradable Smart Contract featuring Bridge Proxy on CCNBETA
 
+![Horizontal Logo (TM)](https://github.com/oort-tech/Huygens_smartcontract_101/assets/90715387/675970c2-5ecd-4132-a9f4-66460d5f2e03)
+
 ### Requirements
 - Node =< 18 (18 works good)
 - yarn
