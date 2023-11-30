@@ -220,6 +220,7 @@ void hankshake::cancel()
 	try
 	{
 		m_io.reset();
+		std::lock_guard<std::mutex> lock(_mutex);
 		if (m_socket->is_open())
 		{
 			m_socket->close();

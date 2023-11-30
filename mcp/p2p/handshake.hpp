@@ -134,6 +134,8 @@ namespace mcp
 
 			HandshakeFailureReason m_failureReason;
 
+			std::mutex _mutex; ///socket close not thread safe.
+
             mcp::log m_log = { mcp::log("p2p") };
 		};
 	}
