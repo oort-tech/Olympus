@@ -1,335 +1,423 @@
 # RPC Interfaces
 
-## account_import
-Import an account into the node, the private key will be managed by the node, unlock the account with personal_unlockAccount to send online transactions and the node will sign the transaction with managed private key.
-### Parameters
-- **action** - String: "account_import".
-- **json** - String: Keystore file of the account to be imported.
-#### POST Request Body
-```json
-{
-    "action": "account_import",
-    "json": "{\"account\":\"<account>\",\"kdf_salt\":\"<kdf_salt>\",\"iv\":\"<iv>\",\"ciphertext\":\"<ciphertext>\"}"
-}
-```
-#### web3-olympus.js
-```javascript
-olympusRequest.accountImport(keystore)
-```
-### Returns
-- **code** - Integer: Error code. *0*: success, *9*: invalid json.
-- **msg** - String: Error message.
-- **account** - String: Imported account.
-#### Example
-```javascript
-olympusRequest.accountImport("{\"account\":\"0xa9d8863d0bf68dbaaacacad4ee0e865a0cc59f28\",\"kdf_salt\":\"175DCAF994E6992AAD1369014670C086\",\"iv\":\"F6054D9B144A254D3D4EAB78C95F21B6\",\"ciphertext\":\"2A943F3A7316C33B16374D9076FEF5BA7770C2A0424A08501D3663A1467DEDD7\"}")
-
-// Success
-> {
-    "code": 0,
-    "msg": "OK",
-    "account": "0xa9d8863d0bf68dbaaacacad4ee0e865a0cc59f28"
-}
-
-// Failed
-> {
-    "code": 9,
-    "msg": "Invalid json"
-}
-```
-
-## account_export
-Export the keystore file of an imported account.
-### Parameters
-- **action** - String: "account_export".
-- **account** - String: Account to be exported.
-#### POST Request Body
-```json
-{
-    "action": "account_export",
-    "account": <account>
-}
-```
-#### web3-olympus.js
-```javascript
-olympusRequest.accountExport(account)
-```
-### Returns
-- **code** - Integer: Error code. *0*: success, *1*: invalid account, *7*: account not found.
-- **msg** - String: Error message.
-- **json** - String: Keystore file of the exported account.
-#### Example
-```javascript
-olympusRequest.accountExport("0xa9d8863d0bf68dbaaacacad4ee0e865a0cc59f28")
-
-// Success
-> {
-    "code": 0,
-    "msg": "OK",
-    "json": "{\"account\":\"0xa9d8863d0bf68dbaaacacad4ee0e865a0cc59f28\",\"kdf_salt\":\"175dcaf994e6992aad1369014670c086\",\"iv\":\"f6054d9b144a254d3d4eab78c95f21b6\",\"ciphertext\":\"2a943f3a7316c33b16374d9076fef5ba7770c2a0424a08501d3663a1467dedd7\"}"
-}
-
-// Failed
-> {
-    "code": 1,
-    "msg": "Invalid account"
-}
-// or
-{
-    "code": 7,
-    "msg": "Account not found"
-}
-```
-
 ## account_remove
-Remove the keystore file of an account previously imported through account_import or personal_importRawKey, the node will no longer manager this account.
+Remove the keystore file of an account previously imported through account_import or personal_importRawKey.
 ### Parameters
-- **action** - String: "account_remove".
-- account - String: Account to be removed.
-- password - String: Account password.
+1. DATA, 20 Bytes - Address.
+2. STRING - Password of the address.
 
-#### POST Request Body
+#### Example
 ```json
 {
-    "action": "account_remove",
-    "account": <account>,
-    "password": <password>
+    "id":1,
+    "jsonrpc":"2.0",
+    "method": "account_remove",
+    "params": ["0xa9d8863d0bf68dbaaacacad4ee0e865a0cc59f28", "12345678"]
 }
-```
-#### web3-olympus.js
-```javascript
-olympusRequest.accountRemove(account, password)
 ```
 ### Returns
-- **code** - Integer: Error code. *0*: success, *1*: invalid account, *5*: invalid password, *7*: account not found, *8*: wrong password, *46*: empty password.
-- **msg** - String: Error message.
+* Boolean - True if successfully, otherwise return error.
 #### Example
-```javascript
-olympusRequest.accountRemove("0xa9d8863d0bf68dbaaacacad4ee0e865a0cc59f28", "s4iH1t@hBFtymA")
-
+```json
 // Success
-> {
-    "code": 0,
-    "msg": "OK"
+{
+    "id": 1,
+    "jsonrpc": "2.0",
+    "result": true
 }
-
 // Failed
-> {
-    "code": 1,
-    "msg": "Invalid account"
-}
-// or
 {
-    "code": 5,
-    "msg": "Invalid password"
+    "id": 1,
+    "jsonrpc": "2.0",
+    "error": {
+        "code": -32700,
+        "message": "cannot wrap string value as a json-rpc type; strings must be prefixed with \"0x\", cannot contains invalid hex character, and must be of the correct length."
+    }
 }
-// or
+```
+
+## account_import
+Imports the given keystore into the key store.
+### Parameters
+1. JSON - Keystore file string(V3).
+#### Example
+```json
 {
-    "code": 7,
-    "msg": "Account not found"
+    "id":1,
+    "jsonrpc":"2.0",
+    "method": "account_import",
+    "params":["{"address":"8bea69e42045e162ccfed67ecb78d513a6be2eb3","id":"137a236e-9740-477b-affb-921efdf922a1","version":3,"crypto":{"cipher":"aes-128-ctr","cipherparams":{"iv":"c16adf7a5520dbdc08d7e08984451e0f"},"ciphertext":"79cb955240fa62deae7c05c6fed77e55cef7dfa7f70db49e4979c0f3403742bf","kdf":"scrypt","kdfparams":{"salt":"f7833b3bf2ef37426141e09bc7d5437521253736a4aac6bd83fe586507b841dc","n":131072,"dklen":32,"p":1,"r":8},"mac":"79740d2707f4af646915fbd14f9127de6e8ec8fb6d62dc3f78ab3aece05f7305"}}"]
 }
-// or
+```
+### Returns
+* DATA, 20 Bytes - The address of the keystore.
+#### Example
+```json
+// Success
 {
-    "code": 8,
-    "msg": "Wrong password"
+    "id": 1,
+    "jsonrpc": "2.0",
+    "result": "0x8bea69e42045e162ccfed67ecb78d513a6be2eb3"
 }
-// or
+// Failed
 {
-    "code": 46,
-    "msg": "Password can not be empty"
+    "id": 1,
+    "jsonrpc": "2.0",
+    "error":{
+	"code": -32700,
+	"message": "Cannot wrap string value as a json-rpc type; only the v3 keystore file."
+	}
+}
+```
+
+## accounts_balances
+Returns the decimalism balance of given addresses.
+### Parameters
+1. Array of DATA, 20 Bytes - The addresses to get the balance of.
+#### Example
+```json
+{
+    "id":1,
+    "jsonrpc":"2.0",
+    "method": "accounts_balances",
+    "params": [
+        "0xa19B8dB625f0f43f2817aa455E646BE6db85f204",
+        "0xa9d8863d0bf68dbaaacacad4ee0e865a0cc59f28"
+    ]
+}
+```
+### Returns
+* Array - Array of balance matching all givening addresses.
+```json
+// Success
+{
+    "id": 1,
+    "jsonrpc": "2.0",
+    "result": [
+        {"0xa19B8dB625f0f43f2817aa455E646BE6db85f204": "0"},
+        {"0xa9d8863d0bf68dbaaacacad4ee0e865a0cc59f28": "0"}
+    ]
+}
+// Failed
+{
+    "id": 1,
+    "jsonrpc": "2.0",
+    "error":{
+        "code": -32700,
+        "message": "cannot wrap string value as a json-rpc type; strings must be 	prefixed with \"0x\", cannot contains invalid hex character, and must be of the correct length."
+    }
+}
+```
+
+## block
+Returns a block by block hash.
+### Parameters
+1. DATA, 32 Bytes - Hash of a block.
+#### Example
+```json
+{
+    "id":1,
+    "jsonrpc":"2.0",
+    "method": "block",
+    "params":["0x7763f7c4ebb4301a71ab27ba5d42cbe4cb7eb71eaba479a50f9b888c8017ced8"]
+}
+```
+### Returns
+* Object - A block object, or null when no block was found:
+  * hash: DATA, 32 Bytes - Hash of the block.
+  * from: DATA, 20 Bytes - Sender's address.
+  * previous: DATA, 32 Bytes - Hash of the latest block of sender's account before the current block. The value is 0 for the first block of the account.
+  * parents: Array - Array of the 32 Bytes hash of parent blocks on the DAG.
+  * links: Array - Array of the 32 Bytes hash of the transactions that the witness block referenced.
+  * approves: Array - Array of the 32 Bytes hash of the approves that the witness block referenced.
+  * last_stable_block:  DATA, 32 Bytes - The last stable block of this block on the DAG.
+  * last_summary_block:  DATA, 32 Bytes - The `last_stable_block` of the best parent of this block on the DAG.
+  * last_summary:  DATA, 32 Bytes - The summary of `last_summary_block`.
+  * timestamp: QUANTITY - The unix timestamp when the block is generated.
+  * gasLimit: QUANTITY - Uplimit of the gas for the block.
+  * signature: DATA, 65 Bytes - Signature.
+#### Example
+```json
+// Success
+{
+    "id": 1,
+    "jsonrpc": "2.0",
+    "result": {
+        "hash": "0x7763f7c4ebb4301a71ab27ba5d42cbe4cb7eb71eaba479a50f9b888c8017ced8",
+        "from": "0x49a1b41e8ccb704f5c069ef89b08cd33f764e9b3",
+        "previous": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "parents": [
+            "0x515e804b8c449fa2972ad9f649b47b84b3e70e4f49514f65bccb9ee13feb4090"
+        ],
+        "links": [
+            "0x87d21d3187b2e7a8ed85fb1a2e8f0f7b54ef8e02aa99fffbb7e7377e246bb7df"
+        ],
+        "approves": [],
+        "last_summary": "0x37b7ce47c8af3f10922e687e514b673b46c1a5f6e05c01cc70ac338cf296b3b1",
+        "last_summary_block": "0x515e804b8c449fa2972ad9f649b47b84b3e70e4f49514f65bccb9ee13feb4090",
+        "last_stable_block": "0x515e804b8c449fa2972ad9f649b47b84b3e70e4f49514f65bccb9ee13feb4090",
+        "timestamp": 1701072715,
+        "gasLimit": "0x2faf080",
+        "signature": "0xcd93ff58377425095e5caaad28bd25f93998dd5736580a80582921dce6a5f6044fc9946df0fd4e320b93ad60f7cbb2ddea4b90d8e993914f771edb9fe51d9fcb00"
+    }
+}
+// Failed
+{
+    "id": 1,
+    "jsonrpc": "2.0",
+    "error": {
+        "code": -32700,
+        "message": "cannot wrap string value as a json-rpc type; strings must be prefixed with \"0x\", cannot contains invalid hex character, and must be of the correct length."
+    }
 }
 ```
 
 ## block_state
-Return the state of a block with its block hash.
+Returns block state by block hash.
 ### Parameters
-- **action** - String: "block_state".
-- **hash** - String: Block hash.
-#### POST Request Body
+1. DATA, 32 Bytes - Hash of a block.
+#### Example
 ```json
 {
-    "action": "block_state",
-    "hash": <blockHash>
+    "jsonrpc":"2.0",
+    "id":1,
+    "method": "block_state",
+    "params":["0x7763f7c4ebb4301a71ab27ba5d42cbe4cb7eb71eaba479a50f9b888c8017ced8"]
 }
 ```
-#### web3-olympus.js
-```javascript
-olympusRequest.getBlockState(blockHash)
-```
 ### Returns
-- **code** - Integer: Error code. *0*: success, *36*: invalid hash format.
-- **msg** - String: Error message.
-- **block state** - Object: The state of the block. *null* if the block does not exist.
-    - **content** - Object
-      - **level** - Number: The level of the block.
-      - **witnessed_level** - Number: The witness level of the block.
-      - **best_parent** - String: The best parent block hash of the block.
-    - **is_stable** - Number: Is the block stable or not. *0*: not stable, *1*: stable.
-    - **stable_content** - Object: Stable block state contents. *empty* if the block is not stable.
-      - **status** - Number: Block status. *0*: success, *1*: double spending, *2*: invalid, *3*: contract execution failed. 
-      - **stable_index** - Number: Stable block index which indicates the order of blocks on DAG. The value starts from genesis block as 0, and keeps increasing.
-      - **stable_timestamp** - Number: Stable timestamp.
-      - **mci** - Number: Main chain index.
-      - **mc_timestamp** - Number: Main chain timestamp.
-      - **is_on_mc** - Number: Is the block on main chain. *0*: not on main chain, *1*: on main chain.
-      - **is_free** - Number: Does the block have children. *0*: no children, *1*: has children.
+* Object - A block state object, or *null* when no block state was found:
+  * content: Object - Object of the witness.
+    * level: QUANTITY - The level of the block.
+    * witnessed_level: QUANTITY - The witness level of the block.
+    * best_parent: DATA, 32 Bytes - The best parent block hash of the block.
+  * is_stable: Boolean - Is the block stable or not. *0*: not stable, *1*: stable.
+  * stable_content: Object - Stable block state contents. *empty* if the block is not stable.
+    * status: QUANTITY - Block status. *0*: success, *1*: double spending, *2*: invalid, *3*: contract execution failed. 
+    * stable_index: QUANTITY - Stable block index which indicates the order of blocks on DAG. The value starts from genesis block as 0, and keeps increasing.
+    * stable_timestamp: QUANTITY - The Stable unix timestamp.
+    * mci：QUANTITY - Main chain index.
+    * mc_timestamp: QUANTITY - Main chain timestamp.
+    * is_on_mc: Boolean - Is the block on main chain. *0*: not on main chain, *1*: on main chain.
+    * is_free: Boolean - Does the block have children. *0*: no children, *1*: has children.
 #### Example
-```javascript
-olympusRequest.getBlockState("0xdbd8c3d4264e92e59b3b9d5f500a258427466e23ad7904b0c01e2e5b0a81c174")
-
+```json
 // Success
-> {
-    "code": 0,
-    "msg": 'OK',
-    "block_state": {
+{
+    "id": 1,
+    "jsonrpc": "2.0",
+    "result": {
         "content": {
-            "level": 76497,
-            "witnessed_level": 76488,
-            "best_parent":
-                '0x45ff3d0989897cf4158516d7b42608f028e575c55b086bab0fb668ee2ac7d41a'
+            "level": 1,
+            "witnessed_level": 1,
+            "best_parent": "0x515e804b8c449fa2972ad9f649b47b84b3e70e4f49514f65bccb9ee13feb4090"
         },
         "is_stable": 1,
         "stable_content": {
             "status": 0,
-            "stable_index": 105834,
-            "stable_timestamp": 1677708703,
-            "mci": 76497,
-            "mc_timestamp": 1677708700,
+            "stable_index": 1,
+            "stable_timestamp": 1701072715,
+            "mci": 1,
+            "mc_timestamp": 1701072715,
             "is_on_mc": 1,
             "is_free": 0
         }
     }
 }
-
 // Failed
-> {
-    "code": 36,
-    "msg": "Invalid hash format"
+{
+    "id": 1,
+    "jsonrpc": "2.0",
+    "error": {
+        "code": -32700,
+        "message": "cannot wrap string value as a json-rpc type; strings must be prefixed with \"0x\", cannot contains invalid hex character, and must be of the correct length."
+    }
+}
+```
+
+## block_states
+Returns block states of given hashes.
+### Parameters
+1. Array of DATA, 32 Bytes - Hashes of the blocks.
+#### Example
+```json
+{
+    "jsonrpc":"2.0",
+    "id":1,
+    "method": "block_states",
+    "params":[
+        "0x7763f7c4ebb4301a71ab27ba5d42cbe4cb7eb71eaba479a50f9b888c8017ced8",
+        "0x7c5f7b04fe000788e9fec981137c782e11aa8422b015cfe01503c1e43bf8a8b4"
+    ]
+}
+```
+### Returns
+* Array - Array of block state contents givening hashes.See block state contents in the [`block_state`](RPC.md#block\_state) RPC method. If any of the block hashes doesn't exist, the corresponding list element is null.
+#### Example
+```json
+// Success
+{
+    "result": [{"hashA":{stateA}}, {"hashA":null}, ...]
+}
+// Failed
+{
+    "jsonrpc":"2.0",
+    "id":1,
+    "error":{
+        "code": -32700,
+        "message": "cannot wrap string value as a json-rpc type; strings must be 	prefixed with \"0x\", cannot contains invalid hex character, and must be of the correct length."
+    }
+}
+```
+
+## block_traces
+Get the trace of internal transactions in a smart contract.
+### Parameters
+1. DATA, 32 Bytes - Hash of a block.
+#### Example
+```json
+{
+    "jsonrpc":"2.0",
+    "id":1,
+    "method":"block_traces",
+    "params": "0x412254AB895FD2E6ADE6F9076CA8297516F2845C989A13AC008CD5D70157AFFB"
+}
+```
+### Returns
+* Array - array of trace objects, or empty when no block was found:
+  * fields in a trace:
+    * type: 0:call，1:create，2:suicide.
+    * action: subjective to the type of a trace.
+      * call: - call_type: type of call. - from: sender's account. - to: receiver's account. - gas: _string_，gas limit. - data: input data. - amount: _string_，amount in the unit of 10-18 oort.
+      * create： - from: sender's account. - gas: _string_，gas limit. - init: the code that creates the contract. - amount: _string_，amount in the unit of 10-18 oort.
+      * suicide： - contract_account: contract account. - refund_account: refund account after suicide. - balance: the total amount that is refunded in suicide.
+    * result: subjective to the type of a trace. If the execution of the contract failed，this field is empty.
+      * call：
+        * gas_used：used gas.
+        * output：output.
+      * create：
+        * gas_used：used gas.
+        * contract_account: address of the contract created.
+        * code：code of the contract created.
+      * suicide：result field is null
+    * error: error message. This field is null if the contract execution is successful.
+    * subtraces：number of subtraces.
+    * trace_address：the layer of trace.
+#### Example
+```json
+// Success
+{
+    "jsonrpc":"2.0",
+    "id":1,
+    "result": [{
+        "type": 0,  //call
+        "action": {
+            "call_type": "call",
+            "from": "0x1144B522F45265C2DFDBAEE8E324719E63A1694C",
+            "to": "0xa9d8863d0bf68dbaaacacad4ee0e865a0cc59f28",
+            "gas": "25000",
+            "data": "",
+            "amount": "120000000000000000000"
+        },
+        "result": {
+            "gas_used": "21000",
+            "output": "",
+        },
+        "subtraces":0,
+        "trace_address": []
+    }, ...]
+}
+// Failed
+{
+    "jsonrpc":"2.0",
+    "id":1,
+    "error":{
+        "code": -32700,
+        "message": "cannot wrap string value as a json-rpc type; strings must be 	prefixed with \"0x\", cannot contains invalid hex character, and must be of the correct length."
+    }
 }
 ```
 
 ## stable_blocks
 Return the stable blocks by giving the index of the first block to retrieve and the uplimit of the number of blocks to return.
 ### Parameters
-- **action** - String: "stable_blocks".
-- **limit** - String: Uplimit of the number of blocks to return. The maximum value is 100.
-- **index** - String: The index of the first block to retrieve. It can be the value of next_index from the result of previous stable_blocks call. The default value is 0.
-#### POST Request Body
+1. QUANTITY - The index of the first block to retrieve. It can be the value of `next_index` from the result of previous `stable_blocks` call. 
+2. QUANTITY - Uplimit of the number of blocks to return. The maximum value is 100.
+#### Example
 ```json
 {
-    "action": "stable_blocks",
-    "limit": <limit>,
-    "index": <index>
+    "id":1,
+    "jsonrpc":"2.0",
+    "method":"stable_blocks",
+    "params":["0","100"]
 }
-```
-#### web3-olympus.js
-```javascript
-olympusRequest.stableBlocks(limit, index)
 ```
 ### Returns
-- **code** - Integer: Error code. *0*: success, *12*: invalid limit, *14*: invalid index.
-- **msg** - String: Error message.
-- **blocks** - Array: List of returned stable blocks. Object on each index is a stable block object.
-  - block object structure:
-    - **hash** - String: Block hash.
-    - **from** - String: Sender's account.
-    - **previous** - String: Hash of the latest block of sender's account before the current block. *0* if it is the first block of the account.
-    - **parents** - Array: List of parent blocks' hashes on the DAG.
-    - **links** - Array: List of the ordinary blocks' hashes that the witness block referenced.
-    - **last_summary** - String: The summary of last_summary_block.
-    - **last_summary_block** - String: The last_stable_block of the best parent of this block on the DAG.
-    - **last_stable_block** - String: The last stable block of this block on the DAG.
-    - **timestamp** - Number: The timestamp when the block was generated.
-    - **gasLimit** - String: Uplimit of the gas for the transaction.
-    - **signature** - String: Sender's signature.
-- **next_index** - Number: The index of next stable block. *null* if there is no subsequent block.
+* Object - Include array of stable blocks and next_index:
+  * blocks: Array - Array of stable blocks object. See block object in the [block](RPC.md#block) RPC method. Object on each index is a stable block object.
+  * next_index: QUANTITY - The index of next stable block. *null* if there is no subsequent block.
 #### Example
-```javascript
-olympusRequest.stableBlocks("1", "10")
-
+```json
 // Success
-> {
-    "code": 0,
-    "msg": "OK",
-    "blocks": [
-        {
-            "hash": "0xdab3afc89643b95d680c0156b6cfcf0f170c518ba4613ee68bff64911bcd4d5f",
-            "from": "0x111a6899a9d63d4295e6de66f791acdaca6d07c6",
-            "previous": "0x0000000000000000000000000000000000000000000000000000000000000000",
-            "parents": [
-                "0x454e45b9406a5f2a36e98c2f376d93924dd9d5ee3360eb2c8857cb0c1ec36437",
-                "0x803318db753dc8ca697cb0f3764eb8fe696f741ab3bec47dec25ba3c1b7748bb"
-            ],
-            "links": [],
-            "last_summary": "0x13927bc1a6208d43b5b70a7c0bdf488aabefaa86665619685018f3c0bc49c6c8",
-            "last_summary_block": "0x5b4d77f0affac85e884f233d4ebd7720016fe04cc14855afd7fd1d13573f57ba",
-            "last_stable_block": "0x5b4d77f0affac85e884f233d4ebd7720016fe04cc14855afd7fd1d13573f57ba",
-            "timestamp": 1676447263,
-            "gasLimit": "0x2faf080",
-            "signature": "0x67582c4a43362d87d7333d92068d59b65ff8d02583267bfec1e8316ca4f5d993446c93709787094f2fc4087fc7de2a14f1fff5d59186a7d354fa5be62a5bfde801"
-        }
-    ],
-    "next_index": 11
-}
-
-// Failed
-> {
-    "code": 12,
-    "msg": "Invalid limit"
-}
-// or
 {
-    "code": 14,
-    "msg": "Invalid index"
+    "result":[{
+        "blocks": [{...}, {...}, ...],
+        "next_index": 15677
+    }]
+}
+// Failed
+{
+    "error":{
+        "code": -32700,
+        "message": "query returned more than 100 results or limit zero."
+    }
 }
 ```
 
 ## block_summary
 Return the summary of a stable block.
 ### Parameters
-- **action** - String: "block_summary".
-- **hash** - String: Block hash.
-#### POST Request Body
+1. DATA, 32 Bytes - Hash of a block.
+#### Example
 ```json
 {
-    "action": "block_summary",
-    "hash": <blockHash>
+    "id":1,
+    "jsonrpc":"2.0",
+    "method": "block_summary",
+    "params":["0x7763f7c4ebb4301a71ab27ba5d42cbe4cb7eb71eaba479a50f9b888c8017ced8"]
 }
-```
-#### web3-olympus.js
-```javascript
-olympusRequest.blockSummary(block_hash)
 ```
 ### Returns
-- **code** - Integer: Error code. *0*: success, *36*: invalid hash format.
-- **msg** - String: Error message.
-- **summary** - String: Summary hash.
-- **previous_summary** - String: Previous summary hash.
-- **parent_summaries** - Array: List of parents' summary hashes.
-- **skiplist_summaries** - Array: List of skipped summary hashes.
-- **status** - Number: The status of the block state.
+* Object - A block summary object, or *null* when no block was found or not stable:
+    * summary: DATA, 32 Bytes - Summary hash value.
+    * previous_summary: DATA, 32 Bytes - Previous summary hash.
+    * parent_summaries: Array - Array of the 32 Bytes hashes of parent summary.
+    * skiplist_summaries: Array - Array of the 32 Bytes hashes of skipped summary.
+    * status: QUANTITY - The status of the block state.
 #### Example
-```javascript
-olympusRequest.blockSummary("0xdbd8c3d4264e92e59b3b9d5f500a258427466e23ad7904b0c01e2e5b0a81c174")
-
+```json
 // Success
-> {
-    "code": 0,
-    "msg": "OK",
-    "summary": "0x5be821f80c34185279acfa219489cb41008415bea7a8ffd28f6f556c06cb7bd8",
-    "previous_summary": "0x73eee53e998ae0e8f0b6e645ca5520c82cc0a551b31897746de8b46c7dff7d1c",
-    "parent_summaries": [
-        "0x9b8499d8ac9065ba91b778c0036d1ac7345d25d82920ec66b90a32823da762af",
-        "0x73eee53e998ae0e8f0b6e645ca5520c82cc0a551b31897746de8b46c7dff7d1c"
-    ],
-    "skiplist_summaries": [],
-    "status": 0
+{
+    "id": 1,
+    "jsonrpc": "2.0",
+    "result": {
+        "summeries": "0xb4f15ae3d10b1e3ebf742213113785a561ffc6ab737471ad6f9085e76a22be1f",
+        "previous_summary": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "parent_summaries": [
+            "0x37b7ce47c8af3f10922e687e514b673b46c1a5f6e05c01cc70ac338cf296b3b1"
+        ],
+        "skiplist_summaries": [],
+        "status": 0
+    }
 }
-
 // Failed
-> {
-    "code": 36,
-    "msg": "Invalid hash format"
+{
+    "id": 1,
+    "jsonrpc": "2.0",
+    "error":{
+        "code": -32700,
+        "message": "cannot wrap string value as a json-rpc type; strings must be 	prefixed with \"0x\", cannot contains invalid hex character, and must be of the correct length."
+    }
 }
 ```
 
@@ -337,33 +425,29 @@ olympusRequest.blockSummary("0xdbd8c3d4264e92e59b3b9d5f500a258427466e23ad7904b0c
 Acquire the current node version, rpc interface version, and database version.
 ### Parameters
 None
-#### POST Request Body
+#### Example
 ```json
 {
-    "action": "version"
+    "id": 1,
+    "jsonrpc": "2.0",
+    "method": "version"
 }
 ```
-#### web3-olympus.js
-```javascript
-olympusRequest.version()
-```
 ### Returns
-- **code** - Integer: Error code. *0*: success.
-- **msg** - String: Error message.
-- **version** - String: Current node version.
-- **rpc_version** - String: RPC interface version.
-- **store_version** - String: Database version.
+* Object.
+  * version: String - Current node version.
+  * rpc_version: String - RPC interface version.
+  * store_version: String - Database version.
 #### Example
-```javascript
-olympusRequest.version()
-
-// Success
-> {
-    "code": 0,
-    "msg": "OK",
-    "version": "1.0.10",
-    "rpc_version": "1",
-    "store_version": "1"
+```json
+{
+    "id": 1,
+    "jsonrpc": "2.0",
+    "result": {
+        "version": "1.0.10",
+        "rpc_version": "1",
+        "store_version": "1"
+    }
 }
 ```
 
@@ -371,118 +455,103 @@ olympusRequest.version()
 Retrieve the current status of DAG on the node.
 ### Parameters
 None
-#### POST Request Body
+#### Example
 ```json
 {
-    "action": "status"
+    "id":1,
+    "jsonrpc":"2.0",
+    "method": "status"
 }
 ```
-#### web3-olympus.js
-```javascript
-olympusRequest.status()
-```
 ### Returns
-- **code** - Integer: Error code. *0*: success.
-- **msg** - String: Error message.
-- **syncing** - Number: If the node is syncing to the other nodes. *0* if not syncing, *1* if syncing.
-- **last_stable_mci** - Number: The mci of the last stable block.
-- **last_mci** - Number: The mci of the last block on the main chain.
-- **last_stable_block_index** - Number: The stable index of the last stable block. Stable index starts from value 0 and keep increasing. It indicates the order of stable blocks on DAG.
-- **epoch** - Number: The current epoch number of mcp.
-- **epoch_period** - Number: The number of blocks in main chain included in each epoch.
+* Object.
+    * syncing: Boolean - If the node is syncing to the other nodes，0：not syncing，1：syncing.
+    * last_stable_mci: QUANTITY - The `mci` of the last stable block.
+    * last_mci: QUANTITY - The `mci` of the last block on the `main chain`.
+    * last_stable_block_index：QUANTITY - The `stable index` of the last stable block. `stable index` starts from value 0 and keep increasing. It indicates the order of stable blocks on DAG.
+    * epoch: QUANTITY - The current epoch number of mcp.
+    * epoch_period: QUANTITY - The number of blocks in main chain included in each epoch.
 #### Example
-```javascript
-olympusRequest.status()
-
-// Success
-> {
-    "code": 0,
-    "msg": "OK",
-    "syncing": 0,
-    "last_stable_mci": 366451,
-    "last_mci": 366469,
-    "last_stable_block_index": 535333,
-    "epoch": 3664,
-    "epoch_period": 100
+```json
+{
+    "id": 1,
+    "jsonrpc": "2.0",
+    "result": {
+        "syncing": 0,
+        "last_stable_mci": 7,
+        "last_mci": 8,
+        "last_stable_block_index": 7,
+        "epoch": 0,
+        "epoch_period": 10000
+    }
 }
 ```
 
 ## peers
-Retrieve the peers connected to the node.
+List the peers connected to the node.
 ### Parameters
 None
-#### POST Request Body
+#### Example
 ```json
 {
-    "action": "peers"
+    "id":1,
+    "jsonrpc":"2.0",
+    "method": "peers"
 }
 ```
-#### web3-olympus.js
-```javascript
-olympusRequest.peers()
-```
 ### Returns
-- **code** - Integer: Error code. *0*: success.
-- **msg** - String: Error message.
-- **peers** - Array: List of peers returned.
+* Array - array of peer object. Object:
+  * id: DATA, 64 Bytes - Remote id.
+  * endpoint: ip - Remote ip address.
 #### Example
-```javascript
-olympusRequest.peers()
-
-// Success
-> {
-    "code": 0,
-    "msg": "OK",
-    "peers": [
+```json
+{
+    "id": 1,
+    "jsonrpc": "2.0",
+    "result": [
         {
-            "id": "0x25931a5f55212a19ac22b5fc3cb1dfda6025828854fa90c14fffeef8027127a8c22a5aae61909d73b6de2167253596853a123e6e2b0050193e45a08be6cc8129",
-            "endpoint": "172.104.91.244:30607"
+            "id": "0x9968eebe92c18e63a77e6e9861c28a506eb7ba1ff35276b3256018f3946812f16e0e8de1e63ee36613f279011393a4995e54bc6101575ae9d167b69e456f5571",
+            "endpoint": "127.0.0.1:30607"
         },
         {
-            "id": "0x8185ce9ca658354142847666ab45a1991fbe86a3fbbdfdab1acfa173a0041600c56d3419f34e88fc1bc888ce913589953f186cc5412c688f45a2de1074db4b4b",
-            "endpoint": "43.154.130.109:30606"
-        },
-        ...
+            "id": "0x569a3550a3163d301ae877efb5b58d062a58f833df497ddae657838558b5f09d466258ee2a972969f0c378e1b936763b4afcea76650f0a378821668793f8ec24",
+            "endpoint": "127.0.0.1:51911"
+        }
     ]
 }
 ```
 
 ## nodes
-Retrieve the nodes that are candidates to connect to the node.
+List the nodes connected to the node.
 ### Parameters
 None
-#### POST Request Body
+#### Example
 ```json
 {
-    "action": "nodes"
+    "id":1,
+    "jsonrpc":"2.0",
+    "method": "nodes"
 }
 ```
-#### web3-olympus.js
-```javascript
-olympusRequest.nodes()
-```
 ### Returns
-- **code** - Integer: Error code. *0*: success.
-- **msg** - String: Error message.
-- **nodes** - Array: List of nodes returned.
+* Array - array of peer object. Object:
+  * id: DATA, 64 Bytes - Remote id.
+  * endpoint: ip - Remote ip address.
 #### Example
-```javascript
-olympusRequest.nodes()
-
+```json
 // Success
-> {
-    "code": 0,
-    "msg": "OK",
-    "nodes": [
+{
+    "id": 1,
+    "jsonrpc": "2.0",
+    "result": [
         {
-            "id": "0x25931a5f55212a19ac22b5fc3cb1dfda6025828854fa90c14fffeef8027127a8c22a5aae61909d73b6de2167253596853a123e6e2b0050193e45a08be6cc8129",
-            "endpoint": "172.104.91.244:30607"
+            "id": "0x9968eebe92c18e63a77e6e9861c28a506eb7ba1ff35276b3256018f3946812f16e0e8de1e63ee36613f279011393a4995e54bc6101575ae9d167b69e456f5571",
+            "endpoint": "127.0.0.1:30607"
         },
         {
-            "id": "0x8a7becc16d52a1d61079cb9c9cdeb13952f5e56d488fcd836b7fa87eaecda542b4abce8b5fe20c7befe78cbe13a83e056242f92b65259d522e9b326c0314face",
-            "endpoint": "109.74.206.50:30607"
-        },
-        ...
+            "id": "0x569a3550a3163d301ae877efb5b58d062a58f833df497ddae657838558b5f09d466258ee2a972969f0c378e1b936763b4afcea76650f0a378821668793f8ec24",
+            "endpoint": "127.0.0.1:30607"
+        }
     ]
 }
 ```
@@ -490,52 +559,171 @@ olympusRequest.nodes()
 ## witness_list
 Retrieve the list of witnesses.
 ### Parameters
-- **action** - String: "witness_list".
-- **epoch** (Optional) - String: Epoch number.
-#### POST Request Body
+1. QUANTITY - Epoch number.
+#### Example
 ```json
 {
-    "action": "witness_list",
-    "epoch": "100" // Optional
+    "id":1,
+    "jsonrpc":"2.0",
+    "method":"witness_list",
+    "params":["0"]
 }
-```
-#### web3-olympus.js
-```javascript
-olympusRequest.witnessList(epoch: Optional)
 ```
 ### Returns
-- **code** - Integer: Error code. *0*: success, *50*: epoch is too big.
-- **msg** - String: Error message.
-- **witness_list** - Array: List of witnesses.
+* Array - Array of witness address.
 #### Example
-```javascript
-olympusRequest.witnessList("100")
-
+```json
 // Success
-> {
-    "code": 0,
-    "msg": "OK",
-    "witness_list": [
-        "0x111a6899a9d63d4295e6de66f791acdaca6d07c6",
-        "0x234a808020b60abd2e85b68a57b19bc6aa7ac217",
-        "0x27821d50355795d2ce792553201a36afc232c4c1",
-        "0x2e2cb4884db9f2976a6b23e0544ea4d2d6f13c45",
-        "0x422ceefcce450aa293f81777c3fa4972349778ab",
-        "0x442f16643aeb9d466add91a464d9aa6acd63625d",
-        "0x49eb9d07b82dbdc6efd3ca14b71336a6a56d2962",
-        "0x712f0e7ef7e055923611721d38d3ed05a5fc878c",
-        "0x9337d003c960c673f42116893f69c248ec4c655d",
-        "0xa6b11d16bd51d996d921dce6c8c350cbb1723c86",
-        "0xb1d9b0199bac38d32b2d539d9911941a14e56f60",
-        "0xb82d856e065ae9b63115eb4024a71bd6df81ba52",
-        "0xc1c64d93759b35effb645cf700983c7d1b9edcca",
-        "0xdf127194cf3c7e314ed25952169d1c56fcbb2d46"
+{
+    "id": 1,
+    "jsonrpc": "2.0",
+    "result": [
+        "0x05174fa7ab39a36391b17850a2db9afdcf57190e",
+        "0x1895ac1edc15389b905bb19537eb0c5b33d8c77a",
+        "0x329e6b5b8e59fc73d892958b2ff6a89474e3d067",
+        "0x49a1b41e8ccb704f5c069ef89b08cd33f764e9b3",
+        "0x827cce78dc6ec7051f2d7bb9e7adaefba7ca3248",
+        "0x918d3fe1dbff02fc7521d4a04b50017ce1a7c2ea",
+        "0x929f336edb0a39ad5532a462d4a84e1546c5e5de",
+        "0xa11b98c54d4189adda8eda97e13c214fedaf0a0f",
+        "0xa65ec5c65031d668094cb1b81bb8253ea64a23d7",
+        "0xba618c1e3e90d16e6c15d92ed198780dc4ad39c2",
+        "0xc2cf7b9eb048c34c2b00175a884543366bbcd029",
+        "0xc543a3868f3613eecd109761f71e31832ecf51ba",
+        "0xdab8a5fb82eb24ad321751bb2dd8e4cc9a4e45e5",
+        "0xf0821dc4ba9419b865aa412170377ca3b44cdb58"
     ]
 }
-
 // Failed
-> { 
-    "code": 50, 
-    "msg": "epoch is too big."
+{
+    "id": 1,
+    "jsonrpc": "2.0",
+    "error": {
+        "code": -32602,
+        "message": "The epoch has not yet completed."
+    }
+}
+```
+
+## epoch_approves
+List the all approve messages that have been processed in the specified epoch.
+### Parameters
+1. QUANTITY - Epoch number.
+#### Example
+```json
+{
+    "id":1,
+    "jsonrpc":"2.0",
+    "method":"epoch_approves",
+    "params":["2"]
+}
+```
+### Returns
+* Array - array of approve object. Object:
+  * hash: DATA, 32 Bytes - Approve hash.
+  * from: DATA, 20 Bytes - Sender, stand for election.
+  * proof: DATA - Election proof message.
+#### Example
+```json
+// Success
+{
+    "id": 1,
+    "jsonrpc": "2.0",
+    "result": [
+        {
+            "hash": "0x01b46344d3e21800e43fbc0da883fbb110b39826e49657150f7c728ae9a6a5d3",
+            "from": "0xf0821dc4ba9419b865aa412170377ca3b44cdb58",
+            "proof": "0x0230dcc71f2c751af057f8a3e339d382dadfb791a45dc55d6c8b6bd610b2c0b9f6a5546e9f06769f5e691543cad18a570cf2dadd1b448257ce536f7624033e814ffae81b189947d6086e0f1950363e7153"
+        },
+        {
+            "hash": "0x13483b1e028088496f7fae84f2d3306023d5700d787e5f89938f66728c4c57a3",
+            "from": "0x929f336edb0a39ad5532a462d4a84e1546c5e5de",
+            "proof": "0x0365900ad931b888d4a45dc3ae62f75affdd3fe61ed75a90b01288ae3bf955b63d5ba9189ff4a624a199d00fe5fd65f2f559f7d9add7009ec7bd0b78c1d1f49436be989c0d795759067ba8b9ca9789e246"
+        }
+    ]
+}
+// Failed
+{
+    "id": 1,
+    "jsonrpc": "2.0",
+    "error": {
+        "code": -32602,
+        "message": "The epoch has not yet completed."
+    }
+}
+```
+
+## approve_receipt
+Returns receipt about a approve by hash.
+### Parameters
+1. DATA, 32 Bytes - Hash of a approve.
+#### Example
+```json
+{
+    "id":1,
+    "jsonrpc":"2.0",
+    "method":"approve_receipt",
+    "params":["0x01b46344d3e21800e43fbc0da883fbb110b39826e49657150f7c728ae9a6a5d3"]
+}
+```
+### Returns
+* Object - A approve receipt object, or *null* when no block state was found, Object:
+  * from: DATA, 20 Bytes - Sender, stand for election.
+  * output: DATA - Receipt output.
+  * status: Boolean - Approve execution status.
+#### Example
+```json
+// Success
+{
+    "id": 1,
+    "jsonrpc": "2.0",
+    "result": {
+        "from": "0xf0821dc4ba9419b865aa412170377ca3b44cdb58",
+        "output": "0xd5e023cc427b924072e7694fe0d29d14336cf47c486401655b405e9fcc712cfc",
+        "status": "0x1"
+    }
+}
+// Failed
+{
+    "id": 1,
+    "jsonrpc": "2.0",
+    "error": {
+        "code": -32700,
+        "message": "cannot wrap string value as a json-rpc type; strings must be prefixed with \"0x\", cannot contains invalid hex character, and must be of the correct length."
+    }
+}
+```
+
+## epoch_work_transaction
+Returns epoch finalized transaction hash, for epoch reward.
+### Parameters
+1. QUANTITY - Epoch number.
+#### Example
+```json
+{
+    "id":1,
+    "jsonrpc":"2.0",
+    "method": "epoch_work_transaction",
+    "params":["2"]
+}
+```
+### Returns
+* DATA, 32 Bytes - Hash of the epoch finalized transaction.
+#### Example
+```json
+// Success
+{
+    "id": 1,
+    "jsonrpc": "2.0",
+    "result": "0x6588d572085f0ed4c771ab5286b2c53a9ea78f6a799360f9a3abebb34332e5f2"
+}
+// Failed
+{
+    "id": 1,
+    "jsonrpc": "2.0",
+    "error": {
+        "code": -32602,
+        "message": "The epoch has not yet completed."
+    }
 }
 ```
