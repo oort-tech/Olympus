@@ -104,7 +104,7 @@ Returns the decimalism balance of given addresses.
     "jsonrpc": "2.0",
     "error":{
         "code": -32700,
-        "message": "cannot wrap string value as a json-rpc type; strings must be 	prefixed with \"0x\", cannot contains invalid hex character, and must be of the correct length."
+        "message": "cannot wrap string value as a json-rpc type; strings must be prefixed with \"0x\", cannot contains invalid hex character, and must be of the correct length."
     }
 }
 ```
@@ -123,7 +123,7 @@ Returns a block by block hash.
 }
 ```
 ### Returns
-* Object - A block object, or null when no block was found:
+* Object - A block object, or *null* when no block was found:
   * hash: DATA, 32 Bytes - Hash of the block.
   * from: DATA, 20 Bytes - Sender's address.
   * previous: DATA, 32 Bytes - Hash of the latest block of sender's account before the current block. The value is 0 for the first block of the account.
@@ -252,7 +252,7 @@ Returns block states of given hashes.
 }
 ```
 ### Returns
-* Array - Array of block state contents givening hashes.See block state contents in the [`block_state`](RPC.md#block\_state) RPC method. If any of the block hashes doesn't exist, the corresponding list element is null.
+* Array - Array of block state contents givening hashes.See block state contents in the [`block_state`](RPC.md#block\_state) RPC method. If any of the block hashes doesn't exist, the corresponding list element is *null*.
 #### Example
 ```json
 // Success
@@ -299,8 +299,8 @@ Get the trace of internal transactions in a smart contract.
         * gas_used：used gas.
         * contract_account: address of the contract created.
         * code：code of the contract created.
-      * suicide：result field is null
-    * error: error message. This field is null if the contract execution is successful.
+      * suicide：result field is *null*
+    * error: error message. This field is *null* if the contract execution is successful.
     * subtraces：number of subtraces.
     * trace_address：the layer of trace.
 #### Example
@@ -333,7 +333,7 @@ Get the trace of internal transactions in a smart contract.
     "id":1,
     "error":{
         "code": -32700,
-        "message": "cannot wrap string value as a json-rpc type; strings must be 	prefixed with \"0x\", cannot contains invalid hex character, and must be of the correct length."
+        "message": "cannot wrap string value as a json-rpc type; strings must be prefixed with \"0x\", cannot contains invalid hex character, and must be of the correct length."
     }
 }
 ```
@@ -416,7 +416,7 @@ Return the summary of a stable block.
     "jsonrpc": "2.0",
     "error":{
         "code": -32700,
-        "message": "cannot wrap string value as a json-rpc type; strings must be 	prefixed with \"0x\", cannot contains invalid hex character, and must be of the correct length."
+        "message": "cannot wrap string value as a json-rpc type; strings must be prefixed with \"0x\", cannot contains invalid hex character, and must be of the correct length."
     }
 }
 ```
@@ -550,7 +550,7 @@ None
         },
         {
             "id": "0x569a3550a3163d301ae877efb5b58d062a58f833df497ddae657838558b5f09d466258ee2a972969f0c378e1b936763b4afcea76650f0a378821668793f8ec24",
-            "endpoint": "127.0.0.1:30607"
+            "endpoint": "127.0.0.1:30608"
         }
     ]
 }
