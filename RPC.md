@@ -284,25 +284,38 @@ Get the trace of internal transactions in a smart contract.
 }
 ```
 ### Returns
-* Array - array of trace objects, or empty when no block was found:
-  * fields in a trace:
-    * type: 0:call，1:create，2:suicide.
-    * action: subjective to the type of a trace.
-      * call: - call_type: type of call. - from: sender's account. - to: receiver's account. - gas: _string_，gas limit. - data: input data. - amount: _string_，amount in the unit of 10-18 oort.
-      * create： - from: sender's account. - gas: _string_，gas limit. - init: the code that creates the contract. - amount: _string_，amount in the unit of 10-18 oort.
-      * suicide： - contract_account: contract account. - refund_account: refund account after suicide. - balance: the total amount that is refunded in suicide.
+* Array - array of trace objects, or empty when no block was found, trace object:
+    * type: QUANTITY - The value of the method such as call or create.
+    * action: The action to be performed on the receiver id.
+      * call: type is call(0).
+        * call_type: String - The type of method such as call, delegatecall. 
+        * from: DATA, 20 Bytes - The address of the sender.
+        * to: DATA, 20 Bytes - The address of the receiver.
+        * gas: QUANTITY - The gas provided by the sender, encoded as decimalism. 
+        * data: DATA - The data sent along with the transaction.
+        * amount: QUANTITY - The integer of the value sent with this transaction, encoded as decimalism.
+      * create: type is create(1).
+        * from: DATA, 20 Bytes - The address of the sender. 
+        * gas: QUANTITY - The gas provided by the sender, encoded as decimalism.  
+        * init: DATA - The code that creates the contract.
+        * amount: QUANTITY - The integer of the value sent with this transaction, encoded as decimalism.
+      * suicide: type is suicide(2).
+        * contract_account: DATA, 20 Bytes - Contract account.
+        * refund_account: DATA, 20 Bytes - Refund account after suicide.
+        * balance: QUANTITY - The total amount that is refunded in suicide.
     * result: subjective to the type of a trace. If the execution of the contract failed，this field is empty.
-      * call：
-        * gas_used：used gas.
-        * output：output.
-      * create：
-        * gas_used：used gas.
-        * contract_account: address of the contract created.
-        * code：code of the contract created.
-      * suicide：result field is *null*
-    * error: error message. This field is *null* if the contract execution is successful.
-    * subtraces：number of subtraces.
-    * trace_address：the layer of trace.
+      * call:
+        * gas_used: QUANTITY - Used gas.
+        * output: DATA - The value returned by the contract call, and it only contains the actual value sent by the RETURN method. If the RETURN method was not executed, the output is empty bytes.
+      * create:
+        * gas_used: QUANTITY - Used gas.
+        * contract_account: DATA, 20 Bytes - Address of the contract created.
+        * code: DATA - code of the contract created.
+      * suicide: result field is *null*
+    * error: String - error message. This field is *null* if the contract execution is successful.
+    * subtraces: QUANTITY - The traces of contract calls made by the transaction.
+    * trace_address: Array of DATA, 20 Bytes - The list of addresses where the call was executed, the address of the parents, and the order of the current sub call.
+.
 #### Example
 ```json
 // Success
