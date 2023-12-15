@@ -12,7 +12,7 @@
     "README.md"
   ],
   "scripts": {
-    "deploy_ccnebeta": "npx hardhat run scripts/deploy.js --network ccnbeta",
+    "deploy_ccnbeta": "npx hardhat run scripts/deploy.js --network ccnbeta",
     "deploy_local": "npx hardhat run scripts/deploy.js --network local"
   },
   "repository": {
