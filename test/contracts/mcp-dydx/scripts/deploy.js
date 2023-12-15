@@ -1,5 +1,5 @@
 const { ethers } = require('hardhat');
-const { getRiskParams, getRiskLimits, getPolynomialParams } = require('./helpers');
+const { getRiskParams, getRiskLimits, getPolynomialParams, getExpiryRampTime, getFinalSettlementRampTime } = require('./helpers');
 const { BigNumber } = require('bignumber.js');
 
 const ZERO = '0';
@@ -15,7 +15,7 @@ async function getTokens() {
       const tokenFactory = await ethers.getContractFactory(contractName);
       const tokenInstance = await tokenFactory.deploy();
       deployedTokens.push(tokenInstance);
-       console.log(tokenInstance.address, contractName);
+      console.log(tokenInstance.address, contractName);
     }
 
     return Promise.all(deployedTokens);
@@ -72,18 +72,64 @@ async function setupProtocol() {
       console.log(tokenAddress, "tokens");
       console.log(await testSoloMargin.ownerSetGlobalOperator(tokenAddress, true));
 
+      // owner add market
       console.log(
         await testSoloMargin.ownerAddMarket(
-        tokenAddress, 
-        testPriceOracle.address,
+          tokenAddress,
+          testPriceOracle.address,
           Poly.address,
           { value: ZERO },
           { value: ZERO }
         ));
     }
 
+    const TestCallee = await ethers.getContractFactory('TestCallee');
+    const TestSimpleCallee = await ethers.getContractFactory('TestSimpleCallee');
+    // Second-Layer Contracts
+    const PayableProxyForSoloMargin = await ethers.getContractFactory('PayableProxyForSoloMargin');
+    const Expiry = await ethers.getContractFactory('Expiry');
+    const ExpiryV2 = await ethers.getContractFactory('ExpiryV2');
+    const FinalSettlement = await ethers.getContractFactory('FinalSettlement');
+    const Refunder = await ethers.getContractFactory('Refunder');
+    const DaiMigrator = await ethers.getContractFactory('DaiMigrator');
+    const LiquidatorProxyV1ForSoloMargin = await ethers.getContractFactory('LiquidatorProxyV1ForSoloMargin');
+    const LimitOrders = await ethers.getContractFactory('LimitOrders');
+    const StopLimitOrders = await ethers.getContractFactory('StopLimitOrders');
+    const CanonicalOrders = await ethers.getContractFactory('CanonicalOrders');
+    const SignedOperationProxy = await ethers.getContractFactory('SignedOperationProxy');
+    const WETH9 = await ethers.getContractFactory('WETH9');
+    const weth = await WETH9.deploy();
+
+    (await PayableProxyForSoloMargin.deploy(
+      testSoloMargin.address,
+      weth.address,
+    )).deployed().then((instance) => { console.log(instance.address, "PayableProxyForSoloMargin") });
+    
+    (await Expiry.deploy(
+      testSoloMargin.address,
+      getExpiryRampTime(),
+    )).deployed().then((instance) => { console.log(instance.address, "Expiry") });
+    
+    (await ExpiryV2.deploy(
+      testSoloMargin.address,
+      getExpiryRampTime(),
+    )).deployed().then((instance) => { console.log(instance.address, "ExpiryV2") });
+    
+    (await FinalSettlement.deploy(
+      testSoloMargin.address,
+      getFinalSettlementRampTime(),
+    )).deployed().then((instance) => { console.log(instance.address, "FinalSettlement") });
+    
+    (await Refunder.deploy(
+      testSoloMargin.address,
+      [],
+    )).deployed().then((instance) => { console.log(instance.address, "Refunder") });
+    
+    (await DaiMigrator.deploy(
+      [],
+    )).deployed().then((instance) => { console.log(instance.address, "DaiMigrator") });
   } catch (error) {
-    console.error('Error during protocol setup:', error);
+    console.log(error);
   }
 }
 
