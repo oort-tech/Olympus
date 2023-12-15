@@ -11,7 +11,7 @@ This repository contains the source code for the mcp-dydx project. Follow the st
 
 ### Installation
 1. Navigate to the source directory in your terminal.
-2. Run the following command to install dependencies using Yarn:
+2. Run the following command to install dependencies using npm:
 
     ```bash
     npm i --save-dev
