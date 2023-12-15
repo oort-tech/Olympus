@@ -16,6 +16,7 @@ This repository contains the source code for the mcp-dydx project. Follow the st
     ```bash
     npm i --save-dev
     ```
+3. Copy .env.example to .env and fill required values
 
 ### Compilation & Deployment
 Compile the project using the following command:
