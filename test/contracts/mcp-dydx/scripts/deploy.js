@@ -62,29 +62,35 @@ async function setupProtocol() {
     const Poly = await testPoly.deploy(await getPolynomialParams());
     console.log(await Poly.address, "Setter Address");
 
-    (await oracle.setPrice(tokens[0].address, ONE_DOLLAR.times('100').toFixed(0)))
-    console.log(await oracle.setPrice(tokens[1].address, ONE_DOLLAR.toFixed(0)))
-    console.log(await oracle.setPrice(tokens[2].address, ONE_DOLLAR.times('0.3').toFixed(0)))
+    const tokenAPrice = (await oracle.setPrice(tokens[0].address, ONE_DOLLAR.times('100').toFixed(0)))
+    const tokenBPrice = (await oracle.setPrice(tokens[1].address, ONE_DOLLAR.toFixed(0)))
+    const tokenCPrice = (await oracle.setPrice(tokens[2].address, ONE_DOLLAR.times('0.3').toFixed(0)))
+    console.log(tokenAPrice.hash, "Token A Price TX Hash");
+    console.log(tokenBPrice.hash, "Token B Price TX Hash");
+    console.log(tokenCPrice.hash, "Token C Price TX Hash");
 
     for (let i = 0; i < tokens.length; i += 1) {
       const tokenAddress = await tokens[i].address;
 
-      console.log(tokenAddress, "tokens");
-      console.log(await testSoloMargin.ownerSetGlobalOperator(tokenAddress, true));
+      //console.log(tokenAddress, "tokens");
+      const ownerSetGlobalOperatorTest = (await testSoloMargin.ownerSetGlobalOperator(tokenAddress, true));
+      console.log(ownerSetGlobalOperatorTest.hash, "Set Global Operator Tx Hash")
 
       // owner add market
-      console.log(
-        await testSoloMargin.ownerAddMarket(
+    
+        const ownerAddMarketCall = await testSoloMargin.ownerAddMarket(
           tokenAddress,
           testPriceOracle.address,
           Poly.address,
           { value: ZERO },
           { value: ZERO }
-        ));
+        );
+        console.log(ownerAddMarketCall.hash, "Add Market Tx Hash")
     }
 
     const TestCallee = await ethers.getContractFactory('TestCallee');
     const TestSimpleCallee = await ethers.getContractFactory('TestSimpleCallee');
+    
     // Second-Layer Contracts
     const PayableProxyForSoloMargin = await ethers.getContractFactory('PayableProxyForSoloMargin');
     const Expiry = await ethers.getContractFactory('Expiry');
@@ -100,36 +106,41 @@ async function setupProtocol() {
     const WETH9 = await ethers.getContractFactory('WETH9');
     const weth = await WETH9.deploy();
 
-    (await PayableProxyForSoloMargin.deploy(
+    const payableProxyForSoloMargin = await PayableProxyForSoloMargin.deploy(
       testSoloMargin.address,
-      weth.address,
-    )).deployed().then((instance) => { console.log(instance.address, "PayableProxyForSoloMargin") });
-    
-    (await Expiry.deploy(
+      weth.address
+    );
+    console.log(payableProxyForSoloMargin.address, "PayableProxyForSoloMargin Contract AddRess");
+  
+    const expiry = await Expiry.deploy(
       testSoloMargin.address,
-      getExpiryRampTime(),
-    )).deployed().then((instance) => { console.log(instance.address, "Expiry") });
-    
-    (await ExpiryV2.deploy(
+      getExpiryRampTime()
+    );
+    console.log(expiry.address, "Expiry Contract Address");
+  
+    const expiryV2 = await ExpiryV2.deploy(
       testSoloMargin.address,
-      getExpiryRampTime(),
-    )).deployed().then((instance) => { console.log(instance.address, "ExpiryV2") });
-    
-    (await FinalSettlement.deploy(
+      getExpiryRampTime()
+    );
+    console.log(expiryV2.address, "ExpiryV2 Contract Address");
+  
+    const finalSettlement = await FinalSettlement.deploy(
       testSoloMargin.address,
-      getFinalSettlementRampTime(),
-    )).deployed().then((instance) => { console.log(instance.address, "FinalSettlement") });
-    
-    (await Refunder.deploy(
+      getFinalSettlementRampTime()
+    );
+    console.log(finalSettlement.address, "FinalSettlement Contract Address");
+  
+    const refunder = await Refunder.deploy(
       testSoloMargin.address,
-      [],
-    )).deployed().then((instance) => { console.log(instance.address, "Refunder") });
-    
-    (await DaiMigrator.deploy(
-      [],
-    )).deployed().then((instance) => { console.log(instance.address, "DaiMigrator") });
+      []
+    );
+    console.log(refunder.address, "Refunder Contract Address");
+  
+    const daiMigrator = await DaiMigrator.deploy([]);
+    console.log(daiMigrator.address, "DaiMigrator Contract Address");
+  
   } catch (error) {
-    console.log(error);
+    console.error('Error during deployment:', error);
   }
 }
 
