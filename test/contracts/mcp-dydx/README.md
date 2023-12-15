@@ -4,7 +4,7 @@
 
 ### Project Setup and Testing Guide
 
-This repository contains the source code for the mcp-upgradable project. Follow the steps below to set up the project, compile the code, and run tests.
+This repository contains the source code for the mcp-dydx project. Follow the steps below to set up the project, compile the code, and run tests.
 
 ### Requirements
 - Node.js version 20 or later (20 is recommended)
