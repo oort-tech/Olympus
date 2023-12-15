@@ -79,9 +79,13 @@ module.exports = {
       allowUnlimitedContractSize: true,
       accounts: [
         process.env.CCNBETA_PRIVATE_KEY,
-        process.env.CCNBETA_OPERATION_PRIVATE_KEY,
-        process.env.CCNBETA_AUTHORIZED_PRIVATE_KEY,
-        process.env.CCNBETA_USER_PRIVATE_KEY,
+      ]
+    },
+    local: {
+      url: "http://localhost:8545",
+      allowUnlimitedContractSize: true,
+      accounts: [
+        process.env.LOCAL_PRIVATE_KEY
       ]
     }
   },
