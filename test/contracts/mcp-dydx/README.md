@@ -24,3 +24,10 @@ Compile the project using the following command:
 ```bash
 npm run deploy_ccnbeta
 ```
+
+#### Alternative
+
+You may run the provided shell script
+```bash
+./deploy_ccnbeta.sh # Deploy Protocol to CCNBETA
+```
