@@ -1,7 +1,7 @@
 # JSON-RPC API
 In order for a software application to interact with the mcp blockchain - either by reading blockchain data or sending transactions to the network - it must connect to an mcp node.
 
-JSON-RPC(opens in a new tab) is a stateless, light-weight remote procedure call (RPC) protocol. It defines several data structures and the rules around their processing. It is transport agnostic in that the concepts can be used within the same process, over sockets, over HTTP, or in many various message passing environments. It uses JSON (RFC 4627) as data format.
+JSON-RPC is a stateless, light-weight remote procedure call (RPC) protocol. It defines several data structures and the rules around their processing. It is transport agnostic in that the concepts can be used within the same process, over sockets, over HTTP, or in many various message passing environments. It uses JSON (RFC 4627) as data format.
 
 # CONVENIENCE LIBRARIES
 While you may choose to interact directly with mcp clients via the JSON-RPC API, there are often easier options for dapp developers. Many JavaScript and backend API libraries exist to provide wrappers on top of the JSON-RPC API. With these libraries, developers can write intuitive, one-line methods in the programming language of their choice to initialize JSON-RPC requests (under the hood) that interact with mcp.
@@ -24,7 +24,7 @@ The following options are possible for the defaultBlock parameter:
 # JSON-RPC API METHODS
 
 ## account_remove
-Remove the keystore file of an account previously imported through account_import or personal_importRawKey.
+Remove the keystore file of an account previously imported through `account_import` or `personal_importRawKey`.
 
 ### **Parameters**
 1. `DATA`, 20 Bytes - Address.
@@ -34,7 +34,7 @@ Remove the keystore file of an account previously imported through account_impor
 `Boolean` - `true` if the account was successfully removed, otherwise return error message.
 
 ### **Example**
-```json
+```js
 // Request
 curl --data '{"method":"account_remove","params":["0xa9d8863d0bf68dbaaacacad4ee0e865a0cc59f28", "12345678"],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8765
 // Result
@@ -57,7 +57,7 @@ Imports the given keystore into the key store.
 `DATA`, 20 Bytes - The account address.
 
 ### **Example**
-```json
+```js
 // Request
 curl --data '{"method":"account_import","params":["{"address":"8bea69e42045e162ccfed67ecb78d513a6be2eb3","id":"137a236e-9740-477b-affb-921efdf922a1","version":3,"crypto":{"cipher":"aes-128-ctr","cipherparams":{"iv":"c16adf7a5520dbdc08d7e08984451e0f"},"ciphertext":"79cb955240fa62deae7c05c6fed77e55cef7dfa7f70db49e4979c0f3403742bf","kdf":"scrypt","kdfparams":{"salt":"f7833b3bf2ef37426141e09bc7d5437521253736a4aac6bd83fe586507b841dc","n":131072,"dklen":32,"p":1,"r":8},"mac":"79740d2707f4af646915fbd14f9127de6e8ec8fb6d62dc3f78ab3aece05f7305"}}"],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8765
 // Result
@@ -80,7 +80,7 @@ Returns the decimalism balance of given addresses.
 `Array` - Array of balance matching all givening addresses.
 
 ### **Example**
-```json
+```js
 // Request
 curl --data '{"method":"accounts_balances","params":["0xa19B8dB625f0f43f2817aa455E646BE6db85f204","0xa9d8863d0bf68dbaaacacad4ee0e865a0cc59f28"],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8765
 // Result
@@ -118,7 +118,7 @@ Returns a block by block hash.
   * `signature`: `DATA`, 65 Bytes - Signature.
 
 ### **Example**
-```json
+```js
 // Request
 curl --data '{"method":"block","params":["0x7763f7c4ebb4301a71ab27ba5d42cbe4cb7eb71eaba479a50f9b888c8017ced8"],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8765
 // Result
@@ -171,7 +171,7 @@ Returns block state by block hash.
     * `is_free`: `Boolean` - Does the block have children. *0*: no children, *1*: has children.
 
 ### **Example**
-```json
+```js
 // Request
 curl --data '{"method":"block_state","params":["0x7763f7c4ebb4301a71ab27ba5d42cbe4cb7eb71eaba479a50f9b888c8017ced8"],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8765
 // Result
@@ -210,7 +210,7 @@ Returns block states of given hashes.
 `Array` - Array of block state contents givening hashes.See block state contents in the [block_state](#block_state) RPC method. If any of the block hashes doesn't exist, the corresponding list element is *null*.
 
 ### **Example**
-```json
+```js
 // Request
 curl --data '{"method":"block_states","params":["0x7763f7c4ebb4301a71ab27ba5d42cbe4cb7eb71eaba479a50f9b888c8017ced8","0x7c5f7b04fe000788e9fec981137c782e11aa8422b015cfe01503c1e43bf8a8b4"],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8765
 // Result
@@ -286,7 +286,7 @@ Get the trace of internal transactions in a smart contract.
   * `trace_address`: `Array` of `DATA`, 20 Bytes - The list of addresses where the call was executed, the address of the parents, and the order of the current sub call.
 
 ### **Example**
-```json
+```js
 // Request
 curl --data '{"method":"block_traces","params":["0x412254AB895FD2E6ADE6F9076CA8297516F2845C989A13AC008CD5D70157AFFB"],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8765
 // Result
@@ -328,7 +328,7 @@ Return the stable blocks by giving the index of the first block to retrieve and 
   * `next_index`: `QUANTITY` - The index of next stable block. *null* if there is no subsequent block.
 
 ### **Example**
-```json
+```js
 // Request
 curl --data '{"method":"stable_blocks","params":["0","100"],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8765
 // Result
@@ -359,7 +359,7 @@ Return the summary of a stable block.
   * `status`: `QUANTITY` - The status of the block state.
 
 ### **Example**
-```json
+```js
 // Request
 curl --data '{"method":"block_summary","params":["0x7763f7c4ebb4301a71ab27ba5d42cbe4cb7eb71eaba479a50f9b888c8017ced8"],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8765
 // Result
@@ -393,7 +393,7 @@ None
   * `store_version`: `String` - Database version.
 
 ### **Example**
-```json
+```js
 // Request
 curl --data '{"method":"version","id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8765
 // Result
@@ -426,7 +426,7 @@ None
   * `epoch_period`: `QUANTITY` - The number of blocks in main chain included in each epoch.
 
 ### **Example**
-```json
+```js
 // Request
 curl --data '{"method":"status","id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8765
 // Result
@@ -458,7 +458,7 @@ None
   * `endpoint`: `String` - Remote ip address.
 
 ### **Example**
-```json
+```js
 // Request
 curl --data '{"method":"peers","id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8765
 // Result
@@ -492,7 +492,7 @@ None
   * `endpoint`: `String` - Remote ip address.
 
 ### **Example**
-```json
+```js
 // Request
 curl --data '{"method":"nodes","id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8765
 // Result
@@ -524,7 +524,7 @@ Return the witness list by epoch.
 `Array` - Array of 20 Bytes `DATA` witness address.
 
 ### **Example**
-```json
+```js
 // Request
 curl --data '{"method":"witness_list","params":["0"],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8765
 // Result
@@ -565,7 +565,7 @@ Return all approve messages that have been processed in the specified epoch.
   * `proof`: `DATA`, 81 Bytes - Election proof message.
 
 ### **Example**
-```json
+```js
 // Request
 curl --data '{"method":"epoch_approves","params":["2"],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8765
 // Result
@@ -602,7 +602,7 @@ Returns the approve receipt by hash.
   * `status`: `Boolean` - Approve execution status. `true` if successfully, otherwise `false`.
 
 ### **Example**
-```json
+```js
 // Request
 curl --data '{"method":"approve_receipt","params":["0x01b46344d3e21800e43fbc0da883fbb110b39826e49657150f7c728ae9a6a5d3"],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8765
 // Result
@@ -629,7 +629,7 @@ Returns epoch finalized transaction hash.
 `DATA`, 32 Bytes - Hash of the epoch finalized transaction.
 
 ### **Example**
-```json
+```js
 // Request
 curl --data '{"method":"epoch_work_transaction","params":["2"],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8765
 // Result
@@ -639,62 +639,6 @@ curl --data '{"method":"epoch_work_transaction","params":["2"],"id":1,"jsonrpc":
     "result": "0x6588d572085f0ed4c771ab5286b2c53a9ea78f6a799360f9a3abebb34332e5f2"
 }
 ```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -708,7 +652,7 @@ None
 `String` - The current client version.
 
 ### **Example**
-```json
+```js
 // Request
 curl --data '{"method":"web3_clientVersion","id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8765
 // Result
@@ -731,7 +675,7 @@ Returns Keccak-256 (*not* the standardized SHA3-256) of the given data.
 `DATA`, 32Bytes - The Keccak-256 hash of the given string.
 
 ### **Example**
-```json
+```js
 // Request
 curl --data '{"method":"web3_sha3","params":["0x68656c6c6f20776f726c64"],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8765
 // Result
@@ -754,7 +698,7 @@ None
 `QUANTITY` - Integer of the current block number the client is on.
 
 ### **Example**
-```json
+```js
 // Request
 curl --data '{"method":"eth_blockNumber","id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8765
 // Result
@@ -778,7 +722,7 @@ Returns the number of transactions *sent* from an address.
 `QUANTITY` - Integer of the number of transactions send from this address.
 
 ### **Example**
-```json
+```js
 // Request
 curl --data '{"method":"eth_getTransactionCount","params":["0x407d73d8a49eeb85d32cf465507dd71d507100c1","latest"],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8765
 // Result
@@ -801,7 +745,7 @@ None
 `QUANTITY` - Hexadecimal value as a string representing the integer of the current chain id.
 
 ### **Example**
-```json
+```js
 // Request
 curl --data '{"method":"eth_chainId","id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8765
 // Result
@@ -824,7 +768,7 @@ None
 `QUANTITY` - Integer of the current gas price in wei.
 
 ### **Example**
-```json
+```js
 // Request
 curl --data '{"method":"eth_gasPrice","id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8765
 // Result
@@ -847,7 +791,7 @@ See [eth_call](#eth_call) parameters, except that all properties are optional. I
 `QUANTITY` - The amount of gas used.
 
 ### **Example**
-```json
+```js
 // Request
 curl --data '{"method":"eth_estimateGas","params":[{"from": "0x9b1d35635cc34752ca54713bb99d38614f63c955", "data": "0x6060604052341561000f57600080fd5b60eb8061001d6000396000f300606060405260043610603f576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff168063c6888fa1146044575b600080fd5b3415604e57600080fd5b606260048080359060200190919050506078565b6040518082815260200191505060405180910390f35b60007f24abdb5865df5079dcc5ac590ff6f01d5c16edbc5fab4e195d9febd1114503da600783026040518082815260200191505060405180910390a16007820290509190505600a165627a7a7230582040383f19d9f65246752244189b02f56e8d0980ed44e7a56c0b200458caad20bb0029"}], "id": 1, "jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8765
 // Result
@@ -871,7 +815,7 @@ Returns information about a block by block number.
 See [eth_getBlockByHash](#eth_getBlockByHash).
 
 ### **Example**
-```json
+```js
 // Request
 curl --data '{"method":"eth_getBlockByNumber","params":["0x1b4",true],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8765
 ```
@@ -888,7 +832,7 @@ Returns the number of transactions in a block from a block matching the given bl
 `QUANTITY` - Integer of the number of transactions in this block.
 
 ### **Example**
-```json
+```js
 // Request
 curl --data '{"method":"eth_getBlockTransactionCountByHash","params":["0xb903239f8543d04b5dc1ba6579132b143087c68db1b2168786408fcbce568238"],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8765
 // Result
@@ -911,7 +855,7 @@ Returns the number of transactions in a block from a block matching the given bl
 `QUANTITY` - Integer of the number of transactions in this block.
 
 ### **Example**
-```json
+```js
 // Request
 curl --data '{"method":"eth_getBlockTransactionCountByNumber","params":["0xe8"],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8765
 // Result
@@ -936,7 +880,7 @@ Creates new message call transaction or a contract creation for signed transacti
 Use [eth_getTransactionReceipt](#eth_getTransactionReceipt) to get the contract address, after the transaction was mined, when you created a contract.
 
 ### **Example**
-```json
+```js
 // Request
 curl --data '{"method":"eth_sendRawTransaction","params":["0xd46e8dd67c5d32be8d46e8dd67c5d32be8058bb8eb970870f072445675058bb8eb970870f072445675"],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8765
 // Result
@@ -961,7 +905,7 @@ Creates new message call transaction or a contract creation, if the data field c
    * `value`: `QUANTITY` - (optional) Integer of the value sent with this transaction.
    * `data`: `DATA` - The compiled code of a contract OR the hash of the invoked method signature and encoded parameters.
    * `nonce`: `QUANTITY` - (optional) Integer of a nonce. This allows you to overwrite your own pending transactions that use the same nonce.
-```json
+```js
 params: [{
   "from": "0xb60e8dd61c5d32be8058bb8eb970870f07233155",
   "to": "0xd46e8dd67c5d32be8058bb8eb970870f07244567",
@@ -977,7 +921,7 @@ params: [{
 Use [eth_getTransactionReceipt](#eth_getTransactionReceipt) to get the contract address, after the transaction was mined, when you created a contract.
 
 **Example**
-```json
+```js
 // Request
 curl --data '{"method":"eth_sendTransaction","params":[{see above}],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8765
 // Result
@@ -1007,7 +951,7 @@ Executes a new message call immediately without creating a transaction on the bl
 `DATA` - The return value of executed contract.
 
 ### **Example**
-```json
+```js
 // Request
 curl --data '{"method":"eth_call","params":[{see above}],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8765
 // Result
@@ -1034,7 +978,7 @@ The full list of current network IDs is available at chainlist.org(https://chain
 * 0x25e4: mcp dev //9700
 
 ### **Example**
-```json
+```js
 // Request
 curl --data '{"method":"net_version","id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8765
 // Result
@@ -1057,7 +1001,7 @@ None
 `Boolean` - `true` when listening, otherwise `false`.
 
 ### **Example**
-```json
+```js
 // Request
 curl --data '{"method":"net_listening","id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8765
 // Result
@@ -1080,7 +1024,7 @@ None
 `QUANTITY` - Integer of the number of connected peers.
 
 **Example**
-```json
+```js
 // Request
 curl --data '{"method":"net_peerCount","id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8765
 // Result
@@ -1103,7 +1047,7 @@ None
 `String` - The current mcp protocol version.
 
 ### **Example**
-```json
+```js
 // Request
 curl --data '{"method":"eth_protocolVersion","id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8765
 // Result
@@ -1131,7 +1075,7 @@ Return `False` when the node is not syncing, and return the following fields.
 * `highestBlock`: `QUANTITY` - The estimated highest block.
 
 ### **Example**
-```json
+```js
 // Request
 curl --data '{"method":"eth_syncing","id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8765
 // Result
@@ -1176,7 +1120,7 @@ Returns an array of all logs matching a given filter object.
   * `topics`: `Array` of `DATA` - Array of 0 to 4 32 Bytes DATA of indexed log arguments. (In solidity: The first topic is the hash of the signature of the event (e.g. Deposit(address,bytes32,uint256)), except you declared the event with the anonymous specifier.)
 
 ### **Example**
-```json
+```js
 // Request
 curl --data '{"method":"eth_getLogs","params":[{"topics":["0x000000000000000000000000a94f5374fce5edbc8e2a8697c15331677e6ebf0b"]}],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8765
 // Result
@@ -1211,7 +1155,7 @@ Returns code at a given address.
 `DATA` - The code from the given address.
 
 ### **Example**
-```json
+```js
 // Request
 curl --data '{"method":"eth_getCode","params":["0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b"],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8765
 // Result
@@ -1235,7 +1179,7 @@ Returns the value from a storage position at a given address.
 `DATA` - The value at this storage position.
 
 ### **Example**
-```json
+```js
 // Request
 curl --data '{"method":"eth_getStorageAt","params":["0x407d73d8a49eeb85d32cf465507dd71d507100c1","0x0"],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8765
 // Result
@@ -1272,7 +1216,7 @@ Returns the information about a transaction requested by transaction hash.
   * `s`: `QUANTITY` - ECDSA signature s.
 
 ### **Example**
-```json
+```js
 // Request
 curl --data '{"method":"eth_getTransactionByHash","params":["0xbf2d4552fba50efcf467da369b2f36596edfc337cb17ff7c9fe9431548231fe3"],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8765
 // Result
@@ -1311,7 +1255,7 @@ Returns information about a transaction by block hash and transaction index posi
 See [eth_getTransactionByHash](#eth_getTransactionByHash).
 
 ### **Example**
-```json
+```js
 // Request
 curl --data '{"method":"eth_getTransactionByBlockHashAndIndex","params":["0xe670ec64341771606e55d6b4ca35a1a6b75ee3d5145a99d05921026d1527331","0x0"],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8765
 ```
@@ -1329,7 +1273,7 @@ Returns information about a transaction by block number and transaction index po
 See [eth_getTransactionByHash](#eth_getTransactionByHash).
 
 ### **Example**
-```json
+```js
 // Request
 curl --data '{"method":"eth_getTransactionByBlockNumberAndIndex","params":["0x29c","0x1"],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8765
 ```
@@ -1360,7 +1304,7 @@ Returns the receipt of a transaction by transaction hash.
   * `status`: `QUANTITY` - either `0x1` (success) or `0x0` (failure).
 
 ### **Example**
-```json
+```js
 // Request
 curl --data '{"method":"eth_getTransactionReceipt","params":["0x444172bef57ad978655171a8af2cfd89baa02a97fcb773067aef7794d6913374"],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8765
 // Result
@@ -1396,7 +1340,7 @@ Returns the balance of the account of given address.
 `QUANTITY` - Integer of the current balance in wei.
 
 ### **Example**
-```json
+```js
 // Request
 curl --data '{"method":"eth_getBalance","params":["0x407d73d8a49eeb85d32cf465507dd71d507100c1"],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8765
 // Result
@@ -1429,7 +1373,7 @@ Returns information about a block by hash.
   * `miner`: `DATA`, 20 Bytes - The address of the beneficiary to whom the mining rewards were given.
 
 ### **Example**
-```json
+```js
 // Request
 curl --data '{"method":"eth_getBlockByHash","params":["0xcad8c320cae32037415aab16ace767ee163a0eaedb29f2282e5acd2596f5d55f",true],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8765
 // Result
@@ -1466,7 +1410,7 @@ None
 `Array` of `DATA`, 20 Bytes - Addresses owned by the client.
 
 **Example**
-```json
+```js
 // Request
 curl --data '{"method":"eth_accounts","id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8765
 // Result
@@ -1491,7 +1435,7 @@ The sign method calculates an mcp specific signature with: `sign(keccak256("\x19
 `DATA` - Signature.
 
 ### **Example**
-```json
+```js
 // Request
 curl --data '{"method":"eth_sign","params":["0xcd2a3d9f938e13cd947ec05abc7fe734df8dd826","0x5363686f6f6c627573"],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8765
 // Result
@@ -1521,7 +1465,7 @@ Signs a transaction that can be submitted to the network at a later time using w
 `DATA` - The RLP-encoded transaction object signed by the specified account.
 
 ### **Example**
-```json
+```js
 // Request
 curl --data '{"id": 1,"jsonrpc": "2.0","method": "eth_signTransaction","params": [{"data":"0xd46e8dd67c5d32be8d46e8dd67c5d32be8058bb8eb970870f072445675058bb8eb970870f072445675","from": "0x613a091b978848d48dabc74a4c4487389e2e0d8c","gas": "0x76c0","gasPrice": "0x9184e72a000","to": "0x07f332f5a5ade86babdf1f8a43fbca9691ac46ed","value": "0x9184e72a"}]}' -H "Content-Type: application/json" -X POST localhost:8765
 // Result
@@ -1557,7 +1501,7 @@ Imports the given private key into the key store, encrypting it with the passphr
 `DATA`, 20 Bytes - The address of the account.
 
 ### **Example**
-```json
+```js
 // Request
 curl --data '{"method":"personal_importRawKey","params":["7aa3b91561fceae29a8cb1affb3a9d9b3dec7a720685678ae890df0b6e6eed79", "12345678"],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8765
 // Result
@@ -1580,7 +1524,7 @@ None
 `Array` of `DATA`, 20 Bytes - Addresses owned by the client.
 
 ### **Example**
-```json
+```js
 // Request
 curl --data '{"method":"personal_listAccounts","id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8765
 // Result
@@ -1606,7 +1550,7 @@ Locks the given account.
 `Boolean` - `true` if the account was successfully locked, otherwise `false`.
 
 ### **Example**
-```json
+```js
 // Request
 curl --data '{"method":"personal_lockAccount","params":["0x1144b522f45265c2dfdbaee8e324719e63a1694c"],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8765
 // Result
@@ -1631,7 +1575,7 @@ Creates new account.
 `DATA`, 20 Bytes - The identifier of the new account.
 
 ### **Example**
-```json
+```js
 // Request
 curl --data '{"method":"personal_newAccount","params":["hunter2"],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8765
 // Result
@@ -1654,7 +1598,7 @@ Decrypts the key with the given address from the key store. The unencrypted key 
 ### **Returns**
 `Boolean` - `true` if the account was successfully unlocked, otherwise `false`.
 
-```json
+```js
 // Request
 curl --data '{"method":"personal_unlockAccount","params":["0x8f0227d45853a50eefd48dd4fec25d5b3fd2295e","hunter2"],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8765
 // Result
@@ -1678,7 +1622,7 @@ Sends transaction and signs it in a single call. The account does not need to be
 `DATA`, 32 Bytes - The transaction hash, or the zero hash if the transaction is not yet available.
 
 ### **Example**
-```json
+```js
 // Request
 curl --data '{"method":"personal_sendTransaction","params":[{"from":"0x407d73d8a49eeb85d32cf465507dd71d507100c1","to":"0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b","value":"0x186a0"},"hunter2"],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8765
 // Result
@@ -1703,7 +1647,7 @@ Calculates an mcp specific signature with: `sign(keccak256("\x19Ethereum Signed 
 `DATA` - Signature.
 
 **Example**
-```json
+```js
 // Request
 curl --data '{"method":"personal_sign","params":["0xd46e8dd67c5d32be8d46e8dd67c5d32be8058bb8eb970870f072445675058bb8eb970870f072445675","0xb60e8dd61c5d32be8058bb8eb970870f07233155","hunter"],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8765
 // Result
@@ -1727,7 +1671,7 @@ Returns the address associated with the private key that was used to calculate t
 `DATA`, 20 Bytes - Address of the signer of the message.
 
 ### **Example**
-```json
+```js
 // Request
 curl --data '{"method":"personal_ecRecover","params":["0xd46e8dd67c5d32be8d46e8dd67c5d32be8058bb8eb970870f072445675058bb8eb970870f072445675","0xe7225f986f192f859a9bf84e34b2b7001dfa11aeb5c7164f81a2bee0d79943e2587be1faa11502eba0f803bb0ee071a082b6fe40fba025f3309263a1eef52c711c"],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8765
 // Result
