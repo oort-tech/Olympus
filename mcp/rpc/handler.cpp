@@ -985,14 +985,7 @@ void mcp::rpc_handler::eth_signTransaction(mcp::json &j_response, bool &)
 	m_wallet->populateTransactionWithDefaults(ts);
 
 	Transaction t(ts, ar.second);
-	mcp::json result;
-
-	RLPStream s;
-	t.streamRLP(s);
-	result["raw"] = toJS(s.out());
-	result["tx"] = toJson(t);
-
-	j_response["result"] = result;
+	j_response["result"] = toJS(t.rlp());
 }
 
 void mcp::rpc_handler::eth_protocolVersion(mcp::json &j_response, bool &)
@@ -1002,6 +995,12 @@ void mcp::rpc_handler::eth_protocolVersion(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::eth_syncing(mcp::json &j_response, bool &)
 {
+	if (!mcp::node_sync::is_syncing())
+	{
+		j_response["result"] = false;
+		return;
+	}
+
 	uint64_t last_stable_mci(m_chain->last_stable_mci());
 	uint64_t last_mci(m_chain->last_mci());
 	uint64_t last_stable_index(m_chain->last_stable_index());
