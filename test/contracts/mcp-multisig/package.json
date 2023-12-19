@@ -26,7 +26,6 @@
   },
   "dependencies": {
     "child_process": "1.0.2",
-    "ganache-cli": "6.1.8",
     "solc": "0.5.8"
   },
   "devDependencies": {
