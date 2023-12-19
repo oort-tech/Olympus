@@ -1,12 +1,11 @@
 ## Olympus (The blockchain layer in Oort)
 Official C++ implementation of the Olympus protocol.
 
-To understand the consensus algorithm in Olympus, refer to the CCN yellow paper.\
-https://resources.computecoin.com/docs/computecoin-consensus-and-security.pdf
+To understand the consensus algorithm in Olympus, refer to the mcp [yellow paper](https://resources.computecoin.com/docs/computecoin-consensus-and-security.pdf).
 
 [![API Reference](
 https://camo.githubusercontent.com/915b7be44ada53c290eb157634330494ebe3e30a/68747470733a2f2f676f646f632e6f72672f6769746875622e636f6d2f676f6c616e672f6764646f3f7374617475732e737667
-)](https://docs.computecoin.com/computecoin/for-developers/mainnet/)
+)](https://docs.oortech.com/oort/community/developers/blockchain-developers/)
 [![Discord](https://img.shields.io/badge/discord-join%20chat-blue.svg)](https://discord.gg/f4Z2jJjtNp)
 
 ## Building the source
@@ -41,7 +40,7 @@ Prerequisite:
   make install
   cd .. && rm -rf rocksdb-8.3.3 v8.3.3.zip
   ```
-  Note：Set `USE_RTTI=1` in Makefile. Otherwise, there will be link failed to rocksdb. Moreover, set `PORTABLE=1` to enhance the portability of the code. Please refer to the following link for more details. https://github.com/facebook/rocksdb/blob/master/INSTALL.md
+  Note: Set `USE_RTTI=1` in Makefile. Otherwise, there will be link failed to rocksdb. Moreover, set `PORTABLE=1` to enhance the portability of the code. Please refer the [Installation Instructions](https://github.com/facebook/rocksdb/blob/master/INSTALL.md) for more details.
 	
 Compile MCP
 
@@ -83,8 +82,8 @@ Note：1).Compilation of a few library will fail in Debug mode. Set the "treat w
 Prerequisite:
   * Visual studio version >= 2022.
   * Install `git` 、 `cmake`. Download these tools from official website.
-  * Install `boost`. Download Version 1.81.0 from https://www.boost.org/users/history/version_1_81_0.html, and install in `c:\dependence`.
-  * Build `lz4` which is required by `rocksdb`. Download from https://github.com/lz4/lz4/archive/refs/tags/v1.9.2.zip, and install in `c:\dependence`.
+  * Install `boost`. Download Version 1.81.0 from [boost.org](https://www.boost.org/users/history/version_1_81_0.html), and install in `c:\dependence`.
+  * Install `lz4` which is required by `rocksdb`. Download [v1.9.2](https://github.com/lz4/lz4/archive/refs/tags/v1.9.2.zip), and install in `c:\dependence`.
     ```
     cd c:\dependence (Download the package in this directory and unzip it)
     cd lz4-1.9.2
@@ -93,7 +92,7 @@ Prerequisite:
     msbuild lz4.sln /p:Configuration=Debug /p:Platform=x64
     msbuild lz4.sln /p:Configuration=Release /p:Platform=x64
     ```	   
-* Build `zstd` which is required by `rocksdb`. Download from https://github.com/facebook/zstd/archive/v1.5.2.zip, and install in `c:\dependence`.
+* Install `zstd` which is required by `rocksdb`. Download [v1.5.2](https://github.com/facebook/zstd/archive/v1.5.2.zip), and install in `c:\dependence`.
     ```
     cd c:\dependence (Download the package in this directory and unzip it)
     cd zstd-1.5.2\build\VS2010
@@ -101,7 +100,7 @@ Prerequisite:
     msbuild zstd.sln /p:Configuration=Debug /p:Platform=x64
     msbuild zstd.sln /p:Configuration=Release /p:Platform=x64
     ```
-* Build `zlib` which is required by `rocksdb`. Download from https://github.com/madler/zlib/archive/refs/tags/v1.2.13.zip, and install in `c:\dependence`.
+* Install `zlib` which is required by `rocksdb`. Download [v1.2.13](https://github.com/madler/zlib/archive/refs/tags/v1.2.13.zip), and install in `c:\dependence`.
     ```
     cd c:\dependence (Download the package in this directory and unzip it)
     cd zlib-1.2.13\contrib\vstudio\vc14
@@ -113,7 +112,7 @@ Prerequisite:
     ```
     cd c:\dependence
     ```
-    Downlood using `git clone https://github.com/facebook/rocksdb` and checkout tag 8.3.3
+    Download [rocksdb](https://github.com/facebook/rocksdb/archive/refs/tags/v8.3.3.zip) and unzip it.
     
     Edit `rocksdb\thirdparty.inc`.
     ```
@@ -132,7 +131,7 @@ Prerequisite:
     set(ZLIB_LIB_DEBUG ${ZLIB_HOME}/contrib/vstudio/vc14/x64/ZlibStatDebug/zlibstat.lib)
     set(ZLIB_LIB_RELEASE ${ZLIB_HOME}/contrib/vstudio/vc14/x64/ZlibStatRelease/zlibstat.lib)
     ```
-    Compile rocksdb. Follow instructions in https://github.com/facebook/rocksdb/wiki/Building-on-Windows
+    Compile rocksdb. Follow [Installation Instructions](https://github.com/facebook/rocksdb/wiki/Building-on-Windows).
 
 
     ```
