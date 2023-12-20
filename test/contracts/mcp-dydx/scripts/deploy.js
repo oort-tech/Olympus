@@ -69,8 +69,12 @@ async function setupProtocol() {
     console.log(tokenBPrice.hash, "Token B Price TX Hash");
     console.log(tokenCPrice.hash, "Token C Price TX Hash");
 
+    //const issueTokens = await tokens[0].issueTo(admin.address, ethers.utils.parseEther("1"));
+    //console.log(issueTokens.hash, "issue to acc")
+
     for (let i = 0; i < tokens.length; i += 1) {
       const tokenAddress = await tokens[i].address;
+      await tokens[i].issueTo(admin.address, ethers.utils.parseEther("1"));
 
       //console.log(tokenAddress, "tokens");
       const ownerSetGlobalOperatorTest = (await testSoloMargin.ownerSetGlobalOperator(tokenAddress, true));
