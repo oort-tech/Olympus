@@ -5,6 +5,7 @@ const { BigNumber } = require('bignumber.js');
 const ZERO = '0';
 const ONE_HUNDRED = '100';
 const ONE_DOLLAR = new BigNumber('1e18');
+const ONE = ethers.utils.parseEther("1");
 
 async function getTokens() {
   try {
@@ -74,7 +75,7 @@ async function setupProtocol() {
 
     for (let i = 0; i < tokens.length; i += 1) {
       const tokenAddress = await tokens[i].address;
-      await tokens[i].issueTo(admin.address, ethers.utils.parseEther("1"));
+      await tokens[i].issueTo(admin.address, ONE);
 
       //console.log(tokenAddress, "tokens");
       const ownerSetGlobalOperatorTest = (await testSoloMargin.ownerSetGlobalOperator(tokenAddress, true));
