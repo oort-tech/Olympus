@@ -78,3 +78,6 @@ dapp/localhost.key
 
 # built package.json
 dapp/src/package.json
+
+#ignore default env
+.env
