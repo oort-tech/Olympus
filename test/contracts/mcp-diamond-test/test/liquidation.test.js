@@ -36,7 +36,7 @@ const symbolCAKE = "0x43414b4500000000000000000000000000000000000000000000000000
 const comit_ONEMONTH = utils.formatBytes32String("comit_ONEMONTH");
 const comit_NONE = utils.formatBytes32String("comit_NONE");
 const comit_TWOWEEKS = utils.formatBytes32String("comit_TWOWEEKS");
-const pancakeRouterAddr = process.env.PancakeRouterAddress;
+const pancakeRouterAddr = process.env.PANCAKE_ROUTER_ADDRESS;
 
 async function before() {
   array = await deployDiamond();

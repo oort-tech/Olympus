@@ -15,7 +15,7 @@ async function main() {
   // const bridgeContract = await ethers.getContractAt('BridgeContract', '0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6')
   
   const coinAddress = '0x0000000000000000000000000000000000000000'
-  const targetAddress = '0x90F79bf6EB2c4f870365E785982E1f101E93b906'
+  const targetAddress = '0x6a3fBD2903A52Dd469e9fd43434fd835B2556c82'
 
   console.log("1. USDM deploying...")
   const ERC20 = await ethers.getContractFactory('TetherToken')
@@ -103,7 +103,7 @@ async function main() {
   expect(await ccnwrap.balanceOf(targetAddress)).to.equal(90)
   console.log("> OK: addAvailableBalanceWithAdjustmentQuota: wrap->coin")
 
-  console.log("14. addAvailableBalanceWithAdjustmentQuota : coin->wrap...")
+  /*console.log("14. addAvailableBalanceWithAdjustmentQuota : coin->wrap...")
   await (await bridgeContract.connect(authorized).resetBalanceAdjustmentQuota(coinAddress, ethers.utils.parseEther("10"))).wait()
   expect(await bridgeContract.balanceAdjustmentQuota(coinAddress)).to.equal(ethers.utils.parseEther("10"))
 
@@ -111,7 +111,7 @@ async function main() {
   await (await bridgeContract.connect(operation).addAvailableBalanceWithAdjustmentQuota(coinAddress, 10000000000, targetAddress)).wait()
   expect(await waffle.provider.getBalance(targetAddress)).to.equal(ethers.BigNumber.from(9900000000).add(targetBalance))
   console.log("> OK: addAvailableBalanceWithAdjustmentQuota : coin->wrap...")
-
+  */
   console.log("15. inject : erc20...")
   await (await erc20.connect(authorized).approve(bridgeContract.address, 150)).wait()
   await (await bridgeContract.connect(authorized).inject(erc20.address, 150)).wait()

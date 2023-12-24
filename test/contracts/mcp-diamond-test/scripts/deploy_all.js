@@ -563,7 +563,7 @@ async function provideLiquidity(rets) {
   console.log("Start LP making");
   const accounts = await ethers.getSigners();
   const upgradeAdmin = accounts[0];
-  const pancakeRouterAddr = process.env.PancakeRouterAddress;
+  const pancakeRouterAddr = process.env.PANCAKE_ROUTER_ADDRESS;
   const tbtc = await ethers.getContractAt("BEP20Token", rets["tBtcAddress"]);
   const tusdc = await ethers.getContractAt("BEP20Token", rets["tUsdcAddress"]);
   const tusdt = await ethers.getContractAt("BEP20Token", rets["tUsdtAddress"]);

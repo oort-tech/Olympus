@@ -3,12 +3,16 @@ const { ethers, upgrades } = require("hardhat")
 async function main() {
   const [owner, operation, authorized, user] = await ethers.getSigners()
 
-  console.log(operation.address, authorized.address, user.address)
+  console.log(
+    operation.address, "Operation Signer Address", 
+    authorized.address, "Authorized Signer Address", 
+    user.address, "User Signer Address"
+  )
 
   const CCNWRAP = await ethers.getContractFactory('UCCN')
-  ccnwrap = await CCNWRAP.deploy()
+  const ccnwrap = await CCNWRAP.deploy()
   await ccnwrap.deployed()
-  console.log("> OK: CCNWRAP deployed to:", ccnwrap.address, "Minted:", await ccnwrap.balanceOf(owner.address))
+  console.log("> OK: CCNWRAP deployed to:", ccnwrap.address, "Minted:", (await ccnwrap.balanceOf(owner.address)))
 
   const BridgeContract = await ethers.getContractFactory("BridgeContract")
   const bridgeContract = await upgrades.deployProxy(BridgeContract, [

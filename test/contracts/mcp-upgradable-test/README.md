@@ -1,9 +1,40 @@
-### Install
+# Upgradable Smart Contract featuring Bridge Proxy on CCNBETA
+
+![Horizontal Logo (TM)](https://github.com/oort-tech/Olympus/assets/41552663/bc195389-b1ec-4d96-9f23-bb90415b1e36)
+
+### Requirements
+- Node =< 18 (18 works good)
+- yarn
+
 Go to the source directory and open terminal, please run this command.<br>
-> yarn install
+> yarn
+
 ### Compile
-> npx hardhat compile
+> npx hardhat compile (unless you want to manually compiled as yarn run does this under the hood)
+
 ### Config
-Rename .env.example to .env and open it, then fill the ccnbeta's url and account's private key.<br>
+Copy .env.example to .env and open it, then fill the ccnbetas url and accounts private key.<br> (All fields must be filled with different private keys)
+
 ### Test
-> yarn run test
+
+### Run all test at once
+
+> yarn run test-all
+
+### Run test Individually
+
+Test [main](https://github.com/oort-tech/Olympus/blob/master/test/contracts/mcp-upgradable-test/scripts/1_main.js)
+
+> yarn run test-main
+
+Test [bridge](https://github.com/oort-tech/Olympus/blob/master/test/contracts/mcp-upgradable-test/scripts/2_bridge.js)
+
+> yarn run test-bridge
+
+Test [DWDN](https://github.com/oort-tech/Olympus/blob/master/test/contracts/mcp-upgradable-test/scripts/3_dwdn.js)
+
+> yarn run test-dwdn
+
+Test [Test Script](https://github.com/oort-tech/Olympus/blob/master/test/contracts/mcp-upgradable-test/scripts/4_test.js)
+
+yarn run test-test
