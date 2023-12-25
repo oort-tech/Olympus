@@ -2,7 +2,8 @@ const { ethers } = require('hardhat');
 const { expect } = require('chai');
 const ABI = require('../artifacts/contracts/Factory.sol/Factory.json')
 
-describe("Test MultiSig", () => {
+describe("Test MultiSig", async() => {
+    const [owner, outsideUser] = await ethers.getSigners();
     let multiSigFactory;
     let deployedWalletSig;
     let multiSig;
@@ -37,4 +38,9 @@ describe("Test MultiSig", () => {
         const count = (await contract.getInstantiationCount(owner.address));
         expect(count).to.be.equal(1);
     });
+    it("Should create wallets MultiSig from factory and return correct MultiSig Address", async() => {
+        const result = await deployedWalletSig.connect(owner).create(["0xD2a8fd999bF4CC30A3fD86f017DeD1c6BF67E78B", "0x6080184Da41682D75562fcae090dD5eB4Fc2E771"], 2, 3000);
+        const contract = new ethers.Contract(result.to, ABI.abi, owner);
+        console.log(await contract.instantiations(owner.address,0), "MultiSig Address");
+        })
 });
