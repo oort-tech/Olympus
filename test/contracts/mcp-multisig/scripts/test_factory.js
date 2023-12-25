@@ -29,4 +29,11 @@ describe("Test MultiSig", () => {
         const data = result.data;
         expect(data).to.be.equal(result.data);
     })
+    it("Should return correct number of contracts instantiations", async() => {
+        const [owner, outsideUser] = await ethers.getSigners();
+        const result = await deployedWalletSig.connect(owner).create([owner.address, outsideUser.address], 2, 3000)
+        const contract = new ethers.Contract(result.to, ABI.abi, owner);
+        const count = (await contract.getInstantiationCount(owner.address));
+        expect(count).to.be.equal(1);
+    });
 });
