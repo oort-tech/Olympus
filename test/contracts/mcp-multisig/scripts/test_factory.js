@@ -1,5 +1,6 @@
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
+const ABI = require('../artifacts/contracts/Factory.sol/Factory.json')
 
 describe("Test MultiSig", () => {
     let multiSigFactory;
