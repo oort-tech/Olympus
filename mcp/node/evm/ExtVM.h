@@ -99,10 +99,9 @@ public:
     EVMSchedule const& evmSchedule() const final { return m_evmSchedule; }
     
     mcp::chain_state const& state() const { return m_s; }
-
-	h256 mcBlockHash(h256 mci_a);
-
-    h256 blockHash(u256 mci_a);
+	
+    /// Hash of a block if within the last 256 blocks, or h256() otherwise.
+    h256 blockHash(u256 _number) final;
 
 private:
     EVMSchedule const& initEvmSchedule(int64_t _blockNumber, u256 const& _version) const

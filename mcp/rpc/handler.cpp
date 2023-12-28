@@ -577,7 +577,7 @@ void mcp::rpc_handler::eth_estimateGas(mcp::json &j_response, bool &)
 	TransactionSkeleton ts = mcp::toTransactionSkeletonForEth(params[0]);
 
 	dev::eth::McInfo mc_info;
-	uint64_t block_number = m_chain->last_stable_mci();
+	uint64_t block_number = m_chain->last_stable_index();
 	if (!try_get_mc_info(mc_info, block_number))
 		BOOST_THROW_EXCEPTION(RPC_Http_Error_Internal_Server_Error());
 

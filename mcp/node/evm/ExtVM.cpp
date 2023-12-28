@@ -198,77 +198,15 @@ void ExtVM::selfdestruct(Address _a)
 	m_s.traces.push_back(suicide_trace);
 }
 
-/*
 h256 ExtVM::blockHash(u256 _number)
 {
     u256 const currentNumber = envInfo().number();
-
     if (_number >= currentNumber || _number < (std::max<u256>(256, currentNumber) - 256))
         return h256();
 
-    if (currentNumber < m_sealEngine.chainParams().experimentalForkBlock + 256)
-    {
-        h256 const parentHash = envInfo().header().parentHash();
-        h256s const lastHashes = envInfo().lastHashes().precedingHashes(parentHash);
-
-        assert(lastHashes.size() > (unsigned)(currentNumber - 1 - _number));
-        return lastHashes[(unsigned)(currentNumber - 1 - _number)];
-    }
-
-    u256 const nonce = m_s.getNonce(caller);
-    u256 const gas = 1000000;
-    Transaction tx(0, 0, gas, c_blockhashContractAddress, toBigEndian(_number), nonce);
-    tx.forceSender(caller);
-
-    ExecutionResult res;
-    std::tie(res, std::ignore) = m_s.execute(envInfo(), m_sealEngine, tx, Permanence::Reverted);
-    return h256(res.output);
-    return h256(0);
-}
-*/
-
-h256 ExtVM::mcBlockHash(h256 mci_a)
-{
-	if(mci_a > h256(std::numeric_limits<uint64_t>::max()))
-		return h256(0);
-
-	dev::h256 mci_u(mci_a);
-	uint64_t mci;
-	bool success(boost::conversion::try_lexical_convert<uint64_t>(mci_u, mci));
-	assert_x(success);
-
-	mcp::block_store & store(envInfo().store);
-	mcp::db::db_transaction & transaction(envInfo().transaction);
-	mcp::block_hash mc_hash;
-	bool exists(!store.main_chain_get(transaction, mci, mc_hash));
-	if (exists)
-	{
-		dev::bytesConstRef ref(mc_hash.data(), mc_hash.size);
-		return h256(ref);
-	}
-	else
-		return h256(0);
-}
-
-h256 ExtVM::blockHash(u256 _number)
-{
-    h256 mci_a(_number);
-	if(mci_a > h256(std::numeric_limits<uint64_t>::max()))
-		return h256(0);
-
-	uint64_t mci;
-	bool success(boost::conversion::try_lexical_convert<uint64_t>(mci_a, mci));
-	assert_x(success);
-
-	mcp::block_store & store(envInfo().store);
-	mcp::db::db_transaction & transaction(envInfo().transaction);
-	mcp::block_hash mc_hash;
-	bool exists(!store.main_chain_get(transaction, mci, mc_hash));
-	if (exists)
-	{
-		dev::bytesConstRef ref(mc_hash.data(), mc_hash.size);
-		return h256(ref);
-	}
-	else
-		return h256(0);
+    mcp::block_store& store(envInfo().store);
+    mcp::db::db_transaction& transaction(envInfo().transaction);
+    h256 _h(0);
+    store.stable_block_get(transaction, uint64_t(_number), _h);
+    return _h;
 }
