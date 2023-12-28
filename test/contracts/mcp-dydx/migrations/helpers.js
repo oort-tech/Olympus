@@ -14,11 +14,6 @@ function isDevNetwork(network) {
       || network.startsWith('hyugens_dev');
 }
 
- function isGoerli(network) {
-  verifyNetwork(network);
-  return network.startsWith('goerli');
-}
-
 function isHuygensDev(network) {
   verifyNetwork(network);
   return network.startsWith('huygens_dev');
@@ -29,11 +24,6 @@ function isMainNet(network) {
   return network.startsWith('mainnet');
 }
 
-function isKovan(network) {
-  verifyNetwork(network);
-  return network.startsWith('kovan');
-}
-
 function isDocker(network) {
   verifyNetwork(network);
   return network.startsWith('docker');
@@ -42,12 +32,6 @@ function isDocker(network) {
 function getChainId(network) {
   if (isMainNet(network)) {
     return 1;
-  }
-  if (isKovan(network)) {
-    return 42;
-  }
-  if (network.startsWith('goerli')) {
-    return 5;
   }
   if (network.startsWith('huygens_dev')) {
     return 828;
@@ -155,7 +139,7 @@ function verifyNetwork(network) {
 }
 
 function getSenderAddress(network, accounts) {
-  if (isMainNet(network) || isKovan(network)) {
+  if (isMainNet(network)) {
     return '0xf809e07870dca762B9536d61A4fBEF1a17178092';
   }
   if (isDevNetwork(network)) {
@@ -168,13 +152,7 @@ function getOraclePokerAddress(network, accounts) {
   if (isMainNet(network)) {
     return '0x500dd93a74dbfa65a4eeda44da489adcef530cb9';
   }
-  if (isKovan(network)) {
-    return '0xa13cc3ab215bf669764a1a56a831c1bdc95659dd';
-  }
   if (isDevNetwork(network)) {
-    return accounts[0];
-  }
-  if (isGoerli(network)) {
     return accounts[0];
   }
   if (isHuygens_Dev(network)) {
@@ -187,12 +165,6 @@ function getPartiallyDelayedMultisigAddress(network) {
   if (isMainNet(network)) {
     return '0xba2906b18B069b40C6D2CAFd392E76ad479B1B53';
   }
-  if (isKovan(network)) {
-    return '0x3d62d8b3ef034e0fde7de8fec4f557a3e6e4efa1';
-  }
-  if (isGoerli(network)) {
-    return accounts[1]
-  }
   if (isHuygensDev(network)) {
     return accounts[1]
   }
@@ -203,12 +175,6 @@ function getNonDelayedMultisigAddress(network) {
   if (isMainNet(network)) {
     return '0x03b24cf9fe32dd719631d52bd6705d014c49f86f';
   }
-  if (isKovan(network)) {
-    return '0xecc04f59c69e6ddb19d601282eb6dd4ea763ee09';
-  }
-  if (isGoerli(network)) {
-    return accounts[3]
-  }
   if (isHuygensDev(network)) {
     return accounts[3]
   }
@@ -218,8 +184,6 @@ function getNonDelayedMultisigAddress(network) {
 module.exports = {
   isDevNetwork,
   isMainNet,
-  isKovan,
-  isGoerli,
   isHuygensDev,
   isDocker,
   getChainId,

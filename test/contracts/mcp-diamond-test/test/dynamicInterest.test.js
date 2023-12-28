@@ -83,7 +83,7 @@ const symbolUsdt = "0x555344542e740000000000000000000000000000000000000000000000
 const symbolUsdc = "0x555344432e740000000000000000000000000000000000000000000000000000"; // USDC.t
 const symbolBtc = "0x4254432e74000000000000000000000000000000000000000000000000000000"; // BTC.t
 
-const pancakeRouterAddr = process.env.PancakeRouterAddress;
+const pancakeRouterAddr = process.env.PANCAKE_ROUTER_ADDRESS;
 
 async function Pause_DynamicInterest() {
   console.log("Pause_DynamicInterest started");

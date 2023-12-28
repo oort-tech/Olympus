@@ -1,6 +1,9 @@
+![Horizontal Logo (TM)](https://github.com/oort-tech/Olympus/assets/41552663/bc195389-b1ec-4d96-9f23-bb90415b1e36)
+
 # Local Development
 
-The following assumes the use of `node@>=10`.
+### Requirement
+- `node@>=10`.
 
 ## Install Dependencies
 
@@ -10,6 +13,10 @@ The following assumes the use of `node@>=10`.
 
 `yarn compile`
 
+## Set enviroment
+
+Copy .env.example to .env (do not rename) and fill the fields
+
 ## Run Tests
 
-`npx hardhat run --network ccnbeta .\test\main.js`
+`npx hardhat run --network ccnbeta ./test/main.js`
