@@ -1396,7 +1396,7 @@ std::pair<u256, mcp::ExecutionResult> mcp::chain::estimate_gas(mcp::db::db_trans
 		{
 			Transaction t = _T(lowerBound);
 			c_state.ts = t;
-			c_state.addBalance(_from, lowerBound * _gasPrice + _value);
+			c_state.addBalance(_from, lowerBound * gasPrice + _value);
 			er = c_state.execute(env, Permanence::Reverted, t, dev::eth::OnOpFunc()).first;
 			if (er.excepted == TransactionException::None)
 				return std::make_pair(lowerBound, er);
@@ -1406,7 +1406,7 @@ std::pair<u256, mcp::ExecutionResult> mcp::chain::estimate_gas(mcp::db::db_trans
 		{
 			Transaction t = _T(upperBound);
 			c_state.ts = t;
-			c_state.addBalance(_from, upperBound * _gasPrice + _value);
+			c_state.addBalance(_from, upperBound * gasPrice + _value);
 			er = c_state.execute(env, Permanence::Reverted, t, dev::eth::OnOpFunc()).first;
 			/// If the error is not nil(consensus error), it means the provided message
 			/// call or transaction will never be accepted no matter how much gas it is
@@ -1421,7 +1421,7 @@ std::pair<u256, mcp::ExecutionResult> mcp::chain::estimate_gas(mcp::db::db_trans
 			int64_t mid = (lowerBound + upperBound) / 2;
 			Transaction t = _T(mid);
 			c_state.ts = t;
-			c_state.addBalance(_from, mid * _gasPrice + _value);
+			c_state.addBalance(_from, mid * gasPrice + _value);
 
 			ExecutionResult result = c_state.execute(env, Permanence::Reverted, t, dev::eth::OnOpFunc()).first;
 			if (result.excepted != TransactionException::None

@@ -78,6 +78,27 @@ namespace mcp
 		unsigned depositSize = 0; 							///< Amount of code of the creation's attempted deposit.
 		u256 gasForDeposit;			 						///< Amount of gas remaining for the code deposit phase.
 		std::set<Address> modified_accounts;			///< The accounts that have been modified by the transaction.
+
+		bool Failed() const { return excepted != TransactionException::None; } /// Failed returns the indicator whether the execution is successful or not.
+
+		std::string ErrorMsg() const { return mcp::to_transaction_exception_messge(excepted); } ///Returns error message.
+
+		/// Return is a helper function to help caller distinguish between revert reason
+		/// and function return. Return returns the data after execution if no error occurs.
+		dev::bytes Return() const
+		{
+			if (excepted != TransactionException::None)
+				return dev::bytes();
+			return output;
+		}
+		/// Return is a helper function to help caller distinguish between revert reason
+		/// and function return. Return returns the data after execution if no error occurs.
+		dev::bytes Revert() const
+		{
+			if (excepted != TransactionException::RevertInstruction)
+				return dev::bytes();
+			return output;
+		}
 	};
 
 	enum class Permanence

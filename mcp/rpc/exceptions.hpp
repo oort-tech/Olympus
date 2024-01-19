@@ -38,11 +38,14 @@ namespace mcp
 	struct RpcException : virtual Exception
 	{
 		const char* what() const noexcept override { return "OK"; }
+		const virtual char* data() const noexcept { return ""; }
 		const int virtual code() const noexcept { return 0; }
 		const void virtual toJson(json & j_response) const noexcept {
 			json error;
 			error["code"] = code();
 			error["message"] = what();
+			if (std::strlen(data()))
+				error["data"] = data();///for evm 0.8.0 panic.
 			j_response["error"] = error;
 		}
 	};
@@ -50,11 +53,13 @@ namespace mcp
 #define RPC_ERROR_EXCEPTION(X, C)  \
     struct X : virtual RpcException \
     {                            \
-		X(const char* m = "") : message(m) {} \
+		X(const char* m = "",const char* d = "") : message(m),_data(d) {} \
 		const char* what() const noexcept override { return message.what(); }\
+		const char* data() const noexcept override { return _data.what(); } \
 		const int code() const noexcept override { return C; } \
 	private: \
         std::runtime_error message; \
+		std::runtime_error _data; \
     };
 	
 	/***************************************************************************************************************************/

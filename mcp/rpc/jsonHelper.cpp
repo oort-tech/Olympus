@@ -2,6 +2,7 @@
 
 #include <libdevcore/CommonJS.h>
 #include <mcp/core/config.hpp>
+#include <account/abi.hpp>
 #include "jsonHelper.hpp"
 
 namespace mcp
@@ -305,5 +306,16 @@ namespace mcp
 		res["status"] = toJS(_a.statusCode());
 
 		return res;
+	}
+
+	std::string newRevertError(mcp::ExecutionResult const& result)
+	{
+		std::string reason;
+		bool unpack = dev::UnpackRevert(result.Revert(), reason);
+		std::string err = result.ErrorMsg();
+		if (unpack)
+			err = err + ": " + reason;
+
+		return err;
 	}
 }

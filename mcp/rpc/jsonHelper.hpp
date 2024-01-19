@@ -75,4 +75,6 @@ namespace mcp
 	mcp::json toJson(mcp::block_state & _b);
 
 	mcp::json toJson(dev::ApproveReceipt const& _a);
+
+	std::string newRevertError(mcp::ExecutionResult const& result);
 }
