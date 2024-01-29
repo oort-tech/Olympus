@@ -935,7 +935,6 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 							<< ", from: " << dev::toJS(_t->sender())
 							<< ", to: " << dev::toJS(_t->to())
 							<< ", value: " << _t->value();
-						cache_a->account_nonce_put(transaction_a, _t->sender(), _t->nonce()-1);
 						invalid = true;
 					}
 					catch (dev::eth::InvalidNonce const& _e)
@@ -1470,17 +1469,17 @@ std::pair<mcp::ExecutionResult, dev::eth::TransactionReceipt> mcp::chain::execut
 	return c_state.execute(env, _p, _t, _onOp);
 }
 
-mcp::json mcp::chain::traceTransaction(Executive& _e, Transaction const& _t, mcp::json const& _json)
-{
-	StandardTrace st;
-	st.setShowMnemonics();
-	st.setOptions(debugOptions(_json));
-	_e.initialize(_t);
-	if (!_e.execute())
-		_e.go(st.onOp());
-	_e.finalize();
-	return st.jsonValue();
-}
+//mcp::json mcp::chain::traceTransaction(Executive& _e, Transaction const& _t, mcp::json const& _json)
+//{
+//	StandardTrace st;
+//	st.setShowMnemonics();
+//	st.setOptions(debugOptions(_json));
+//	_e.initialize(_t);
+//	if (!_e.execute())
+//		_e.go(st.onOp());
+//	_e.finalize();
+//	return st.jsonValue();
+//}
 
 void mcp::chain::call(dev::Address const& _from, dev::Address const& _contractAddress, dev::bytes const& _data, dev::bytes& result)
 {
