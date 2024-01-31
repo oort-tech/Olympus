@@ -455,6 +455,9 @@ namespace mcp
 		_t->checkChainId(mcp::chain_id);
 		_t->checkLowS();
 
+		if (_t->data().size() > mcp::max_data_size)
+			BOOST_THROW_EXCEPTION(ErrMaxInitCodeSizeExceeded());
+
 		eth::EVMSchedule const& schedule = dev::eth::EVMSchedule();
 		/// Pre calculate the gas needed for execution
 		if (_t->baseGasRequired(schedule) > _t->gas())

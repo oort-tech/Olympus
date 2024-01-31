@@ -133,6 +133,9 @@ namespace mcp
 		else if(instanceof<dev::BadHexCharacter>(&e)){
 			RPC_Error_JsonParseError("invalid argument: bad hex character").toJson(j_response);
 		}
+		else if (instanceof<dev::ErrMaxInitCodeSizeExceeded>(&e)) {
+			RPC_Error_RequestDenied("max initcode size exceeded.").toJson(j_response);
+		}
 		else if(instanceof<mcp::json::exception>(&e)){
 			RPC_Error_JsonParseError(e.what()).toJson(j_response);
 		}
