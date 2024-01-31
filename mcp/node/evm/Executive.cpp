@@ -65,6 +65,7 @@ void mcp::Executive::initialize(Transaction const& _transaction)
 			<< " * " << m_t.gasPrice() << " + " << m_t.value() << " Got"
 			<< m_s.balance(m_t.sender()) << " for sender: " << m_t.sender().hexPrefixed();
 		m_excepted = TransactionException::NotEnoughCash;
+		m_s.incNonce(m_t.sender());
 		BOOST_THROW_EXCEPTION(dev::eth::NotEnoughCash() << RequirementError(totalCost, (bigint)m_s.balance(m_t.sender())) << errinfo_comment(m_t.sender().hex()));
 	}
     m_gasCost = (u256)gasCost;  // Convert back to 256-bit, safe now.
@@ -73,7 +74,15 @@ void mcp::Executive::initialize(Transaction const& _transaction)
 bool mcp::Executive::execute()
 {
 	//mcp::stopwatch_guard sw("Executive:execute");
-    m_s.subBalance(m_t.sender(), m_gasCost);
+	try
+	{
+		m_s.subBalance(m_t.sender(), m_gasCost);
+	}
+	catch (dev::eth::NotEnoughCash const&)
+	{
+		m_s.incNonce(m_t.sender());
+		throw;
+	}
 	assert(m_t.gas() >= (u256)m_baseGasRequired);
     if (m_t.isCreation())
     {
@@ -247,7 +256,7 @@ bool mcp::Executive::executeCreate(Address const& _sender, u256 const& _endowmen
     bool accountAlreadyExist = (m_s.addressHasCode(m_newAddress) || m_s.getNonce(m_newAddress) >0);
     if (accountAlreadyExist)
     {
-		BOOST_LOG(m_log.debug) << "Address already used: " << m_newAddress;
+		BOOST_LOG(m_log.debug) << "Address already used: " << m_newAddress.hexPrefixed();
         m_gas = 0;
         m_excepted = TransactionException::AddressAlreadyUsed;
         revert();

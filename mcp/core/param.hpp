@@ -81,13 +81,13 @@ private:
 		case mcp::mcp_networks::mcp_mini_test_network:
 		{
 			chain_id = (uint64_t)9900;
-			gas_price = 10000000;
+			gas_price = (uint256_t)1e11;
 			break;
 		}
 		case mcp::mcp_networks::mcp_test_network:
 		{
 			chain_id = (uint64_t)9800;
-			gas_price = 10000000;
+			gas_price = (uint256_t)1e11;
 			break;
 		}
 		case mcp::mcp_networks::mcp_beta_network:

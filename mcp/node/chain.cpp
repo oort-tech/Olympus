@@ -935,7 +935,6 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 							<< ", from: " << dev::toJS(_t->sender())
 							<< ", to: " << dev::toJS(_t->to())
 							<< ", value: " << _t->value();
-						cache_a->account_nonce_put(transaction_a, _t->sender(), _t->nonce()-1);
 						invalid = true;
 					}
 					catch (dev::eth::InvalidNonce const& _e)
@@ -1396,7 +1395,7 @@ std::pair<u256, mcp::ExecutionResult> mcp::chain::estimate_gas(mcp::db::db_trans
 		{
 			Transaction t = _T(lowerBound);
 			c_state.ts = t;
-			c_state.addBalance(_from, lowerBound * _gasPrice + _value);
+			c_state.addBalance(_from, lowerBound * gasPrice + _value);
 			er = c_state.execute(env, Permanence::Reverted, t, dev::eth::OnOpFunc()).first;
 			if (er.excepted == TransactionException::None)
 				return std::make_pair(lowerBound, er);
@@ -1406,7 +1405,7 @@ std::pair<u256, mcp::ExecutionResult> mcp::chain::estimate_gas(mcp::db::db_trans
 		{
 			Transaction t = _T(upperBound);
 			c_state.ts = t;
-			c_state.addBalance(_from, upperBound * _gasPrice + _value);
+			c_state.addBalance(_from, upperBound * gasPrice + _value);
 			er = c_state.execute(env, Permanence::Reverted, t, dev::eth::OnOpFunc()).first;
 			/// If the error is not nil(consensus error), it means the provided message
 			/// call or transaction will never be accepted no matter how much gas it is
@@ -1421,7 +1420,7 @@ std::pair<u256, mcp::ExecutionResult> mcp::chain::estimate_gas(mcp::db::db_trans
 			int64_t mid = (lowerBound + upperBound) / 2;
 			Transaction t = _T(mid);
 			c_state.ts = t;
-			c_state.addBalance(_from, mid * _gasPrice + _value);
+			c_state.addBalance(_from, mid * gasPrice + _value);
 
 			ExecutionResult result = c_state.execute(env, Permanence::Reverted, t, dev::eth::OnOpFunc()).first;
 			if (result.excepted != TransactionException::None
@@ -1470,17 +1469,17 @@ std::pair<mcp::ExecutionResult, dev::eth::TransactionReceipt> mcp::chain::execut
 	return c_state.execute(env, _p, _t, _onOp);
 }
 
-mcp::json mcp::chain::traceTransaction(Executive& _e, Transaction const& _t, mcp::json const& _json)
-{
-	StandardTrace st;
-	st.setShowMnemonics();
-	st.setOptions(debugOptions(_json));
-	_e.initialize(_t);
-	if (!_e.execute())
-		_e.go(st.onOp());
-	_e.finalize();
-	return st.jsonValue();
-}
+//mcp::json mcp::chain::traceTransaction(Executive& _e, Transaction const& _t, mcp::json const& _json)
+//{
+//	StandardTrace st;
+//	st.setShowMnemonics();
+//	st.setOptions(debugOptions(_json));
+//	_e.initialize(_t);
+//	if (!_e.execute())
+//		_e.go(st.onOp());
+//	_e.finalize();
+//	return st.jsonValue();
+//}
 
 void mcp::chain::call(dev::Address const& _from, dev::Address const& _contractAddress, dev::bytes const& _data, dev::bytes& result)
 {

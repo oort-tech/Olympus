@@ -455,6 +455,9 @@ namespace mcp
 		_t->checkChainId(mcp::chain_id);
 		_t->checkLowS();
 
+		if (_t->data().size() > mcp::max_data_size)
+			BOOST_THROW_EXCEPTION(ErrMaxInitCodeSizeExceeded());
+
 		eth::EVMSchedule const& schedule = dev::eth::EVMSchedule();
 		/// Pre calculate the gas needed for execution
 		if (_t->baseGasRequired(schedule) > _t->gas())
@@ -473,10 +476,10 @@ namespace mcp
 			(bigint)(mcp::tx_max_gas), (bigint)_t->gas(),
 				std::string("_gasUsed + (bigint)_t.gas() < lower.gasLimit()")));
 		
-		if ((uint256_t)_t->gas()*(uint256_t)_t->gasPrice() > mcp::uint256_t(tx_max_gas_fee))
-			BOOST_THROW_EXCEPTION(BlockGasLimitReached() << RequirementErrorComment(
-			(bigint)(mcp::tx_max_gas), (bigint)_t->gas(),
-				std::string("_t->gas() * t->gasPrice() > tx_max_gas_fee")));
+		//if ((uint256_t)_t->gas()*(uint256_t)_t->gasPrice() > mcp::uint256_t(tx_max_gas_fee))
+		//	BOOST_THROW_EXCEPTION(BlockGasLimitReached() << RequirementErrorComment(
+		//	(bigint)(mcp::tx_max_gas), (bigint)_t->gas(),
+		//		std::string("_t->gas() * t->gasPrice() > tx_max_gas_fee")));
 	}
 
 	void TransactionQueue::checkTx(Transaction const& _t)

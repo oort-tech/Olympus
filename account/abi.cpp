@@ -1,5 +1,6 @@
 #include "abi.hpp"
 #include "utils.hpp"
+#include "funcSelector.hpp"
 #include <libdevcore/Exceptions.h>
 
 namespace dev
@@ -86,6 +87,42 @@ namespace dev
 		nlohmann::json r = nlohmann::json::parse(reader);
 		AbiMarshalings j = r.get<AbiMarshalings>();
 		return ABI(j);
+	}
+
+	// revertSelector is a special function selector for revert reason unpacking.
+	dev::FixedHash<4> revertSelector = selectorFromSignatureH32("Error(string)");
+
+	bool UnpackRevert(dev::bytes const& data, std::string& result)
+	{
+		if (data.size() < 4)
+		{
+			result = "invalid data for unpacking";
+			return false;
+		}
+		dev::FixedHash<4> _selector(bytesConstRef(&data).cropped(0, 4).toBytes());
+		if (_selector != revertSelector)
+		{
+			result = "invalid data for unpacking";
+			return false;
+		}
+
+		try
+		{
+			Arguments arg;
+			arg.push_back(Argument("", NewType("string", "", ArgumentMarshalings()), false));
+			arg.Unpack(bytesConstRef(&data).cropped(4).toBytes(), result);
+			return true;
+		}
+		catch (dev::FailedABI& _e)
+		{
+			result = "invalid data for unpacking";
+			return false;
+		}
+		catch (const std::exception&)
+		{
+			result = "invalid data for unpacking";
+			return false;
+		}
 	}
 	
 }

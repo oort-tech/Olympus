@@ -436,8 +436,6 @@ void mcp::node_sync::prepare_catchup_chain(mcp::catchup_request_message const& r
 	uint64_t last_stable_mci_remote = request.last_stable_mci;
 	uint64_t last_known_mci_remote = request.last_known_mci;
 	mcp::summary_hash first_catchup_chain_summary = request.first_catchup_chain_summary;
-	WitnessList arr_witnesses_remote = request.arr_witnesses;
-	size_t distinct_witness_size_remote = request.distinct_witness_size;
 
 	mcp::db::db_transaction transaction(m_store.create_transaction());
 
@@ -446,7 +444,9 @@ void mcp::node_sync::prepare_catchup_chain(mcp::catchup_request_message const& r
 	std::list<mcp::joint_message> arr_unstable_mc_joints;
 	std::list<mcp::joint_message> arr_stable_last_summary_joints;
 	mcp::block_hash last_summary_hash(0);
-	std::unordered_set<dev::Address> arr_found_witnesses;
+	dev::h160Hash arr_found_witnesses;
+	mcp::witness_param const& w_param(mcp::param::witness_param(transaction, m_chain->last_epoch()));
+	size_t distinct_witness_size_remote = w_param.witness_count - w_param.majority_of_witnesses + 1; //there must be at least one honest witness
 
 	if (first_catchup_chain_summary == mcp::summary_hash(0))
 	{
@@ -485,13 +485,7 @@ void mcp::node_sync::prepare_catchup_chain(mcp::catchup_request_message const& r
 
 			//find first honest witness
 			if (arr_found_witnesses.size() < distinct_witness_size_remote)
-			{
-				if (arr_witnesses_remote.count(acct) && !arr_found_witnesses.count(acct))
-				{
-					arr_found_witnesses.insert(acct);
-				}
-
-			}
+				arr_found_witnesses.insert(acct);
 			if (arr_found_witnesses.size() == distinct_witness_size_remote)
 			{
 				// Collect last summaries of last distinct witnessed blocks
@@ -532,12 +526,6 @@ void mcp::node_sync::prepare_catchup_chain(mcp::catchup_request_message const& r
 			response.stable_last_summary_joints = std::move(arr_stable_last_summary_joints);
 			response.is_catchup_chain_complete = false;
 
-			return;
-		}
-
-		if (arr_found_witnesses.size() != distinct_witness_size_remote)
-		{
-			LOG(log_sync.info) << "your witness list might be too much off, too few witness authored blocks";
 			return;
 		}
 	}
@@ -879,8 +867,7 @@ mcp::sync_result mcp::node_sync::process_catchup_chain(mcp::catchup_response_mes
 
 			uint64_t distinct_witness_size = m_current_catchup_request.distinct_witness_size;
 			assert_x(distinct_witness_size > 0);
-			std::set<dev::Address> const & arr_witnesses = m_current_catchup_request.arr_witnesses;
-			std::vector<dev::Address> arr_found_witnesses;
+			dev::h160Hash arr_found_witnesses;
 			std::vector<mcp::joint_message> arr_witness_joints;
 
 			std::vector<mcp::block_hash> arr_parent_blocks;
@@ -908,14 +895,9 @@ mcp::sync_result mcp::node_sync::process_catchup_chain(mcp::catchup_response_mes
 				}
 
 				dev::Address acct = block->from();
-				if (arr_witnesses.count(acct))
-				{
-					if (std::find(arr_found_witnesses.begin(), arr_found_witnesses.end(), acct) == arr_found_witnesses.end())
-					{
-						arr_found_witnesses.push_back(acct);
-					}
-					arr_witness_joints.push_back(joint);
-				}
+				if (!arr_found_witnesses.count(acct))
+					arr_found_witnesses.insert(acct);
+				arr_witness_joints.push_back(joint);
 
 				arr_parent_blocks = block->parents();
 

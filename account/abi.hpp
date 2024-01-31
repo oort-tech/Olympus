@@ -95,4 +95,9 @@ namespace dev
 
 	ABI JSON(std::string reader);
 	
+	// UnpackRevert resolves the abi-encoded revert reason. According to the solidity
+	// spec https://solidity.readthedocs.io/en/latest/control-structures.html#revert,
+	// the provided revert reason is abi-encoded as if it were a call to a function
+	// `Error(string)`. So it's a special tool for it.
+	bool UnpackRevert(dev::bytes const& data, std::string& result);
 }

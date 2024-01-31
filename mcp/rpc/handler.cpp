@@ -585,7 +585,7 @@ void mcp::rpc_handler::eth_estimateGas(mcp::json &j_response, bool &)
 
 	mcp::db::db_transaction transaction(m_store.create_transaction());
 
-	auto result = m_chain->estimate_gas(
+	std::pair<u256, mcp::ExecutionResult> result = m_chain->estimate_gas(
 		transaction,
 		m_cache,
 		ts.from,
@@ -595,9 +595,18 @@ void mcp::rpc_handler::eth_estimateGas(mcp::json &j_response, bool &)
 		static_cast<int64_t>(ts.gas),
 		ts.gasPrice,
 		mc_info);
-
-	if (result.second.excepted != TransactionException::None)
-		BOOST_THROW_EXCEPTION(RPC_Error_RequestDenied(mcp::to_transaction_exception_messge(result.second.excepted).c_str()));
+	
+	mcp::ExecutionResult executionResult = result.second;
+	if (executionResult.Failed())///execution failed
+	{
+		if (executionResult.Revert().size())///revert
+		{
+			std::string msg = newRevertError(executionResult);
+			std::string data = toJS(executionResult.Revert());
+			BOOST_THROW_EXCEPTION(RPC_Error_RequestDenied(msg.c_str(), data.c_str()));
+		}
+		BOOST_THROW_EXCEPTION(RPC_Error_RequestDenied(executionResult.ErrorMsg().c_str()));
+	}
 
 	j_response["result"] = toJS(result.first);
 }
@@ -739,6 +748,18 @@ void mcp::rpc_handler::eth_call(mcp::json &j_response, bool &)
 		mc_info,
 		Permanence::Uncommitted,
 		dev::eth::OnOpFunc());
+
+	mcp::ExecutionResult executionResult = result.first;
+	if (executionResult.Failed())///execution failed
+	{
+		if (executionResult.Revert().size())///revert
+		{
+			std::string msg = newRevertError(executionResult);
+			std::string data = toJS(executionResult.Revert());
+			BOOST_THROW_EXCEPTION(RPC_Error_RequestDenied(msg.c_str(), data.c_str()));
+		}
+		BOOST_THROW_EXCEPTION(RPC_Error_RequestDenied(executionResult.ErrorMsg().c_str()));
+	}
 
 	j_response["result"] = toJS(result.first.output);
 }
