@@ -271,6 +271,7 @@ void mcp::chain::UpdateCommittee(mcp::timeout_db_transaction & timeout_tx_a, Epo
 	Epoch useepoch = epoch + 1;
 	mcp::db::db_transaction & transaction_a(timeout_tx_a.get_transaction());
 	mcp::witness_param p_param = mcp::param::witness_param(transaction_a, epoch);
+	assert_x(p_param.witness_list.size() && p_param.witness_count);///must be existed
 
 	if (!vrf_outputs.count(vrfepoch))/// used the previous epoch
 		mcp::param::add_witness_param(transaction_a, useepoch, p_param);
@@ -380,8 +381,6 @@ void mcp::chain::InitWork(mcp::db::db_transaction & transaction_a, std::shared_p
 
 void mcp::chain::ApplyWorkTransaction(mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a, Epoch const& epoch, uint64_t const &mci, mcp::block_hash const& hash)
 {
-	timeout_tx_a.commit_and_continue();///update global cache from local cache,commit contract data. if block contains main contract address cause nonce error.
-	///
 	mcp::db::db_transaction & transaction_a(timeout_tx_a.get_transaction());
 	///call contract, get aword
 	MainInfo _m = MainCaller.GetMainInfo();

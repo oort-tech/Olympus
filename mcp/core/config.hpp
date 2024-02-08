@@ -55,9 +55,9 @@ public:
 	void streamRLP(dev::RLPStream & s) const;
 	bytes rlp() const { RLPStream s; streamRLP(s); return s.out(); }
 
-	size_t witness_count;
-	size_t majority_of_witnesses;
-	WitnessList witness_list;
+	size_t witness_count = 0;
+	size_t majority_of_witnesses = 0;
+	WitnessList witness_list = WitnessList();
 };
 
 }

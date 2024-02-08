@@ -22,19 +22,17 @@ public:
 		return b_param;
 	}
 
-	static mcp::witness_param const & witness_param(mcp::db::db_transaction & transaction_a, Epoch const & epoch_a)
+	static mcp::witness_param witness_param(mcp::db::db_transaction & transaction_a, Epoch const & epoch_a)
 	{
 		DEV_READ_GUARDED(m_mutex_witness){
-			mcp::witness_param const & w_param
-				= find_param(transaction_a, epoch_a);;
-			return w_param;
+			return find_param(transaction_a, epoch_a);;
 		}
 	}
 
 	static bool is_witness(mcp::db::db_transaction & transaction_a, Epoch const & epoch_a, dev::Address const & account_a)
 	{
 		DEV_READ_GUARDED(m_mutex_witness){
-			mcp::witness_param const & w_param = find_param(transaction_a,epoch_a);
+			mcp::witness_param w_param = find_param(transaction_a,epoch_a);
 			if (w_param.witness_list.count(account_a))
 				return true;
 			return false;
@@ -236,7 +234,7 @@ private:
 		assert_x(false);
 	}
 
-	static mcp::witness_param const & find_param(mcp::db::db_transaction & transaction_a, Epoch const & epoch_a)
+	static mcp::witness_param find_param(mcp::db::db_transaction & transaction_a, Epoch const & epoch_a)
 	{
 		if (epoch_a <= 1)
 			return init_param;
