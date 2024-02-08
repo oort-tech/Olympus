@@ -251,6 +251,11 @@ std::shared_ptr<mcp::Transaction> mcp::block_store::transaction_get(mcp::db::db_
 	{
 		dev::RLP r(value);
 		result = std::make_shared<mcp::Transaction>(r,CheckTransaction::None);
+
+		/// genesis set sender.
+		auto isGenesisT = mcp::genesis::isGenesisTransaction(hash_a);
+		if (isGenesisT.first)
+			result->forceSender(isGenesisT.second);
 	}
 	return result;
 }

@@ -6,6 +6,8 @@
 #include <libdevcore/CommonJS.h>
 #include <libdevcore/TrieHash.h>
 
+std::unordered_map<mcp::block_hash, dev::Address> GenesisTransactions;
+
 std::string const mini_test_genesis_data = R"%%%({
     "from":"0x1144B522F45265C2DFDBAEE8E324719E63A1694C",
     "to":"0x1144B522F45265C2DFDBAEE8E324719E63A1694C",
@@ -97,10 +99,14 @@ std::pair<bool, mcp::Transactions> mcp::genesis::try_initialize(mcp::db::db_tran
 	/// 5: staking init witness transaction.
 	h256s initHashes;
 	initHashes.push_back(ts.sha3());
+	GenesisTransactions.insert(std::pair(ts.sha3(), ts.sender()));
 	/// genesis block linked initialized transaction 
 	Transactions _tstaking = InitMainContractTransaction();
 	for (Transaction _t : _tstaking)
+	{
 		initHashes.push_back(_t.sha3());
+		GenesisTransactions.insert(std::pair(_t.sha3(), _t.sender()));
+	}
 
 	std::unique_ptr<mcp::block> block(std::make_unique<mcp::block>());
 	block->init_from_genesis_transaction(ts.sender(), initHashes, json["exec_timestamp"]);
@@ -192,6 +198,13 @@ std::pair<bool, mcp::Transactions> mcp::genesis::try_initialize(mcp::db::db_tran
 	store_a.summary_block_put(transaction_a, summary_hash, block_hash);
 
 	return std::make_pair(true, _tstaking);
+}
+
+std::pair<bool, dev::Address> mcp::genesis::isGenesisTransaction(mcp::block_hash const& _h)
+{
+	if (GenesisTransactions.count(_h))
+		return std::make_pair(true, GenesisTransactions[_h]);
+	return std::make_pair(false, dev::ZeroAddress);
 }
 
 mcp::block_hash mcp::genesis::block_hash(0);
