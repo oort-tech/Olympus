@@ -504,13 +504,15 @@ void mcp::rpc_handler::process_request()
             mcp::json response_array = mcp::json::array();
             for (const auto& req : request)
             {
-                j_response["id"] = nullptr;
+				mcp::json j_response_array;
+                j_response_array["id"] = nullptr;
                 if (req.count("id"))
-                    j_response["id"] = req["id"];
-                j_response["jsonrpc"] = JsonrpcVersion;
-                try
+                    j_response_array["id"] = req["id"];
+                j_response_array["jsonrpc"] = JsonrpcVersion;
+                
+				try
                 {
-                    LOG(m_log.debug) << "REQUEST: " << req;
+                    LOG(m_log.debug) << "REQUEST ARRAY: " << req;
                     params = req["params"];
                     if (!req.count("method"))
                         BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError("The method undefined does not exist/is not available"));
@@ -519,27 +521,37 @@ void mcp::rpc_handler::process_request()
                     if (pointer == m_ethRpcMethods.end())
                         BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError("The method undefined does not exist/is not available"));
 
-                    (this->*(pointer->second))(j_response, async);
+                    (this->*(pointer->second))(j_response_array, async);
                 }
-                catch (...)
-                {
-                    BOOST_THROW_EXCEPTION(RPC_Http_Error_BadRequest("Unexpected token JSON"));
-                }
+				catch (mcp::RPC_Error_NoResult const &e)
+				{
+					j_response_array["result"] = nullptr;
+				}
+				catch (mcp::RpcException const &e) 
+				{
+					e.toJson(j_response_array);
+				}
+				catch (std::exception const &e)
+				{
+					toRpcExceptionEthJson(e, j_response_array);
+				} 
 
-                response_array.push_back(j_response);
+                response_array.push_back(j_response_array);
             }
-            response(response_array);
+            if (!async)
+			{
+				response(response_array);
+			}
         }
-        else
+        else // at this point the request its not array
         {
-            j_response["id"] = nullptr;
+			j_response["id"] = nullptr;
             if (request.count("id"))
                 j_response["id"] = request["id"];
             j_response["jsonrpc"] = JsonrpcVersion;
-
-            try
+			try
             {
-                LOG(m_log.debug) << "REQUEST: " << request;
+                LOG(m_log.debug) << "REQUEST NOT ARRAY: " << request;
                 params = request["params"];
                 if (!request.count("method"))
                     BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError("The method undefined does not exist/is not available"));
@@ -550,27 +562,23 @@ void mcp::rpc_handler::process_request()
 
                 (this->*(pointer->second))(j_response, async);
             }
-            catch (...)
-            {
-                BOOST_THROW_EXCEPTION(RPC_Http_Error_BadRequest("Unexpected token JSON"));
-            }
-            if (!async)
+			catch (mcp::RPC_Error_NoResult const &e)
+			{
+				j_response["result"] = nullptr;
+			}
+			catch (mcp::RpcException const &e) 
+			{
+				e.toJson(j_response);
+			}
+			catch (std::exception const &e)
+			{
+				toRpcExceptionEthJson(e, j_response);
+			} 
+			if (!async)
             {
                 response(j_response);
             }
         }
-    }
-    catch (mcp::RPC_Error_NoResult const &e)
-    {
-        j_response["result"] = nullptr;
-    }
-    catch (mcp::RpcException const &e)
-    {
-        e.toJson(j_response);
-    }
-    catch (std::exception const &e)
-    {
-        toRpcExceptionEthJson(e, j_response);
     }
     catch (...)
     {
