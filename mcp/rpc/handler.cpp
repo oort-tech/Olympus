@@ -497,11 +497,10 @@ void mcp::rpc_handler::process_request()
 
     try
     {
-        mcp::json request = mcp::json::parse(body);
-
-        if (request.is_array())
+		mcp::json request = mcp::json::parse(body);
+		if (request.is_array())
         {
-            mcp::json response_array = mcp::json::array();
+			mcp::json response_array = mcp::json::array();
             for (const auto& req : request)
             {
 				mcp::json j_response_array;
@@ -509,7 +508,7 @@ void mcp::rpc_handler::process_request()
                 if (req.count("id"))
                     j_response_array["id"] = req["id"];
                 j_response_array["jsonrpc"] = JsonrpcVersion;
-                
+				
 				try
                 {
                     LOG(m_log.debug) << "REQUEST ARRAY: " << req;
