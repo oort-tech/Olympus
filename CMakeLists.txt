@@ -329,6 +329,8 @@ add_library (rpc
 	mcp/rpc/rpc_ws.hpp
 	mcp/rpc/jsonHelper.cpp
 	mcp/rpc/jsonHelper.hpp
+	mcp/rpc/json.cpp
+	mcp/rpc/json.hpp
 	mcp/rpc/exceptions.hpp
 	)
 	

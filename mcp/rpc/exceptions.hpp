@@ -7,34 +7,7 @@
 namespace mcp
 {
 	/***************************************************************************************************************************/
-	///http exception structure definition:
-	struct RpcHttpException : virtual Exception
-	{
-		const char* what() const noexcept override { return ""; }
-		const boost::beast::http::status virtual status() const noexcept { return boost::beast::http::status::ok; }
-	};
-
-	///bad request.
-	struct RPC_Http_Error_BadRequest : virtual RpcHttpException
-	{
-		RPC_Http_Error_BadRequest(const char* m = "") : message(m) {}
-		const char* what() const noexcept override { return message.what(); }
-		const boost::beast::http::status status() const noexcept override { return boost::beast::http::status::bad_request; }
-	private: 
-		std::runtime_error message;
-	};
-
-	///internal error.
-	struct RPC_Http_Error_Internal_Server_Error : virtual RpcHttpException
-	{
-		RPC_Http_Error_Internal_Server_Error(const char* m = "") : message(m) {}
-		const char* what() const noexcept override { return message.what(); }
-		const boost::beast::http::status status() const noexcept override { return boost::beast::http::status::internal_server_error; }
-	private:
-		std::runtime_error message;
-	};
-
-	///system exception
+	///system exception structure definition:
 	struct RpcException : virtual Exception
 	{
 		const char* what() const noexcept override { return "OK"; }

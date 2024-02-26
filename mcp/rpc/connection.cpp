@@ -2,6 +2,9 @@
 #include "handler.hpp"
 #include "exceptions.hpp"
 
+const std::size_t maxRequestContentLength = 1024 * 1024 * 5;
+std::unordered_set<std::string> acceptedContentTypes = { "application/json", "application/json-rpc", "application/jsonrequest" };
+
 mcp::rpc_connection::rpc_connection(mcp::rpc &rpc_a) : rpc(rpc_a), socket(rpc_a.io_service)
 {
 	responded.clear();
@@ -40,9 +43,8 @@ void mcp::rpc_connection::read()
 		if (!ec)
 		{
 			this_l->rpc.m_background->sync_async([this_l]() {
-				//auto start(std::chrono::steady_clock::now());
 				auto version(this_l->request.version());
-                auto response_handler([this_l, version/*, start*/](mcp::json const & js)
+                auto response_handler([this_l, version](mcp::json const & js)
 				{
 					try
 					{
@@ -60,29 +62,24 @@ void mcp::rpc_connection::read()
 					}
 				});
 
-				if (this_l->request.method() == boost::beast::http::verb::post)
+				// Permit dumb empty requests for remote health-checks
+				if (this_l->request.method() == boost::beast::http::verb::get &&
+					getContentLength(this_l->request) == 0 &&
+					this_l->request.target() == "/")
 				{
-					try
-					{
-						auto handler(std::make_shared<mcp::rpc_handler>(this_l->rpc, this_l->request.body(), response_handler, 0));
-						handler->process_request();
-					}
-					catch (mcp::RpcHttpException const & e)
-					{
-						std::ostringstream stream;
-						stream << std::to_string((unsigned)e.status()) << " " << e.status();						
-						if (std::strlen(e.what()))
-							stream  << ": " << e.what();
-						this_l->response(stream.str(), version, e.status());
-					}
+					this_l->response("", version, boost::beast::http::status::ok);
+					return;
 				}
-				else
+
+				auto validateCode = validateRequest(this_l->request);
+				if (validateCode.first != boost::beast::http::status::ok)
 				{
-					boost::beast::http::status code = boost::beast::http::status::not_found;
-					std::ostringstream stream;
-					stream << std::to_string((unsigned)code) << " " << code;
-					this_l->response(stream.str(), version, boost::beast::http::status::not_found);
+					this_l->response(validateCode.second, version, validateCode.first);
+					return;
 				}
+				
+				auto handler(std::make_shared<mcp::rpc_handler>(this_l->rpc, this_l->request.body(), response_handler, 0));
+				handler->process_request();
 			});
 		}
 		else
@@ -112,4 +109,47 @@ void mcp::rpc_connection::response(std::string const & body, unsigned version, b
 }
 
 
+std::pair<boost::beast::http::status, std::string> mcp::validateRequest(boost::beast::http::request<boost::beast::http::string_body>const& request)
+{
+	auto _handler = [](boost::beast::http::status const& _s) -> 
+		std::pair<boost::beast::http::status, std::string> 
+	{
+		return std::make_pair(_s, boost::beast::http::obsolete_reason(_s));
+	};
 
+	if (request.method() != boost::beast::http::verb::post)
+		return _handler(boost::beast::http::status::method_not_allowed);
+
+	if (getContentLength(request) > maxRequestContentLength)
+		return _handler(boost::beast::http::status::payload_too_large);
+
+	/// Check content-type
+	if (request.find(boost::beast::http::field::content_type) != request.end()) {
+		std::string contentType = request[boost::beast::http::field::content_type];
+		if (acceptedContentTypes.count(contentType))
+		{
+			return _handler(boost::beast::http::status::ok);
+		}
+	}
+	/// Invalid content-type
+	std::string _msg = "invalid content type, only application/json is supported";
+	return std::make_pair(boost::beast::http::status::unsupported_media_type, _msg);
+}
+
+std::size_t mcp::getContentLength(boost::beast::http::request<boost::beast::http::string_body> const& request)
+{
+	std::size_t contentLength = 0;
+	//if (request.find(boost::beast::http::field::content_length) != request.end())
+	if (request.has_content_length())
+	{
+		try
+		{
+			std::string contentLengthStr = request[boost::beast::http::field::content_length];
+			contentLength = std::stoull(contentLengthStr);
+		}
+		catch (const std::exception&)
+		{
+		}
+	}
+	return contentLength;
+}

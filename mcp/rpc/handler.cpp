@@ -6,8 +6,6 @@
 #include <mcp/common/pwd.hpp>
 #include <mcp/node/evm/Executive.hpp>
 
-const std::string JsonrpcVersion = "2.0";
-
 mcp::rpc_handler::rpc_handler(mcp::rpc &rpc_a, std::string const &body_a, std::function<void(mcp::json const &)> const &response_a, int m_cap) : body(body_a),
 																																				 rpc(rpc_a),
 																																				 response(response_a),
@@ -492,97 +490,107 @@ void mcp::rpc_handler::witness_list(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::process_request()
 {
-    static mcp::json j_response;
-    bool async = false;
-
     try
     {
-		mcp::json request = mcp::json::parse(body);
-		if (request.is_array())
-        {
-			mcp::json response_array = mcp::json::array();
-            for (const auto& req : request)
-            {
-				mcp::json j_response_array;
-                j_response_array["id"] = nullptr;
-                if (req.count("id"))
-                    j_response_array["id"] = req["id"];
-                j_response_array["jsonrpc"] = JsonrpcVersion;
-				
-				try
-                {
-                    LOG(m_log.debug) << "REQUEST ARRAY: " << req;
-                    params = req["params"];
-                    if (!req.count("method"))
-                        BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError("The method undefined does not exist/is not available"));
-
-                    auto pointer = m_ethRpcMethods.find(req["method"]);
-                    if (pointer == m_ethRpcMethods.end())
-                        BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError("The method undefined does not exist/is not available"));
-
-                    (this->*(pointer->second))(j_response_array, async);
-                }
-				catch (mcp::RPC_Error_NoResult const &e)
-				{
-					j_response_array["result"] = nullptr;
-				}
-				catch (mcp::RpcException const &e) 
-				{
-					e.toJson(j_response_array);
-				}
-				catch (std::exception const &e)
-				{
-					toRpcExceptionEthJson(e, j_response_array);
-				} 
-
-                response_array.push_back(j_response_array);
-            }
-            if (!async)
-			{
-				response(response_array);
-			}
-        }
-        else // at this point the request its not array
-        {
-			j_response["id"] = nullptr;
-            if (request.count("id"))
-                j_response["id"] = request["id"];
-            j_response["jsonrpc"] = JsonrpcVersion;
-			try
-            {
-                LOG(m_log.debug) << "REQUEST NOT ARRAY: " << request;
-                params = request["params"];
-                if (!request.count("method"))
-                    BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError("The method undefined does not exist/is not available"));
-
-                auto pointer = m_ethRpcMethods.find(request["method"]);
-                if (pointer == m_ethRpcMethods.end())
-                    BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError("The method undefined does not exist/is not available"));
-
-                (this->*(pointer->second))(j_response, async);
-            }
-			catch (mcp::RPC_Error_NoResult const &e)
-			{
-				j_response["result"] = nullptr;
-			}
-			catch (mcp::RpcException const &e) 
-			{
-				e.toJson(j_response);
-			}
-			catch (std::exception const &e)
-			{
-				toRpcExceptionEthJson(e, j_response);
-			} 
-			if (!async)
-            {
-                response(j_response);
-            }
-        }
+		LOG(m_log.debug) << "REQUEST: " << body;
+		std::pair<jsonrpcMessages, bool> batch = readBatch(body);
+		if (batch.second)///batch
+		{
+			handleBatch(batch.first);
+		}
+		else
+		{
+			handleMsg(batch.first[0]);
+		}		
     }
     catch (...)
     {
-        BOOST_THROW_EXCEPTION(RPC_Http_Error_BadRequest("Unexpected token a in JSON."));
+		mcp::json j_response;
+		SetResponse(j_response);
+		RPC_Error_JsonParseError("parse error").toJson(j_response);
+		response(j_response);
     }
+}
+
+// handleBatch executes all messages in a batch and returns the responses.
+void mcp::rpc_handler::handleBatch(mcp::jsonrpcMessages const& req)
+{
+	bool async = false;
+	// Emit error response for empty batches:
+	if (req.size() == 0)
+	{
+		mcp::json _res;
+		SetResponse(_res);///set response rpc version.
+		RPC_Error_InvalidRequest("empty batch").toJson(_res);
+		response(_res);
+		return;
+	}
+
+	mcp::json resp = mcp::json::array();
+	for (const auto& req : req)
+	{
+		mcp::json answer = handleCallMsg(req, async);
+		resp.push_back(answer);
+	}
+	response(resp);
+}
+
+// handleMsg handles a single message.
+void mcp::rpc_handler::handleMsg(mcp::jsonrpcMessage const& req)
+{
+	bool async = true;
+	mcp::json answer = handleCallMsg(req, async);
+	if (async)
+		response(answer);
+}
+
+// handleCallMsg executes a call message and returns the answer.
+mcp::json mcp::rpc_handler::handleCallMsg(mcp::jsonrpcMessage const& req, bool& async)
+{
+	mcp::json _res;
+	try
+	{
+		if (req.isCall())
+		{
+			req.SetResponse(_res);///set response rpc version and id.
+			auto pointer = m_ethRpcMethods.find(req.Method);
+			if (pointer == m_ethRpcMethods.end())
+			{
+				std::string _msg = "The method " + req.Method + " does not exist/is not available";
+				BOOST_THROW_EXCEPTION(RPC_Error_MethodNotFound(_msg.c_str()));
+			}
+
+			params = req.Params;
+			(this->*(pointer->second))(_res, async);
+		}
+		else if (req.hasValidID())///with id
+		{
+			req.SetResponse(_res);///set response rpc version and id.
+			BOOST_THROW_EXCEPTION(RPC_Error_InvalidRequest("invalid request"));
+		}
+		else
+		{
+			SetResponse(_res);///set response rpc version.
+			BOOST_THROW_EXCEPTION(RPC_Error_InvalidRequest("invalid request"));
+		}
+	}
+	catch (mcp::RPC_Error_NoResult const& e)
+	{
+		_res["result"] = nullptr;
+	}
+	catch (mcp::RpcException const& e)
+	{
+		e.toJson(_res);
+	}
+	catch (std::exception const& e)
+	{
+		toRpcExceptionEthJson(e, _res);
+	}
+	catch (...)
+	{
+		RPC_Error_InternalError("internal error.").toJson(_res);
+	}
+	return _res;
 }
 
 void mcp::rpc_handler::eth_blockNumber(mcp::json &j_response, bool &)
@@ -619,7 +627,7 @@ void mcp::rpc_handler::eth_estimateGas(mcp::json &j_response, bool &)
 	dev::eth::McInfo mc_info;
 	uint64_t block_number = m_chain->last_stable_index();
 	if (!try_get_mc_info(mc_info, block_number))
-		BOOST_THROW_EXCEPTION(RPC_Http_Error_Internal_Server_Error());
+		BOOST_THROW_EXCEPTION(RPC_Error_InternalError("internal error: block number not stable."));
 
 	mc_info.mc_timestamp = mcp::seconds_since_epoch();
 
@@ -745,6 +753,17 @@ void mcp::rpc_handler::eth_sendRawTransaction(mcp::json &j_response, bool &)
 void mcp::rpc_handler::eth_sendTransaction(mcp::json &j_response, bool &async)
 {
 	TransactionSkeleton t = mcp::toTransactionSkeletonForEth(params[0]);
+	if (!async)///synchronize
+	{
+		try {
+			h256 h = m_wallet->send_action(t, boost::none);
+			j_response["result"] = toJS(h);
+		}
+		catch (dev::Exception const& e) {
+			toRpcExceptionEthJson(e, j_response);
+		}
+		return;
+	}
 
 	auto rpc_l(shared_from_this());
 	auto fun = [rpc_l, j_response, this](h256 &h, boost::optional<dev::Exception const &> e)
@@ -757,7 +776,7 @@ void mcp::rpc_handler::eth_sendTransaction(mcp::json &j_response, bool &async)
 		response(j_resp);
 	};
 
-	async = true;
+	async = false;
 	m_wallet->send_async(t, fun);
 }
 
@@ -1435,6 +1454,18 @@ void mcp::rpc_handler::personal_sendTransaction(mcp::json &j_response, bool &asy
 	TransactionSkeleton t = mcp::toTransactionSkeletonForEth(params[0]);
 	std::string password = params[1];
 
+	if (!async)///synchronize
+	{
+		try {
+			h256 h = m_wallet->send_action(t, password);
+			j_response["result"] = toJS(h);
+		}
+		catch (dev::Exception const& e) {
+			toRpcExceptionEthJson(e, j_response);
+		}
+		return;
+	}
+
 	auto rpc_l(shared_from_this());
 	auto fun = [rpc_l, j_response, this](h256 &h, boost::optional<dev::Exception const &> e)
 	{
@@ -1446,7 +1477,7 @@ void mcp::rpc_handler::personal_sendTransaction(mcp::json &j_response, bool &asy
 		response(j_resp);
 	};
 
-	async = true;
+	async = false;
 	m_wallet->send_async(t, fun, password);
 }
 

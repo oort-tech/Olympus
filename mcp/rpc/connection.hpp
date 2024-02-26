@@ -25,6 +25,9 @@ namespace mcp
 		std::atomic_flag responded;
 		mcp::log m_log = { mcp::log("rpc") };
 	};
+
+	std::pair<boost::beast::http::status, std::string> validateRequest(boost::beast::http::request<boost::beast::http::string_body>const& request);
+	std::size_t getContentLength(boost::beast::http::request<boost::beast::http::string_body>const& request);
 }
 
 

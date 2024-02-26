@@ -1,6 +1,7 @@
 #pragma once
 
 #include "rpc.hpp"
+#include "json.hpp"
 
 namespace mcp
 {
@@ -93,6 +94,9 @@ namespace mcp
 		std::function<void(mcp::json const&)> response;
 
 	private:
+		void handleBatch(mcp::jsonrpcMessages const& req);
+		void handleMsg(mcp::jsonrpcMessage const& req);
+		mcp::json handleCallMsg(mcp::jsonrpcMessage const& req, bool& async);
 		std::shared_ptr<mcp::chain> m_chain;
 		std::shared_ptr<mcp::block_cache> m_cache;
 		std::shared_ptr<mcp::key_manager> m_key_manager;
