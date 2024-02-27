@@ -1,8 +1,10 @@
 #pragma once
 #include <mcp/common/numbers.hpp>
 #include <mcp/common/mcp_json.hpp>
+#include <libdevcore/TrieHash.h>
 #include "transaction.hpp"
 #include "approve.hpp"
+#include "common.hpp"
 
 
 namespace mcp
@@ -50,5 +52,69 @@ namespace mcp
 		SignatureStruct m_vrs;	///< The signature of the transaction. Encodes the sender.
 
 		mutable mcp::block_hash m_hashWith = mcp::block_hash(0);  ///< Cached hash of block 
+	};
+
+	class LocalisedBlock : public block
+	{
+	public:
+		LocalisedBlock(
+			block const& _b,
+			uint64_t const& _blockNumber,
+			mcp::Transactions const& _txs,
+			dev::h256 const& _stateRoot,
+			dev::h256 const& _receiptsRoot,
+			dev::h256 const& _bestParent
+		) :
+			block(_b),
+			m_blockNumber(_blockNumber),
+			m_txs(_txs),
+			m_stateRoot(_stateRoot),
+			m_receiptsRoot(_receiptsRoot)
+		{
+			std::vector<bytes> transactionsRoot;
+			for (size_t i = 0; i < _txs.size(); i++)
+			{
+				m_gasUsed += _txs[i].gas();
+				m_minGasPrice = m_minGasPrice == 0 ? _txs[i].gasPrice() : std::min(m_minGasPrice, _txs[i].gasPrice());
+				transactionsRoot.push_back(_txs[i].sha3().asBytes());
+			}
+			m_transactionsRoot = dev::orderedTrieRoot(transactionsRoot);
+
+			std::vector<bytes> sha3Uncles;
+			for (auto& l : parents())
+			{
+				if (l == _bestParent)
+					m_parent = l;
+				else
+				{
+					m_uncles.push_back(l);
+					sha3Uncles.push_back(l.asBytes());
+				}
+			}
+			m_sha3Uncles = dev::orderedTrieRoot(sha3Uncles);
+		}
+
+		uint64_t blockNumber() const { return m_blockNumber; }
+		dev::u256 gasUsed() const { return m_gasUsed; }
+		dev::u256 minGasPrice() const { return m_minGasPrice; }
+		mcp::Transactions transactions() const { return m_txs; }
+		dev::h256 parent() const { return m_parent; }
+		dev::h256 sha3Uncles() const { return m_sha3Uncles; }
+		dev::h256 transactionsRoot() const { return m_transactionsRoot; }
+		dev::h256 stateRoot() const { return m_stateRoot; }
+		dev::h256 receiptsRoot() const { return m_receiptsRoot; }
+		size_t size() const { RLPStream s; streamRLP(s); return s.out().size(); }
+		dev::h256s uncles() const { return m_uncles; }
+	private:
+		uint64_t m_blockNumber;
+		dev::u256 m_gasUsed;
+		dev::u256 m_minGasPrice;
+		mcp::Transactions m_txs;
+		dev::h256 m_parent;
+		dev::h256 m_sha3Uncles;
+		dev::h256 m_transactionsRoot;
+		dev::h256 m_stateRoot;
+		dev::h256 m_receiptsRoot;
+		dev::h256s m_uncles;
 	};
 }

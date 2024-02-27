@@ -182,7 +182,7 @@ void mcp::rpc_handler::block(mcp::json &j_response, bool &)
 	if (block == nullptr)
 		BOOST_THROW_EXCEPTION(RPC_Error_NoResult());
 
-	j_response["result"] = toJson(*block, false);
+	j_response["result"] = toJson(*block);
 }
 
 void mcp::rpc_handler::block_state(mcp::json &j_response, bool &)
@@ -672,27 +672,29 @@ void mcp::rpc_handler::eth_getBlockByNumber(mcp::json &j_response, bool &)
 	if (block == nullptr)
 		BOOST_THROW_EXCEPTION(RPC_Error_NoResult());
 
-	mcp::json j_block = toJson(*block, true);
-	j_block["number"] = toJS(block_number);
-
-	u256 gasUsed = 0;
-	u256 minGasPrice = 0;
-
-	for (auto &th : block->links())
+	auto state = m_cache->block_state_get(transaction, block->hash());
+	mcp::Transactions txs;
+	int index = 0;
+	for (auto& th : block->links())
 	{
 		auto t = m_cache->transaction_get(transaction, th);
-		gasUsed += t->gas();
-		minGasPrice = minGasPrice == 0 ? t->gasPrice() : std::min(minGasPrice, t->gasPrice());
-
-		auto td = m_store.transaction_address_get(transaction, th);
-		if (is_full)
-			j_block["transactions"].push_back(toJson(LocalisedTransaction(*t, block->hash(), td->index, block_number)));
-		else
-			j_block["transactions"].push_back(toJS(th));
+		txs.push_back(*t);
 	}
-	j_block["gasUsed"] = toJS(gasUsed);
-	j_block["minGasPrice"] = toJS(minGasPrice);
-	j_response["result"] = j_block;
+
+	mcp::summary_hash stateRoot;/// stateRoot
+	m_cache->block_summary_get(transaction, block->hash(), stateRoot);
+	dev::h256 receiptsRoot;/// receiptsRoot
+	m_store.GetBlockReceiptsRoot(transaction, block->hash(), receiptsRoot);
+
+	mcp::LocalisedBlock lb = mcp::LocalisedBlock(*block,
+		block_number,
+		txs,
+		stateRoot,
+		receiptsRoot,
+		state->best_parent
+	);
+
+	j_response["result"] = toJson(lb, is_full);
 }
 
 void mcp::rpc_handler::eth_getBlockByHash(mcp::json &j_response, bool &)
@@ -706,30 +708,31 @@ void mcp::rpc_handler::eth_getBlockByHash(mcp::json &j_response, bool &)
 	auto block = m_cache->block_get(transaction, block_hash);
 	if (block == nullptr)
 		BOOST_THROW_EXCEPTION(RPC_Error_NoResult());
+	auto state = m_cache->block_state_get(transaction, block_hash);
+	BlockNumber block_number = *state->main_chain_index;
 
-	mcp::json j_block = toJson(*block, true);
-	uint64_t block_number;
-	if (!m_cache->block_number_get(transaction, block_hash, block_number))
-		j_block["number"] = toJS(block_number);
-
-	u256 gasUsed = 0;
-	u256 minGasPrice = 0;
+	mcp::Transactions txs;
+	int index = 0;
 	for (auto &th : block->links())
 	{
 		auto t = m_cache->transaction_get(transaction, th);
-		gasUsed += t->gas();
-		minGasPrice = minGasPrice == 0 ? t->gasPrice() : std::min(minGasPrice, t->gasPrice());
-
-		auto td = m_store.transaction_address_get(transaction, th);
-		if (is_full)
-			j_block["transactions"].push_back(toJson(LocalisedTransaction(*t, block_hash, td->index, block_number)));
-		else
-			j_block["transactions"].push_back(toJS(th));
+		txs.push_back(*t);
 	}
-	j_block["gasUsed"] = toJS(gasUsed);
-	j_block["minGasPrice"] = toJS(minGasPrice);
 
-	j_response["result"] = j_block;
+	mcp::summary_hash stateRoot;/// stateRoot
+	m_cache->block_summary_get(transaction, block->hash(), stateRoot);
+	dev::h256 receiptsRoot;/// receiptsRoot
+	m_store.GetBlockReceiptsRoot(transaction, block->hash(), receiptsRoot);
+
+	mcp::LocalisedBlock lb = mcp::LocalisedBlock(*block, 
+		block_number, 
+		txs,
+		stateRoot,
+		receiptsRoot,
+		state->best_parent
+	);
+
+	j_response["result"] = toJson(lb, is_full);
 }
 
 void mcp::rpc_handler::eth_sendRawTransaction(mcp::json &j_response, bool &)

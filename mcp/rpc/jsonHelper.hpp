@@ -70,7 +70,10 @@ namespace mcp
 
 	mcp::json toJson(mcp::log_entry const& _e);
 
-	mcp::json toJson(mcp::block & _b, bool is_eth = false);
+	mcp::json toJson(mcp::block & _b);
+
+	mcp::json toJson(mcp::LocalisedBlock& _b, bool is_full = false);
+
 
 	mcp::json toJson(mcp::block_state & _b);
 

@@ -212,52 +212,77 @@ namespace mcp
 		return res;
 	}
 
-	mcp::json toJson(mcp::block & _b, bool is_eth)
+	mcp::json toJson(mcp::block & _b)
 	{
 		mcp::json res;
 
-		if (is_eth) {
-			res["number"] = nullptr;
-			res["nonce"] = nullptr;
-			res["extraData"] = "0x00";
-			res["hash"] = toJS(_b.hash());
-			res["parentHash"] = toJS(_b.previous());
-			res["gasUsed"] = 0;
-			res["minGasPrice"] = 0;
-			res["gasLimit"] = toJS(mcp::tx_max_gas);
-			res["timestamp"] = toJS(_b.exec_timestamp());
-			res["transactions"] = mcp::json::array();
-			res["miner"] = toJS(_b.from());
-		}
-		else {
-			res["hash"] = toJS(_b.hash());
-			res["from"] = toJS(_b.from());
-			res["previous"] = toJS(_b.previous());
+		res["hash"] = toJS(_b.hash());
+		res["from"] = toJS(_b.from());
+		res["previous"] = toJS(_b.previous());
 
-			mcp::json j_parents = mcp::json::array();
-			for (auto & p : _b.parents())
+		mcp::json j_parents = mcp::json::array();
+		for (auto& p : _b.parents())
+		{
+			j_parents.push_back(toJS(p));
+		}
+		res["parents"] = j_parents;
+
+		mcp::json j_links = mcp::json::array();
+		for (auto& l : _b.links())
+			j_links.push_back(toJS(l));
+		res["links"] = j_links;
+
+		mcp::json j_approves = mcp::json::array();
+		for (auto& l : _b.approves())
+			j_approves.push_back(toJS(l));
+		res["approves"] = j_approves;
+
+		res["last_summary"] = toJS(_b.last_summary());
+		res["last_summary_block"] = toJS(_b.last_summary_block());
+		res["last_stable_block"] = toJS(_b.last_stable_block());
+		res["timestamp"] = _b.exec_timestamp();
+		res["gasLimit"] = toJS(mcp::tx_max_gas);
+		res["signature"] = toJS((Signature)_b.signature());
+
+		return res;
+	}
+
+	mcp::json toJson(mcp::LocalisedBlock& _b, bool is_full)
+	{
+		mcp::json res;
+
+		res["number"] = toJS(_b.blockNumber());
+		res["hash"] = toJS(_b.hash());
+		res["parentHash"] = toJS(_b.parent());
+		res["nonce"] = nullptr;
+		res["miner"] = toJS(_b.from());
+		res["extraData"] = "0x";
+		res["minGasPrice"] = toJS(_b.minGasPrice());
+		res["gasLimit"] = toJS(mcp::tx_max_gas);
+		res["gasUsed"] = toJS(_b.gasUsed());
+		res["timestamp"] = toJS(_b.exec_timestamp());
+
+		res["transactions"] = mcp::json::array();
+		auto _ts = _b.transactions();
+		for (size_t i = 0; i < _ts.size(); i++)
+		{
+			if (is_full)
 			{
-				j_parents.push_back(toJS(p));
+				res["transactions"].push_back(toJson(LocalisedTransaction(_ts[i], _b.hash(), i, _b.blockNumber())));
 			}
-			res["parents"] = j_parents;
-
-			mcp::json j_links = mcp::json::array();
-			for (auto & l : _b.links())
-				j_links.push_back(toJS(l));
-			res["links"] = j_links;
-
-			mcp::json j_approves = mcp::json::array();
-			for (auto & l : _b.approves())
-				j_approves.push_back(toJS(l));
-			res["approves"] = j_approves;
-
-			res["last_summary"] = toJS(_b.last_summary());
-			res["last_summary_block"] = toJS(_b.last_summary_block());
-			res["last_stable_block"] = toJS(_b.last_stable_block());
-			res["timestamp"] = _b.exec_timestamp();
-			res["gasLimit"] = toJS(mcp::tx_max_gas);
-			res["signature"] = toJS((Signature)_b.signature());
+			else
+				res["transactions"].push_back(toJS(_ts[i].sha3()));
 		}
+		
+		res["sha3Uncles"] = toJS(_b.sha3Uncles());
+		res["transactionsRoot"] = toJS(_b.transactionsRoot());
+		res["stateRoot"] = toJS(_b.stateRoot());
+		res["receiptsRoot"] = toJS(_b.receiptsRoot());
+		res["size"] = toJS(_b.size());
+
+		res["uncles"] = mcp::json::array();
+		for (auto const& _u : _b.uncles())
+			res["uncles"].push_back(toJS(_u));
 
 		return res;
 	}
