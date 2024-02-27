@@ -44,7 +44,7 @@ namespace mcp
 
 
     /// return requests and is batch or false
-    std::pair<jsonrpcMessages, bool> mcp::readBatch(std::string const& reader)
+    std::pair<jsonrpcMessages, bool> readBatch(std::string const& reader)
     {
         jsonrpcMessages messages;
         bool batch = false;
