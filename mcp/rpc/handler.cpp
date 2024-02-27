@@ -674,7 +674,6 @@ void mcp::rpc_handler::eth_getBlockByNumber(mcp::json &j_response, bool &)
 
 	auto state = m_cache->block_state_get(transaction, block->hash());
 	mcp::Transactions txs;
-	int index = 0;
 	for (auto& th : block->links())
 	{
 		auto t = m_cache->transaction_get(transaction, th);
@@ -712,7 +711,6 @@ void mcp::rpc_handler::eth_getBlockByHash(mcp::json &j_response, bool &)
 	BlockNumber block_number = *state->main_chain_index;
 
 	mcp::Transactions txs;
-	int index = 0;
 	for (auto &th : block->links())
 	{
 		auto t = m_cache->transaction_get(transaction, th);
