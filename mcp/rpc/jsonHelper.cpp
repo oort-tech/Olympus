@@ -71,6 +71,85 @@ namespace mcp
 		return ret;
 	}
 
+	mcp::LogFilter toLogFilter(mcp::json const& _json)
+	{
+		mcp::LogFilter filter;
+		if (!_json.is_object() || _json.empty())
+			return filter;
+
+		bool isRange = false;
+		if (_json.count("fromBlock") && !_json["fromBlock"].is_null())
+		{
+			filter.withFrom(jsToBlockNumber(_json["fromBlock"]));
+			isRange = true;
+		}
+
+		if (_json.count("toBlock") && !_json["toBlock"].is_null())
+		{
+			filter.withTo(jsToBlockNumber(_json["toBlock"]));
+			isRange = true;
+		}
+
+		if (_json.count("blockhash") && !_json["blockhash"].is_null())
+		{
+			if (!mcp::isH256(_json["blockhash"]))
+				BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams(BadHexFormat));
+			if (isRange)// BlockHash is mutually exclusive with FromBlock/ToBlock criteria
+				BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("invalid argument 0: cannot specify both BlockHash and FromBlock/ToBlock, choose one or the other"));
+			filter.withBlockHash(jsToHash(_json["blockhash"]));
+		}
+
+		if (_json.count("address") && !_json["address"].is_null())
+		{
+			if (_json["address"].is_array())
+			{
+				for (std::string const& i : _json["address"])
+				{
+					if (!mcp::isAddress(i))
+						BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams(BadHexFormat));
+					filter.withAddress(jsToAddress(i));
+				}
+			}
+			else
+			{
+				if (!mcp::isAddress(_json["address"]))
+					BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams(BadHexFormat));
+				filter.withAddress(jsToAddress(_json["address"]));
+			}
+		}
+
+		if (_json.count("topics") && !_json["topics"].is_null())
+		{
+			if (!_json["topics"].is_array())
+				BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("cannot wrap string value as a json-rpc type; topics needs array type."));
+			int index = 0;
+			for (auto const& i : _json["topics"])
+			{
+				if (i.is_array())
+				{
+					for (auto const& t : i)
+					{
+						if (!t.empty() && !t.is_null())
+						{
+							if (!mcp::isH256(t))
+								BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams(BadHexFormat));
+							filter.withTopic(index, jsToHash(t));
+						}
+					}
+				}
+				else if (!i.empty() && !i.is_null())
+				{
+					if (!mcp::isH256(i))
+						BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams(BadHexFormat));
+					filter.withTopic(index, jsToHash(i));
+				}
+				index++;
+			}
+		}
+
+		return filter;
+	}
+
 	mcp::json toJson(Transaction const& _t)
 	{
 		mcp::json res;
@@ -159,22 +238,9 @@ namespace mcp
 	{
 		mcp::json res = mcp::json::array();
 
-		for (auto r : _e)
+		for (auto const& r : _e)
 		{
-			mcp::json rs;
-			if (r.isSpecial)
-				rs = toJS(r.special);
-			else
-			{
-				rs = toJson(static_cast<mcp::log_entry const&>(r));
-				rs["type"] = "mined";
-				rs["blockNumber"] = toJS(r.blockNumber);
-				rs["blockHash"] = toJS(r.blockHash);
-				rs["logIndex"] = toJS(r.logIndex);
-				rs["transactionHash"] = toJS(r.transactionHash);
-				rs["transactionIndex"] = toJS(r.transactionIndex);
-			}
-			res.push_back(rs);
+			res.push_back(toJson(r));
 		}
 		
 		return res;
@@ -182,20 +248,16 @@ namespace mcp
 
 	mcp::json toJson(mcp::localised_log_entry const& _e)
 	{
-			mcp::json res;
-			if (_e.isSpecial)
-				res = toJS(_e.special);
-			else
-			{
-				res = toJson(static_cast<mcp::log_entry const&>(_e));
-				res["type"] = "mined";
-				res["blockNumber"] = toJS(_e.blockNumber);
-				res["blockHash"] = toJS(_e.blockHash);
-				res["logIndex"] = toJS(_e.logIndex);
-				res["transactionHash"] = toJS(_e.transactionHash);
-				res["transactionIndex"] = toJS(_e.transactionIndex);
-			}
-			
+		mcp::json res;
+		res = toJson(static_cast<mcp::log_entry const&>(_e));
+		res["type"] = "mined";
+		res["blockNumber"] = toJS(_e.blockNumber);
+		res["blockHash"] = toJS(_e.blockHash);
+		res["logIndex"] = toJS(_e.logIndex);
+		res["transactionHash"] = toJS(_e.transactionHash);
+		res["transactionIndex"] = toJS(_e.transactionIndex);
+		res["removed"] = _e.Removed;
+
 		return res;
 	}
 

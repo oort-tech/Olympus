@@ -6,6 +6,7 @@
 #include <mcp/core/transaction_receipt.hpp>
 #include <mcp/core/approve_receipt.hpp>
 #include "exceptions.hpp"
+#include "LogFilter.hpp"
 
 namespace mcp
 {
@@ -14,6 +15,8 @@ namespace mcp
 	const static char* AddressPwdError = "could not decrypt key with given passphrase.";
 
 	TransactionSkeleton toTransactionSkeletonForEth(mcp::json const& _json);
+
+	mcp::LogFilter toLogFilter(mcp::json const& _json);
 
 	inline Address jsToAddress(std::string const& _s) { return jsToFixed<20>(_s); }
 
@@ -42,7 +45,7 @@ namespace mcp
 		catch (const std::exception&)
 		{
 			std::string _e = "cannot wrap string value as a json-rpc type; params \"" + _errorMsg + "\" cannot be converted to uint64.";
-			BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(_e.c_str()));
+			BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams(_e.c_str()));
 		}
 	}
 
@@ -54,6 +57,8 @@ namespace mcp
 			return 0;
 		else if (_js == "pending")
 			return PendingBlock;
+		else if (_js == "finalized" || _js == "safe")
+			return LatestBlock;
 		else
 			return (BlockNumber)jsToULl(_js, _js);
 	}

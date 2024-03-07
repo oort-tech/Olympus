@@ -34,12 +34,6 @@ struct localised_log_entry: public log_entry
 	localised_log_entry() = default;
 	explicit localised_log_entry(log_entry const& _le): log_entry(_le) {}
 
-	localised_log_entry(log_entry const& _le, h256 _special):
-		log_entry(_le),
-		isSpecial(true),
-		special(_special)
-	{}
-
 	localised_log_entry(
 		log_entry const& _le,
 		mcp::block_hash const& _blockHash,
@@ -61,8 +55,7 @@ struct localised_log_entry: public log_entry
 	h256 transactionHash;
 	unsigned transactionIndex = 0;
 	unsigned logIndex = 0;
-	bool isSpecial = false;
-	h256 special;
+	bool Removed = false;
 };
 
 using localised_log_entries = std::vector<localised_log_entry>;

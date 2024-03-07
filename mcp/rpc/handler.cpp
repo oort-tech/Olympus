@@ -1096,154 +1096,59 @@ void mcp::rpc_handler::eth_syncing(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::eth_getLogs(mcp::json &j_response, bool &)
 {
-	params = params[0];
-	std::unordered_set<dev::Address> search_address;
-	if (params.count("address"))///is_null() or empty() invalid for string of json.
-	{
-		if (params["address"].is_string())
-		{
-			if(!mcp::isAddress(params["address"]))
-				BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
-			dev::Address _a = jsToAddress(params["address"]);
-			if (_a != dev::ZeroAddress)
-				search_address.insert(_a);
-		}
-		else if (params["address"].is_array())
-		{
-			std::vector<std::string> address_l = params["address"];
-			for (std::string const &address_text : address_l)
-			{
-				if(!mcp::isAddress(address_text))
-					BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
-				dev::Address _a = jsToAddress(address_text);
-				if (_a != dev::ZeroAddress)
-					search_address.insert(_a);
-			}
-		}
-		else
-			BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
-	}
-
-	std::unordered_set<dev::h256> search_topics;
-	if (params.count("topics"))
-	{
-		if (!params["topics"].is_array())
-			BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError("cannot wrap string value as a json-rpc type; topics needs array type."));
-
-		std::vector<std::string> topics_l = params["topics"];
-		for (std::string const &topic_text : topics_l)
-		{
-			if(!mcp::isH256(topic_text))
-				BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
-			search_topics.insert(jsToHash(topic_text));
-		}
-	}
-
-	mcp::json logs_l = mcp::json::array();
+	LogFilter filter = toLogFilter(params[0]);
 	mcp::db::db_transaction transaction(m_store.create_transaction());
-	/// If we're doing singleton block filtering, execute and return
-	if (params.count("blockhash"))///is_null() or empty() invalid for string of json.
+
+	auto _handler = [this, &transaction, &filter](dev::h256 const& _h, uint64_t const& _number, localised_log_entries& io_logs)
 	{
-		if (!mcp::isH256(params["blockhash"]))
-			BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
-
-		mcp::block_hash block_hash = jsToHash(params["blockhash"]);
-		auto state = m_cache->block_state_get(transaction, block_hash);
-		if (!state || !state->is_stable)
-			BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("block not exist or not stable."));
-
-		auto block = m_cache->block_get(transaction, block_hash);
-		for (auto &th : block->links())
+		mcp::json logs_l = mcp::json::array();
+		auto block = m_cache->block_get(transaction, _h);
+		for (size_t i = 0; i < block->links().size(); i++)
 		{
-			auto t = m_cache->transaction_get(transaction, th);
-			auto tr = m_store.transaction_receipt_get(transaction, th);
+			dev::h256 th = block->links().at(i);
 			auto td = m_cache->transaction_address_get(transaction, th);
-			if (t == nullptr || tr == nullptr || td == nullptr)
+			if (td == nullptr || td->blockHash != _h)///not first linked, ignore.
 				continue;
-			if (td->blockHash != block_hash) {///not first linked, ignore.
-				continue;
-			}
 
-			auto lt = dev::eth::LocalisedTransactionReceipt(
-				*tr,
-				t->sha3(),
-				block_hash,
-				state->stable_index,
-				t->from(),
-				t->to(),
-				td->index,
-				toAddress(t->from(), t->nonce()),
-				search_address,
-				search_topics);
-			for (auto localisedLog : lt.localisedLogs()) {
-				mcp::json log = toJson(localisedLog);
-				logs_l.push_back(log);
-			}
+			auto receipt = m_cache->transaction_receipt_get(transaction, th);
+			assert_x(receipt);
+			log_entries le = filter.matches(*receipt);
+			for (unsigned j = 0; j < le.size(); ++j)
+				io_logs.push_back(localised_log_entry(le[j], _h, _number, th, i, j));
 		}
-		j_response["result"] = logs_l;
+	};
+
+	mcp::localised_log_entries ret;
+	/// Block filter requested
+	if (filter.blockHash())
+	{
+		auto state = m_cache->block_state_get(transaction, filter.blockHash());
+		if (!state || !state->is_stable)
+			BOOST_THROW_EXCEPTION(RPC_Error_RequestDenied("unknown block"));
+
+		_handler(filter.blockHash(), state->stable_index, ret);
+		j_response["result"] = toJson(ret);
 		return;
 	}
 
-	BlockNumber fromBlock;
-	if (params.count("fromBlock"))
-	{
-		fromBlock = jsToBlockNumber(params["fromBlock"]);
-		if (fromBlock == LatestBlock || fromBlock == PendingBlock)
-			fromBlock = m_chain->last_stable_index();
-	}
+	mcp::BlockNumber _lastStable = m_chain->last_stable_index();
+	if (filter.fromBlock() == LatestBlock || filter.fromBlock() == PendingBlock)
+		filter.withFrom(_lastStable);
+	if (filter.toBlock() == LatestBlock || filter.toBlock() == PendingBlock)
+		filter.withTo(_lastStable);
 
-	BlockNumber toBlock;
-	if (params.count("toBlock"))
-	{
-		toBlock = jsToBlockNumber(params["toBlock"]);
-		if (toBlock == LatestBlock || toBlock == PendingBlock)
-			toBlock = m_chain->last_stable_index();
-	}
-
-	if (toBlock - fromBlock + 1 > 200)///max 200
+	if (filter.toBlock() - filter.fromBlock() >= 200)///max 200
 		BOOST_THROW_EXCEPTION(RPC_Error_TooLargeSearchRange("Query Returned More Than 200 Results"));//-32005 query returned more than 10000 results
-
-	for (uint64_t i(fromBlock); i <= toBlock; i++)
+	for (uint64_t i(filter.fromBlock()); i <= filter.toBlock(); i++)
 	{
 		mcp::block_hash block_hash(0);
-		if (m_store.stable_block_get(transaction, i, block_hash))
+		if (m_cache->block_number_get(transaction, i, block_hash))
 			break;
 
-		auto block_state = m_cache->block_state_get(transaction, block_hash);
-		if (!block_state || !block_state->is_stable)
-			break;
-
-		auto block = m_cache->block_get(transaction, block_hash);
-		for (auto &th : block->links())
-		{
-			auto t = m_cache->transaction_get(transaction, th);
-			auto tr = m_store.transaction_receipt_get(transaction, th);
-			auto td = m_cache->transaction_address_get(transaction, th);
-			if (t == nullptr || tr == nullptr || td == nullptr)
-				continue;
-			if (td->blockHash != block_hash) {///not first linked, ignore.
-				continue;
-			}
-
-			auto lt = dev::eth::LocalisedTransactionReceipt(
-				*tr,
-				t->sha3(),
-				block_hash,
-				i,
-				t->from(),
-				t->to(),
-				td->index,
-				toAddress(t->from(), t->nonce()),
-				search_address,
-				search_topics);
-			for (auto localisedLog : lt.localisedLogs()) {
-				mcp::json log = toJson(localisedLog);
-				logs_l.push_back(log);
-			}
-		}
+		_handler(block_hash, i, ret);
 	}
 
-	j_response["result"] = logs_l;
+	j_response["result"] = toJson(ret);
 }
 
 //void mcp::rpc_handler::debug_traceTransaction(mcp::json &j_response, bool &)
