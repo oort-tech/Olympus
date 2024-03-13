@@ -708,7 +708,6 @@ void mcp::rpc_handler::eth_getBlockByHash(mcp::json &j_response, bool &)
 	if (block == nullptr)
 		BOOST_THROW_EXCEPTION(RPC_Error_NoResult());
 	auto state = m_cache->block_state_get(transaction, block_hash);
-	BlockNumber block_number = *state->main_chain_index;
 
 	mcp::Transactions txs;
 	for (auto &th : block->links())
@@ -723,7 +722,7 @@ void mcp::rpc_handler::eth_getBlockByHash(mcp::json &j_response, bool &)
 	m_store.GetBlockReceiptsRoot(transaction, block->hash(), receiptsRoot);
 
 	mcp::LocalisedBlock lb = mcp::LocalisedBlock(*block, 
-		block_number, 
+		state->stable_index,
 		txs,
 		stateRoot,
 		receiptsRoot,
