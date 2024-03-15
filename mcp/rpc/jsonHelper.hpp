@@ -7,6 +7,7 @@
 #include <mcp/core/approve_receipt.hpp>
 #include "exceptions.hpp"
 #include "LogFilter.hpp"
+#include "json.hpp"
 
 namespace mcp
 {
@@ -17,6 +18,8 @@ namespace mcp
 	TransactionSkeleton toTransactionSkeletonForEth(mcp::json const& _json);
 
 	mcp::LogFilter toLogFilter(mcp::json const& _json);
+
+	mcp::BlockNumberOrHash toBlockNumberOrHash(mcp::json const& _json);
 
 	inline Address jsToAddress(std::string const& _s) { return jsToFixed<20>(_s); }
 

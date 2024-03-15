@@ -150,6 +150,34 @@ namespace mcp
 		return filter;
 	}
 
+	mcp::BlockNumberOrHash toBlockNumberOrHash(mcp::json const& _json)
+	{
+		mcp::BlockNumberOrHash _ret;
+		if (_json.is_object())
+		{
+			if (_json.count("blockNumber") && !_json["blockNumber"].is_null())
+				_ret._blockNumber = jsToBlockNumber(_json["blockNumber"]);
+
+			if (_json.count("blockHash") && !_json["blockHash"].is_null())
+			{
+				if (!mcp::isH256(_json["blockHash"]))
+					BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams(BadHexFormat));
+				_ret._blockHash = jsToHash(_json["blockHash"]);
+			}
+			if (_ret._blockNumber && _ret._blockHash)
+				BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("cannot specify both BlockHash and BlockNumber, choose one or the other"));
+		}
+		else if(!_json.empty() && !_json.is_null())///default string
+		{
+			if (mcp::isH256(_json))///block hash
+				_ret._blockHash = jsToHash(_json);
+			else///block number
+				_ret._blockNumber = jsToBlockNumber(_json);
+		}
+
+		return _ret;
+	}
+
 	mcp::json toJson(Transaction const& _t)
 	{
 		mcp::json res;

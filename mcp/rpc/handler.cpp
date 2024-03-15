@@ -705,9 +705,9 @@ void mcp::rpc_handler::eth_getBlockByHash(mcp::json &j_response, bool &)
 
 	mcp::db::db_transaction transaction(m_store.create_transaction());
 	auto block = m_cache->block_get(transaction, block_hash);
-	if (block == nullptr)
-		BOOST_THROW_EXCEPTION(RPC_Error_NoResult());
 	auto state = m_cache->block_state_get(transaction, block_hash);
+	if (block == nullptr || state == nullptr)
+		BOOST_THROW_EXCEPTION(RPC_Error_NoResult());
 
 	mcp::Transactions txs;
 	for (auto &th : block->links())
@@ -791,15 +791,32 @@ void mcp::rpc_handler::eth_call(mcp::json &j_response, bool &)
 	Transaction t(ts);
 	t.setSignature(h256(0), h256(0), 0);
 
-	BlockNumber block_number = jsToBlockNumber(params[1]);
-	if (block_number == LatestBlock || block_number == PendingBlock)
-		block_number = m_chain->last_stable_index();
+	BlockNumberOrHash _b = toBlockNumberOrHash(params[1]);
+	BlockNumber block_number;
+	mcp::db::db_transaction transaction(m_store.create_transaction());
+	if (_b.Number())
+	{
+		BlockNumber _last = m_chain->last_stable_index();
+		if (*_b.Number() == LatestBlock || *_b.Number() == PendingBlock)
+			_b._blockNumber = _last;
+		if (*_b.Number() > _last)
+			BOOST_THROW_EXCEPTION(RPC_Error_RequestDenied("header not found"));
+		block_number = *_b.Number();
+	}
+	else if (_b.Hash())
+	{
+		auto state = m_cache->block_state_get(transaction, *_b.Hash());
+		if (state == nullptr)
+			BOOST_THROW_EXCEPTION(RPC_Error_RequestDenied("header for hash not found"));
+		block_number = state->stable_index;
+	}
+	else
+		BOOST_THROW_EXCEPTION(RPC_Error_RequestDenied("invalid arguments; neither block nor hash specified"));
 
 	dev::eth::McInfo mc_info;
 	if (!try_get_mc_info(mc_info, block_number))
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("block not found."));
 
-	mcp::db::db_transaction transaction(m_store.create_transaction());
 	std::pair<mcp::ExecutionResult, dev::eth::TransactionReceipt> result = m_chain->execute(
 		transaction,
 		m_cache,
