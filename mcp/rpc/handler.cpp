@@ -672,10 +672,16 @@ void mcp::rpc_handler::eth_getBlockByNumber(mcp::json &j_response, bool &)
 	if (block == nullptr)
 		BOOST_THROW_EXCEPTION(RPC_Error_NoResult());
 
-	auto state = m_cache->block_state_get(transaction, block->hash());
+	dev::h256 _parentHash(0);///genesis block have no parent
+	if (block_number && m_cache->block_number_get(transaction, block_number - 1, _parentHash))
+		BOOST_THROW_EXCEPTION(RPC_Error_NoResult());
+
 	mcp::Transactions txs;
 	for (auto& th : block->links())
 	{
+		auto td = m_cache->transaction_address_get(transaction, th);
+		if (td == nullptr || td->blockHash != block->hash())///not first linked, ignore.
+			continue;
 		auto t = m_cache->transaction_get(transaction, th);
 		txs.push_back(*t);
 	}
@@ -690,7 +696,7 @@ void mcp::rpc_handler::eth_getBlockByNumber(mcp::json &j_response, bool &)
 		txs,
 		stateRoot,
 		receiptsRoot,
-		state->best_parent
+		_parentHash
 	);
 
 	j_response["result"] = toJson(lb, is_full);
@@ -706,12 +712,19 @@ void mcp::rpc_handler::eth_getBlockByHash(mcp::json &j_response, bool &)
 	mcp::db::db_transaction transaction(m_store.create_transaction());
 	auto block = m_cache->block_get(transaction, block_hash);
 	auto state = m_cache->block_state_get(transaction, block_hash);
-	if (block == nullptr || state == nullptr)
+	if (block == nullptr || state == nullptr || !state->is_stable)
+		BOOST_THROW_EXCEPTION(RPC_Error_NoResult());
+
+	dev::h256 _parentHash(0);///genesis block have no parent
+	if (state->stable_index && m_cache->block_number_get(transaction, state->stable_index - 1, _parentHash))
 		BOOST_THROW_EXCEPTION(RPC_Error_NoResult());
 
 	mcp::Transactions txs;
-	for (auto &th : block->links())
+	for (auto& th : block->links())
 	{
+		auto td = m_cache->transaction_address_get(transaction, th);
+		if (td == nullptr || td->blockHash != block_hash)///not first linked, ignore.
+			continue;
 		auto t = m_cache->transaction_get(transaction, th);
 		txs.push_back(*t);
 	}
@@ -726,7 +739,7 @@ void mcp::rpc_handler::eth_getBlockByHash(mcp::json &j_response, bool &)
 		txs,
 		stateRoot,
 		receiptsRoot,
-		state->best_parent
+		_parentHash
 	);
 
 	j_response["result"] = toJson(lb, is_full);

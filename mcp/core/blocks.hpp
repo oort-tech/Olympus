@@ -6,6 +6,7 @@
 #include "approve.hpp"
 #include "common.hpp"
 
+const dev::h256 ZeroUnclesSha3("0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421");
 
 namespace mcp
 {
@@ -63,13 +64,15 @@ namespace mcp
 			mcp::Transactions const& _txs,
 			dev::h256 const& _stateRoot,
 			dev::h256 const& _receiptsRoot,
-			dev::h256 const& _bestParent
+			dev::h256 const& _parent
 		) :
 			block(_b),
 			m_blockNumber(_blockNumber),
 			m_txs(_txs),
 			m_stateRoot(_stateRoot),
-			m_receiptsRoot(_receiptsRoot)
+			m_receiptsRoot(_receiptsRoot),
+			m_parent(_parent),
+			m_sha3Uncles(ZeroUnclesSha3)
 		{
 			std::vector<bytes> transactionsRoot;
 			for (size_t i = 0; i < _txs.size(); i++)
@@ -79,19 +82,6 @@ namespace mcp
 				transactionsRoot.push_back(_txs[i].sha3().asBytes());
 			}
 			m_transactionsRoot = dev::orderedTrieRoot(transactionsRoot);
-
-			std::vector<bytes> sha3Uncles;
-			for (auto& l : parents())
-			{
-				if (l == _bestParent)
-					m_parent = l;
-				else
-				{
-					m_uncles.push_back(l);
-					sha3Uncles.push_back(l.asBytes());
-				}
-			}
-			m_sha3Uncles = dev::orderedTrieRoot(sha3Uncles);
 		}
 
 		uint64_t blockNumber() const { return m_blockNumber; }
