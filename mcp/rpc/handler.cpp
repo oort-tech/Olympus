@@ -1166,8 +1166,8 @@ void mcp::rpc_handler::eth_getLogs(mcp::json &j_response, bool &)
 	if (filter.toBlock() == LatestBlock || filter.toBlock() == PendingBlock)
 		filter.withTo(_lastStable);
 
-	if (filter.toBlock() - filter.fromBlock() >= 200)///max 200
-		BOOST_THROW_EXCEPTION(RPC_Error_TooLargeSearchRange("Query Returned More Than 200 Results"));//-32005 query returned more than 10000 results
+	if (filter.toBlock() - filter.fromBlock() >= 2000)///max 2000
+		BOOST_THROW_EXCEPTION(RPC_Error_TooLargeSearchRange("Query Returned More Than 2000 Results"));//-32005 query returned more than 10000 results
 	for (uint64_t i(filter.fromBlock()); i <= filter.toBlock(); i++)
 	{
 		mcp::block_hash block_hash(0);
