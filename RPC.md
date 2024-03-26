@@ -1503,7 +1503,7 @@ Imports the given private key into the key store, encrypting it with the passphr
 ### **Example**
 ```js
 // Request
-curl --data '{"method":"personal_importRawKey","params":["7aa3b91561fceae29a8cb1affb3a9d9b3dec7a720685678ae890df0b6e6eed79", "12345678"],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8765
+curl --data '{"method":"personal_importRawKey","params":["0x7aa3b91561fceae29a8cb1affb3a9d9b3dec7a720685678ae890df0b6e6eed79", "12345678"],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8765
 // Result
 {
     "id": 1,
