@@ -4,7 +4,7 @@ mcp::mcp_networks mcp::mcp_network = mcp::mcp_networks::mcp_live_network;
 
 dev::u256 mcp::gas_price;
 uint64_t mcp::chain_id;
-mcp::ChainOperationParams* mcp::ChainConfig = &mcp::ChainOperationParams();
+mcp::ChainOperationParams* mcp::ChainConfig = new mcp::ChainOperationParams();
 
 mcp::uint256_t mcp::chainID()
 {
