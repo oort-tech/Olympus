@@ -66,6 +66,9 @@ void mcp::Executive::initialize(Transaction const& _transaction)
 			<< m_s.balance(m_t.sender()) << " for sender: " << m_t.sender().hexPrefixed();
 		m_excepted = TransactionException::NotEnoughCash;
 		m_s.incNonce(m_t.sender());
+		if (mcp::chainParams()->IsGasUsedFork(m_envInfo.mci()))
+			m_gas = m_t.gas();//for receipt calculate gasUsed
+
 		BOOST_THROW_EXCEPTION(dev::eth::NotEnoughCash() << RequirementError(totalCost, (bigint)m_s.balance(m_t.sender())) << errinfo_comment(m_t.sender().hex()));
 	}
     m_gasCost = (u256)gasCost;  // Convert back to 256-bit, safe now.

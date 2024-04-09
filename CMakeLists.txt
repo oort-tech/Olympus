@@ -386,6 +386,7 @@ add_library (core
 	mcp/core/approve.cpp
 	mcp/core/contract.hpp
 	mcp/core/contract.cpp
+	mcp/core/ChainOperationParams.hpp
 	mcp/core/iapprove_queue.hpp
 	)
 	
