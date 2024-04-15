@@ -17,7 +17,7 @@ namespace mcp
 		bool isRangeFilter() const;
 
 		bool matches(log_bloom _bloom) const;
-		log_entries matches(dev::eth::TransactionReceipt const& _r) const;
+		log_entries matches(dev::eth::TransactionReceipt const& _r, uint64_t const& _mci) const;
 
 		dev::h256 blockHash() const { return m_blockHash; }
 		mcp::BlockNumber fromBlock() const { return m_fromBlock; }

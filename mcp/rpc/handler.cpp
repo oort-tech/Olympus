@@ -1128,7 +1128,7 @@ void mcp::rpc_handler::eth_getLogs(mcp::json &j_response, bool &)
 	LogFilter filter = toLogFilter(params[0]);
 	mcp::db::db_transaction transaction(m_store.create_transaction());
 
-	auto _handler = [this, &transaction, &filter](dev::h256 const& _h, uint64_t const& _number, localised_log_entries& io_logs)
+	auto _handler = [this, &transaction, &filter](dev::h256 const& _h, uint64_t const& _number, uint64_t const& _mci, localised_log_entries& io_logs)
 	{
 		mcp::json logs_l = mcp::json::array();
 		auto block = m_cache->block_get(transaction, _h);
@@ -1141,7 +1141,7 @@ void mcp::rpc_handler::eth_getLogs(mcp::json &j_response, bool &)
 
 			auto receipt = m_cache->transaction_receipt_get(transaction, th);
 			assert_x(receipt);
-			log_entries le = filter.matches(*receipt);
+			log_entries le = filter.matches(*receipt, _mci);
 			for (unsigned j = 0; j < le.size(); ++j)
 				io_logs.push_back(localised_log_entry(le[j], _h, _number, th, i, j));
 		}
@@ -1155,7 +1155,7 @@ void mcp::rpc_handler::eth_getLogs(mcp::json &j_response, bool &)
 		if (!state || !state->is_stable)
 			BOOST_THROW_EXCEPTION(RPC_Error_RequestDenied("unknown block"));
 
-		_handler(filter.blockHash(), state->stable_index, ret);
+		_handler(filter.blockHash(), state->stable_index, *state->main_chain_index, ret);
 		j_response["result"] = toJson(ret);
 		return;
 	}
@@ -1173,8 +1173,11 @@ void mcp::rpc_handler::eth_getLogs(mcp::json &j_response, bool &)
 		mcp::block_hash block_hash(0);
 		if (m_cache->block_number_get(transaction, i, block_hash))
 			break;
+		auto state = m_cache->block_state_get(transaction, block_hash);
+		if (!state || !state->is_stable)
+			break;
 
-		_handler(block_hash, i, ret);
+		_handler(block_hash, i, *state->main_chain_index, ret);
 	}
 
 	j_response["result"] = toJson(ret);

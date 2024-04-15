@@ -8,10 +8,14 @@ namespace mcp
 	{
 		ChainOperationParams(){}
 
-		bool IsGasUsedFork(uint64_t const& _mci)
+		bool IsOIP4(uint64_t const& _mci)
 		{
-			return _mci >= gasUsedForkBlock;
+			return _mci >= OIP4And5Block;
 		}
-		uint64_t gasUsedForkBlock = 0;// gas used switch block , 0 = already on fork
+		bool IsOIP5(uint64_t const& _mci)
+		{
+			return _mci >= OIP4And5Block;
+		}
+		uint64_t OIP4And5Block = 0;// OIP4,OIP5 block
 	};
 }

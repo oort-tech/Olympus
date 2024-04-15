@@ -38,7 +38,7 @@ class TransactionReceipt
 {
 public:
 	TransactionReceipt(RLP r);
-	TransactionReceipt(uint8_t _status, u256 const& _gasUsed, mcp::log_entries const& _log);
+	TransactionReceipt(uint8_t _status, u256 const& _gasUsed, mcp::log_entries const& _log, uint64_t const& _mci = 0);
 
 	/// @returns the status code.
 	/// @throw TransactionReceiptVersionError when the receipt has a state root instead of a status code.
