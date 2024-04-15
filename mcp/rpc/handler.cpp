@@ -1128,22 +1128,20 @@ void mcp::rpc_handler::eth_getLogs(mcp::json &j_response, bool &)
 	LogFilter filter = toLogFilter(params[0]);
 	mcp::db::db_transaction transaction(m_store.create_transaction());
 
-	auto _handler = [this, &transaction, &filter](dev::h256 const& _h, uint64_t const& _number, uint64_t const& _mci, localised_log_entries& io_logs)
+	auto _handler = [this, &transaction, &filter](std::shared_ptr<mcp::block> _block, std::shared_ptr<mcp::block_state> _state, localised_log_entries& io_logs)
 	{
-		mcp::json logs_l = mcp::json::array();
-		auto block = m_cache->block_get(transaction, _h);
-		for (size_t i = 0; i < block->links().size(); i++)
+		for (size_t i = 0; i < _block->links().size(); i++)
 		{
-			dev::h256 th = block->links().at(i);
+			dev::h256 th = _block->links().at(i);
 			auto td = m_cache->transaction_address_get(transaction, th);
-			if (td == nullptr || td->blockHash != _h)///not first linked, ignore.
+			if (td == nullptr || td->blockHash != _block->hash())///not first linked, ignore.
 				continue;
 
 			auto receipt = m_cache->transaction_receipt_get(transaction, th);
 			assert_x(receipt);
-			log_entries le = filter.matches(*receipt, _mci);
+			log_entries le = filter.matches(*receipt, *_state->main_chain_index);
 			for (unsigned j = 0; j < le.size(); ++j)
-				io_logs.push_back(localised_log_entry(le[j], _h, _number, th, i, j));
+				io_logs.push_back(localised_log_entry(le[j], _block->hash(), _state->stable_index, th, i, j));
 		}
 	};
 
@@ -1154,8 +1152,11 @@ void mcp::rpc_handler::eth_getLogs(mcp::json &j_response, bool &)
 		auto state = m_cache->block_state_get(transaction, filter.blockHash());
 		if (!state || !state->is_stable)
 			BOOST_THROW_EXCEPTION(RPC_Error_RequestDenied("unknown block"));
+		auto _block = m_cache->block_get(transaction, filter.blockHash());
+		if (!_block)
+			BOOST_THROW_EXCEPTION(RPC_Error_RequestDenied("unknown block"));
 
-		_handler(filter.blockHash(), state->stable_index, *state->main_chain_index, ret);
+		_handler(_block, state, ret);
 		j_response["result"] = toJson(ret);
 		return;
 	}
@@ -1170,14 +1171,16 @@ void mcp::rpc_handler::eth_getLogs(mcp::json &j_response, bool &)
 		BOOST_THROW_EXCEPTION(RPC_Error_TooLargeSearchRange("Query Returned More Than 2000 Results"));//-32005 query returned more than 10000 results
 	for (uint64_t i(filter.fromBlock()); i <= filter.toBlock(); i++)
 	{
-		mcp::block_hash block_hash(0);
-		if (m_cache->block_number_get(transaction, i, block_hash))
+		auto _block = m_cache->block_get(transaction, i);
+		if (!_block)
 			break;
-		auto state = m_cache->block_state_get(transaction, block_hash);
+		if (!_block->links().size())///have no logs
+			continue;
+		auto state = m_cache->block_state_get(transaction, _block->hash());
 		if (!state || !state->is_stable)
 			break;
 
-		_handler(block_hash, i, *state->main_chain_index, ret);
+		_handler(_block, state, ret);
 	}
 
 	j_response["result"] = toJson(ret);
