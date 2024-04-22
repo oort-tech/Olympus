@@ -78,14 +78,12 @@ private:
 		{
 		case mcp::mcp_networks::mcp_mini_test_network:
 		{
-			ChainConfig->OIP4And5Block = 10;
 			chain_id = (uint64_t)9900;
 			gas_price = (uint256_t)1e11;
 			break;
 		}
 		case mcp::mcp_networks::mcp_test_network:
 		{
-			ChainConfig->OIP4And5Block = 250;
 			chain_id = (uint64_t)9800;
 			gas_price = (uint256_t)1e11;
 			break;
@@ -94,7 +92,7 @@ private:
 		{
 			chain_id = (uint64_t)9700;// Ascraeus 972; huygens 971; dev 9700
 			gas_price = (uint256_t)1e11;
-			ChainConfig->OIP4And5Block = 95000;
+			ChainConfig->OIP4And5Block = 110000;
 			break;
 		}
 		case mcp::mcp_networks::mcp_live_network:
