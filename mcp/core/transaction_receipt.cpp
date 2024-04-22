@@ -20,6 +20,7 @@
  */
 
 #include "transaction_receipt.hpp"
+#include "config.hpp"
 #include <mcp/common/Exceptions.h>
 
 #include <boost/variant/get.hpp>
@@ -41,11 +42,16 @@ TransactionReceipt::TransactionReceipt(RLP r)
 
 }
 
-TransactionReceipt::TransactionReceipt(uint8_t _status, u256 const& _gasUsed, mcp::log_entries const& _log):
+TransactionReceipt::TransactionReceipt(uint8_t _status, u256 const& _gasUsed, mcp::log_entries const& _log, uint64_t const& _mci):
 	m_statusCode(_status),
 	m_gasUsed(_gasUsed),
 	m_log(_log)
-{}
+{
+	if (mcp::chainParams()->IsOIP5(_mci))
+	{
+		m_bloom = mcp::bloom(_log);
+	}
+}
 
 void TransactionReceipt::streamRLP(RLPStream& _s) const
 {

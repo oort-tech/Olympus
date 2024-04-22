@@ -46,14 +46,18 @@ namespace mcp
         return true;
     }
 
-    log_entries LogFilter::matches(dev::eth::TransactionReceipt const& _r) const
+    log_entries LogFilter::matches(dev::eth::TransactionReceipt const& _r, uint64_t const& _mci) const
     {
         // there are no addresses or topics to filter
         if (isRangeFilter())
             return _r.log();
 
         log_entries ret;
-        if (matches(mcp::bloom(_r.log())))//interim solution, used from database
+        log_bloom _bloom = _r.bloom();
+        if (!mcp::chainParams()->IsOIP5(_mci))///OIP5
+            _bloom = mcp::bloom(_r.log());
+
+        if (matches(_bloom))
         {
             for (log_entry const& e : _r.log())
             {

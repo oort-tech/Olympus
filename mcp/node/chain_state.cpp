@@ -130,7 +130,7 @@ std::pair<mcp::ExecutionResult, dev::eth::TransactionReceipt> mcp::chain_state::
 		break;
 	}
 
-	TransactionReceipt const receipt = TransactionReceipt(statusCode, startGasUsed + e.gasUsed(), e.logs());
+	TransactionReceipt const receipt = TransactionReceipt(statusCode, startGasUsed + e.gasUsed(), e.logs(), _envInfo.mci());
 	return std::make_pair(res, receipt);
 }
 

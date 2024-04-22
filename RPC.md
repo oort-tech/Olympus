@@ -945,7 +945,12 @@ Executes a new message call immediately without creating a transaction on the bl
    * `gasPrice`: `QUANTITY` - (optional) Integer of the gas price used for each paid gas.
    * `value`: `QUANTITY` - (optional) Integer of the value sent with this transaction.
    * `data`: `DATA` - (optional) Hash of the method signature and encoded parameters. For details see [Contract ABI in the Solidity documentation](https://docs.soliditylang.org/en/latest/abi-spec.html).
-2. `QUANTITY`|`TAG` - Integer block number, or the string `'latest'`, `'earliest'` or `'pending'`, see the [default block parameter](#the-default-block-parameter).
+2. `QUANTITY`|`TAG`|`DATA`|`Object` - Union structure, use block number, block hash or an object(inlcude blockNumber or blockHash).
+   * `QUANTITY`|`TAG` - Integer block number, or the string `'latest'`, `'earliest'` or `'pending'`, see the [default block parameter](#the-default-block-parameter).
+   * `DATA`, 32 Bytes - Hash of a block.
+   * `Object` - The blockNumberOrHash object.
+     * `blockNumber`: `QUANTITY`|`TAG` - Integer block number, or the string `'latest'`, `'earliest'` or `'pending'`, see the [default block parameter](#the-default-block-parameter).
+     * `blockHash`: `DATA`, 32 Bytes - Hash of a block.
 
 ### **Returns**
 `DATA` - The return value of executed contract.
@@ -1107,6 +1112,7 @@ Returns an array of all logs matching a given filter object.
   * `toBlock`: `QUANTITY`|`TAG` - (optional, default: `'latest'`) Integer block number, or `'latest'` for the last mined block or `'pending'`, `'earliest'` for not yet mined transactions.
   * `address`: `DATA`|`Array`, 20 Bytes - (optional) Contract address or a list of addresses from which logs should originate.
   * `topics`: `Array` of `DATA` - (optional) Array of 32 Bytes `DATA` topics. Topics are order-dependent. Each topic can also be an array of `DATA` with "or" options.
+  * `blockhash`: `DATA`, 32 Bytes - (optional) blockHash be a new filter option which restricts the logs returned to the single block with the 32-byte hash blockHash. Using blockHash is equivalent to fromBlock = toBlock = the block number with hash blockHash. If blockHash is present in the filter criteria, then neither fromBlock nor toBlock are allowed.
 
 ### **Returns**
 `Array` - Array of log objects, or an empty array if nothing. Log objects contain the following keys and their values:
