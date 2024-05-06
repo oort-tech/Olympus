@@ -85,6 +85,8 @@ namespace mcp
 		/// Register a handler that will be called once asynchronous verification is comeplte an transaction has been imported
 		void onReady(std::function<void(h256 const&)> const& _t) { m_onReady.add(_t); }
 
+		void makeQueue(std::shared_ptr<Transaction> _t);
+
 		/// Get transaction queue information
 		std::string getInfo();
 
@@ -139,7 +141,7 @@ namespace mcp
 		ImportResult check_WITH_LOCK(h256 const& _h);
 		ImportResult manageImport_WITH_LOCK(std::shared_ptr<Transaction> _t, source _in);
 
-		ImportResult insertQueue_WITH_LOCK(std::shared_ptr<Transaction> _t, bool includeQueue = true);
+		ImportResult insertQueue_WITH_LOCK(std::shared_ptr<Transaction> _t, source _in, bool includeQueue = true);
 		ImportResult insertPending_WITH_LOCK(std::shared_ptr<Transaction>);
 		void makeQueue_WITH_LOCK(std::shared_ptr<Transaction> _t);
 		bool remove_WITH_LOCK(h256 const& _txHash);
@@ -180,7 +182,7 @@ namespace mcp
 		std::map<std::chrono::steady_clock::time_point, h256Set> m_superfluous;
 		std::unique_ptr<boost::asio::deadline_timer> m_clearTimer;
 		std::thread m_processSuperfluousThread;
-		std::chrono::minutes m_clear_time = std::chrono::minutes(1);
+		std::chrono::minutes m_clear_time = std::chrono::minutes(10);
 
 		mcp::block_store & m_store;
 		std::shared_ptr<mcp::iblock_cache> m_cache;

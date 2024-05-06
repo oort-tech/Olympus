@@ -155,7 +155,7 @@ bool mcp::chain_state::executeTransaction(Executive& _e, dev::eth::OnOpFunc cons
     catch (dev::eth::NotEnoughCash const&)
     {
         ///do not throw, used the transaction nonce
-        LOG(m_log.info) << "executeTransaction not enough cash,hash: " << ts.sha3().hexPrefixed()
+        LOG(m_log.debug) << "executeTransaction not enough cash,hash: " << ts.sha3().hexPrefixed()
             << ", from: " << ts.sender().hexPrefixed()
             << ", to: " << ts.to().hexPrefixed()
             << ", value: " << ts.value();

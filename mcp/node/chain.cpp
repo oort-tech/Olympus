@@ -420,6 +420,7 @@ void mcp::chain::ApplyWorkTransaction(mcp::timeout_db_transaction & timeout_tx_a
 	cache_a->transaction_receipt_put(transaction_a, _t.sha3(), std::make_shared<dev::eth::TransactionReceipt>(result.second));
 	cache_a->transaction_address_put(transaction_a, _t.sha3(), std::make_shared<mcp::TransactionAddress>(hash, 0));
 	m_store.epoch_work_transaction_put(transaction_a, epoch - 1, _t.sha3());
+	m_tq->makeQueue(std::make_shared<Transaction>(_t));///may be transactions pending due to this transaction.
 
 	//LOG(m_log.info) << "ApplyWorkTransaction hash: " << _t.sha3().hex();
 }

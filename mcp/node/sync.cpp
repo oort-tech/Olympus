@@ -1339,7 +1339,7 @@ void mcp::node_sync::process_hash_tree(p2p::node_id const &id, mcp::hash_tree_re
 {
 	if (m_block_processor->is_full())
 	{
-		LOG(log_sync.warning) << "process_hash_tree: reach pending size limit";
+		LOG(log_sync.debug) << "process_hash_tree: reach pending size limit";
 		m_sync_timer->expires_from_now(boost::posix_time::seconds(1));
 		m_sync_timer->async_wait([this, id, hash_tree_response](boost::system::error_code const & error)
 		{

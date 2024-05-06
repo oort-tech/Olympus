@@ -137,7 +137,7 @@ namespace mcp
 			if (NonceRange::TooSmall == r)///nonce too low, just request need insert.
 			{
 				if (_in == source::request)
-					return insertQueue_WITH_LOCK(_t, false);
+					return insertQueue_WITH_LOCK(_t, _in, false);
 				else
 					return ImportResult::InvalidNonce;
 			}
@@ -156,7 +156,7 @@ namespace mcp
 			else ///insert to queue
 			{
 				//LOG(m_log.debug) << "Queued vaguely legit-looking transaction " << _t->sha3().hex();
-				return insertQueue_WITH_LOCK(_t);
+				return insertQueue_WITH_LOCK(_t, _in);
 			}
 		}
 		catch (Exception const& _e)
@@ -212,7 +212,7 @@ namespace mcp
 	}
 
 
-	ImportResult TransactionQueue::insertQueue_WITH_LOCK(std::shared_ptr<Transaction> _t, bool includeQueue)
+	ImportResult TransactionQueue::insertQueue_WITH_LOCK(std::shared_ptr<Transaction> _t, source _in, bool includeQueue)
 	{
 		if (all.count(_t->sha3()))
 			assert_x(false);
@@ -226,7 +226,7 @@ namespace mcp
 			auto r = queue[_t->sender()].add(_t);/// have transaction used nonce,replace it
 			if (!r.first)///OverbidGasPrice
 				return ImportResult::OverbidGasPrice;
-			if (r.second)///replaced. remove replaced transaction from known and all.
+			if (r.second && _in != source::sync)///replaced. remove replaced transaction from known and all.
 			{
 				all.erase(r.second->sha3());
 				m_known.erase(r.second->sha3());
@@ -293,7 +293,7 @@ namespace mcp
 		if (queue.count(from))
 		{
 			auto delt = queue[from].erase(nonce);
-			if (delt->sha3() != _txHash)/// not the hash,but deleted from queue,put it to delete queue,delete it 2 minutes later
+			if (delt && delt->sha3() != _txHash)/// not the hash,but deleted from queue,put it to delete queue,delete it 2 minutes later
 			{
 				auto now = SteadyClock.now();
 				if (!m_superfluous.count(now))
@@ -534,6 +534,12 @@ namespace mcp
 		{
 			processSuperfluous();
 		});
+	}
+
+	void TransactionQueue::makeQueue(std::shared_ptr<Transaction> _t)
+	{
+		WriteGuard ul(m_lock);
+		makeQueue_WITH_LOCK(_t);
 	}
 
 	std::string TransactionQueue::getInfo()
