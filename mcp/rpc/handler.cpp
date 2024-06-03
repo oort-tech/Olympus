@@ -903,7 +903,7 @@ void mcp::rpc_handler::eth_getStorageAt(mcp::json &j_response, bool &)
 
 	mcp::db::db_transaction transaction(m_store.create_transaction());
 	chain_state c_state(transaction, 0, m_store, m_chain, m_cache);
-	j_response["result"] = toJS(c_state.storage(account, position));
+	j_response["result"] = toJS(toCompactBigEndian(c_state.storage(account, position), 32));
 }
 
 void mcp::rpc_handler::eth_getTransactionByHash(mcp::json &j_response, bool &)
