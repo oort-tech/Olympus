@@ -1,6 +1,7 @@
 #pragma once
 #include <mcp/common/numbers.hpp>
 #include <mcp/common/mcp_json.hpp>
+#include <mcp/core/log_entry.hpp>
 #include <libdevcore/TrieHash.h>
 #include "transaction.hpp"
 #include "approve.hpp"
@@ -90,6 +91,7 @@ namespace mcp
 		mcp::Transactions transactions() const { return m_txs; }
 		dev::h256 parent() const { return m_parent; }
 		dev::h256 sha3Uncles() const { return m_sha3Uncles; }
+		log_bloom const& bloom() const { return m_bloom; }
 		dev::h256 transactionsRoot() const { return m_transactionsRoot; }
 		dev::h256 stateRoot() const { return m_stateRoot; }
 		dev::h256 receiptsRoot() const { return m_receiptsRoot; }
@@ -106,5 +108,6 @@ namespace mcp
 		dev::h256 m_stateRoot;
 		dev::h256 m_receiptsRoot;
 		dev::h256s m_uncles;
+		log_bloom m_bloom;
 	};
 }

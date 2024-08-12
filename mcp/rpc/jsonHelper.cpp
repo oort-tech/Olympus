@@ -347,6 +347,7 @@ namespace mcp
 		res["nonce"] = nullptr;
 		res["miner"] = toJS(_b.from());
 		res["extraData"] = "0x";
+		res["difficulty"] = "0x";
 		res["minGasPrice"] = toJS(_b.minGasPrice());
 		res["gasLimit"] = toJS(mcp::tx_max_gas);
 		res["gasUsed"] = toJS(_b.gasUsed());
@@ -369,6 +370,7 @@ namespace mcp
 		res["stateRoot"] = toJS(_b.stateRoot());
 		res["receiptsRoot"] = toJS(_b.receiptsRoot());
 		res["size"] = toJS(_b.size());
+		res["logsBloom"] = toJS(_b.bloom());
 
 		res["uncles"] = mcp::json::array();
 		for (auto const& _u : _b.uncles())
