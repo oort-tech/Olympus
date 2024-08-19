@@ -347,7 +347,7 @@ namespace mcp
 		res["nonce"] = nullptr;
 		res["miner"] = toJS(_b.from());
 		res["extraData"] = "0x";
-		res["difficulty"] = "0x";
+		res["difficulty"] = "0x0";
 		res["minGasPrice"] = toJS(_b.minGasPrice());
 		res["gasLimit"] = toJS(mcp::tx_max_gas);
 		res["gasUsed"] = toJS(_b.gasUsed());
