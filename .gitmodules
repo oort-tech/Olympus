@@ -22,3 +22,6 @@
 	path = libdevcrypto
 	url = https://github.com/oort-tech/libdevcrypto.git
 	branch = zhou_truffle
+[submodule "intx"]
+	path = intx
+	url = https://github.com/oort-tech/intx.git
