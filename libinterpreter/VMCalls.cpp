@@ -195,7 +195,8 @@ bool VM::caseCallSetup(evmc_message& o_msg, bytesRef& o_output)
     auto const destination = intx::be::trunc<evmc::address>(m_SP[1]);
 
     // Check for call-to-self (eip1380) and adjust gas accordingly
-    if (m_rev >= EVMC_BERLIN && m_message->destination == destination)
+    // Ethereum call-to-self after EIP150 consume 700 gas, and consumes 40 gas after EVMC_BERLIN, but mcp has always been 40 gas. 
+    if (/*m_rev >= EVMC_BERLIN &&*/ m_message->destination == destination)
         m_runGas = VMSchedule::callSelfGas;
 
     switch (m_OP)
