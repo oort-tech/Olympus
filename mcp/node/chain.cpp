@@ -47,7 +47,7 @@ void mcp::chain::init(bool & error_a, mcp::timeout_db_transaction & timeout_tx_a
 
 			///init system contract
 			auto gstate = m_store.block_state_get(transaction, mcp::genesis::block_hash);
-			dev::eth::McInfo mc_info(0, 0, gstate->stable_timestamp, 0);
+			dev::eth::McInfo mc_info(0, 0, gstate->stable_timestamp, 0, dev::ZeroAddress);
 			///init staking
 			for (auto _t : ret.second)
 			{
@@ -344,7 +344,7 @@ dev::eth::McInfo mcp::chain::GetMcInfo(mcp::timeout_db_transaction & timeout_tx_
 	uint64_t const & mc_last_summary_mci = *last_summary_state->main_chain_index;
 
 	uint64_t const & mc_timestamp = mc_stable_block->exec_timestamp();
-	return dev::eth::McInfo(m_last_stable_index_internal, m_last_stable_mci_internal, mc_timestamp, mc_last_summary_mci);
+	return dev::eth::McInfo(m_last_stable_index_internal, m_last_stable_mci_internal, mc_timestamp, mc_last_summary_mci, mc_stable_block->from());
 }
 
 void mcp::chain::InitWork(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a)
@@ -918,7 +918,7 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 					bool invalid = false;
 					try
 					{
-						dev::eth::McInfo mc_info(m_last_stable_index_internal, mci, mc_timestamp, mc_last_summary_mci);
+						dev::eth::McInfo mc_info(m_last_stable_index_internal, mci, mc_timestamp, mc_last_summary_mci, dag_stable_block->from());
 						//mcp::stopwatch_guard sw("set_block_stable2_1");
 						std::pair<ExecutionResult, dev::eth::TransactionReceipt> result = execute(transaction_a, cache_a, *_t, mc_info, Permanence::Committed, dev::eth::OnOpFunc());
 
@@ -1281,40 +1281,40 @@ mcp::Epoch mcp::chain::last_stable_epoch()
 	return mcp::epoch(m_last_stable_mci);
 }
 
-bool mcp::chain::get_mc_info_from_block_hash(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::iblock_cache> cache_a, mcp::block_hash hash_a, dev::eth::McInfo & mc_info_a)
-{
-	std::shared_ptr<mcp::block_state> block_state(cache_a->block_state_get(transaction_a, hash_a));
-
-	if (!block_state || !block_state->is_stable || !block_state->main_chain_index)
-		return false;
-
-	mcp::block_hash mc_hash;
-	bool exists(!m_store.main_chain_get(transaction_a, *block_state->main_chain_index, mc_hash));
-	assert_x(exists);
-	std::shared_ptr<mcp::block_state> mc_state(cache_a->block_state_get(transaction_a, mc_hash));
-	assert_x(mc_state);
-	assert_x(mc_state->is_stable);
-	assert_x(mc_state->main_chain_index);
-	assert_x(mc_state->mc_timestamp > 0);
-
-	uint64_t last_summary_mci(0);
-	if (mc_hash != mcp::genesis::block_hash)
-	{
-		std::shared_ptr<mcp::block> mc_block(cache_a->block_get(transaction_a, mc_hash));
-		assert_x(mc_block);
-		std::shared_ptr<mcp::block_state> last_summary_state(cache_a->block_state_get(transaction_a, mc_block->last_summary_block()));
-		assert_x(last_summary_state);
-		assert_x(last_summary_state->is_stable);
-		assert_x(last_summary_state->is_on_main_chain);
-		assert_x(last_summary_state->main_chain_index);
-		last_summary_mci = *last_summary_state->main_chain_index;
-
-		mc_info_a = dev::eth::McInfo(mc_state->stable_index, *mc_state->main_chain_index, mc_state->mc_timestamp, last_summary_mci);
-		return true;
-	}
-	else
-		return false;
-}
+//bool mcp::chain::get_mc_info_from_block_hash(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::iblock_cache> cache_a, mcp::block_hash hash_a, dev::eth::McInfo & mc_info_a)
+//{
+//	std::shared_ptr<mcp::block_state> block_state(cache_a->block_state_get(transaction_a, hash_a));
+//
+//	if (!block_state || !block_state->is_stable || !block_state->main_chain_index)
+//		return false;
+//
+//	mcp::block_hash mc_hash;
+//	bool exists(!m_store.main_chain_get(transaction_a, *block_state->main_chain_index, mc_hash));
+//	assert_x(exists);
+//	std::shared_ptr<mcp::block_state> mc_state(cache_a->block_state_get(transaction_a, mc_hash));
+//	assert_x(mc_state);
+//	assert_x(mc_state->is_stable);
+//	assert_x(mc_state->main_chain_index);
+//	assert_x(mc_state->mc_timestamp > 0);
+//
+//	uint64_t last_summary_mci(0);
+//	if (mc_hash != mcp::genesis::block_hash)
+//	{
+//		std::shared_ptr<mcp::block> mc_block(cache_a->block_get(transaction_a, mc_hash));
+//		assert_x(mc_block);
+//		std::shared_ptr<mcp::block_state> last_summary_state(cache_a->block_state_get(transaction_a, mc_block->last_summary_block()));
+//		assert_x(last_summary_state);
+//		assert_x(last_summary_state->is_stable);
+//		assert_x(last_summary_state->is_on_main_chain);
+//		assert_x(last_summary_state->main_chain_index);
+//		last_summary_mci = *last_summary_state->main_chain_index;
+//
+//		mc_info_a = dev::eth::McInfo(mc_state->stable_index, *mc_state->main_chain_index, mc_state->mc_timestamp, last_summary_mci, mc_block->from());
+//		return true;
+//	}
+//	else
+//		return false;
+//}
 
 //void mcp::chain::notify_observers()
 //{
@@ -1489,13 +1489,15 @@ void mcp::chain::call(dev::Address const& _from, dev::Address const& _contractAd
 	std::shared_ptr<mcp::block_state> mc_state(m_cache->block_state_get(transaction, block_hash));
 
 	uint64_t last_summary_mci(0);
+	Address  author;
 	if (block_hash != mcp::genesis::block_hash)
 	{
 		std::shared_ptr<mcp::block> mc_block(m_cache->block_get(transaction, block_hash));
 		std::shared_ptr<mcp::block_state> last_summary_state(m_cache->block_state_get(transaction, mc_block->last_summary_block()));
 		last_summary_mci = *last_summary_state->main_chain_index;
+		author = mc_block->from();
 	}
-	dev::eth::McInfo mc_info = dev::eth::McInfo(mc_state->stable_index, *mc_state->main_chain_index, mc_state->mc_timestamp, last_summary_mci);
+	dev::eth::McInfo mc_info = dev::eth::McInfo(mc_state->stable_index, *mc_state->main_chain_index, mc_state->mc_timestamp, last_summary_mci, author);
 	dev::eth::EnvInfo env(transaction, m_store, m_cache, mc_info, mcp::chainID());
 	auto chain_ptr(shared_from_this());
 	chain_state c_state(transaction, 0, m_store, chain_ptr, m_cache);

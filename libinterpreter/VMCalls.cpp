@@ -121,7 +121,7 @@ void VM::caseCreate()
     // Clear the return data buffer. This will not free the memory.
     m_returnData.clear();
 
-    auto const balance = intx::be::load<intx::uint256>(m_host->get_balance(m_context, &m_message->destination));
+    auto const balance = intx::be::load<intx::uint256>(m_host->get_balance(m_context, &m_message->recipient));
     if (balance >= endowment && m_message->depth < 1024)
     {
         evmc_message msg = {};
@@ -136,7 +136,7 @@ void VM::caseCreate()
         msg.input_data = &m_mem[off];
         msg.input_size = size;
         msg.create2_salt = intx::be::store<evmc_uint256be>(salt);
-        msg.sender = m_message->destination;
+        msg.sender = m_message->recipient;
         msg.depth = m_message->depth + 1;
         msg.kind = m_OP == Instruction::CREATE ? EVMC_CREATE : EVMC_CREATE2;  // FIXME: In EVMC move the kind to the top.
         msg.value = intx::be::store<evmc_uint256be>(endowment);
@@ -196,7 +196,7 @@ bool VM::caseCallSetup(evmc_message& o_msg, bytesRef& o_output)
 
     // Check for call-to-self (eip1380) and adjust gas accordingly
     // Ethereum call-to-self after EIP150 consume 700 gas, and consumes 40 gas after EVMC_BERLIN, but mcp has always been 40 gas. 
-    if (/*m_rev >= EVMC_BERLIN &&*/ m_message->destination == destination)
+    if (/*m_rev >= EVMC_BERLIN &&*/ m_message->recipient == destination)
         m_runGas = VMSchedule::callSelfGas;
 
     switch (m_OP)
@@ -254,8 +254,8 @@ bool VM::caseCallSetup(evmc_message& o_msg, bytesRef& o_output)
     updateIOGas();
 
     o_msg.depth = m_message->depth + 1;
-    o_msg.destination = destination;
-    o_msg.sender = m_message->destination;
+    o_msg.recipient = destination;
+    o_msg.sender = m_message->recipient;
     o_msg.input_data = m_mem.data() + size_t(inputOffset);
     o_msg.input_size = size_t(inputSize);
 
@@ -269,7 +269,7 @@ bool VM::caseCallSetup(evmc_message& o_msg, bytesRef& o_output)
             o_msg.gas += VMSchedule::callStipend;
             {
                 auto const balance =
-                    intx::be::load<intx::uint256>(m_host->get_balance(m_context, &m_message->destination));
+                    intx::be::load<intx::uint256>(m_host->get_balance(m_context, &m_message->recipient));
                 balanceOk = balance >= value;
             }
         }

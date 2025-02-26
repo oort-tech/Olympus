@@ -204,14 +204,14 @@ namespace eth
         &&RETURNDATACOPY,                       \
         &&EXTCODEHASH,                          \
         &&BLOCKHASH, /* 40, */                  \
-        &&INVALID,  /* &&COINBASE, */           \
+        &&COINBASE,                             \
         &&TIMESTAMP,                            \
         &&NUMBER,                               \
         &&INVALID, /* &&DIFFICULTY,  */         \
-        &&INVALID, /* &&GASLIMIT,    */         \
+        &&GASLIMIT,                             \
         &&CHAINID,                              \
         &&SELFBALANCE,                          \
-        &&INVALID,                              \
+        &&BASEFEE,                              \
         &&INVALID,                              \
         &&INVALID,                              \
         &&INVALID,                              \
@@ -234,7 +234,7 @@ namespace eth
         &&BEGINDATA,                            \
         &&BEGINSUB,                             \
         &&INVALID,                              \
-        &&INVALID,                              \
+        &&PUSH0,                                \
         &&PUSH1, /* 60, */                      \
         &&PUSH2,                                \
         &&PUSH3,                                \

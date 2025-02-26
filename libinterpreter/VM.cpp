@@ -357,7 +357,7 @@ void VM::interpretCases()
             if (m_rev >= EVMC_TANGERINE_WHISTLE)
             {
                 if (m_rev == EVMC_TANGERINE_WHISTLE ||
-                    fromEvmC(m_host->get_balance(m_context, &m_message->destination)) > 0)
+                    fromEvmC(m_host->get_balance(m_context, &m_message->recipient)) > 0)
                 {
                     if (!m_host->account_exists(m_context, &destination))
                     {
@@ -367,7 +367,7 @@ void VM::interpretCases()
                 }
             }
 
-            m_host->selfdestruct(m_context, &m_message->destination, &destination);
+            m_host->selfdestruct(m_context, &m_message->recipient, &destination);
             m_bounce = nullptr;
         }
         BREAK
@@ -445,7 +445,7 @@ void VM::interpretCases()
             uint8_t const* data = m_mem.data() + size_t(m_SP[0]);
             size_t dataSize = size_t(m_SP[1]);
 
-            m_host->emit_log(m_context, &m_message->destination, data, dataSize, nullptr, 0);
+            m_host->emit_log(m_context, &m_message->recipient, data, dataSize, nullptr, 0);
         }
         NEXT
 
@@ -464,7 +464,7 @@ void VM::interpretCases()
             evmc_uint256be topics[] = {intx::be::store<evmc_uint256be>(m_SP[2])};
             size_t numTopics = sizeof(topics) / sizeof(topics[0]);
 
-            m_host->emit_log(m_context, &m_message->destination, data, dataSize, topics, numTopics);
+            m_host->emit_log(m_context, &m_message->recipient, data, dataSize, topics, numTopics);
         }
         NEXT
 
@@ -486,7 +486,7 @@ void VM::interpretCases()
             };
             size_t numTopics = sizeof(topics) / sizeof(topics[0]);
 
-            m_host->emit_log(m_context, &m_message->destination, data, dataSize, topics, numTopics);
+            m_host->emit_log(m_context, &m_message->recipient, data, dataSize, topics, numTopics);
         }
         NEXT
 
@@ -509,7 +509,7 @@ void VM::interpretCases()
             };
             size_t numTopics = sizeof(topics) / sizeof(topics[0]);
 
-            m_host->emit_log(m_context, &m_message->destination, data, dataSize, topics, numTopics);
+            m_host->emit_log(m_context, &m_message->recipient, data, dataSize, topics, numTopics);
         }
         NEXT
 
@@ -533,7 +533,7 @@ void VM::interpretCases()
             };
             size_t numTopics = sizeof(topics) / sizeof(topics[0]);
 
-            m_host->emit_log(m_context, &m_message->destination, data, dataSize, topics, numTopics);
+            m_host->emit_log(m_context, &m_message->recipient, data, dataSize, topics, numTopics);
         }
         NEXT
 
@@ -882,7 +882,7 @@ void VM::interpretCases()
             ON_OP();
             updateIOGas();
 
-            m_SPP[0] = intx::be::load<intx::uint256>(m_message->destination);
+            m_SPP[0] = intx::be::load<intx::uint256>(m_message->recipient);
         }
         NEXT
 
@@ -1093,14 +1093,17 @@ void VM::interpretCases()
         }
         NEXT
 
-        //CASE(COINBASE)
-        //{
-        //    ON_OP();
-        //    updateIOGas();
+        CASE(COINBASE)
+        {
+            if (m_rev < EVMC_SHANGHAI)
+                throwBadInstruction();
 
-        //    m_SPP[0] = intx::be::load<intx::uint256>(getTxContext().block_coinbase);
-        //}
-        //NEXT
+            ON_OP();
+            updateIOGas();
+
+            m_SPP[0] = intx::be::load<intx::uint256>(getTxContext().block_coinbase);
+        }
+        NEXT
 
         CASE(TIMESTAMP)
         {
@@ -1127,16 +1130,19 @@ void VM::interpretCases()
 
             m_SPP[0] = intx::be::load<intx::uint256>(getTxContext().block_difficulty);
         }
-        NEXT
+        NEXT*/
 
         CASE(GASLIMIT)
         {
+            if (m_rev < EVMC_SHANGHAI)
+                throwBadInstruction();
+
             ON_OP();
             updateIOGas();
 
             m_SPP[0] = getTxContext().block_gas_limit;
         }
-        NEXT*/
+        NEXT
 
 
         CASE(CHAINID)
@@ -1161,7 +1167,19 @@ void VM::interpretCases()
 
             updateIOGas();
 
-            m_SPP[0] = intx::be::load<intx::uint256>(m_host->get_balance(m_context, &m_message->destination));
+            m_SPP[0] = intx::be::load<intx::uint256>(m_host->get_balance(m_context, &m_message->recipient));
+        }
+        NEXT
+
+        CASE(BASEFEE)
+        {
+            if (m_rev < EVMC_SHANGHAI)
+                throwBadInstruction();
+
+            ON_OP();
+            updateIOGas();
+
+            m_SPP[0] = intx::be::load<intx::uint256>(getTxContext().block_base_fee);
         }
         NEXT
 
@@ -1193,6 +1211,22 @@ void VM::interpretCases()
             throwBadInstruction();
 #endif
         }
+        CONTINUE
+
+        // EIP-3855. Code PUSH0 is similar to PUSH1 but pushes 0
+        // we need to increment program counter only by one since
+        // the value is not read from program code as in PUSH1
+        CASE(PUSH0) {
+            if (m_rev < EVMC_SHANGHAI)
+                throwBadInstruction();
+
+            //std::cout << "PUSH000" << std::endl;
+
+            ON_OP();
+            updateIOGas();
+            m_SPP[0] = 0;
+            ++m_PC;
+        };
         CONTINUE
 
         CASE(PUSH1)
@@ -1361,7 +1395,7 @@ void VM::interpretCases()
 
             auto const key = intx::be::store<evmc_uint256be>(m_SP[0]);
             m_SPP[0] =
-                intx::be::load<intx::uint256>(m_host->get_storage(m_context, &m_message->destination, &key));
+                intx::be::load<intx::uint256>(m_host->get_storage(m_context, &m_message->recipient, &key));
         }
         NEXT
 
@@ -1377,7 +1411,7 @@ void VM::interpretCases()
             auto const key = intx::be::store<evmc_uint256be>(m_SP[0]);
             auto const value = intx::be::store<evmc_uint256be>(m_SP[1]);
             auto const status =
-                m_host->set_storage(m_context, &m_message->destination, &key, &value);
+                m_host->set_storage(m_context, &m_message->recipient, &key, &value);
 
             switch(status)
             {
@@ -1388,8 +1422,8 @@ void VM::interpretCases()
             case EVMC_STORAGE_DELETED:
                 m_runGas = VMSchedule::sstoreResetGas;
                 break;
-            case EVMC_STORAGE_UNCHANGED:
-            case EVMC_STORAGE_MODIFIED_AGAIN:
+            //case EVMC_STORAGE_ASSIGNED:
+            case EVMC_STORAGE_ASSIGNED:
                 m_runGas = (m_rev == EVMC_CONSTANTINOPLE || m_rev >= EVMC_ISTANBUL) ?
                                (*m_metrics)[OP_SLOAD].gas_cost :
                                VMSchedule::sstoreResetGas;

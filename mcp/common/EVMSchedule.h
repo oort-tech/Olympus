@@ -30,6 +30,7 @@ struct EVMSchedule
 {
     EVMSchedule(): tierStepGas(std::array<unsigned, 8>{{0, 2, 3, 5, 8, 10, 20, 0}}) {}
     EVMSchedule(bool _efcd, bool _hdc, unsigned const& _txCreateGas): exceptionalFailedCodeDeposit(_efcd), haveDelegateCall(_hdc), tierStepGas(std::array<unsigned, 8>{{0, 2, 3, 5, 8, 10, 20, 0}}), txCreateGas(_txCreateGas) {}
+    bool havePush0 = false;
     bool exceptionalFailedCodeDeposit = true;
     bool haveDelegateCall = true;
     bool eip150Mode = false;
@@ -166,15 +167,21 @@ static const EVMSchedule IstanbulSchedule = [] {
     return schedule;
 }();
 
-static const EVMSchedule& MuirGlacierSchedule = IstanbulSchedule;
+//static const EVMSchedule& MuirGlacierSchedule = IstanbulSchedule;
 
 static const EVMSchedule BerlinSchedule = [] {
-    EVMSchedule schedule = MuirGlacierSchedule;
+    EVMSchedule schedule = IstanbulSchedule;
+    return schedule;
+}();
+
+static const EVMSchedule HalleySchedule = [] {
+    EVMSchedule schedule = BerlinSchedule;
+    schedule.havePush0 = true;
     return schedule;
 }();
 
 static const EVMSchedule ExperimentalSchedule = [] {
-    EVMSchedule schedule = BerlinSchedule;
+    EVMSchedule schedule = HalleySchedule;
     // schedule.accountVersion = 1;
     schedule.blockhashGas = 800;
     return schedule;

@@ -100,6 +100,7 @@ bool mcp::rpc_handler::try_get_mc_info(dev::eth::McInfo &mc_info_a, uint64_t &bl
 	assert_x(mc_state->mc_timestamp > 0);
 
 	uint64_t last_summary_mci(0);
+	Address  author;
 	if (block_hash != mcp::genesis::block_hash)
 	{
 		std::shared_ptr<mcp::block> mc_block(m_cache->block_get(transaction, block_hash));
@@ -110,9 +111,10 @@ bool mcp::rpc_handler::try_get_mc_info(dev::eth::McInfo &mc_info_a, uint64_t &bl
 		assert_x(last_summary_state->is_on_main_chain);
 		assert_x(last_summary_state->main_chain_index);
 		last_summary_mci = *last_summary_state->main_chain_index;
+		author = mc_block->from();
 	}
 
-	mc_info_a = dev::eth::McInfo(mc_state->stable_index, *mc_state->main_chain_index, mc_state->mc_timestamp, last_summary_mci);
+	mc_info_a = dev::eth::McInfo(mc_state->stable_index, *mc_state->main_chain_index, mc_state->mc_timestamp, last_summary_mci, author);
 
 	return true;
 }

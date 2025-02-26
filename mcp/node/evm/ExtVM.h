@@ -42,7 +42,7 @@ public:
       : ExtVMFace(_envInfo, _myAddress, _caller, _origin, _value, _gasPrice, _data, _code.toBytes(),
             _codeHash, _version, _depth, _isCreate, _staticCall),
         m_s(_s),
-        m_evmSchedule(initEvmSchedule(envInfo().number(), _version))
+        m_evmSchedule(initEvmSchedule(envInfo().mci(), _version))
     {
         // Contract: processing account must exist. In case of CALL, the ExtVM
         // is created only if an account has code (so exist). In case of CREATE
@@ -93,7 +93,7 @@ public:
     }
 
     /// Selfdestruct the associated contract to the given address.
-    void selfdestruct(Address _a) final;
+    bool selfdestruct(Address _a) final;
 
     /// Return the EVM gas-price schedule for this execution context.
     EVMSchedule const& evmSchedule() const final { return m_evmSchedule; }
@@ -104,9 +104,9 @@ public:
     h256 blockHash(u256 _number) final;
 
 private:
-    EVMSchedule const& initEvmSchedule(int64_t _blockNumber, u256 const& _version) const
+    EVMSchedule const& initEvmSchedule(int64_t _mci, u256 const& _version) const
     {
-        return BerlinSchedule;
+        return mcp::chainParams()->forkScheduleForBlockMci(_mci);
     }
 
     mcp::chain_state & m_s;  ///< A reference to the base state.
