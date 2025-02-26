@@ -1220,8 +1220,6 @@ void VM::interpretCases()
             if (m_rev < EVMC_SHANGHAI)
                 throwBadInstruction();
 
-            //std::cout << "PUSH000" << std::endl;
-
             ON_OP();
             updateIOGas();
             m_SPP[0] = 0;
