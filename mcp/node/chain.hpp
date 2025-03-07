@@ -81,7 +81,7 @@ namespace mcp
 		uint64_t min_retrievable_mci();
 		uint64_t last_stable_index();
 
-		bool get_mc_info_from_block_hash(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::iblock_cache> cache_a, mcp::block_hash hash_a, dev::eth::McInfo & mc_info_a);
+		//bool get_mc_info_from_block_hash(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::iblock_cache> cache_a, mcp::block_hash hash_a, dev::eth::McInfo & mc_info_a);
 
 		bool is_precompiled(Address const& account_a, uint64_t const& last_summary_mci_a) const
 		{
