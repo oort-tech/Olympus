@@ -103,7 +103,7 @@ private:
 			chain_id = (uint64_t)970;
 			gas_price = (uint256_t)1e11;
 			ChainConfig->OIP4And5Block = 6000000;
-			ChainConfig->HalleyForkBlock = 24600000;
+			ChainConfig->HalleyForkBlock = 24700000;
 			break;
 		}
 		default:
