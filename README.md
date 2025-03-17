@@ -20,7 +20,7 @@ Prerequisite:
 * Install ```boost```.
   ```
   wget https://archives.boost.io/release/1.81.0/source/boost_1_81_0_rc1.tar.gz
-  tar --bzip2 -xf  boost_1_81_0_rc1.tar.bz2
+  tar --bzip2 -xf  boost_1_81_0_rc1.tar.gz
   cd boost_1_81_0
   ./bootstrap.sh --prefix=/usr/local
   ./b2 -j$(nproc) --with-atomic --with-chrono --with-date_time --with-filesystem --with-log \
