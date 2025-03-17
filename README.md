@@ -19,7 +19,7 @@ Prerequisite:
   apt-get install -y git cmake wget unzip
 * Install ```boost```.
   ```
-  wget https://boostorg.jfrog.io/artifactory/main/release/1.81.0/source/boost_1_81_0_rc1.tar.bz2
+  wget https://archives.boost.io/release/1.81.0/source/boost_1_81_0_rc1.tar.gz
   tar --bzip2 -xf  boost_1_81_0_rc1.tar.bz2
   cd boost_1_81_0
   ./bootstrap.sh --prefix=/usr/local
