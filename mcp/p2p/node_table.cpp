@@ -396,7 +396,7 @@ std::unique_ptr<discover_packet> node_table::interpret_packet(bi::udp::endpoint 
 		default:
 		{
             LOG(m_log.info) << "Invalid packet (unknown packet type) from " << from.address().to_string() << ":" << from.port();
-			break;
+			return packet;
 		}
 		}
 		packet->interpret_RLP(bodyBytes);
@@ -404,7 +404,7 @@ std::unique_ptr<discover_packet> node_table::interpret_packet(bi::udp::endpoint 
 	catch (std::exception const & e)
 	{
         LOG(m_log.info) << "Invalid packet format " << from.address().to_string() << ":" << from.port() << " message:" << e.what();
-		return packet;
+		return nullptr;
 	}
 
 	return packet;
