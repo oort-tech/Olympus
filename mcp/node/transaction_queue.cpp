@@ -224,12 +224,15 @@ namespace mcp
 			if (!queue.count(from)) 
 				queue[_t->sender()] = newTxList();
 			auto r = queue[_t->sender()].add(_t);/// have transaction used nonce,replace it
-			if (!r.first)///OverbidGasPrice
-				return ImportResult::OverbidGasPrice;
-			if (r.second && _in != source::sync)///replaced. remove replaced transaction from known and all.
+			if (_in != source::sync)//The source is sync can't be erase, must have block needs it. 
 			{
-				all.erase(r.second->sha3());
-				m_known.erase(r.second->sha3());
+				if (!r.first)///OverbidGasPrice
+					return ImportResult::OverbidGasPrice;
+				if (r.second)///replaced. remove replaced transaction from known and all.
+				{
+					all.erase(r.second->sha3());
+					m_known.erase(r.second->sha3());
+				}
 			}
 		}
 		

@@ -108,87 +108,62 @@ void peer::read_loop()
         if (is_dropped)
             return;
 
-        if (!ec)
+		if (!checkRead(h256::size, ec, size))
+			return;
+
+		if (!m_io->authAndDecryptHeader(bytesRef(read_header_buffer.data(), size)))
+		{
+			LOG(m_log.debug) << "Header decrypt failed";
+			drop(disconnect_reason::bad_protocol);
+			return;
+		}
+		uint16_t hProtocolId;
+		uint32_t hLength;
+		uint8_t hPadding;
+		try
+		{
+			RLPXFrameInfo header(bytesConstRef(read_header_buffer.data(), size));
+			hProtocolId = header.protocolId;
+			hLength = header.length;
+			hPadding = header.padding;
+		}
+		catch (std::exception const& _e)
+		{
+			LOG(m_log.debug) << "Exception decoding frame header RLP: " << _e.what() << " "
+				<< bytesConstRef(read_header_buffer.data(), h128::size).cropped(3);
+			drop(disconnect_reason::bad_protocol);
+			return;
+		}
+		/// read padded frame and mac
+		auto packet_size = hLength + hPadding + h128::size;
+		read_buffer.resize(packet_size);
+        ba::async_read(*socket, boost::asio::buffer(read_buffer, packet_size), [this, this_l, packet_size, hLength](boost::system::error_code ec, std::size_t size)
         {
-			if (!checkRead(h256::size, ec, size))
+            if (is_dropped)
+                return;
+			if (!checkRead(packet_size, ec, size))
 				return;
-			if (!m_io->authAndDecryptHeader(bytesRef(read_header_buffer.data(), size)))
+
+			if (!m_io->authAndDecryptFrame(bytesRef(read_buffer.data(), packet_size)))
 			{
-				LOG(m_log.debug) << "Header decrypt failed";
 				drop(disconnect_reason::bad_protocol);
 				return;
 			}
-			uint16_t hProtocolId;
-			uint32_t hLength;
-			uint8_t hPadding;
-			try
+			bytesConstRef frame(read_buffer.data(), hLength);
+			bool is_do_read(false);
 			{
-				RLPXFrameInfo header(bytesConstRef(read_header_buffer.data(), size));
-				hProtocolId = header.protocolId;
-				hLength = header.length;
-				hPadding = header.padding;
+				std::lock_guard<std::mutex> lock(read_queue_mutex); 
+				read_queue.push_back(frame.toBytes());
+				is_do_read = read_queue.size() == 1;
 			}
-			catch (std::exception const& _e)
+			if (is_do_read)
 			{
-				LOG(m_log.debug) << "Exception decoding frame header RLP: " << _e.what() << " "
-					<< bytesConstRef(read_header_buffer.data(), h128::size).cropped(3);
-				drop(disconnect_reason::bad_protocol);
-				return;
+				m_io_service.post([this, this_l]() {
+					do_read();
+				});
 			}
-			/// read padded frame and mac
-			auto packet_size = hLength + hPadding + h128::size;
-			if (packet_size > mcp::p2p::max_tcp_packet_size)
-			{
-                LOG(m_log.debug) << boost::str(boost::format("Too large body size %1%, max message body size %2%") % packet_size % mcp::p2p::max_tcp_packet_size);
-				drop(disconnect_reason::too_large_packet_size);
-				return;
-			}
-
-			read_buffer.resize(packet_size);
-            ba::async_read(*socket, boost::asio::buffer(read_buffer, packet_size), [this, this_l, packet_size, hLength](boost::system::error_code ec, std::size_t size)
-            {
-                if (is_dropped)
-                    return;
-
-                if (!ec)
-                {
-					if (!checkRead(packet_size, ec, size))
-						return;
-					if (!m_io->authAndDecryptFrame(bytesRef(read_buffer.data(), packet_size)))
-					{
-						drop(disconnect_reason::bad_protocol);
-						return;
-					}
-					bytesConstRef frame(read_buffer.data(), hLength);
-					bool is_do_read(false);
-					{
-						std::lock_guard<std::mutex> lock(read_queue_mutex); 
-						read_queue.push_back(frame.toBytes());
-						is_do_read = read_queue.size() == 1;
-					}
-					if (is_do_read)
-					{
-						m_io_service.post([this, this_l]() {
-							do_read();
-						});
-					}
-						
-
-					read_loop();
-                }
-                else
-                {
-                    LOG(m_log.warning) << "Error while peer reading data, message:" << ec.message();
-                    drop(disconnect_reason::tcp_error);
-                    return;
-                }
-            });
-        }
-        else
-        {
-            LOG(m_log.warning) << "Error while peer reading header, message:" << ec.message();
-            drop(disconnect_reason::tcp_error);
-        }
+			read_loop();
+        });
     });
 }
 
@@ -212,32 +187,65 @@ void peer::do_read()
 			buffer = std::move(read_queue[0]);
 		}
 
-		dev::bytes size(mcp::p2p::tcp_header_size);
-		dev::bytesConstRef(buffer.data(), mcp::p2p::tcp_header_size).copyTo(dev::bytesRef(size.data(), mcp::p2p::tcp_header_size));
+		if (buffer.size() < mcp::p2p::tcp_header_size)
+		{
+			LOG(m_log.debug) << boost::str(boost::format("buffer size mismatch %1%, min size %2%") % buffer.size() % mcp::p2p::tcp_header_size);
+			drop(disconnect_reason::bad_protocol);
+			return;
+		}
+		
+		uint32_t original_buffer_size(
+			m_io->deserializePacketSize(
+				dev::bytesConstRef(buffer.data(), mcp::p2p::tcp_header_size).toBytes()
+			)
+		);
 
-		uint32_t package_original_size(m_io->deserializePacketSize(size));
-		dev::bytes package_buffer(package_original_size);
+		if (original_buffer_size > mcp::p2p::max_tcp_packet_size)
+		{
+			LOG(m_log.debug) << boost::str(boost::format("Too large body size %1%, max message body size %2%") % original_buffer_size % mcp::p2p::max_tcp_packet_size);
+			drop(disconnect_reason::bad_protocol);
+			return;
+		}
+		dev::bytes package_buffer(original_buffer_size);
+		const int decompressed_size = LZ4_decompress_safe(
+			(const char*)buffer.data() + mcp::p2p::tcp_header_size,
+			(char*)package_buffer.data(), 
+			buffer.size() - mcp::p2p::tcp_header_size,
+			original_buffer_size
+		);
 
-		uint32_t body_size = buffer.size() - mcp::p2p::tcp_header_size;
-		dev::bytesConstRef(buffer.data() + mcp::p2p::tcp_header_size, body_size).copyTo(dev::bytesRef(buffer.data(), body_size));
-		buffer.resize(body_size);
-
-		const int decompressed_size = LZ4_decompress_safe((const char*)buffer.data(), (char*)package_buffer.data(), buffer.size(), package_original_size);
+		if (decompressed_size != original_buffer_size)
+		{
+			LOG(m_log.debug) << boost::str(boost::format("Lz4 decompression size mismatch %1%, decompressed size %2%") % original_buffer_size % decompressed_size);
+			drop(disconnect_reason::bad_protocol);
+			return;
+		}
 
 		uint32_t offset = 0;
-		while (offset < package_original_size)
+		while (offset < original_buffer_size)
 		{
+			if (original_buffer_size < offset + 4)
+			{
+				LOG(m_log.debug) << boost::str(boost::format("Peer send message header lenth error,buffer size %1%, offset %2%") % original_buffer_size % offset);
+				drop(disconnect_reason::bad_protocol);
+				return;
+			}
+			uint32_t isize(
+				m_io->deserializePacketSize(
+					dev::bytesConstRef(package_buffer.data() + offset, 4).toBytes()
+				)
+			);
 
-			dev::bytes body_size(4);
-			dev::bytesConstRef(package_buffer.data() + offset, 4).copyTo(dev::bytesRef(body_size.data(), 4));
-			uint32_t isize(m_io->deserializePacketSize(body_size));
+			if (!isize || isize > mcp::p2p::max_tcp_packet_size ||
+				isize > original_buffer_size - offset - 4)
+			{
+				LOG(m_log.debug) << boost::str(boost::format("Peer send message lenth mismatch %1%, max message body size %2%") % isize % (package_buffer.size() - offset - 4));
+				drop(disconnect_reason::bad_protocol);
+				return;
+			}
 
-			dev::bytes body(isize);
-			dev::bytesConstRef(package_buffer.data() + offset + 4, isize).copyTo(dev::bytesRef(body.data(), isize));
-
-			dev::bytesConstRef packet(body.data(), isize);
+			dev::bytesConstRef packet(package_buffer.data() + offset + 4, isize);
 			offset = offset + 4 + isize;
-
 			if (!check_packet(packet))
 			{
                 LOG(m_log.debug) << boost::str(boost::format("invalid packet, size: %1%, packet: %2%") % packet.size() % toHex(packet));
@@ -269,11 +277,6 @@ void peer::do_read()
 	}
 	catch (std::exception const & ex)
 	{
-		std::vector<int> x;
-		for (int a : x)
-		{
-
-		}
 		if (buffer.size() > 0)
 		{
             LOG(m_log.warning) << "Error while peer convert data to RLP, buffer size:" << buffer.size() << ", buffer:" << dev::toHex(bytesConstRef(&buffer)) << ", message:" << ex.what();
@@ -282,7 +285,7 @@ void peer::do_read()
 		{
             LOG(m_log.warning) << "Error while peer convert data to RLP, buffer size:" << buffer.size() << ", message:" << ex.what();
 		}
-		throw;
+		disconnect(disconnect_reason::bad_protocol);
 	}
 }
 
