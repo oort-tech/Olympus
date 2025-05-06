@@ -42,7 +42,6 @@ mcp::block_store::block_store(bool & error_a, boost::filesystem::path const & pa
 	approve_receipt(0),
 	epoch_approves(0),
 	epoch_param(0),
-	transaction_account_state(0),
 	epoch_work_transaction(0),
 	stakingList(0),
 	receiptsRoot(0)
@@ -93,7 +92,7 @@ mcp::block_store::block_store(bool & error_a, boost::filesystem::path const & pa
 	approve_receipt = m_db->set_column_family(default_col, "030");
 	epoch_approves = m_db->set_column_family(default_col, "031");
 	epoch_param = m_db->set_column_family(default_col, "032");
-	transaction_account_state = m_db->set_column_family(default_col, "033");
+	//"033" deleted
 	epoch_work_transaction = m_db->set_column_family(default_col, "034");
 	stakingList = m_db->set_column_family(default_col, "035");
 	receiptsRoot = m_db->set_column_family(default_col, "036");
@@ -1138,33 +1137,6 @@ void mcp::block_store::epoch_param_put(mcp::db::db_transaction & transaction_a, 
 	dev::bytes b_value = param.rlp();
 	dev::Slice s_value((char *)b_value.data(), b_value.size());
 	transaction_a.put(epoch_param, mcp::h64_to_slice(h64(epoch)), s_value);
-}
-
-bool mcp::block_store::transaction_previous_account_state_get(mcp::db::db_transaction & transaction_a, dev::h256 const & link_a, std::vector<h256> & hashs_a)
-{
-	std::string value;
-	bool exists(transaction_a.get(transaction_account_state, mcp::h256_to_slice(link_a), value));
-	if (exists)
-	{
-		dev::RLP r(value);
-		assert_x(r.isList());
-		for (auto sk : r)
-			hashs_a.emplace_back((h256) sk);
-	}
-	return exists;
-}
-
-void mcp::block_store::transaction_previous_account_state_put(mcp::db::db_transaction & transaction_a, dev::h256 const & link_a, std::vector<h256> & hashs_a)
-{
-	dev::bytes b_value;
-    dev::RLPStream s;
-    s.appendList(hashs_a.size());
-    for (h256 sk : hashs_a)
-        s << sk;
-	s.swapOut(b_value);
-	
-	dev::Slice s_value((char *)b_value.data(), b_value.size());
-	transaction_a.put(transaction_account_state, mcp::h256_to_slice(link_a), s_value);
 }
 
 bool mcp::block_store::epoch_work_transaction_get(mcp::db::db_transaction & transaction_a, Epoch const & epoch, h256 & hash_a)

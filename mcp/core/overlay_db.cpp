@@ -103,28 +103,22 @@ bool overlay_db::exists(dev::h256 const& _h) const
 
 void overlay_db::kill(dev::h256 const& _h)
 {
-/*
-#if ETH_PARANOIA || 1
     if (!StateCacheDB::kill(_h))
     {
-        if (m_db)
-        {
-            if (!m_db->exists(toSlice(_h)))
-            {
-                // No point node ref decreasing for EmptyTrie since we never bother incrementing it
-                // in the first place for empty storage tries.
-                if (_h != EmptyTrie)
-                    cnote << "Decreasing DB node ref count below zero with no DB node. Probably "
-                             "have a corrupt Trie."
-                          << _h;
-                // TODO: for 1.1: ref-counted triedb.
-            }
-        }
+        //if (m_db)
+        //{
+        //    if (!m_db->exists(toSlice(_h)))
+        //    {
+        //        // No point node ref decreasing for EmptyTrie since we never bother incrementing it
+        //        // in the first place for empty storage tries.
+        //        if (_h != EmptyTrie)
+        //            cnote << "Decreasing DB node ref count below zero with no DB node. Probably "
+        //            "have a corrupt Trie."
+        //            << _h;
+        //        // TODO: for 1.1: ref-counted triedb.
+        //    }
+        //}
     }
-#else
-    StateCacheDB::kill(_h);
-#endif
-*/
 }
 
 }
