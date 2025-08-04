@@ -9,11 +9,6 @@
 #include <libdevcore/CommonJS.h>
 #include <mcp/db/counter.hpp>
 #include <rocksdb/sst_file_manager.h>
-#include <thread>
-#include <atomic>
-#include <iostream>
-#include <vector>
-#include <mutex>
 
 rocksdb::Options default_DB_options()
 {
@@ -153,182 +148,23 @@ void checkMergeValue()
 	}
 }
 
-enum class StorePrefix : uint8_t
-{
-	blocks = 0x01
-};
-
-std::atomic<int> global_counterAdd{ 0 };
-std::atomic<int> global_counterReduce{ 0 };
-std::mutex log_mutex;
-void worker_add(mcp::block_store& store, int count) {
-	for (int i = 0; i < count; i++) {
-		mcp::db::db_transaction tx = store.create_transaction();
-		tx.count_add("transaction_unstable", 1);
-		global_counterAdd.fetch_add(1, std::memory_order_relaxed);
-	}
-	std::cout << "worker_add completed" << std::endl;
-}
-
-void worker_reduce(mcp::block_store& store, int count) {
-	for (int i = 0; i < count; i++) {
-		mcp::db::db_transaction tx = store.create_transaction();
-		tx.count_reduce("transaction_unstable", 1);
-		global_counterReduce.fetch_sub(1, std::memory_order_relaxed);
-	}
-	std::cout << "worker_reduce completed" << std::endl;
-}
 int main(int argc, char * const * argv)
 {	
-	bool error(false);
-	mcp::block_store store(error, boost::filesystem::path("./db"));
-	{
-		mcp::db::db_transaction tx = store.create_transaction();
-		tx.count_add("transaction_unstable", 1000000);
-		tx.commit();
-		cnote << "count_add hou:" << tx.count_get("transaction_unstable");
-	}
-	const int operations_per_thread = 100000; // 每个线程10万次操作
-	std::vector<std::thread> threads;
-	threads.emplace_back(worker_add, std::ref(store), operations_per_thread);
-	threads.emplace_back(worker_reduce, std::ref(store), 300000);
-	for (auto& t : threads) {
-		t.join();
-	}
-	mcp::db::db_transaction tx = store.create_transaction();
-	uint64_t final_value = tx.count_get("transaction_unstable");
-	std::cout << global_counterAdd.load() << ":" << global_counterReduce.load() << std::endl;
-	std::cout << "Database counter: " << final_value << std::endl;
+	uint8_t _block = 0x01;
+	dev::Slicebytes _prefix(1, _block);
+	cnote << "_prefix:" << _prefix << "_prefix:" << dev::toHex(_prefix);
+	std::string _k = "abc";
+	dev::Slice _key(_k.data(), _k.size());
+	cnote << "_key:" << dev::toHex(_key);
+	auto _rt = _prefix + _key;
+	cnote << "_rt:" << dev::toHex(_rt);
+	cnote << "s_value:" << dev::toHex(dev::Slice(_rt.data(), _rt.size()));
+	rocksdb::Slice a("1");
+	std::string b = a.ToString();
 
-	//mcp::db::db_transaction tx = store.create_transaction();
-	//tx.count_add("transaction_unstable", 1);
-	//cnote << "count_add hou:" << tx.count_get("transaction_unstable");
-	//tx.count_reduce("transaction_unstable", 1);
-	//cnote << "count_reduce hou:" << tx.count_get("transaction_unstable");
-
-	//h256 _h("0x73a4ff9ed6a5ac141b077cdbc6b989965c9402b07051d74bda7ec9ac7f643b7d");
-	//mcp::free_key _f(1, 2, _h);
-	//store.dag_free_put(tx, _f);
-	//tx.commit();
-	//auto snapshot = store.create_snapshot();
-	//mcp::db::db_transaction tx2 = store.create_transaction();
-	//{
-	//	dev::bytes b_key;
-	//	{
-	//		mcp::vectorstream stream(b_key);
-	//		_f.serialize(stream);
-	//	}
-	//	dev::Slice s_key((char*)b_key.data(), b_key.size());
-	//	std::string _result;
-	//	bool ret = tx2.get(static_cast<uint8_t>(mcp::StorePrefix::dag_free), s_key, _result, snapshot);
-	//	if (true)
-	//		cnote << "find";
-	//	else
-	//		cnote << "not find";
-	//}
-
-	//{
-	//	dev::Slicebytes sPrefix(1, static_cast<uint8_t>(mcp::StorePrefix::dag_free));
-	//	dev::Slicebytes key = sPrefix + dev::Slice();
-	//	{
-	//		auto read_ops(mcp::db::database::default_read_options());
-	//		read_ops->fill_cache = false;
-	//		read_ops->prefix_same_as_start = true;
-	//		read_ops->snapshot = snapshot->snapshot();
-	//		auto m_txn = store.db()->get_db()->BeginTransaction(rocksdb::WriteOptions(), rocksdb::TransactionOptions());
-	//		auto it = m_txn->GetIterator(*read_ops);
-	//		it->Seek(rocksdb::Slice(key.data(), key.size()));
-	//		while (it->Valid())
-	//		{
-	//			auto _k = it->key();
-	//			dev::Slice data(_k.data(), _k.size());
-	//			cnote << "1 key:" << dev::toHex(data);
-	//			it->Next();
-	//		}
-	//	}
-	//	//ok
-	//	{
-	//		auto it = store.db()->get_db()->NewIterator(m_read_options);
-	//		it->Seek(rocksdb::Slice(key.data(), key.size()));
-	//		while (it->Valid())
-	//		{
-	//			auto _k = it->key();
-	//			dev::Slice data(_k.data(), _k.size());
-	//			cnote << "2 key:" << dev::toHex(data);
-	//			it->Next();
-	//		}
-	//	}
-	//	
-	//}
-
-	//auto it = store.dag_free_begin(tx2, snapshot);
-	//if (!it.valid())
-	//	cnote << "it not valid";
-	//while (it.valid())
-	//{
-	//	mcp::free_key _f(it.key());
-	//	cnote << _f.witnessed_level_desc << ":" << _f.level_desc << ":" << _f.hash_asc.hex();
-	//	++it;
-	//}
-	
-
-	/*auto ddd = dev::fromHex("0x7885");
-	dev::Slice _key(mcp::h256_to_slice(h256("0x73a4ff9ed6a5ac141b077cdbc6b989965c9402b07051d74bda7ec9ac7f643b7d")));
-	dev::Slice _value((char*)ddd.data(), ddd.size());
-	{
-		mcp::db::db_transaction tx = store.create_transaction();
-		tx.put(static_cast<uint8_t>(StorePrefix::blocks), _key, _value);
-		{
-			mcp::db::db_transaction tx2 = store.create_transaction();
-			std::string value;
-			bool exist = tx2.get(static_cast<uint8_t>(StorePrefix::blocks), _key, value);
-			if (exist)
-			{
-				dev::Slice _value(value.data(), value.size());
-				cnote << "tx2_value:" << dev::toHex(_value);
-			}
-			else
-				cnote << "tx2 not exist";
-			
-		}
-		{
-			std::string value;
-			bool exist = tx.get(static_cast<uint8_t>(StorePrefix::blocks), _key, value);
-			if (exist)
-			{
-				dev::Slice _value(value.data(), value.size());
-				cnote << "tx_value:" << dev::toHex(_value);
-			}
-			else
-				cnote << "tx not exist";
-		}
-		tx.commit();
-	}
-	{
-		std::string value;
-		mcp::db::db_transaction tx = store.create_transaction();
-		tx.get(static_cast<uint8_t>(StorePrefix::blocks), _key, value);
-		dev::Slice _value(value.data(), value.size());
-		cnote << "_value" << dev::toHex(_value);
-	}*/
-
-
-	//uint8_t _block = 0x01;
-	//dev::Slicebytes _prefix(1, _block);
-	//cnote << "_prefix:" << _prefix << "_prefix:" << dev::toHex(_prefix);
-	//std::string _k = "abc";
-	//dev::Slice _key(_k.data(), _k.size());
-	//cnote << "_key:" << dev::toHex(_key);
-	//auto _rt = _prefix + _key;
-	//cnote << "_rt:" << dev::toHex(_rt);
-	//cnote << "s_value:" << dev::toHex(dev::Slice(_rt.data(), _rt.size()));
-	//rocksdb::Slice a("1");
-	//std::string b = a.ToString();
-
-#if 0
 	{
 		//family  #0
-		auto tbops = mcp::db::defaultBlockBasedTableOptions(mcp::db::get_table_cache(64));
+		auto tbops = mcp::db::default_column_table_options(mcp::db::get_table_cache(64));
 		auto cfops = mcp::db::default_column_family_options(tbops);
 		cfops->merge_operator = std::make_shared<mcp::db::UInt64SafeOperator>();
 		cfops->max_successive_merges = 1000;
@@ -336,7 +172,7 @@ int main(int argc, char * const * argv)
 	}
 	{
 		//family  #1
-		auto tbops_prefix = mcp::db::defaultBlockBasedTableOptions(mcp::db::get_table_cache(2048));
+		auto tbops_prefix = mcp::db::default_column_table_options(mcp::db::get_table_cache(2048));
 		if (rocksdb::BlockBasedTableOptions::IndexType::kBinarySearch == tbops_prefix->index_type)
 			tbops_prefix->index_type = rocksdb::BlockBasedTableOptions::IndexType::kHashSearch;
 		auto cfops_prefix = mcp::db::default_column_family_options(tbops_prefix);
@@ -441,7 +277,6 @@ int main(int argc, char * const * argv)
 		//}
 		//get_value(); // 初始值: 100
 	}
-#endif
 
 	/*test_abi();
 	test_decode();
