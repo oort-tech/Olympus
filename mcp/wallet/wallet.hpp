@@ -30,7 +30,7 @@ class wallet : public std::enable_shared_from_this<mcp::wallet>
 {
 public:
 	wallet (
-		mcp::block_store& block_store_a, std::shared_ptr<mcp::block_cache> cache_a, std::shared_ptr<mcp::key_manager> key_manager_a,
+		/*mcp::block_store& block_store_a, */std::shared_ptr<mcp::block_cache> cache_a, std::shared_ptr<mcp::key_manager> key_manager_a,
 		std::shared_ptr<TransactionQueue> tq
 	);
 	~wallet() { stop(); }
@@ -53,7 +53,7 @@ private:
 	std::condition_variable m_condition;
 	bool m_stopped;
 	std::thread m_thread;
-	mcp::block_store m_block_store;
+	//mcp::block_store m_block_store;
 	std::shared_ptr<mcp::key_manager> m_key_manager;
 	std::shared_ptr<TransactionQueue> m_tq;                  ///< Maintains a list of incoming transactions not yet in a block on the blockchain.
 	std::shared_ptr<mcp::iblock_cache> m_cache;

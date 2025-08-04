@@ -7,6 +7,8 @@
 #include <libevm/VMFace.h>
 #include <boost/endian/conversion.hpp>
 #include <libdevcore/CommonJS.h>
+#include <libdevcore/OverlayDB.h>
+
 
 using namespace dev::eth;
 
@@ -149,7 +151,7 @@ mcp::block_state::block_state(bool & error_a, dev::RLP const & r)
 	if (error_a)
 		return;
 
-	error_a = r.itemCount() != 16;
+	error_a = (r.itemCount() != 16 && r.itemCount() != 20);
 	if (error_a)
 		return;
 
@@ -237,11 +239,18 @@ mcp::block_state::block_state(bool & error_a, dev::RLP const & r)
 	}
 
 	stable_index = (uint64_t)r[15];
+
+	if (r.itemCount() == 16)
+		return;
+	m_stateRoot = (h256)r[16];
+	m_transactionsRoot = (h256)r[17];
+	m_receiptsRoot = (h256)r[18];
+	m_logBloom = (log_bloom)r[19];
 }
 
 void mcp::block_state::stream_RLP(dev::RLPStream & s) const
 {
-	s.appendList(16);
+	s.appendList(20);
 
 	s << (uint8_t)status << is_free << is_stable;
 
@@ -308,7 +317,7 @@ void mcp::block_state::stream_RLP(dev::RLPStream & s) const
 		s.appendList(0);
 	}
 
-	s << stable_index;
+	s << stable_index << m_stateRoot << m_transactionsRoot << m_receiptsRoot << m_logBloom;
 }
 
 mcp::free_key::free_key(uint64_t const & witnessed_level_a, uint64_t const & level_a, mcp::block_hash const & hash_a) :
@@ -450,14 +459,14 @@ void mcp::account_state::resetCode()
 	m_codeHash = EmptySHA3;
 }
 
-u256 mcp::account_state::originalStorageValue(u256 const& _key, mcp::overlay_db const& _db) const
+u256 mcp::account_state::originalStorageValue(u256 const& _key, dev::OverlayDB const& _db) const
 {
     auto it = m_storageOriginal.find(_key);
     if (it != m_storageOriginal.end())
         return it->second;
 
     // Not in the original values cache - go to the DB.
-    SecureTrieDB<h256, overlay_db> const memdb(const_cast<overlay_db*>(&_db), m_storageRoot);
+    SecureTrieDB<h256, dev::OverlayDB> const memdb(const_cast<dev::OverlayDB*>(&_db), m_storageRoot);
     std::string const payload = memdb.at(_key);
     auto const value = payload.size() ? RLP(payload).toInt<u256>() : 0;
     m_storageOriginal[_key] = value;
@@ -584,227 +593,227 @@ bool mcp::isH256(std::string const& _s)
 	return dev::isHex(_s);
 }
 
-mcp::call_trace_action::call_trace_action(bool & error_a, dev::RLP const & r)
-{
-	error_a = r.itemCount() != 6;
-	if (error_a)
-		return;
-
-	call_type = (std::string)r[0];
-	from = (Address)r[1];
-	gas = (u256)r[2];
-	data = (dev::bytes)r[3];
-	to = (Address)r[4];
-	amount = (u256)r[5];
-}
-
-void mcp::call_trace_action::stream_RLP(dev::RLPStream & s) const
-{
-	s.appendList(6);
-	s << call_type << from << gas << data << to << amount;
-}
-
-void mcp::call_trace_action::serialize_json(mcp::json & json_a) const
-{
-	json_a["call_type"] = call_type;
-	json_a["from"] = dev::toJS(from);
-	json_a["gas"] = gas.str();
-	json_a["data"] = dev::toJS(data);
-	json_a["to"] = dev::toJS(to);
-	json_a["amount"] = amount.str();
-}
-
-mcp::call_trace_result::call_trace_result(bool & error_a, dev::RLP const & r)
-{
-	error_a = r.itemCount() != 2;
-	if (error_a)
-		return;
-
-	gas_used = (mcp::uint256_t)r[0];
-	output = (dev::bytes)r[1];
-}
-
-void mcp::call_trace_result::stream_RLP(dev::RLPStream & s) const
-{
-	s.appendList(2);
-	s << gas_used << output;
-}
-
-void mcp::call_trace_result::serialize_json(mcp::json & json_a) const
-{
-	json_a["gas_used"] = gas_used.str();
-	json_a["output"] = dev::toJS(output);
-}
-
-mcp::create_trace_action::create_trace_action(bool & error_a, dev::RLP const & r)
-{
-	error_a = r.itemCount() != 4;
-	if (error_a)
-		return;
-
-	from = (Address)r[0];
-	gas = (u256)r[1];
-	init = (dev::bytes)r[2];
-	amount = (u256)r[3];
-}
-
-void mcp::create_trace_action::stream_RLP(dev::RLPStream & s) const
-{
-	s.appendList(4);
-	s << from << gas << init << amount;
-}
-
-void mcp::create_trace_action::serialize_json(mcp::json & json_a) const
-{
-	json_a["from"] = dev::toJS(from);
-	json_a["gas"] = gas.str();
-	json_a["init"] = dev::toJS(init);
-	json_a["amount"] = amount.str();
-}
-
-mcp::create_trace_result::create_trace_result(bool & error_a, dev::RLP const & r)
-{
-	error_a = r.itemCount() != 3;
-	if (error_a)
-		return;
-
-	gas_used = (u256)r[0];
-	contract_account = (Address)r[1];
-	code = (dev::bytes)r[2];
-}
-
-void mcp::create_trace_result::stream_RLP(dev::RLPStream & s) const
-{
-	s.appendList(3);
-	s << gas_used << contract_account << code;
-}
-
-void mcp::create_trace_result::serialize_json(mcp::json & json_a) const
-{
-	json_a["gas_used"] = gas_used.str();
-	json_a["contract_account"] = dev::toJS(contract_account);
-	json_a["code"] = dev::toJS(code);
-}
-
-mcp::suicide_trace_action::suicide_trace_action(bool & error_a, dev::RLP const & r)
-{
-	error_a = r.itemCount() != 3;
-	if (error_a)
-		return;
-
-	contract_account = (Address)r[0];
-	refund_account = (Address)r[1];
-	balance = (u256)r[2];
-}
-
-void mcp::suicide_trace_action::stream_RLP(dev::RLPStream & s) const
-{
-	s.appendList(3);
-	s << contract_account << refund_account << balance;
-}
-
-void mcp::suicide_trace_action::serialize_json(mcp::json & json_a) const
-{
-	json_a["contract_account"] = dev::toJS(contract_account);
-	json_a["refund_account"] = dev::toJS(refund_account);
-	json_a["balance"] = balance.str();
-}
-
-mcp::trace::trace(bool & error_a, dev::RLP const & r)
-{
-	error_a = r.itemCount() != 5;
-	if (error_a)
-		return;
-
-	type = (mcp::trace_type)r[0].toInt<uint8_t>();
-	switch (type)
-	{
-	case mcp::trace_type::call:
-		action = std::make_shared<mcp::call_trace_action>(error_a, r[1]);
-		break;
-	case  mcp::trace_type::create:
-		action = std::make_shared<mcp::create_trace_action>(error_a, r[1]);
-		break;
-	case  mcp::trace_type::suicide:
-		action = std::make_shared<mcp::suicide_trace_action>(error_a, r[1]);
-		break;
-	default:
-		assert_x_msg(false, "Invalid trace type");
-	}
-	if (error_a)
-		return;
-
-	error_message = (std::string)r[2];
-	
-	dev::RLP const & result_rlp = r[3];
-	if (result_rlp.itemCount() > 0)
-	{
-		assert_x(error_message.empty());
-		error_a = result_rlp.itemCount() != 1;
-		if (error_a)
-			return;
-
-		switch (type)
-		{
-		case mcp::trace_type::call:
-			result = std::make_shared<mcp::call_trace_result>(error_a, result_rlp[0]);
-			break;
-		case  mcp::trace_type::create:
-			result = std::make_shared<mcp::create_trace_result>(error_a, result_rlp[0]);
-			break;
-		case  mcp::trace_type::suicide:
-			result = nullptr;
-			break;
-		default:
-			assert_x_msg(false, "Invalid trace type");
-		}
-	}
-	else
-		result = nullptr;
-
-	depth = r[4].toInt<uint32_t>();
-
-}
-
-void mcp::trace::stream_RLP(dev::RLPStream & s) const
-{
-	s.appendList(5);
-
-	s << (uint8_t)type;
-	action->stream_RLP(s);
-	s << error_message;
-	if (result)
-	{
-		s.appendList(1);
-		result->stream_RLP(s);
-	}
-	else
-		s.appendList(0);
-	s << depth;
-}
-
-void mcp::trace::serialize_json(mcp::json & json_a) const
-{
-	json_a["type"] = (uint8_t)type;
-
-	mcp::json action_l = mcp::json::object();
-	action->serialize_json(action_l);
-	json_a["action"] = action_l;
-
-	if (!error_message.empty())
-		json_a["error"] = error_message;
-	else
-	{
-		if (result)
-		{
-			mcp::json result_l = mcp::json::object();
-			result->serialize_json(result_l);
-			json_a["result"] = result_l;
-		}
-		else
-			json_a["result"] = nullptr;
-	}
-}
+//mcp::call_trace_action::call_trace_action(bool & error_a, dev::RLP const & r)
+//{
+//	error_a = r.itemCount() != 6;
+//	if (error_a)
+//		return;
+//
+//	call_type = (std::string)r[0];
+//	from = (Address)r[1];
+//	gas = (u256)r[2];
+//	data = (dev::bytes)r[3];
+//	to = (Address)r[4];
+//	amount = (u256)r[5];
+//}
+//
+//void mcp::call_trace_action::stream_RLP(dev::RLPStream & s) const
+//{
+//	s.appendList(6);
+//	s << call_type << from << gas << data << to << amount;
+//}
+//
+//void mcp::call_trace_action::serialize_json(mcp::json & json_a) const
+//{
+//	json_a["call_type"] = call_type;
+//	json_a["from"] = dev::toJS(from);
+//	json_a["gas"] = gas.str();
+//	json_a["data"] = dev::toJS(data);
+//	json_a["to"] = dev::toJS(to);
+//	json_a["amount"] = amount.str();
+//}
+//
+//mcp::call_trace_result::call_trace_result(bool & error_a, dev::RLP const & r)
+//{
+//	error_a = r.itemCount() != 2;
+//	if (error_a)
+//		return;
+//
+//	gas_used = (mcp::uint256_t)r[0];
+//	output = (dev::bytes)r[1];
+//}
+//
+//void mcp::call_trace_result::stream_RLP(dev::RLPStream & s) const
+//{
+//	s.appendList(2);
+//	s << gas_used << output;
+//}
+//
+//void mcp::call_trace_result::serialize_json(mcp::json & json_a) const
+//{
+//	json_a["gas_used"] = gas_used.str();
+//	json_a["output"] = dev::toJS(output);
+//}
+//
+//mcp::create_trace_action::create_trace_action(bool & error_a, dev::RLP const & r)
+//{
+//	error_a = r.itemCount() != 4;
+//	if (error_a)
+//		return;
+//
+//	from = (Address)r[0];
+//	gas = (u256)r[1];
+//	init = (dev::bytes)r[2];
+//	amount = (u256)r[3];
+//}
+//
+//void mcp::create_trace_action::stream_RLP(dev::RLPStream & s) const
+//{
+//	s.appendList(4);
+//	s << from << gas << init << amount;
+//}
+//
+//void mcp::create_trace_action::serialize_json(mcp::json & json_a) const
+//{
+//	json_a["from"] = dev::toJS(from);
+//	json_a["gas"] = gas.str();
+//	json_a["init"] = dev::toJS(init);
+//	json_a["amount"] = amount.str();
+//}
+//
+//mcp::create_trace_result::create_trace_result(bool & error_a, dev::RLP const & r)
+//{
+//	error_a = r.itemCount() != 3;
+//	if (error_a)
+//		return;
+//
+//	gas_used = (u256)r[0];
+//	contract_account = (Address)r[1];
+//	code = (dev::bytes)r[2];
+//}
+//
+//void mcp::create_trace_result::stream_RLP(dev::RLPStream & s) const
+//{
+//	s.appendList(3);
+//	s << gas_used << contract_account << code;
+//}
+//
+//void mcp::create_trace_result::serialize_json(mcp::json & json_a) const
+//{
+//	json_a["gas_used"] = gas_used.str();
+//	json_a["contract_account"] = dev::toJS(contract_account);
+//	json_a["code"] = dev::toJS(code);
+//}
+//
+//mcp::suicide_trace_action::suicide_trace_action(bool & error_a, dev::RLP const & r)
+//{
+//	error_a = r.itemCount() != 3;
+//	if (error_a)
+//		return;
+//
+//	contract_account = (Address)r[0];
+//	refund_account = (Address)r[1];
+//	balance = (u256)r[2];
+//}
+//
+//void mcp::suicide_trace_action::stream_RLP(dev::RLPStream & s) const
+//{
+//	s.appendList(3);
+//	s << contract_account << refund_account << balance;
+//}
+//
+//void mcp::suicide_trace_action::serialize_json(mcp::json & json_a) const
+//{
+//	json_a["contract_account"] = dev::toJS(contract_account);
+//	json_a["refund_account"] = dev::toJS(refund_account);
+//	json_a["balance"] = balance.str();
+//}
+//
+//mcp::trace::trace(bool & error_a, dev::RLP const & r)
+//{
+//	error_a = r.itemCount() != 5;
+//	if (error_a)
+//		return;
+//
+//	type = (mcp::trace_type)r[0].toInt<uint8_t>();
+//	switch (type)
+//	{
+//	case mcp::trace_type::call:
+//		action = std::make_shared<mcp::call_trace_action>(error_a, r[1]);
+//		break;
+//	case  mcp::trace_type::create:
+//		action = std::make_shared<mcp::create_trace_action>(error_a, r[1]);
+//		break;
+//	case  mcp::trace_type::suicide:
+//		action = std::make_shared<mcp::suicide_trace_action>(error_a, r[1]);
+//		break;
+//	default:
+//		assert_x_msg(false, "Invalid trace type");
+//	}
+//	if (error_a)
+//		return;
+//
+//	error_message = (std::string)r[2];
+//	
+//	dev::RLP const & result_rlp = r[3];
+//	if (result_rlp.itemCount() > 0)
+//	{
+//		assert_x(error_message.empty());
+//		error_a = result_rlp.itemCount() != 1;
+//		if (error_a)
+//			return;
+//
+//		switch (type)
+//		{
+//		case mcp::trace_type::call:
+//			result = std::make_shared<mcp::call_trace_result>(error_a, result_rlp[0]);
+//			break;
+//		case  mcp::trace_type::create:
+//			result = std::make_shared<mcp::create_trace_result>(error_a, result_rlp[0]);
+//			break;
+//		case  mcp::trace_type::suicide:
+//			result = nullptr;
+//			break;
+//		default:
+//			assert_x_msg(false, "Invalid trace type");
+//		}
+//	}
+//	else
+//		result = nullptr;
+//
+//	depth = r[4].toInt<uint32_t>();
+//
+//}
+//
+//void mcp::trace::stream_RLP(dev::RLPStream & s) const
+//{
+//	s.appendList(5);
+//
+//	s << (uint8_t)type;
+//	action->stream_RLP(s);
+//	s << error_message;
+//	if (result)
+//	{
+//		s.appendList(1);
+//		result->stream_RLP(s);
+//	}
+//	else
+//		s.appendList(0);
+//	s << depth;
+//}
+//
+//void mcp::trace::serialize_json(mcp::json & json_a) const
+//{
+//	json_a["type"] = (uint8_t)type;
+//
+//	mcp::json action_l = mcp::json::object();
+//	action->serialize_json(action_l);
+//	json_a["action"] = action_l;
+//
+//	if (!error_message.empty())
+//		json_a["error"] = error_message;
+//	else
+//	{
+//		if (result)
+//		{
+//			mcp::json result_l = mcp::json::object();
+//			result->serialize_json(result_l);
+//			json_a["result"] = result_l;
+//		}
+//		else
+//			json_a["result"] = nullptr;
+//	}
+//}
 
 boost::filesystem::path mcp::working_path()
 {

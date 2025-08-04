@@ -78,7 +78,7 @@ void mcp::rpc_connection::read()
 					return;
 				}
 				
-				auto handler(std::make_shared<mcp::rpc_handler>(this_l->rpc, this_l->request.body(), response_handler, 0));
+				auto handler(std::make_shared<mcp::rpc_handler>(this_l->rpc, this_l->request.body(), response_handler/*, 0*/));
 				handler->process_request();
 			});
 		}

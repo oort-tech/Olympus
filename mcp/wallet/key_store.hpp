@@ -1,6 +1,7 @@
 #pragma once
 
 #include <mcp/core/common.hpp>
+#include <mcp/db/db_transaction.hpp>
 #include <boost/uuid/uuid.hpp>
 
 namespace mcp
@@ -113,6 +114,6 @@ namespace mcp
 		
 	private:
 		std::shared_ptr<mcp::db::database> m_database;
-		int m_keys;
+		uint8_t m_keys;
 	};
 }

@@ -1,4 +1,5 @@
 #pragma once
+#include "Client.hpp"
 #include <mcp/common/mcp_json.hpp>
 #include <mcp/core/common.hpp>
 #include <mcp/core/transaction_queue.hpp>
@@ -26,8 +27,8 @@ namespace mcp
 	{
 	public:
 		TransactionQueue(
-			boost::asio::io_service& io_service_a, mcp::block_store& store_a, std::shared_ptr<mcp::block_cache> cache_a,std::shared_ptr<mcp::chain> chain_a,
-			std::shared_ptr<mcp::async_task> async_task_a
+			boost::asio::io_service& io_service_a, mcp::block_store& store_a, std::shared_ptr<mcp::block_cache> cache_a,/*std::shared_ptr<mcp::chain> chain_a,*/
+			std::shared_ptr<mcp::Client> client_a, std::shared_ptr<mcp::async_task> async_task_a
 		);
 		~TransactionQueue();
 
@@ -151,7 +152,7 @@ namespace mcp
 
 		void validateTx(std::shared_ptr<Transaction>);/// Base format check
 		void checkTx(Transaction const& _t);/// nonce and balance check
-
+		std::shared_ptr<mcp::Client> client() { return m_client; }
 		void processSuperfluous();
 
 		mutable SharedMutex m_lock;  ///< General lock.
@@ -186,9 +187,10 @@ namespace mcp
 
 		mcp::block_store & m_store;
 		std::shared_ptr<mcp::iblock_cache> m_cache;
-		std::shared_ptr<mcp::chain> m_chain;
+		//std::shared_ptr<mcp::chain> m_chain;
 		std::shared_ptr<mcp::async_task> m_async_task;
 		std::shared_ptr<mcp::node_capability> m_capability;
+		std::shared_ptr<mcp::Client> m_client;
 
 		mcp::log m_log = { mcp::log("node") };
 	};

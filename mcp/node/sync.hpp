@@ -63,6 +63,8 @@ namespace mcp
 		std::mutex			version_mutex;
 	};
 
+	class node_capability;
+	class block_processor;
 	class node_sync
 	{
 	public:

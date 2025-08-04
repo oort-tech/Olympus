@@ -1,13 +1,13 @@
 #pragma once
 
-#include "overlay_db.hpp"
+//#include "overlay_db.hpp"
 #include "log_entry.hpp"
 #include "blocks.hpp"
 #include "transaction.hpp"
 #include "approve.hpp"
 #include <libdevcore/RLP.h>
 #include <libdevcore/TrieCommon.h>
-
+#include <libdevcore/OverlayDB.h>
 
 namespace mcp
 {
@@ -161,6 +161,23 @@ namespace mcp
 			m_isUnchanged(_c == Unchanged), 
 			m_nonce(_nonce), 
 			m_balance(_balance) {}
+		/// Construct an alive Account, with given endowment, for either a normal (non-contract) account
+		/// or for a contract account in the conception phase, where the code is not yet known.
+		account_state(u256 _nonce, u256 _balance, Changedness _c = Changed) : m_isAlive(true), m_isUnchanged(_c == Unchanged), m_nonce(_nonce), m_balance(_balance) {}
+
+		/// Explicit constructor for wierd cases of construction or a contract account.
+		account_state(u256 const& _nonce, u256 const& _balance, h256 const& _contractRoot,
+			h256 const& _codeHash, u256 const& _version, Changedness _c)
+			: m_isAlive(true),
+			m_isUnchanged(_c == Unchanged),
+			m_nonce(_nonce),
+			m_balance(_balance),
+			m_storageRoot(_contractRoot),
+			m_codeHash(_codeHash),
+			m_version(_version)
+		{
+			assert(_contractRoot);
+		}
 		account_state(Address const & _account, h256 const&ts, h256 const& _previous, u256 const& _nonce, u256 const& _balance, h256 const& _contractRoot,
 			h256 const& _codeHash, Changedness _c)
 			:m_account(_account),
@@ -247,7 +264,7 @@ namespace mcp
 
 		/// @returns account's storage value corresponding to the @_key
 		/// taking into account overlayed modifications
-		u256 storageValue(u256 const& _key, mcp::overlay_db const& _db) const
+		u256 storageValue(u256 const& _key, dev::OverlayDB const& _db) const
 		{
 			auto mit = m_storageOverlay.find(_key);
 			if (mit != m_storageOverlay.end())
@@ -258,7 +275,7 @@ namespace mcp
 
 		/// @returns account's original storage value corresponding to the @_key
 		/// not taking into account overlayed modifications
-		u256 originalStorageValue(u256 const& _key, mcp::overlay_db const& _db) const;
+		u256 originalStorageValue(u256 const& _key, dev::OverlayDB const& _db) const;
 
 		/// @returns the storage overlay as a simple hash map.
 		std::unordered_map<u256, u256> const& storageOverlay() const { return m_storageOverlay; }
@@ -352,6 +369,9 @@ namespace mcp
      	* be called with the correct args.
      	*/
     	h256 m_codeHash = EmptySHA3;
+
+		/// Account's version
+		u256 m_version = 0;
 		
 		/// The map with is overlaid onto whatever storage is implied by the m_storageRoot in the trie.
 		mutable std::unordered_map<u256, u256> m_storageOverlay;
@@ -393,6 +413,12 @@ namespace mcp
 		boost::optional<uint64_t> latest_bp_included_mc_index;
 		uint64_t witnessed_level;
 		mcp::block_hash best_parent;
+
+		///OIP6
+		h256 m_stateRoot;
+		h256 m_transactionsRoot;
+		h256 m_receiptsRoot;
+		log_bloom m_logBloom;
 	};
 
 	class skiplist_info
@@ -435,110 +461,110 @@ namespace mcp
 		std::unordered_set<dev::Address> witnesses;
 	};
 
-	//trace
-	class trace_action
-	{
-	public:
-		virtual void stream_RLP(dev::RLPStream & s) const = 0;
-		virtual void serialize_json(mcp::json & json_a) const = 0;
-	};
+	////trace
+	//class trace_action
+	//{
+	//public:
+	//	virtual void stream_RLP(dev::RLPStream & s) const = 0;
+	//	virtual void serialize_json(mcp::json & json_a) const = 0;
+	//};
 
-	class trace_result
-	{
-	public:
-		virtual void stream_RLP(dev::RLPStream & s) const = 0;
-		virtual void serialize_json(mcp::json & json_a) const = 0;
-	};
+	//class trace_result
+	//{
+	//public:
+	//	virtual void stream_RLP(dev::RLPStream & s) const = 0;
+	//	virtual void serialize_json(mcp::json & json_a) const = 0;
+	//};
 
-	class call_trace_action : public trace_action
-	{
-	public:
-		call_trace_action() = default;
-		call_trace_action(bool & error_a, dev::RLP const & r);
-		void stream_RLP(dev::RLPStream & s) const;
-		void serialize_json(mcp::json & json_a) const;
+	//class call_trace_action : public trace_action
+	//{
+	//public:
+	//	call_trace_action() = default;
+	//	call_trace_action(bool & error_a, dev::RLP const & r);
+	//	void stream_RLP(dev::RLPStream & s) const;
+	//	void serialize_json(mcp::json & json_a) const;
 
-		std::string call_type;
-		Address from;
-		u256 gas;
-		bytes data;
-		Address to;
-		u256 amount;
-	};
+	//	std::string call_type;
+	//	Address from;
+	//	u256 gas;
+	//	bytes data;
+	//	Address to;
+	//	u256 amount;
+	//};
 
-	class call_trace_result : public trace_result
-	{
-	public:
-		call_trace_result() = default;
-		call_trace_result(bool & error_a, dev::RLP const & r);
-		void stream_RLP(dev::RLPStream & s) const;
-		void serialize_json(mcp::json & json_a) const;
+	//class call_trace_result : public trace_result
+	//{
+	//public:
+	//	call_trace_result() = default;
+	//	call_trace_result(bool & error_a, dev::RLP const & r);
+	//	void stream_RLP(dev::RLPStream & s) const;
+	//	void serialize_json(mcp::json & json_a) const;
 
-		u256 gas_used;
-		dev::bytes output;
-	};
+	//	u256 gas_used;
+	//	dev::bytes output;
+	//};
 
-	class create_trace_action : public trace_action
-	{
-	public:
-		create_trace_action() = default;
-		create_trace_action(bool & error_a, dev::RLP const & r);
-		void stream_RLP(dev::RLPStream & s) const;
-		void serialize_json(mcp::json & json_a) const;
+	//class create_trace_action : public trace_action
+	//{
+	//public:
+	//	create_trace_action() = default;
+	//	create_trace_action(bool & error_a, dev::RLP const & r);
+	//	void stream_RLP(dev::RLPStream & s) const;
+	//	void serialize_json(mcp::json & json_a) const;
 
-		Address from;
-		u256 gas;
-		dev::bytes init;
-		mcp::uint256_t amount;
-	};
+	//	Address from;
+	//	u256 gas;
+	//	dev::bytes init;
+	//	mcp::uint256_t amount;
+	//};
 
-	class create_trace_result : public trace_result
-	{
-	public:
-		create_trace_result() = default;
-		create_trace_result(bool & error_a, dev::RLP const & r);
-		void stream_RLP(dev::RLPStream & s) const;
-		void serialize_json(mcp::json & json_a) const;
+	//class create_trace_result : public trace_result
+	//{
+	//public:
+	//	create_trace_result() = default;
+	//	create_trace_result(bool & error_a, dev::RLP const & r);
+	//	void stream_RLP(dev::RLPStream & s) const;
+	//	void serialize_json(mcp::json & json_a) const;
 
-		u256 gas_used;
-		Address contract_account;
-		dev::bytes code;
-	};
+	//	u256 gas_used;
+	//	Address contract_account;
+	//	dev::bytes code;
+	//};
 
-	class suicide_trace_action : public trace_action
-	{
-	public:
-		suicide_trace_action() = default;
-		suicide_trace_action(bool & error_a, dev::RLP const & r);
-		void stream_RLP(dev::RLPStream & s) const;
-		void serialize_json(mcp::json & json_a) const;
+	//class suicide_trace_action : public trace_action
+	//{
+	//public:
+	//	suicide_trace_action() = default;
+	//	suicide_trace_action(bool & error_a, dev::RLP const & r);
+	//	void stream_RLP(dev::RLPStream & s) const;
+	//	void serialize_json(mcp::json & json_a) const;
 
-		Address contract_account;
-		Address refund_account;
-		u256 balance;
-	};
+	//	Address contract_account;
+	//	Address refund_account;
+	//	u256 balance;
+	//};
 
-	enum class trace_type : uint8_t
-	{
-		call = 0,
-		create = 1,
-		suicide = 2
-	};
+	//enum class trace_type : uint8_t
+	//{
+	//	call = 0,
+	//	create = 1,
+	//	suicide = 2
+	//};
 
-	class trace
-	{
-	public:
-		trace() = default;
-		trace(bool & error_a, dev::RLP const & r);
-		void stream_RLP(dev::RLPStream & s) const;
-		void serialize_json(mcp::json & json_a) const;
+	//class trace
+	//{
+	//public:
+	//	trace() = default;
+	//	trace(bool & error_a, dev::RLP const & r);
+	//	void stream_RLP(dev::RLPStream & s) const;
+	//	void serialize_json(mcp::json & json_a) const;
 
-		mcp::trace_type type;
-		std::shared_ptr<mcp::trace_action> action;
-		std::string error_message;
-		std::shared_ptr<mcp::trace_result> result;
-		uint32_t depth;
-	};
+	//	mcp::trace_type type;
+	//	std::shared_ptr<mcp::trace_action> action;
+	//	std::string error_message;
+	//	std::shared_ptr<mcp::trace_result> result;
+	//	uint32_t depth;
+	//};
 
 	/// processed transaction -> block info
 	struct TransactionAddress

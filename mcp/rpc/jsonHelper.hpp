@@ -5,6 +5,7 @@
 #include <mcp/core/common.hpp>
 #include <mcp/core/transaction_receipt.hpp>
 #include <mcp/core/approve_receipt.hpp>
+#include <mcp/p2p/common.hpp>
 #include "exceptions.hpp"
 #include "LogFilter.hpp"
 #include "json.hpp"
@@ -16,6 +17,19 @@ namespace mcp
 	const static char* AddressPwdError = "could not decrypt key with given passphrase.";
 
 	TransactionSkeleton toTransactionSkeletonForEth(mcp::json const& _json);
+
+	mcp::json toJson(Address const& _address);
+
+	mcp::json toJson(bi::tcp::endpoint const& _ep);
+
+	template <class T>
+	mcp::json toJson(std::vector<T> const& _es)
+	{
+		mcp::json res = mcp::json::array();
+		for (auto const& e : _es)
+			res.push_back(toJson(e));
+		return res;
+	}
 
 	mcp::LogFilter toLogFilter(mcp::json const& _json);
 
@@ -88,4 +102,10 @@ namespace mcp
 	mcp::json toJson(dev::ApproveReceipt const& _a);
 
 	std::string newRevertError(mcp::ExecutionResult const& result);
+
+	mcp::json toJson(WitnessList& _wl);
+
+	mcp::json toJson(mcp::Approves const& _a);
+
+	mcp::json toJson(mcp::approve const& _a);
 }

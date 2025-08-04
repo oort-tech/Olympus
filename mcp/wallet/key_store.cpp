@@ -172,22 +172,16 @@ mcp::json mcp::key_content::to_json() const
 }
 
 //store
-mcp::key_store::key_store(bool & error_a, boost::filesystem::path const& _path) :
-	m_database(std::make_shared<mcp::db::database>(_path))
+mcp::key_store::key_store(bool & error_a, boost::filesystem::path const& _path)
 {
 	if (error_a)
 		return;
 
-	auto tbops = mcp::db::db_column::default_table_options(mcp::db::database::get_table_cache());
-	auto cfops = mcp::db::db_column::default_column_family_options(tbops);
-	cfops->OptimizeForSmallDb();
-	cfops->prefix_extractor.reset(rocksdb::NewFixedPrefixTransform(1));
-
-	int default_col = m_database->create_column_family(rocksdb::kDefaultColumnFamilyName, cfops);
-	m_keys = m_database->set_column_family(default_col, "k");
-	error_a = !m_database->open();
-	if(error_a)
-		std::cerr << "Key store db open error" << std::endl;
+	auto based = mcp::db::defaultBlockBasedTableOptions(128);
+	auto ops = mcp::db::defaultDBOptions(based);
+	ops->OptimizeForSmallDb();
+	m_keys = 'k';
+	m_database = std::make_shared<mcp::db::database>(_path, ops);
 }
 
 //keys

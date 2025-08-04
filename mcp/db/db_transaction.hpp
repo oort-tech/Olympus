@@ -2,7 +2,7 @@
 
 #include <rocksdb/utilities/transaction_db.h>
 #include <mcp/db/database.hpp>
-#include <mcp/db/counter.hpp>
+#include <mcp/db/db_iterator.hpp>
 
 namespace mcp
 {
@@ -11,8 +11,6 @@ namespace mcp
 		class database;
 		class forward_iterator;
 		class backward_iterator;
-		enum class db_column_index;
-		class merge_based_counters;
 		/*transaction atomic operation, destructor commit the data to database, can get the key real time*/
 		class db_transaction
 		{
@@ -26,15 +24,13 @@ namespace mcp
 			~db_transaction();
 			static std::shared_ptr<rocksdb::TransactionOptions> default_trans_options();
 
-			void put(int const& index, dev::Slice const& _k, dev::Slice const& _v);
-			bool get(int const& index, dev::Slice const& _k, std::string& _v, 
-				std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a = nullptr, 
-				std::shared_ptr<rocksdb::ReadOptions> read_ops_a = nullptr
+			void put(uint8_t const& _prefix, dev::Slice const& _k, dev::Slice const& _v);
+			bool get(uint8_t const& _prefix, dev::Slice const& _k, std::string& _v,
+				std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a = nullptr
 			);
-			void del(int const& index, dev::Slice const& _k);
-			bool exists(int const& index, dev::Slice const& _k, 
-				std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a = nullptr,
-				std::shared_ptr<rocksdb::ReadOptions> read_ops_a = nullptr
+			void del(uint8_t const& _prefix, dev::Slice const& _k);
+			bool exists(uint8_t const& _prefix, dev::Slice const& _k,
+				std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a = nullptr
 			);
 
 			void count_add(std::string const& _k, uint32_t const& _v);
@@ -45,23 +41,17 @@ namespace mcp
 			void commit();
 			void rollback();
 
-			forward_iterator begin(int const& index, 
-				std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a = nullptr,
-				std::shared_ptr<rocksdb::ReadOptions> read_ops_a = nullptr);
-			forward_iterator begin(int const& index, 
+			forward_iterator begin(uint8_t const& _prefix,
+				std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a = nullptr);
+			forward_iterator begin(uint8_t const& _prefix,
 				dev::Slice const& _k, 
-				std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a = nullptr,
-				std::shared_ptr<rocksdb::ReadOptions> read_ops_a = nullptr);
+				std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a = nullptr);
 
-			backward_iterator rbegin(int const& index, 
-				std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a = nullptr,
-				std::shared_ptr<rocksdb::ReadOptions> read_ops_a = nullptr);
-			backward_iterator rbegin(int const& index, 
+			backward_iterator rbegin(uint8_t const& _prefix,
+				std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a = nullptr);
+			backward_iterator rbegin(uint8_t const& _prefix,
 				dev::Slice const& _k, 
-				std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a = nullptr,
-				std::shared_ptr<rocksdb::ReadOptions> read_ops_a = nullptr);
-
-			bool merge(int const & index, std::string const& _k, dev::Slice const& _v);
+				std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a = nullptr);
 
 			database& get_db() { return m_db; }
 

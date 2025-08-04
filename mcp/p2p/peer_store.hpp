@@ -1,5 +1,6 @@
 #pragma once
 #include <mcp/p2p/common.hpp>
+#include <mcp/db/db_transaction.hpp>
 
 namespace mcp
 {
@@ -37,8 +38,8 @@ namespace mcp
 			mcp::db::db_transaction create_transaction() { return m_database->create_transaction(); };
 		private:
 			std::shared_ptr<mcp::db::database> m_database;
-			int m_peers;
-			int m_nodes;
+			uint8_t m_peers;
+			uint8_t m_nodes;
 		};
 	}
 }

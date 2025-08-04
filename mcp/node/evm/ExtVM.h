@@ -20,8 +20,9 @@
 #include "Executive.hpp"
 #include <mcp/node/chain_state.hpp>
 #include <mcp/common/utility.hpp>
+#include <mcp/core/SealEngine.h>
 #include <libevm/ExtVMFace.h>
-
+#include <mcp/core/param.hpp>
 #include <functional>
 #include <map>
 
@@ -35,13 +36,14 @@ class ExtVM : public ExtVMFace
 {
 public:
     /// Full constructor.
-    ExtVM(mcp::chain_state& _s, EnvInfo const& _envInfo, Address _myAddress,
+    ExtVM(mcp::chain_state& _s, EnvInfo const& _envInfo, mcp::SealEngineFace const& _sealEngine, Address _myAddress,
         Address _caller, Address _origin, u256 _value, u256 _gasPrice, bytesConstRef _data,
         bytesConstRef _code, h256 const& _codeHash, u256 const& _version, unsigned _depth,
         bool _isCreate, bool _staticCall)
       : ExtVMFace(_envInfo, _myAddress, _caller, _origin, _value, _gasPrice, _data, _code.toBytes(),
             _codeHash, _version, _depth, _isCreate, _staticCall),
         m_s(_s),
+        m_sealEngine(_sealEngine),
         m_evmSchedule(initEvmSchedule(envInfo().mci(), _version))
     {
         // Contract: processing account must exist. In case of CALL, the ExtVM
@@ -75,7 +77,7 @@ public:
     h256 codeHashAt(dev::Address _a) final;
 
     /// Create a new contract.
-    CreateResult create(u256 _endowment, u256& io_gas, bytesConstRef _code, Instruction _op, u256 _salt, OnOpFunc const& _onOp = {}) final;
+    CreateResult create(u256 _endowment, u256& io_gas, bytesConstRef _code, Instruction _op, u256 _salt, std::shared_ptr<EVMLogger> _tracer = nullptr/*, OnOpFunc const& _onOp = {}*/) final;
 
     /// Create a new message call.
     CallResult call(CallParameters& _params) final;
@@ -84,6 +86,11 @@ public:
     u256 balance(dev::Address _a) final
     {
         return m_s.balance(_a);
+    }
+
+    u256 getNonce(Address const& _addr) const
+    {
+        return m_s.getNonce(_addr);
     }
 
     /// Does the account exist?
@@ -106,10 +113,11 @@ public:
 private:
     EVMSchedule const& initEvmSchedule(int64_t _mci, u256 const& _version) const
     {
-        return mcp::chainParams()->forkScheduleForBlockMci(_mci);
+        return mcp::param::get()->forkScheduleForBlockMci(_mci);
     }
 
     mcp::chain_state & m_s;  ///< A reference to the base state.
+    mcp::SealEngineFace const& m_sealEngine;
     EVMSchedule const& m_evmSchedule;
 };
 

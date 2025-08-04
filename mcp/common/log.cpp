@@ -50,6 +50,12 @@ mcp::logging::logging() :
 	modules_level["sync"] = g_verbosity;
 	modules_level["db"] = g_verbosity;
 	modules_level["vm"] = g_verbosity;
+	//support cerror,cwarn,cnote,cdebug,ctrace
+	modules_level["error"] = g_verbosity;
+	modules_level["warn"] = g_verbosity;
+	modules_level["info"] = g_verbosity;
+	modules_level["debug"] = g_verbosity;
+	modules_level["trace"] = g_verbosity;
 }
 
 bool mcp::logging::set_global_log_level(std::string const & verbosity_a, bool is_p_error_a)

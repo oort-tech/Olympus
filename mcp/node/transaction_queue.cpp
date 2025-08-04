@@ -15,12 +15,13 @@ namespace mcp
 	constexpr size_t c_maxReadyTransactionCount = 100000;
 
 	TransactionQueue::TransactionQueue(
-		boost::asio::io_service& io_service_a, mcp::block_store& store_a, std::shared_ptr<mcp::block_cache> cache_a, std::shared_ptr<mcp::chain> chain_a,
-		std::shared_ptr<mcp::async_task> async_task_a
+		boost::asio::io_service& io_service_a, mcp::block_store& store_a, std::shared_ptr<mcp::block_cache> cache_a, /*std::shared_ptr<mcp::chain> chain_a,*/
+		std::shared_ptr<mcp::Client> client_a, std::shared_ptr<mcp::async_task> async_task_a
 	):
 		m_store(store_a),
 		m_cache(cache_a),
-		m_chain(chain_a),
+		//m_chain(chain_a),
+		m_client(client_a),
 		m_async_task(async_task_a),
 		m_dropped(c_maxDroppedTransactionCount),
 		m_pendingLimit(c_maxPendingTransactionCount)
@@ -488,9 +489,13 @@ namespace mcp
 	void TransactionQueue::checkTx(Transaction const& _t)
 	{
 		/// nonce great than last stable transaction nonce,It doesn't mean it's right,meybe exist pending transactions
-		mcp::db::db_transaction transaction(m_store.create_transaction());
-		mcp::chain_state c_state(transaction, 0, m_store, m_chain, m_cache);
-		auto nonce = c_state.getNonce(_t.sender());
+		//dev::OverlayDB _db = dev::OverlayDB(std::make_unique<mcp::block_store>(m_store));
+		//Block s(/*m_store,*/ *m_chain, _db, m_chain->lastStateRoot());
+		//mcp::chain_state c_state(/*transaction,*/ 0, /*m_store,*/ /*m_chain,*/ /*m_cache,*/ _db);
+		//auto nonce = s.state().getNonce(_t.sender());
+		
+		auto _block = client()->blockByNumber(LatestBlock);
+		auto nonce = _block.transactionsFrom(_t.sender());
 		if (nonce > _t.nonce())
 			BOOST_THROW_EXCEPTION(
 				InvalidNonce() << RequirementError((bigint)_t.nonce(), (bigint)nonce));
@@ -498,9 +503,10 @@ namespace mcp
 		/// check balance
 		bigint gasCost = (bigint)_t.gas() * _t.gasPrice();
 		bigint totalCost = _t.value() + gasCost;
-		if (c_state.balance(_t.sender()) < totalCost)
+
+		if (_block.balance(_t.sender()) < totalCost)
 			BOOST_THROW_EXCEPTION(
-				NotEnoughCash() << RequirementError(totalCost, (bigint)c_state.balance(_t.sender())) << errinfo_comment(_t.sender().hex()));
+				NotEnoughCash() << RequirementError(totalCost, (bigint)_block.balance(_t.sender())) << errinfo_comment(_t.sender().hex()));
 	}
 
 	void TransactionQueue::processSuperfluous()

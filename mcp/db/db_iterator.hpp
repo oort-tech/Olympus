@@ -1,6 +1,7 @@
 #pragma once
 
-#include <mcp/db/database.hpp>
+#include <libdevcore/Common.h>
+#include <rocksdb/iterator.h>
 
 namespace mcp
 {
@@ -9,7 +10,7 @@ namespace mcp
 		class db_iterator
 		{
 		public:
-			db_iterator(std::string const& prefix_a = "");
+			db_iterator(rocksdb::Slice const& prefix_a = rocksdb::Slice());
 			~db_iterator();
 			bool valid();
 
@@ -21,8 +22,7 @@ namespace mcp
 		protected:
 			rocksdb::Iterator* m_it;
 
-			std::string m_prefix;
-			//mcp::log m_log = { mcp::log("node") };
+			rocksdb::Slice m_prefix;
 		};
 
 		class forward_iterator : public db_iterator
@@ -30,7 +30,7 @@ namespace mcp
 		public:
 			forward_iterator();
 			forward_iterator(rocksdb::Iterator* it_a);
-			forward_iterator(rocksdb::Iterator* it_a, rocksdb::Slice const& k_a, std::string const& prefix_a = "");
+			forward_iterator(rocksdb::Iterator* it_a, rocksdb::Slice const& k_a, rocksdb::Slice const& prefix_a = rocksdb::Slice());
 			forward_iterator(forward_iterator &&);
 			forward_iterator(forward_iterator const &) = delete;
 			forward_iterator& operator++();
@@ -43,7 +43,7 @@ namespace mcp
 		public:
 			backward_iterator();
 			backward_iterator(rocksdb::Iterator* it_a);
-			backward_iterator(rocksdb::Iterator* it_a, rocksdb::Slice const& k_a, std::string const& prefix_a = "");
+			backward_iterator(rocksdb::Iterator* it_a, rocksdb::Slice const& k_a, rocksdb::Slice const& prefix_a = rocksdb::Slice());
 			backward_iterator(backward_iterator && other_a);
 			backward_iterator(backward_iterator const &) = delete;
 			backward_iterator& operator++();

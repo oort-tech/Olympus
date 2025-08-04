@@ -5,10 +5,10 @@
 
 
 mcp::wallet::wallet(
-	mcp::block_store& block_store_a, std::shared_ptr<mcp::block_cache> cache_a, std::shared_ptr<mcp::key_manager> key_manager_a,
+	/*mcp::block_store& block_store_a, */std::shared_ptr<mcp::block_cache> cache_a, std::shared_ptr<mcp::key_manager> key_manager_a,
 	std::shared_ptr<TransactionQueue> tq
 ) :
-	m_block_store(block_store_a),
+	//m_block_store(block_store_a),
 	m_cache(cache_a),
 	m_key_manager(key_manager_a),
 	m_tq(tq),

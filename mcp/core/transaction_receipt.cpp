@@ -20,7 +20,8 @@
  */
 
 #include "transaction_receipt.hpp"
-#include "config.hpp"
+//#include "config.hpp"
+#include "param.hpp"
 #include <mcp/common/Exceptions.h>
 
 #include <boost/variant/get.hpp>
@@ -47,7 +48,7 @@ TransactionReceipt::TransactionReceipt(uint8_t _status, u256 const& _gasUsed, mc
 	m_gasUsed(_gasUsed),
 	m_log(_log)
 {
-	if (mcp::chainParams()->IsOIP5(_mci))
+	if (mcp::param::get()->IsOIP5(_mci))
 	{
 		m_bloom = mcp::bloom(_log);
 	}

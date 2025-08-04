@@ -1,9 +1,10 @@
 #include "chain.hpp"
+#include "Block.hpp"
 #include <mcp/core/genesis.hpp>
 #include <mcp/core/param.hpp>
 #include <mcp/common/stopwatch.hpp>
 #include <mcp/common/Exceptions.h>
-#include <mcp/node/debug.hpp>
+//#include <mcp/node/debug.hpp>
 #include <mcp/node/evm/Executive.hpp>
 #include <libdevcore/TrieHash.h>
 #include <libdevcore/CommonJS.h>
@@ -15,9 +16,12 @@
 #include <queue>
 
 mcp::chain::chain(mcp::block_store& store_a, std::shared_ptr<mcp::block_cache> cache_a) :
+	/*m_stateDB(std::make_unique<mcp::block_store>(store_a)),*/
+	m_stateDB(store_a.db()),
 	m_store(store_a),
 	m_cache(cache_a),
-	m_stopped(false)
+	m_stopped(false),
+	m_postSeal(Invalid256)
 {
 }
 
@@ -25,11 +29,13 @@ mcp::chain::~chain()
 {
 }
 
-void mcp::chain::init(bool & error_a, mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a, std::shared_ptr<mcp::block_cache> block_cache_a)
+void mcp::chain::init(bool & error_a, mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a/*, std::shared_ptr<mcp::block_cache> block_cache_a*/)
 {
-	mcp::db::db_transaction & transaction(timeout_tx_a.get_transaction());
+	m_sealEngine.reset(mcp::param::createSealEngine());
 	try
 	{
+		genesisBlock(timeout_tx_a, cache_a);
+		/*
 		std::pair<bool, mcp::Transactions> ret = mcp::genesis::try_initialize(transaction, m_store);
 
 		/// Init precompiled contract account
@@ -42,12 +48,12 @@ void mcp::chain::init(bool & error_a, mcp::timeout_db_transaction & timeout_tx_a
 				precompiled_accounts[acc] = std::make_shared<mcp::account_state>(acc, h256(0), h256(0), 0, 0);
 			}
 
-			mcp::overlay_db db(transaction, m_store);
-			mcp::commit(transaction, precompiled_accounts, &db, cache_a, m_store, h256(0));
+			//mcp::overlay_db db(transaction, m_store);
+			//mcp::commit(transaction, precompiled_accounts, &db, cache_a, m_store, h256(0));
 
 			///init system contract
 			auto gstate = m_store.block_state_get(transaction, mcp::genesis::block_hash);
-			dev::eth::McInfo mc_info(0, 0, gstate->stable_timestamp, 0, dev::ZeroAddress);
+			dev::eth::McInfo mc_info(0, 0, gstate->stable_timestamp, 0);
 			///init staking
 			for (auto _t : ret.second)
 			{
@@ -63,27 +69,28 @@ void mcp::chain::init(bool & error_a, mcp::timeout_db_transaction & timeout_tx_a
 			timeout_tx_a.commit_and_continue();
 			auto _all = MainCaller.GetWitnesses();
 			m_cache->PutStakingList(transaction, 0, _all.first);
-		}
+		}*/
 	}
 	catch (const std::exception & e)
 	{
 		LOG(m_log.error) << boost::str(boost::format("Init genesis error: %1%") % e.what());
-		transaction.rollback();
+		timeout_tx_a.rollback();
 		error_a = true;
 		return;
 	}
 	LOG(m_log.info) << "Genesis block:" << mcp::genesis::block_hash.hex();
 
-	/// Setup default precompiled contracts as equal to genesis of Frontier.
-	m_precompiled.insert(std::make_pair(Address(1), dev::eth::PrecompiledContract(3000, 0, dev::eth::PrecompiledRegistrar::executor("ecrecover"))));
-	m_precompiled.insert(std::make_pair(Address(2), dev::eth::PrecompiledContract(60, 12, dev::eth::PrecompiledRegistrar::executor("sha256"))));
-	m_precompiled.insert(std::make_pair(Address(3), dev::eth::PrecompiledContract(600, 120, dev::eth::PrecompiledRegistrar::executor("ripemd160"))));
-	m_precompiled.insert(std::make_pair(Address(4), dev::eth::PrecompiledContract(15, 3, dev::eth::PrecompiledRegistrar::executor("identity"))));
-	m_precompiled.insert(std::make_pair(Address(5), dev::eth::PrecompiledContract(dev::eth::PrecompiledRegistrar::pricer("modexp"), dev::eth::PrecompiledRegistrar::executor("modexp"))));
-	m_precompiled.insert(std::make_pair(Address(6), dev::eth::PrecompiledContract(500, 0, dev::eth::PrecompiledRegistrar::executor("alt_bn128_G1_add"))));
-	m_precompiled.insert(std::make_pair(Address(7), dev::eth::PrecompiledContract(40000, 0, dev::eth::PrecompiledRegistrar::executor("alt_bn128_G1_mul"))));
-	m_precompiled.insert(std::make_pair(Address(8), dev::eth::PrecompiledContract(dev::eth::PrecompiledRegistrar::pricer("alt_bn128_pairing_product"), dev::eth::PrecompiledRegistrar::executor("alt_bn128_pairing_product"))));
+	///// Setup default precompiled contracts as equal to genesis of Frontier.
+	//m_precompiled.insert(std::make_pair(Address(1), dev::eth::PrecompiledContract(3000, 0, dev::eth::PrecompiledRegistrar::executor("ecrecover"))));
+	//m_precompiled.insert(std::make_pair(Address(2), dev::eth::PrecompiledContract(60, 12, dev::eth::PrecompiledRegistrar::executor("sha256"))));
+	//m_precompiled.insert(std::make_pair(Address(3), dev::eth::PrecompiledContract(600, 120, dev::eth::PrecompiledRegistrar::executor("ripemd160"))));
+	//m_precompiled.insert(std::make_pair(Address(4), dev::eth::PrecompiledContract(15, 3, dev::eth::PrecompiledRegistrar::executor("identity"))));
+	//m_precompiled.insert(std::make_pair(Address(5), dev::eth::PrecompiledContract(dev::eth::PrecompiledRegistrar::pricer("modexp"), dev::eth::PrecompiledRegistrar::executor("modexp"))));
+	//m_precompiled.insert(std::make_pair(Address(6), dev::eth::PrecompiledContract(500, 0, dev::eth::PrecompiledRegistrar::executor("alt_bn128_G1_add"))));
+	//m_precompiled.insert(std::make_pair(Address(7), dev::eth::PrecompiledContract(40000, 0, dev::eth::PrecompiledRegistrar::executor("alt_bn128_G1_mul"))));
+	//m_precompiled.insert(std::make_pair(Address(8), dev::eth::PrecompiledContract(dev::eth::PrecompiledRegistrar::pricer("alt_bn128_pairing_product"), dev::eth::PrecompiledRegistrar::executor("alt_bn128_pairing_product"))));
 
+	mcp::db::db_transaction& transaction(timeout_tx_a.get_transaction());
 	///get init data
 	m_last_mci_internal = m_store.last_mci_get(transaction);
 	m_last_stable_mci_internal = m_store.last_stable_mci_get(transaction);
@@ -107,6 +114,15 @@ void mcp::chain::init(bool & error_a, mcp::timeout_db_transaction & timeout_tx_a
 	init_vrf_outputs(transaction);
 	InitWork(transaction, cache_a);
 	m_last_stable_epoch = mcp::epoch(m_last_stable_mci_internal);
+
+	{
+		h256 _h;
+		assert_x(!m_store.stable_block_get(transaction, m_last_stable_index_internal, _h));
+		std::shared_ptr<mcp::block_state> state(m_store.block_state_get(transaction, _h));
+		assert_x(state && state->is_stable && state->is_on_main_chain && state->main_chain_index);
+		m_lastStateRoot = state->m_stateRoot;
+		m_postSeal = Block(*this, m_stateDB, m_lastStateRoot);
+	}
 
 	update_cache();
 }
@@ -413,29 +429,34 @@ void mcp::chain::ApplyWorkTransaction(mcp::timeout_db_transaction & timeout_tx_a
 
 	dev::eth::McInfo mc_info = GetMcInfo(timeout_tx_a, cache_a, mci);
 	Transaction _t = PackSystemContract(transaction_a, cache_a, _v);
-	std::pair<ExecutionResult, dev::eth::TransactionReceipt> result = execute(transaction_a, cache_a, _t, mc_info, Permanence::Committed, dev::eth::OnOpFunc());
-	//assert_x(result.second.statusCode());//for test .
+
+	postSeal().execute(_t, mc_info, Permanence::Committed/*, dev::eth::OnOpFunc()*/);
+	//std::pair<ExecutionResult, dev::eth::TransactionReceipt> result = execute(transaction_a, cache_a, _t, mc_info, Permanence::Committed, dev::eth::OnOpFunc());
+	dev::eth::TransactionReceipt _receipt = postSeal().receipt(0);
+	assert_x(/*result.second*/_receipt.statusCode());//for test .
 	cache_a->transaction_put(transaction_a, std::make_shared<Transaction>(_t));
 	cache_a->account_nonce_put(transaction_a, _t.sender(), _t.nonce());
-	cache_a->transaction_receipt_put(transaction_a, _t.sha3(), std::make_shared<dev::eth::TransactionReceipt>(result.second));
+	cache_a->transaction_receipt_put(transaction_a, _t.sha3(), std::make_shared<dev::eth::TransactionReceipt>(/*result.second*/_receipt));
 	cache_a->transaction_address_put(transaction_a, _t.sha3(), std::make_shared<mcp::TransactionAddress>(hash, 0));
 	m_store.epoch_work_transaction_put(transaction_a, epoch - 1, _t.sha3());
 	m_tq->makeQueue(std::make_shared<Transaction>(_t));///may be transactions pending due to this transaction.
+	postSeal().cleanup();///todo used batch
 
-	//LOG(m_log.info) << "ApplyWorkTransaction hash: " << _t.sha3().hex();
+	LOG(m_log.info) << "ApplyWorkTransaction hash: " << _t.sha3().hex();
 }
 
 mcp::Transaction mcp::chain::PackSystemContract(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a, std::map<dev::Address, u256> const& _v)
 {
-	auto chain_ptr(shared_from_this());
-	chain_state c_state(transaction_a, 0, m_store, chain_ptr, cache_a);
+	//chain_state c_state(/*transaction_a,*/ 0, /*m_store,*/ /*chain_ptr,*/ /*cache_a,*/ m_stateDB);
+	//c_state.setRoot(m_lastStateRoot);
 	TransactionSkeleton ts;
 	ts.from = MainCallcAddress;
 	ts.to = MainContractAddress;
 	ts.data = MainCaller.DistributeRewards(_v);
 	ts.gasPrice = mcp::gas_price;
 	ts.gas = mcp::tx_max_gas;
-	ts.nonce = c_state.getNonce(ts.from);
+	//ts.nonce = c_state.getNonce(ts.from);
+	ts.nonce = postSeal().transactionsFrom(ts.from);
 	Transaction _t(ts);
 	_t.setSignature(h256(0), h256(0), 0);
 	return _t;
@@ -516,12 +537,144 @@ void mcp::chain::try_advance(mcp::timeout_db_transaction & timeout_tx_a, std::sh
 	}
 }
 
-bool mcp::chain::IsStakingList(mcp::db::db_transaction & _transaction, Epoch const& _epoch, dev::Address const & _address)
+bool mcp::chain::IsStakingList(mcp::db::db_transaction & _transaction, Epoch const& _epoch, dev::Address const & _address) const
 {
 	auto sl = m_cache->GetStakingList(_transaction, _epoch);
 	return sl.count(_address);
 }
 
+
+void mcp::chain::genesisBlock(mcp::timeout_db_transaction& timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a)
+{
+	mcp::db::db_transaction& transaction(timeout_tx_a.get_transaction());
+	std::pair<mcp::block, mcp::Transactions> gnesis = mcp::genesis::try_initialize();
+	/// 0: genesis transaction.
+	/// 1: transfer to the account that deployed system contract.
+	/// 2: Admin contract transaction.
+	/// 3: Deposit contract transaction.
+	/// 4: Proxy contract transaction.
+	/// 5: staking init witness transaction.
+	mcp::block block = gnesis.first;
+
+	mcp::block_hash genesis_hash;
+	bool exists(!m_store.genesis_hash_get(transaction, genesis_hash));
+	if (exists)
+	{
+		if (genesis_hash != mcp::genesis::block_hash)
+			throw std::runtime_error("genesis block changed");
+
+		return;	///initialized
+	}
+
+	m_store.genesis_hash_put(transaction, mcp::genesis::block_hash);
+	m_store.block_put(transaction, mcp::genesis::block_hash, block);
+
+	//block state
+	mcp::block_state block_state;
+
+	block_state.is_free = true;
+	block_state.level = 0;
+	block_state.is_stable = true;
+	block_state.status = mcp::block_status::ok;
+	block_state.main_chain_index = 0;
+	block_state.mc_timestamp = block.exec_timestamp();
+	block_state.stable_timestamp = block.exec_timestamp();
+
+	block_state.is_on_main_chain = true;
+	block_state.witnessed_level = block_state.level;
+	block_state.best_parent.clear();
+	block_state.earliest_included_mc_index = boost::none;
+	block_state.latest_included_mc_index = boost::none;
+	block_state.bp_included_mc_index = boost::none;
+	block_state.earliest_bp_included_mc_index = boost::none;
+	block_state.latest_bp_included_mc_index = boost::none;
+	m_store.block_state_put(transaction, mcp::genesis::block_hash, block_state);
+
+	//mci
+	m_store.main_chain_put(transaction, *block_state.main_chain_index, mcp::genesis::block_hash);
+
+	//stable index
+	m_store.stable_block_put(transaction, 0, mcp::genesis::block_hash);
+	m_store.last_stable_index_put(transaction, 0);
+
+	//free
+	m_store.dag_free_put(transaction, mcp::free_key(block_state.witnessed_level, block_state.level, mcp::genesis::block_hash));
+
+	//add dag account info
+	mcp::dag_account_info info;
+	m_store.dag_account_get(transaction, block.from(), info);
+	info.latest_stable_block = mcp::genesis::block_hash;
+	m_store.dag_account_put(transaction, block.from(), info);
+	//genesis maybe is witness too.
+	m_store.successor_put(transaction, mcp::block_hash(block.from()), info.latest_stable_block);
+
+	//genesis account state
+	Transaction ts = gnesis.second[0];
+	mcp::account_state to_state(ts.sender(), ts.sha3(), h256(0), 0, ts.value());
+	to_state.incNonce();//nonce + 1 Stored for the next nonce
+	//m_store.account_state_put(transaction, to_state.hash(), to_state);
+	//m_store.latest_account_state_put(transaction, ts.to(), to_state.hash());
+	m_store.account_nonce_put(transaction, ts.sender(), ts.nonce());
+	m_store.transaction_put(transaction, ts.sha3(), ts);
+	dev::eth::TransactionReceipt const receipt = dev::eth::TransactionReceipt(true, 0, mcp::log_entries());
+	m_store.transaction_receipt_put(transaction, ts.sha3(), receipt);
+	m_store.transaction_address_put(transaction, ts.sha3(), mcp::TransactionAddress(mcp::genesis::block_hash, 0));
+
+	h256 receiptsRoot = dev::orderedTrieRoot(std::vector<bytes>{receipt.rlp()});
+	//summary hash
+	//mcp::summary_hash previous_summary_hash(0);
+	//std::list<mcp::summary_hash> p_summary_hashs; //no parents
+	//std::set<mcp::summary_hash> summary_skiplist; //no skiplist
+	mcp::summary_hash summary_hash = mcp::summary::gen_summary_hash(mcp::genesis::block_hash, dev::h256(), std::list<mcp::summary_hash>(), receiptsRoot, h256Set(),
+		block_state.status, block_state.stable_index, block_state.mc_timestamp);
+
+	LOG(m_log.info) << "Genesis Summary:" << summary_hash.hex();
+
+	m_store.block_summary_put(transaction, mcp::genesis::block_hash, summary_hash);
+	m_store.summary_block_put(transaction, summary_hash, mcp::genesis::block_hash);
+
+	/// Init precompiled contract account
+	AccountMap precompiled_accounts;
+	precompiled_accounts[ts.sender()] = std::make_shared<mcp::account_state>(to_state);
+	for (unsigned i = 1; i <= 8; ++i)
+	{
+		Address acc(i);
+		precompiled_accounts[acc] = std::make_shared<mcp::account_state>(acc, h256(0), h256(0), 0, 0);
+	}
+
+	Block ret(/*m_store,*/ *this, m_stateDB, BaseState::Empty);
+	mcp::commit(precompiled_accounts, ret.mutableState().m_state);        // bit horrible. maybe consider a better way of constructing it?
+
+	///init system contract
+	auto gstate = m_store.block_state_get(transaction, mcp::genesis::block_hash);
+	dev::eth::EnvInfo env(/*transaction, m_store, /*cache_a,*/ dev::eth::McInfo(0, 0, gstate->stable_timestamp, 0, dev::ZeroAddress), mcp::chainID());
+	///init staking
+	for (size_t i = 1; i < gnesis.second.size(); i++)
+	{
+		auto _t(gnesis.second[i]);
+		std::pair<ExecutionResult, dev::eth::TransactionReceipt> result = ret.mutableState().execute(env, *m_sealEngine, Permanence::Committed, _t/*, dev::eth::OnOpFunc()*/);
+		assert_x(result.second.statusCode());
+		cache_a->transaction_put(transaction, std::make_shared<Transaction>(_t));
+		cache_a->account_nonce_put(transaction, _t.sender(), _t.nonce());
+		cache_a->transaction_receipt_put(transaction, _t.sha3(), std::make_shared<dev::eth::TransactionReceipt>(result.second));
+		cache_a->transaction_address_put(transaction, _t.sha3(), std::make_shared<mcp::TransactionAddress>(mcp::genesis::block_hash, 0));
+	}
+	block_state.m_receiptsRoot = receiptsRoot;
+	block_state.m_stateRoot = ret.mutableState().rootHash();
+	m_lastStateRoot = block_state.m_stateRoot;
+	m_store.block_state_put(transaction, mcp::genesis::block_hash, block_state);
+	ret.mutableState().db().commit();
+	ret.cleanup();
+	m_postSeal = ret;
+	timeout_tx_a.commit_and_continue();///GetWitnesses use new database transaction
+	/// set genesis epoch staking list
+	auto _all = MainCaller.GetWitnesses();
+	for (auto it : _all.first)
+	{
+		std::cout << it.first.hexPrefixed() << std::endl;
+	}
+	m_cache->PutStakingList(transaction, 0, _all.first);
+}
 
 void mcp::chain::write_dag_block(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a, std::shared_ptr<mcp::block> block_a)
 {
@@ -886,7 +1039,15 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 			//LOG(m_log.info) << "[advance_stable_mci]" << dag_stable_block_hash.hexPrefixed();
 
 			m_last_stable_index_internal++;
-			std::vector<bytes> receipts;
+			///handle dag stable block 
+			std::shared_ptr<mcp::block> dag_stable_block = cache_a->block_get(transaction_a, dag_stable_block_hash);
+			assert_x(dag_stable_block);
+			VerifiedBlockRef _block{ dag_stable_block };
+			//ChainEnv _param = { /*timeout_tx_a, cache_a,*/ mci, m_last_stable_index_internal, mc_timestamp, /*stable_timestamp,*/ mc_last_summary_mci };
+			dev::eth::McInfo mc_info(m_last_stable_index_internal, mci, mc_timestamp, mc_last_summary_mci, dag_stable_block->from());
+			std::pair<h256, h256> importRet = import(transaction_a, cache_a, _block, mc_info);
+			
+			/*std::vector<bytes> receipts;
 			{
 				//mcp::stopwatch_guard sw("advance_stable_mci2_1");
 
@@ -918,7 +1079,7 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 					bool invalid = false;
 					try
 					{
-						dev::eth::McInfo mc_info(m_last_stable_index_internal, mci, mc_timestamp, mc_last_summary_mci, dag_stable_block->from());
+						dev::eth::McInfo mc_info(m_last_stable_index_internal, mci, mc_timestamp, mc_last_summary_mci);
 						//mcp::stopwatch_guard sw("set_block_stable2_1");
 						std::pair<ExecutionResult, dev::eth::TransactionReceipt> result = execute(transaction_a, cache_a, *_t, mc_info, Permanence::Committed, dev::eth::OnOpFunc());
 
@@ -1035,21 +1196,128 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 						throw;
 					}
 				}
-			}
+			}*/
 
 			/// set block stable
 			{
-				h256 receiptsRoot = dev::orderedTrieRoot(receipts);
 				//mcp::stopwatch_guard sw("advance_stable_mci2_2");
-				set_block_stable(timeout_tx_a, cache_a, dag_stable_block_hash, mci, mc_timestamp, mc_last_summary_mci, stable_timestamp, m_last_stable_index_internal, receiptsRoot);
+				set_block_stable(timeout_tx_a, cache_a, dag_stable_block_hash, mci, mc_timestamp, mc_last_summary_mci, stable_timestamp, m_last_stable_index_internal, importRet.first, importRet.second);
 			}
 		}
 	}
 }
 
+std::pair<h256, h256> mcp::chain::import(mcp::db::db_transaction& transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a, VerifiedBlockRef& _block, dev::eth::McInfo const& _mc)
+{
+	///handle light stable block 
+	///account A : b2, b3, b4, b5
+	///account B : b1, b2, b3
+	///account c : b2, b3
+	std::unordered_map<h256, std::shared_ptr<dev::eth::TransactionReceipt>> _local;
+	h256s const& _links = _block.info->links();
+	for (h256 const& _th : _links)
+	{
+		auto receipt = cache_a->transaction_receipt_get(transaction_a, _th);
+		if (receipt)/// transaction maybe processed yet,but summary need used receipt even if it has been processed.
+		{
+			_local[_th] = receipt;
+			_block.transactions.push_back(nullptr);
+			continue;
+		}
+		auto _t = cache_a->transaction_get(transaction_a, _th);
+		_block.transactions.push_back(_t);
+	}
+
+	Block s(/*m_store,*/ *this, m_stateDB, m_lastStateRoot);
+	auto tdIncrease = s.enactOn(_mc, _block, *this);
+
+	std::vector<bytes> receipts;
+	uint32_t _reduce = 0;
+	for (unsigned i = 0; i < _links.size(); ++i)
+	{
+		TransactionReceipt const& _re = s.receipt(i);
+		if (_re.isPlaceholder())
+		{
+			assert(_local.count(_links[i]));
+			receipts.push_back(_local.at(_links[i])->rlp());
+		}
+		else
+		{
+			/// commit transaction receipt
+			cache_a->transaction_receipt_put(transaction_a, _links[i], std::make_shared<dev::eth::TransactionReceipt>(_re));
+			receipts.push_back(_re.rlp());
+
+			std::shared_ptr<mcp::TransactionAddress> td(std::make_shared<mcp::TransactionAddress>(_block.info->hash(), i));
+			cache_a->transaction_address_put(transaction_a, _links[i], td);
+			_reduce++;
+		}
+	}
+	s.cleanup();///todo used batch
+	m_postSeal = s;
+	/// exec transaction can reduce, if two or more block linked a transaction,reduce once.
+	if (_reduce)
+		m_store.transaction_unstable_count_reduce(transaction_a, _reduce);
+
+	///handle approve stable block 
+	for (h256 const& _ah : _block.info->approves())
+	{
+		auto receipt = cache_a->approve_receipt_get(transaction_a, _ah);
+		if (receipt)/// approve maybe processed yet,but summary need used receipt even if it has been processed.
+		{
+			receipts.push_back(receipt->rlp());
+			continue;
+		}
+
+		auto ap = cache_a->approve_get(transaction_a, _ah);
+		assert_x(ap);
+		/// exec approves
+		try 
+		{
+			/// exec approve can reduce, if two or more block linked a approve,reduce once.
+			m_store.approve_unstable_count_reduce(transaction_a);
+
+			if (ap->outputs() == h256(0))/// reboot system. approve read from db,but not cache outputs
+			{
+				mcp::block_hash hash;
+				if (ap->epoch() <= 1) {
+					hash = mcp::genesis::block_hash;
+				}
+				else {
+					bool exists(!m_store.main_chain_get(transaction_a, (ap->epoch() - 1) * epoch_period, hash));
+					assert_x(exists);
+				}
+				ap->vrf_verify(hash);///cached outputs.must successed.
+			}
+			bool apStatus = false;
+			if (IsStakingList(transaction_a, ap->epoch(), ap->sender()))///staking completed.
+				apStatus = true;
+			std::shared_ptr<dev::ApproveReceipt> preceipt = std::make_shared<dev::ApproveReceipt>(apStatus, ap->sender(), ap->outputs());
+			cache_a->approve_receipt_put(transaction_a, _ah, preceipt);
+
+			///the approve which is smaller than the current epoch, is not eligible for election.
+			///Bigger than the present is problematic
+			//LOG(m_log.debug) << "[vrf_outputs] ap epoch:" << ap->epoch() <<",epoch:" << epoch(mci)
+			//	<< ",address:" << preceipt->from().hexPrefixed();
+			if (ap->epoch() == epoch(_mc.mci) && apStatus)
+			{
+				vrf_outputs[ap->epoch()].insert(std::make_pair(ap->outputs(), *preceipt));
+			}
+
+			receipts.push_back(preceipt->rlp());
+		}
+		catch (std::exception const& _e)
+		{
+			std::cerr << _e.what() << std::endl;
+			throw;
+		}
+	}
+
+	return std::make_pair(dev::orderedTrieRoot(receipts), s.rootHash());
+}
+
 void mcp::chain::set_block_stable(mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a, mcp::block_hash const & stable_block_hash, 
 	uint64_t const & mci, uint64_t const & mc_timestamp, uint64_t const & mc_last_summary_mci, 
-	uint64_t const & stable_timestamp, uint64_t const & stable_index, h256 receiptsRoot)
+	uint64_t const & stable_timestamp, uint64_t const & stable_index, h256 receiptsRoot, h256 stateRoot)
 {
 	mcp::db::db_transaction & transaction_a(timeout_tx_a.get_transaction());
 	try
@@ -1119,6 +1387,10 @@ void mcp::chain::set_block_stable(mcp::timeout_db_transaction & timeout_tx_a, st
 			stable_block_state_copy->stable_timestamp = stable_timestamp;
 			stable_block_state_copy->is_stable = true;
 			stable_block_state_copy->stable_index = stable_index;
+			stable_block_state_copy->m_receiptsRoot = receiptsRoot;
+			stable_block_state_copy->m_stateRoot = stateRoot;
+			
+			m_lastStateRoot = stateRoot;
 			cache_a->block_state_put(transaction_a, stable_block_hash, stable_block_state_copy);
 
 			//m_store.stable_block_put(transaction_a, stable_index, stable_block_hash);
@@ -1175,7 +1447,10 @@ void mcp::chain::set_block_stable(mcp::timeout_db_transaction & timeout_tx_a, st
 
 			cache_a->block_summary_put(transaction_a, stable_block_hash, summary_hash);
 			m_store.summary_block_put(transaction_a, summary_hash, stable_block_hash);
-			m_store.PutBlockReceiptsRoot(transaction_a, stable_block_hash, receiptsRoot);
+			//m_store.PutBlockReceiptsRoot(transaction_a, stable_block_hash, receiptsRoot);
+
+			//LOG(m_log.info) << "block " << stable_block_hash.hexPrefixed() << " : " << summary_hash.hexPrefixed() 
+			//	<< " ,receiptRoot:" << receiptsRoot.hexPrefixed();
 
 #pragma endregion
 
@@ -1225,23 +1500,23 @@ void mcp::chain::search_stable_block(mcp::db::db_transaction & transaction_a, st
 }
 
 
-std::vector<uint64_t> mcp::chain::cal_skip_list_mcis(uint64_t const &mci)
-{
-	std::vector<uint64_t> skip_list_mcis;
-	if (mci == 0) ///return empty
-		return skip_list_mcis;
-	uint64_t divisor = mcp::skiplist_divisor;
-	while (true)
-	{
-		if (mci % divisor == 0)
-		{
-			skip_list_mcis.push_back(mci - divisor);
-			divisor *= mcp::skiplist_divisor;
-		}
-		else
-			return skip_list_mcis;
-	}
-}
+//std::vector<uint64_t> mcp::chain::cal_skip_list_mcis(uint64_t const &mci)
+//{
+//	std::vector<uint64_t> skip_list_mcis;
+//	if (mci == 0) ///return empty
+//		return skip_list_mcis;
+//	uint64_t divisor = mcp::skiplist_divisor;
+//	while (true)
+//	{
+//		if (mci % divisor == 0)
+//		{
+//			skip_list_mcis.push_back(mci - divisor);
+//			divisor *= mcp::skiplist_divisor;
+//		}
+//		else
+//			return skip_list_mcis;
+//	}
+//}
 
 void mcp::chain::update_cache()
 {
@@ -1309,7 +1584,7 @@ mcp::Epoch mcp::chain::last_stable_epoch()
 //		assert_x(last_summary_state->main_chain_index);
 //		last_summary_mci = *last_summary_state->main_chain_index;
 //
-//		mc_info_a = dev::eth::McInfo(mc_state->stable_index, *mc_state->main_chain_index, mc_state->mc_timestamp, last_summary_mci, mc_block->from());
+//		mc_info_a = dev::eth::McInfo(mc_state->stable_index, *mc_state->main_chain_index, mc_state->mc_timestamp, last_summary_mci);
 //		return true;
 //	}
 //	else
@@ -1347,127 +1622,128 @@ mcp::Epoch mcp::chain::last_stable_epoch()
 //	}
 //}
 
-std::pair<u256, mcp::ExecutionResult> mcp::chain::estimate_gas(mcp::db::db_transaction& transaction_a, std::shared_ptr<mcp::iblock_cache> cache_a,
-	Address const& _from, u256 const& _value, Address const& _dest, bytes const& _data, int64_t const& _maxGas, u256 const& _gasPrice, dev::eth::McInfo const & mc_info_a, GasEstimationCallback const& _callback)
-{
-	try
-    {
-		int64_t upperBound = _maxGas;
-		if (upperBound == Invalid256 || upperBound > mcp::tx_max_gas)
-			upperBound = mcp::tx_max_gas;
-
-		int64_t lowerBound = Transaction::baseGasRequired(!_dest, &_data, dev::eth::EVMSchedule());
-        u256 gasPrice = _gasPrice == Invalid256 ? mcp::gas_price : _gasPrice;
-		ExecutionResult er;
-
-		/// Pre calculate the gas needed for execution
-		if (upperBound < lowerBound)
-		{
-			er.excepted = TransactionException::OutOfGas;
-			return std::make_pair(u256(), er);;
-		}
-			
-		/// Avoid transactions that are less than the lower gas price limit.
-		if (gasPrice < mcp::gas_price)
-		{
-			er.excepted = TransactionException::OutOfGasPriceIntrinsic;
-			return std::make_pair(u256(), er);
-		}
-
-		dev::eth::EnvInfo env(transaction_a, m_store, cache_a, mc_info_a, mcp::chainID());
-		auto chain_ptr(shared_from_this());
-		chain_state c_state(transaction_a, 0, m_store, chain_ptr, cache_a);
-
-		auto _T([this, c_state, _from, _value, _dest, _data, gasPrice](int64_t const & gas)
-		{
-			u256 n = c_state.getNonce(_from);
-			Transaction t;
-			if (_dest)
-				t = Transaction(_value, gasPrice, gas, _dest, _data, n);
-			else
-				t = Transaction(_value, gasPrice, gas, _data, n);
-			t.setSignature(h256(0), h256(0), 0);
-			t.forceSender(_from);
-			return t;
-		});
-
-		/// return if used lowerBound successed.
-		{
-			Transaction t = _T(lowerBound);
-			c_state.ts = t;
-			c_state.addBalance(_from, lowerBound * gasPrice + _value);
-			er = c_state.execute(env, Permanence::Reverted, t, dev::eth::OnOpFunc()).first;
-			if (er.excepted == TransactionException::None)
-				return std::make_pair(lowerBound, er);
-		}
-
-		/// Reject the transaction as invalid if it still fails at the highest allowance
-		{
-			Transaction t = _T(upperBound);
-			c_state.ts = t;
-			c_state.addBalance(_from, upperBound * gasPrice + _value);
-			er = c_state.execute(env, Permanence::Reverted, t, dev::eth::OnOpFunc()).first;
-			/// If the error is not nil(consensus error), it means the provided message
-			/// call or transaction will never be accepted no matter how much gas it is
-			/// assigned. Return the error directly, don't struggle any more.
-
-			if (er.excepted != TransactionException::None)
-				return std::make_pair(u256(), er);
-		}
-		/// Execute the binary search and hone in on an executable gas limit
-		while (lowerBound + 1 < upperBound)
-		{
-			int64_t mid = (lowerBound + upperBound) / 2;
-			Transaction t = _T(mid);
-			c_state.ts = t;
-			c_state.addBalance(_from, mid * gasPrice + _value);
-
-			ExecutionResult result = c_state.execute(env, Permanence::Reverted, t, dev::eth::OnOpFunc()).first;
-			if (result.excepted != TransactionException::None
-				/*|| result.codeDeposit == CodeDeposit::Failed*/ /// throw exception if failed. not used yet?
-				)
-			{
-				lowerBound = mid;
-			}
-			else
-			{
-				upperBound = mid;
-				er = result;
-			}
-			if (_callback)
-				_callback(GasEstimationProgress{ lowerBound, upperBound });
-		}
-
-        if (_callback)
-            _callback(GasEstimationProgress { lowerBound, upperBound });
-
-        return std::make_pair(upperBound, er);
-    }
-    catch (std::exception const & e)
-    {
-		LOG(m_log.error) << "estimate_gas error:" << e.what();
-        return std::make_pair(u256(), ExecutionResult());
-    }
-	catch (...)
-	{
-		LOG(m_log.error) << "estimate_gas unknown error";
-		/// TODO: Some sort of notification of failure.
-		return std::make_pair(u256(), ExecutionResult());
-	}
-}
+//std::pair<u256, mcp::ExecutionResult> mcp::chain::estimate_gas(mcp::db::db_transaction& transaction_a, std::shared_ptr<mcp::iblock_cache> cache_a,
+//	Address const& _from, u256 const& _value, Address const& _dest, bytes const& _data, int64_t const& _maxGas, u256 const& _gasPrice, dev::eth::McInfo const & mc_info_a, GasEstimationCallback const& _callback)
+//{
+//	try
+//    {
+//		int64_t upperBound = _maxGas;
+//		if (upperBound == Invalid256 || upperBound > mcp::tx_max_gas)
+//			upperBound = mcp::tx_max_gas;
+//
+//		int64_t lowerBound = Transaction::baseGasRequired(!_dest, &_data, dev::eth::EVMSchedule());
+//        u256 gasPrice = _gasPrice == Invalid256 ? mcp::gas_price : _gasPrice;
+//		ExecutionResult er;
+//
+//		/// Pre calculate the gas needed for execution
+//		if (upperBound < lowerBound)
+//		{
+//			er.excepted = TransactionException::OutOfGas;
+//			return std::make_pair(u256(), er);;
+//		}
+//			
+//		/// Avoid transactions that are less than the lower gas price limit.
+//		if (gasPrice < mcp::gas_price)
+//		{
+//			er.excepted = TransactionException::OutOfGasPriceIntrinsic;
+//			return std::make_pair(u256(), er);
+//		}
+//
+//		dev::eth::EnvInfo env(/*transaction_a, m_store, /*cache_a,*/ mc_info_a, mcp::chainID());
+//		auto bk = postSeal();
+//		chain_state tempState(bk.state());
+//
+//		auto _T([this, bk/*c_state*/, _from, _value, _dest, _data, gasPrice](int64_t const & gas)
+//		{
+//			//u256 n = c_state.getNonce(_from);
+//			u256 n = bk.transactionsFrom(_from);
+//			Transaction t;
+//			if (_dest)
+//				t = Transaction(_value, gasPrice, gas, _dest, _data, n);
+//			else
+//				t = Transaction(_value, gasPrice, gas, _data, n);
+//			t.setSignature(h256(0), h256(0), 0);
+//			t.forceSender(_from);
+//			return t;
+//		});
+//
+//		/// return if used lowerBound successed.
+//		{
+//			Transaction t = _T(lowerBound);
+//			//c_state.ts = t;
+//			tempState.addBalance(_from, lowerBound * gasPrice + _value);
+//			er = tempState.execute(env, *m_sealEngine, Permanence::Reverted, t, dev::eth::OnOpFunc()).first;
+//			if (er.excepted == TransactionException::None)
+//				return std::make_pair(lowerBound, er);
+//		}
+//
+//		/// Reject the transaction as invalid if it still fails at the highest allowance
+//		{
+//			Transaction t = _T(upperBound);
+//			//c_state.ts = t;
+//			tempState.addBalance(_from, upperBound * gasPrice + _value);
+//			er = tempState.execute(env, *m_sealEngine, Permanence::Reverted, t, dev::eth::OnOpFunc()).first;
+//			/// If the error is not nil(consensus error), it means the provided message
+//			/// call or transaction will never be accepted no matter how much gas it is
+//			/// assigned. Return the error directly, don't struggle any more.
+//
+//			if (er.excepted != TransactionException::None)
+//				return std::make_pair(u256(), er);
+//		}
+//		/// Execute the binary search and hone in on an executable gas limit
+//		while (lowerBound + 1 < upperBound)
+//		{
+//			int64_t mid = (lowerBound + upperBound) / 2;
+//			Transaction t = _T(mid);
+//			//c_state.ts = t;
+//			tempState.addBalance(_from, mid * gasPrice + _value);
+//
+//			ExecutionResult result = tempState.execute(env, *m_sealEngine, Permanence::Reverted, t, dev::eth::OnOpFunc()).first;
+//			if (result.excepted != TransactionException::None
+//				/*|| result.codeDeposit == CodeDeposit::Failed*/ /// throw exception if failed. not used yet?
+//				)
+//			{
+//				lowerBound = mid;
+//			}
+//			else
+//			{
+//				upperBound = mid;
+//				er = result;
+//			}
+//			if (_callback)
+//				_callback(GasEstimationProgress{ lowerBound, upperBound });
+//		}
+//
+//        if (_callback)
+//            _callback(GasEstimationProgress { lowerBound, upperBound });
+//
+//        return std::make_pair(upperBound, er);
+//    }
+//    catch (std::exception const & e)
+//    {
+//		LOG(m_log.error) << "estimate_gas error:" << e.what();
+//        return std::make_pair(u256(), ExecutionResult());
+//    }
+//	catch (...)
+//	{
+//		LOG(m_log.error) << "estimate_gas unknown error";
+//		/// TODO: Some sort of notification of failure.
+//		return std::make_pair(u256(), ExecutionResult());
+//	}
+//}
 
 /// This is the top function to be called by js call(). The reason to have this extra wrapper is to have this function
 /// be called other methods except chain::set_block_stable
-std::pair<mcp::ExecutionResult, dev::eth::TransactionReceipt> mcp::chain::execute(mcp::db::db_transaction& transaction_a, std::shared_ptr<mcp::iblock_cache> cache_a, Transaction const& _t, dev::eth::McInfo const & mc_info_a, Permanence _p, dev::eth::OnOpFunc const& _onOp)
-{
-	dev::eth::EnvInfo env(transaction_a, m_store, cache_a, mc_info_a, mcp::chainID());
-	/// sichaoy: startNonce = 0
-	auto chain_ptr(shared_from_this());
-	chain_state c_state(transaction_a, 0, m_store, chain_ptr, cache_a);
-
-	//mcp::stopwatch_guard sw("advance_mc_stable_block3_1_1");
-	return c_state.execute(env, _p, _t, _onOp);
-}
+//std::pair<mcp::ExecutionResult, dev::eth::TransactionReceipt> mcp::chain::execute(mcp::db::db_transaction& transaction_a, std::shared_ptr<mcp::iblock_cache> cache_a, Transaction const& _t, dev::eth::McInfo const & mc_info_a, Permanence _p, dev::eth::OnOpFunc const& _onOp)
+//{
+//	dev::eth::EnvInfo env(/*transaction_a, m_store, /*cache_a,*/ mc_info_a, mcp::chainID());
+//	/// sichaoy: startNonce = 0
+//	chain_state c_state(/*transaction_a,*/ 0, /*m_store,*/ /*chain_ptr,*/ /*cache_a,*/ m_stateDB);
+//	c_state.setRoot(m_lastStateRoot);
+//
+//	//mcp::stopwatch_guard sw("advance_mc_stable_block3_1_1");
+//	return c_state.execute(env, *m_sealEngine, _p, _t, _onOp);
+//}
 
 //mcp::json mcp::chain::traceTransaction(Executive& _e, Transaction const& _t, mcp::json const& _json)
 //{
@@ -1481,35 +1757,53 @@ std::pair<mcp::ExecutionResult, dev::eth::TransactionReceipt> mcp::chain::execut
 //	return st.jsonValue();
 //}
 
-void mcp::chain::call(dev::Address const& _from, dev::Address const& _contractAddress, dev::bytes const& _data, dev::bytes& result)
-{
-	mcp::db::db_transaction transaction(m_store.create_transaction());
-	mcp::block_hash block_hash;
-	m_cache->block_number_get(transaction, last_stable_index(), block_hash);
-	std::shared_ptr<mcp::block_state> mc_state(m_cache->block_state_get(transaction, block_hash));
+//void mcp::chain::call(dev::Address const& _from, dev::Address const& _contractAddress, dev::bytes const& _data, dev::bytes& result)
+//{
+//	mcp::db::db_transaction transaction(m_store.create_transaction());
+//	mcp::block_hash block_hash;
+//	m_cache->block_number_get(transaction, last_stable_index(), block_hash);
+//	std::shared_ptr<mcp::block_state> mc_state(m_cache->block_state_get(transaction, block_hash));
+//	uint64_t last_summary_mci(0);
+//	if (block_hash != mcp::genesis::block_hash)
+//	{
+//		std::shared_ptr<mcp::block> mc_block(m_cache->block_get(transaction, block_hash));
+//		std::shared_ptr<mcp::block_state> last_summary_state(m_cache->block_state_get(transaction, mc_block->last_summary_block()));
+//		last_summary_mci = *last_summary_state->main_chain_index;
+//	}
+//	dev::eth::McInfo mc_info = dev::eth::McInfo(mc_state->stable_index, *mc_state->main_chain_index, mc_state->mc_timestamp, last_summary_mci);
+//	//dev::eth::EnvInfo env(/*transaction, m_store, /*m_cache,*/ mc_info, mcp::chainID());
+//	//chain_state c_state(/*transaction,*/ 0, /*m_store,*/ /*chain_ptr,*/ /*m_cache,*/ m_stateDB);
+//	//c_state.setRoot(m_lastStateRoot);
+//	TransactionSkeleton ts;
+//	ts.from = _from;
+//	ts.to = _contractAddress;
+//	ts.data = _data;
+//	ts.gasPrice = 0;
+//	ts.gas = mcp::tx_max_gas;
+//	//ts.nonce = c_state.getNonce(ts.from);
+//	ts.nonce = postSeal().transactionsFrom(ts.from);
+//	Transaction _t(ts);
+//	_t.setSignature(h256(0), h256(0), 0);
+//	//std::pair<mcp::ExecutionResult, dev::eth::TransactionReceipt> ar = postSeal().execute(env, *m_sealEngine, Permanence::Uncommitted, _t, dev::eth::OnOpFunc());
+//	mcp::ExecutionResult const& ar = postSeal().execute(_t, mc_info, Permanence::Uncommitted, dev::eth::OnOpFunc());
+//
+//	result = ar.output;
+//}
 
-	uint64_t last_summary_mci(0);
-	Address  author;
-	if (block_hash != mcp::genesis::block_hash)
+std::vector<uint64_t> mcp::cal_skip_list_mcis(uint64_t const& mci)
+{
+	std::vector<uint64_t> skip_list_mcis;
+	if (mci == 0) ///return empty
+		return skip_list_mcis;
+	uint64_t divisor = mcp::skiplist_divisor;
+	while (true)
 	{
-		std::shared_ptr<mcp::block> mc_block(m_cache->block_get(transaction, block_hash));
-		std::shared_ptr<mcp::block_state> last_summary_state(m_cache->block_state_get(transaction, mc_block->last_summary_block()));
-		last_summary_mci = *last_summary_state->main_chain_index;
-		author = mc_block->from();
+		if (mci % divisor == 0)
+		{
+			skip_list_mcis.push_back(mci - divisor);
+			divisor *= mcp::skiplist_divisor;
+		}
+		else
+			return skip_list_mcis;
 	}
-	dev::eth::McInfo mc_info = dev::eth::McInfo(mc_state->stable_index, *mc_state->main_chain_index, mc_state->mc_timestamp, last_summary_mci, author);
-	dev::eth::EnvInfo env(transaction, m_store, m_cache, mc_info, mcp::chainID());
-	auto chain_ptr(shared_from_this());
-	chain_state c_state(transaction, 0, m_store, chain_ptr, m_cache);
-	TransactionSkeleton ts;
-	ts.from = _from;
-	ts.to = _contractAddress;
-	ts.data = _data;
-	ts.gasPrice = 0;
-	ts.gas = mcp::tx_max_gas;
-	ts.nonce = c_state.getNonce(ts.from);
-	Transaction _t(ts);
-	_t.setSignature(h256(0), h256(0), 0);
-	std::pair<mcp::ExecutionResult, dev::eth::TransactionReceipt> ar = c_state.execute(env, Permanence::Uncommitted, _t, dev::eth::OnOpFunc());
-	result = ar.first.output;
 }

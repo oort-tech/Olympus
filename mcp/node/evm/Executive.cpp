@@ -5,7 +5,8 @@
 #include <libevm/VMFactory.h>
 #include <mcp/common/Exceptions.h>
 #include <mcp/common/stopwatch.hpp>
-
+#include <mcp/core/param.hpp>
+#include <mcp/node/chain.hpp>
 #include <numeric>
 
 using namespace std;
@@ -39,6 +40,15 @@ namespace
 
 
 
+mcp::Executive::Executive(chain_state& io_s, Block const& _block, unsigned _txIndex, chain const& _bc, unsigned _level, std::shared_ptr<EVMLogger> _tracer)
+	: m_s(createIntermediateState(io_s, _block, _txIndex, _bc)),
+	m_envInfo(_block.info(), mcp::chainID()),
+	m_depth(_level),
+	m_sealEngine(*_bc.sealEngine()),
+	m_tracer(_tracer)
+{
+}
+
 void mcp::Executive::initialize(Transaction const& _transaction)
 {
 	m_t = _transaction;
@@ -66,7 +76,8 @@ void mcp::Executive::initialize(Transaction const& _transaction)
 			<< m_s.balance(m_t.sender()) << " for sender: " << m_t.sender().hexPrefixed();
 		m_excepted = TransactionException::NotEnoughCash;
 		m_s.incNonce(m_t.sender());
-		if (mcp::chainParams()->IsOIP4(m_envInfo.mci()))
+		//if (mcp::chainParams()->IsOIP4(m_envInfo.mci()))
+		if (mcp::param::get()->IsOIP4(m_envInfo.mci()))
 			m_gas = m_t.gas();//OIP4
 
 		BOOST_THROW_EXCEPTION(dev::eth::NotEnoughCash() << RequirementError(totalCost, (bigint)m_s.balance(m_t.sender())) << errinfo_comment(m_t.sender().hex()));
@@ -77,6 +88,9 @@ void mcp::Executive::initialize(Transaction const& _transaction)
 bool mcp::Executive::execute()
 {
 	//mcp::stopwatch_guard sw("Executive:execute");
+	if (m_tracer)
+		m_tracer->CaptureTxStart(uint64_t(m_t.gas()));
+
 	try
 	{
 		m_s.subBalance(m_t.sender(), m_gasCost);
@@ -88,14 +102,9 @@ bool mcp::Executive::execute()
 	}
 	assert(m_t.gas() >= (u256)m_baseGasRequired);
     if (m_t.isCreation())
-    {
         return create(m_t.sender(), m_t.value(), m_t.gasPrice(), m_t.gas() - (u256)m_baseGasRequired, &m_t.data(), m_t.sender());
-    }
     else
-    {
         return call(m_t.receiveAddress(), m_t.sender(), m_t.value(), m_t.gasPrice(), bytesConstRef(&m_t.data()), m_t.gas() - (u256)m_baseGasRequired);
-    }
-	return true;
 }
 
 bool mcp::Executive::create(Address const& _txSender, u256 const& _endowment, u256 const& _gasPrice, u256 const& _gas, bytesConstRef _init, Address const& _origin)
@@ -106,7 +115,10 @@ bool mcp::Executive::create(Address const& _txSender, u256 const& _endowment, u2
 
 bool mcp::Executive::call(Address const& _receiveAddress, Address const& _senderAddress, u256 const& _value, u256 const& _gasPrice, bytesConstRef _data, u256 const& _gas)
 {
-    dev::eth::CallParameters params(_senderAddress, _receiveAddress, _receiveAddress, _value, _value, _gas, _data, {});
+	//if (m_tracer && topCall())
+	//	m_tracer->CaptureStart(_senderAddress, _receiveAddress, false, _data.toBytes(), uint64_t(m_gas), _value);
+
+    dev::eth::CallParameters params(_senderAddress, _receiveAddress, _receiveAddress, _value, _value, _gas, _data, nullptr/*, {}*/);
     return call(params, _gasPrice, _senderAddress);
 }
 
@@ -114,15 +126,13 @@ bool mcp::Executive::call(dev::eth::CallParameters const& _p, u256 const& _gasPr
 {
 	// If external transaction.
     if (m_t)
-    {
         m_s.incNonce(_p.senderAddress);
-    }
 
     m_savepoint = m_s.savepoint();
 
-	if (m_s.is_precompiled(_p.codeAddress, m_envInfo.mc_last_summary_mci()))
+	if (m_sealEngine.isPrecompiled(_p.codeAddress, m_envInfo.mc_last_summary_mci()))
 	{
-		bigint g = m_s.cost_of_precompiled(_p.codeAddress, _p.data);
+		bigint g = m_sealEngine.costOfPrecompiled(_p.codeAddress, _p.data);
 		if (_p.gas < g)
 		{
 			m_excepted = TransactionException::OutOfGasBase;
@@ -133,7 +143,7 @@ bool mcp::Executive::call(dev::eth::CallParameters const& _p, u256 const& _gasPr
 			m_gas = (u256)(_p.gas - g);
 			bytes output;
 			bool success;
-			tie(success, output) = m_s.execute_precompiled(_p.codeAddress, _p.data);
+			tie(success, output) = m_sealEngine.executePrecompiled(_p.codeAddress, _p.data);
 			size_t outputSize = output.size();
 			m_output = owning_bytes_ref{ std::move(output), 0, outputSize };
 			if (!success)
@@ -151,74 +161,77 @@ bool mcp::Executive::call(dev::eth::CallParameters const& _p, u256 const& _gasPr
 		{
 			bytes const& c = m_s.code(_p.codeAddress);
 			h256 codeHash = m_s.codeHash(_p.codeAddress);
-			m_ext = std::make_shared<ExtVM>(m_s, m_envInfo, _p.receiveAddress,
+			m_ext = std::make_shared<ExtVM>(m_s, m_envInfo, m_sealEngine, _p.receiveAddress,
 				_p.senderAddress, _origin, _p.apparentValue, _gasPrice, _p.data, &c, codeHash,
-				0, m_depth + 1, false, _p.staticCall);
+				0, m_depth, false, _p.staticCall);
 		}
 	}
 
-	//call trace action
-	std::shared_ptr<mcp::call_trace_action> call_action(std::make_shared<mcp::call_trace_action>());
-	std::string call_type;
-	if (_p.op)
-	{
-		Instruction op = *_p.op;
-		switch (op)
-		{
-		case Instruction::CALL:
-			call_type = "call";
-			break;
-		case Instruction::CALLCODE:
-			call_type = "callcode";
-			break;
-		case Instruction::DELEGATECALL:
-			call_type = "delegatecall";
-			break;
-		case Instruction::STATICCALL:
-			call_type = "staticcall";
-			break;
-		default:
-			call_type = std::to_string((uint8_t)op);
-			break;
-		}
-	}
-	else
-		call_type = "call";
+	////call trace action
+	//std::shared_ptr<mcp::call_trace_action> call_action(std::make_shared<mcp::call_trace_action>());
+	//std::string call_type;
+	//if (_p.op)
+	//{
+	//	Instruction op = *_p.op;
+	//	switch (op)
+	//	{
+	//	case Instruction::CALL:
+	//		call_type = "call";
+	//		break;
+	//	case Instruction::CALLCODE:
+	//		call_type = "callcode";
+	//		break;
+	//	case Instruction::DELEGATECALL:
+	//		call_type = "delegatecall";
+	//		break;
+	//	case Instruction::STATICCALL:
+	//		call_type = "staticcall";
+	//		break;
+	//	default:
+	//		call_type = std::to_string((uint8_t)op);
+	//		break;
+	//	}
+	//}
+	//else
+	//	call_type = "call";
 
-	call_action->call_type = call_type;
-	call_action->from = _p.senderAddress;
-	call_action->to = _p.receiveAddress;
-	call_action->amount = _p.valueTransfer;
-	call_action->data = _p.data.toBytes();
-	call_action->gas = _p.gas;
-	if (m_depth == 0)
-		call_action->gas += m_baseGasRequired;
+	//call_action->call_type = call_type;
+	//call_action->from = _p.senderAddress;
+	//call_action->to = _p.receiveAddress;
+	//call_action->amount = _p.valueTransfer;
+	//call_action->data = _p.data.toBytes();
+	//call_action->gas = _p.gas;
+	//if (m_depth == 0)
+	//	call_action->gas += m_baseGasRequired;
 
-	std::shared_ptr<mcp::trace> call_trace(std::make_shared<mcp::trace>());
-	call_trace->type = mcp::trace_type::call;
-	call_trace->action = call_action;
-	call_trace->depth = m_depth;
+	//std::shared_ptr<mcp::trace> call_trace(std::make_shared<mcp::trace>());
+	//call_trace->type = mcp::trace_type::call;
+	//call_trace->action = call_action;
+	//call_trace->depth = m_depth;
 
-	m_traces.push_back(call_trace);
-	assert_x(!m_current_trace);
-	m_current_trace = call_trace;
+	//m_traces.push_back(call_trace);
+	//assert_x(!m_current_trace);
+	//m_current_trace = call_trace;
 
 	mcp::uint256_t start_gas_used = gasUsed();
 
     /// Transfer balance
     m_s.transferBalance(_p.senderAddress, _p.receiveAddress, _p.valueTransfer);
 
-	if (!m_ext)
-	{
-		std::shared_ptr<mcp::call_trace_result> call_result(std::make_shared<mcp::call_trace_result>());
-		call_result->output = m_output.toVector();
-		call_result->gas_used = gasUsed() - start_gas_used;
+	if (m_tracer && m_ext && topCall())
+		m_tracer->CaptureStart(m_ext.get(), _p.senderAddress, _p.codeAddress, false, _p.data.toBytes(), uint64_t(m_gas), _p.valueTransfer);
 
-		assert_x(m_current_trace);
-		assert_x(m_current_trace->type == mcp::trace_type::call);
-		m_current_trace->result = call_result;
-		m_current_trace = nullptr;
-	}
+	//if (!m_ext)
+	//{
+	//	std::shared_ptr<mcp::call_trace_result> call_result(std::make_shared<mcp::call_trace_result>());
+	//	call_result->output = m_output.toVector();
+	//	call_result->gas_used = gasUsed() - start_gas_used;
+
+	//	assert_x(m_current_trace);
+	//	assert_x(m_current_trace->type == mcp::trace_type::call);
+	//	m_current_trace->result = call_result;
+	//	m_current_trace = nullptr;
+	//}
 
     return !m_ext;
 }
@@ -233,17 +246,21 @@ bool mcp::Executive::createOpcode(Address const& _sender, u256 const& _endowment
 {
     u256 nonce = m_s.getNonce(_sender);
 	m_newAddress = right160(sha3(rlpList(_sender, nonce)));
-    return executeCreate(_sender, _endowment, _gasPrice, _gas, _init, _origin);
+
+	//if (m_tracer && topCall())
+	//	m_tracer->CaptureStart(_sender, m_newAddress, true, _init.toBytes(), uint64_t(m_gas), _endowment);
+    
+	return executeCreate(_sender, _endowment, _gasPrice, _gas, _init, _origin, Instruction::CREATE);
 }
 
 bool mcp::Executive::create2Opcode(Address const& _sender, u256 const& _endowment, u256 const& _gasPrice, u256 const& _gas, bytesConstRef _init, Address const& _origin, u256 const& _salt)
 {
     m_newAddress = right160(sha3(bytes{0xff} +_sender.asBytes() + toBigEndian(_salt) + sha3(_init)));
-    return executeCreate(_sender, _endowment, _gasPrice, _gas, _init, _origin);
+    return executeCreate(_sender, _endowment, _gasPrice, _gas, _init, _origin, Instruction::CREATE2);
 }
 
 bool mcp::Executive::executeCreate(Address const& _sender, u256 const& _endowment, u256 const& _gasPrice,
-	u256 const& _gas, bytesConstRef _init, Address const& _origin)
+	u256 const& _gas, bytesConstRef _init, Address const& _origin, Instruction _typ)
 {
     // sichaoy: why should _sender != MaxAddress?
     m_s.incNonce(_sender);
@@ -276,32 +293,35 @@ bool mcp::Executive::executeCreate(Address const& _sender, u256 const& _endowmen
     // Schedule _init execution if not empty.
 	if (!_init.empty())
 	{
-		m_ext = std::make_shared<ExtVM>(m_s, m_envInfo, m_newAddress, _sender, _origin, _endowment, _gasPrice, 
-			dev::bytesConstRef(), _init, sha3(_init), 0, m_depth + 1, true, false);
+		m_ext = std::make_shared<ExtVM>(m_s, m_envInfo, m_sealEngine, m_newAddress, _sender, _origin, _endowment, _gasPrice,
+			dev::bytesConstRef(), _init, sha3(_init), 0, m_depth, true, false);
 	}
 
-	//create trace action
-	std::shared_ptr<mcp::create_trace_action> create_action(std::make_shared<mcp::create_trace_action>());
-	create_action->from = _sender;
-	create_action->init = _init.toVector();
-	create_action->amount = _endowment;
-	create_action->gas = _gas;
-	if (m_depth == 0)
-		create_action->gas += m_baseGasRequired;
+	if (m_tracer && m_ext && topCall())
+		m_tracer->CaptureStart(m_ext.get(), _sender, m_newAddress, true, _init.toBytes(), uint64_t(m_gas), _endowment);
 
-	std::shared_ptr<mcp::trace> create_trace(std::make_shared<mcp::trace>());
-	create_trace->type = mcp::trace_type::create;
-	create_trace->action = create_action;
-	create_trace->depth = m_depth;
+	////create trace action
+	//std::shared_ptr<mcp::create_trace_action> create_action(std::make_shared<mcp::create_trace_action>());
+	//create_action->from = _sender;
+	//create_action->init = _init.toVector();
+	//create_action->amount = _endowment;
+	//create_action->gas = _gas;
+	//if (m_depth == 0)
+	//	create_action->gas += m_baseGasRequired;
 
-	m_traces.push_back(create_trace);
-	assert_x(!m_current_trace);
-	m_current_trace = create_trace;
+	//std::shared_ptr<mcp::trace> create_trace(std::make_shared<mcp::trace>());
+	//create_trace->type = mcp::trace_type::create;
+	//create_trace->action = create_action;
+	//create_trace->depth = m_depth;
+
+	//m_traces.push_back(create_trace);
+	//assert_x(!m_current_trace);
+	//m_current_trace = create_trace;
 
     return !m_ext;
 }
 
-bool mcp::Executive::go(dev::eth::OnOpFunc const& _onOp)
+bool mcp::Executive::go(/*dev::eth::OnOpFunc const& _onOp*/)
 {
 	//mcp::stopwatch_guard sw("Executive:go");
     if (m_ext)
@@ -310,26 +330,26 @@ bool mcp::Executive::go(dev::eth::OnOpFunc const& _onOp)
         Timer t;
 #endif
         try{
-			mcp::uint256_t start_gas_used = gasUsed();
-			int64_t start_refunds = m_ext->sub.refunds;
+			//mcp::uint256_t start_gas_used = gasUsed();
+			//int64_t start_refunds = m_ext->sub.refunds;
 
             // Create VM instance. Force Interpreter if tracing requested.
             auto vm = VMFactory::create();
             if (m_isCreation)
             {
-                auto out = vm->exec(m_gas, *m_ext, _onOp);
+				m_output = vm->exec(m_gas, *m_ext, m_tracer/*, _onOp*/);
                 if (m_res)
                 {
                     m_res->gasForDeposit = m_gas;
-                    m_res->depositSize = out.size();
+                    m_res->depositSize = m_output.size();
                 }
-                if (out.size() > m_ext->evmSchedule().maxCodeSize)
+                if (m_output.size() > m_ext->evmSchedule().maxCodeSize)
                     BOOST_THROW_EXCEPTION(OutOfGas());
-                else if (out.size() * m_ext->evmSchedule().createDataGas <= m_gas)
+                else if (m_output.size() * m_ext->evmSchedule().createDataGas <= m_gas)
                 {
                     if (m_res)
                         m_res->codeDeposit = CodeDeposit::Success;
-                    m_gas -= out.size() * m_ext->evmSchedule().createDataGas;
+                    m_gas -= m_output.size() * m_ext->evmSchedule().createDataGas;
                 }
                 else
                 {
@@ -339,38 +359,38 @@ bool mcp::Executive::go(dev::eth::OnOpFunc const& _onOp)
                     {
                         if (m_res)
                             m_res->codeDeposit = CodeDeposit::Failed;
-                        out = {};
+						m_output = {};
                     }
                 }
                 if (m_res)
-                    m_res->output = out.toVector(); // copy output to execution result
-                m_s.setCode(m_ext->myAddress, out.toVector());
+                    m_res->output = m_output.toVector(); // copy output to execution result
+                m_s.setCode(m_ext->myAddress, m_output.toVector());
 
-				//create trace result 
-				std::shared_ptr<mcp::create_trace_result> create_result(std::make_shared<mcp::create_trace_result>());
-				create_result->contract_account = m_ext->myAddress;
-				create_result->code = out.toVector();
-				create_result->gas_used = gasUsed() - start_gas_used - mcp::uint256_t(m_ext->sub.refunds - start_refunds);
+				////create trace result 
+				//std::shared_ptr<mcp::create_trace_result> create_result(std::make_shared<mcp::create_trace_result>());
+				//create_result->contract_account = m_ext->myAddress;
+				//create_result->code = out.toVector();
+				//create_result->gas_used = gasUsed() - start_gas_used - mcp::uint256_t(m_ext->sub.refunds - start_refunds);
 
-				assert_x(m_current_trace);
-				assert_x(m_current_trace->type == mcp::trace_type::create);
-				m_current_trace->result = create_result;
-				m_current_trace = nullptr;
+				//assert_x(m_current_trace);
+				//assert_x(m_current_trace->type == mcp::trace_type::create);
+				//m_current_trace->result = create_result;
+				//m_current_trace = nullptr;
             }
             else
-            {
-                m_output = vm->exec(m_gas, *m_ext, _onOp);
+            //{
+                m_output = vm->exec(m_gas, *m_ext, m_tracer/*, _onOp*/);
 
-				//call trace result 
-				std::shared_ptr<mcp::call_trace_result> call_result(std::make_shared<mcp::call_trace_result>());
-				call_result->output = m_output.toVector();
-				call_result->gas_used = gasUsed() - start_gas_used - mcp::uint256_t(m_ext->sub.refunds - start_refunds);
+				////call trace result 
+				//std::shared_ptr<mcp::call_trace_result> call_result(std::make_shared<mcp::call_trace_result>());
+				//call_result->output = m_output.toVector();
+				//call_result->gas_used = gasUsed() - start_gas_used - mcp::uint256_t(m_ext->sub.refunds - start_refunds);
 
-				assert_x(m_current_trace);
-				assert_x(m_current_trace->type == mcp::trace_type::call);
-				m_current_trace->result = call_result;
-				m_current_trace = nullptr;
-            }
+				//assert_x(m_current_trace);
+				//assert_x(m_current_trace->type == mcp::trace_type::call);
+				//m_current_trace->result = call_result;
+				//m_current_trace = nullptr;
+            //}
         }
         catch (RevertInstruction& _e)
         {
@@ -412,15 +432,18 @@ bool mcp::Executive::go(dev::eth::OnOpFunc const& _onOp)
         if (m_res && m_output)
             // Copy full output:
             m_res->output = m_output.toVector();
+		if (m_tracer && topCall())
+			m_tracer->CaptureEnd(m_output.toVector(), uint64_t(gasUsed()), getException());
+
         //std::cout << m_res->output << std::endl;
 
-		//error trace result 
-		if (m_excepted != mcp::TransactionException::None)
-		{
-			assert_x(m_current_trace);
-			m_current_trace->error_message = to_transaction_exception_messge(m_excepted);
-			m_current_trace = nullptr;
-		}
+		////error trace result 
+		//if (m_excepted != mcp::TransactionException::None)
+		//{
+		//	assert_x(m_current_trace);
+		//	m_current_trace->error_message = to_transaction_exception_messge(m_excepted);
+		//	m_current_trace = nullptr;
+		//}
 
 #if ETH_TIMED_EXECUTIONS
         cnote << "VM took:" << t.elapsed() << "; gas used: " << (sgas - m_endGas);
@@ -449,7 +472,7 @@ bool mcp::Executive::finalize()
     {
         m_s.addBalance(m_t.sender(), m_gas * m_t.gasPrice());
 
-		u256 feesEarned = (m_t.gas() - m_gas) * m_t.gasPrice();
+		//u256 feesEarned = (m_t.gas() - m_gas) * m_t.gasPrice();
         // m_s.addBalance(m_envInfo.author(), feesEarned); //sichaoy: these fees should goes to witness
     }
 
@@ -469,6 +492,10 @@ bool mcp::Executive::finalize()
         m_res->newAddress = m_newAddress;
         m_res->gasRefunded = m_ext ? m_ext->sub.refunds : 0;
     }
+
+	if (m_tracer)
+		m_tracer->CaptureTxEnd(uint64_t(m_gas));
+
     return (m_excepted == TransactionException::None);
 }
 

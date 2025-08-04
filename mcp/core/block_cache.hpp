@@ -19,7 +19,7 @@ public:
 	virtual bool block_exists(mcp::db::db_transaction & transaction_a, mcp::block_hash const & block_hash_a) = 0;
 	virtual std::shared_ptr<mcp::block> block_get(mcp::db::db_transaction & transaction_a, mcp::block_hash const & block_hash_a) = 0;
 	virtual std::shared_ptr<mcp::block_state> block_state_get(mcp::db::db_transaction & transaction_a, mcp::block_hash const & block_hash_a) = 0;
-	virtual std::shared_ptr<mcp::account_state> latest_account_state_get(mcp::db::db_transaction & transaction_a, Address const & account_a) = 0;
+	//virtual std::shared_ptr<mcp::account_state> latest_account_state_get(mcp::db::db_transaction & transaction_a, Address const & account_a) = 0;
 	virtual std::shared_ptr<Transaction> transaction_get(mcp::db::db_transaction & transaction_a, h256 const & hash) = 0;
 	virtual std::shared_ptr<approve> approve_get(mcp::db::db_transaction & transaction_a, h256 const & hash) = 0;
 	virtual bool transaction_exists(mcp::db::db_transaction & transaction_a, h256 const & hash) = 0;
@@ -48,11 +48,11 @@ class block_cache : public mcp::iblock_cache
 	void mark_block_state_as_changing(std::unordered_set<mcp::block_hash> const & block_hashs_a);
 	void clear_block_state_changing();
 
-	std::shared_ptr<mcp::account_state> latest_account_state_get(mcp::db::db_transaction & transaction_a, Address const & account_a);
-	void latest_account_state_put(Address const & account_a, std::shared_ptr<mcp::account_state> account_state_a);
-	void latest_account_state_earse(std::unordered_set<Address> const & accounts_a);
-	void mark_latest_account_state_as_changing(std::unordered_set<Address> const & accounts_a);
-	void clear_latest_account_state_changing();
+	//std::shared_ptr<mcp::account_state> latest_account_state_get(mcp::db::db_transaction & transaction_a, Address const & account_a);
+	//void latest_account_state_put(Address const & account_a, std::shared_ptr<mcp::account_state> account_state_a);
+	//void latest_account_state_earse(std::unordered_set<Address> const & accounts_a);
+	//void mark_latest_account_state_as_changing(std::unordered_set<Address> const & accounts_a);
+	//void clear_latest_account_state_changing();
 
 	bool transaction_exists(mcp::db::db_transaction & transaction_a, h256 const & hash);
 	std::shared_ptr<Transaction> transaction_get(mcp::db::db_transaction & transaction_a, h256 const & hash);
@@ -122,9 +122,9 @@ private:
 	std::unordered_set<mcp::block_hash> m_block_state_changings;
 	mcp::Cache<mcp::block_hash, std::shared_ptr<mcp::block_state>> m_block_states;
 
-	std::mutex m_latest_account_state_mutex;
-	std::unordered_set<Address> m_latest_account_state_changings;
-	mcp::Cache<Address, std::shared_ptr<mcp::account_state>> m_latest_account_states;
+	//std::mutex m_latest_account_state_mutex;
+	//std::unordered_set<Address> m_latest_account_state_changings;
+	//mcp::Cache<Address, std::shared_ptr<mcp::account_state>> m_latest_account_states;
 
 	std::mutex m_transaction_mutex;
 	std::unordered_set<h256> m_transaction_changings;

@@ -7,7 +7,7 @@
 #include "approve.hpp"
 #include "common.hpp"
 
-const dev::h256 ZeroUnclesSha3("0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421");
+//const dev::h256 ZeroUnclesSha3("0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421");
 
 namespace mcp
 {
@@ -73,7 +73,7 @@ namespace mcp
 			m_stateRoot(_stateRoot),
 			m_receiptsRoot(_receiptsRoot),
 			m_parent(_parent),
-			m_sha3Uncles(ZeroUnclesSha3)
+			m_sha3Uncles(dev::EmptyListSHA3)
 		{
 			std::vector<bytes> transactionsRoot;
 			for (size_t i = 0; i < _txs.size(); i++)

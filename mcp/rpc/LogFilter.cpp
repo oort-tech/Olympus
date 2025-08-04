@@ -1,4 +1,5 @@
 #include "LogFilter.hpp"
+#include <mcp/core/param.hpp>
 
 namespace mcp
 {
@@ -54,7 +55,8 @@ namespace mcp
 
         log_entries ret;
         log_bloom _bloom = _r.bloom();
-        if (!mcp::chainParams()->IsOIP5(_mci))///OIP5
+        //if (!mcp::chainParams()->IsOIP5(_mci))///OIP5
+        if (!mcp::param::get()->IsOIP5(_mci))///OIP5
             _bloom = mcp::bloom(_r.log());
 
         if (matches(_bloom))

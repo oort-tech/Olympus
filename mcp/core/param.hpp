@@ -2,72 +2,97 @@
 
 #include "config.hpp"
 #include "block_cache.hpp"
+#include "ChainOperationParams.hpp"
+#include "SealEngine.h"
 
 namespace mcp
 {
-class param
+class param : public ChainOperationParams
 {
 public:
 	static void init(std::shared_ptr<mcp::block_cache> cache_a)
 	{
-		init_block_param();
-		init_witness_param();
-		cache = cache_a;
+		get()->init_block_param();
+		get()->init_witness_param();
+		get()->Load();
+		get()->cache = cache_a;
 	}
 
 	static mcp::block_param const & block_param(uint64_t const & last_epoch_a)
 	{
 		mcp::block_param const & b_param
-			= find_by_last_epoch<mcp::block_param>(last_epoch_a, block_param_map);
+			= get()->find_by_last_epoch<mcp::block_param>(last_epoch_a, get()->block_param_map);
 		return b_param;
 	}
 
 	static mcp::witness_param witness_param(mcp::db::db_transaction & transaction_a, Epoch const & epoch_a)
 	{
-		DEV_READ_GUARDED(m_mutex_witness){
-			return find_param(transaction_a, epoch_a);;
+		DEV_READ_GUARDED(get()->m_mutex_witness){
+			return get()->find_param(transaction_a, epoch_a);;
 		}
 	}
 
 	static bool is_witness(mcp::db::db_transaction & transaction_a, Epoch const & epoch_a, dev::Address const & account_a)
 	{
-		DEV_READ_GUARDED(m_mutex_witness){
-			mcp::witness_param w_param = find_param(transaction_a,epoch_a);
+		DEV_READ_GUARDED(get()->m_mutex_witness){
+			mcp::witness_param w_param = get()->find_param(transaction_a,epoch_a);
 			if (w_param.witness_list.count(account_a))
 				return true;
 			return false;
 		}
 	}
 
-	static WitnessList to_witness_list(std::vector<std::string> const & witness_strs)
-	{
-		WitnessList witness_list;
-		for (std::string w_str : witness_strs)
-		{
-			dev::Address w_acc(w_str);
-			witness_list.insert(w_acc);
-		}
-		return witness_list;
-	}
+	//static WitnessList to_witness_list(std::vector<std::string> const & witness_strs)
+	//{
+	//	WitnessList witness_list;
+	//	for (std::string w_str : witness_strs)
+	//	{
+	//		dev::Address w_acc(w_str);
+	//		witness_list.insert(w_acc);
+	//	}
+	//	return witness_list;
+	//}
 
 	static void add_witness_param(mcp::db::db_transaction & transaction_a, Epoch const & epoch_a, mcp::witness_param &w_param){
-		DEV_WRITE_GUARDED(m_mutex_witness){
-			cache->epoch_param_put(transaction_a, epoch_a, std::make_shared<mcp::witness_param>(w_param));
-			mcp::param::witness_param_map.insert({epoch_a, w_param });
-			if (mcp::param::witness_param_map.size() > 3)
+		DEV_WRITE_GUARDED(get()->m_mutex_witness){
+			get()->cache->epoch_param_put(transaction_a, epoch_a, std::make_shared<mcp::witness_param>(w_param));
+			get()->witness_param_map.insert({epoch_a, w_param });
+			if (get()->witness_param_map.size() > 3)
 			{
-				mcp::param::witness_param_map.erase(mcp::param::witness_param_map.begin());
+				get()->witness_param_map.erase(get()->witness_param_map.begin());
 			}
 		}
 	}
 
 	static mcp::witness_param const & genesis_witness_param()
 	{
-		return init_param;
+		return get()->init_param;
 	}
 
+	static SealEngineFace* createSealEngine()
+	{
+		auto _seal = new SealEngineFace;
+		_seal->setChainParams(*get());
+		return _seal;
+	}
+
+	static param* get() { if (!s_this) s_this = new param; return s_this; }
+
 private:
-	static void init_block_param()
+	
+	void Load()
+	{
+		precompiled.insert(std::make_pair(dev::Address(1), dev::eth::PrecompiledContract(3000, 0, dev::eth::PrecompiledRegistrar::executor("ecrecover"))));
+		precompiled.insert(std::make_pair(dev::Address(2), dev::eth::PrecompiledContract(60, 12, dev::eth::PrecompiledRegistrar::executor("sha256"))));
+		precompiled.insert(std::make_pair(dev::Address(3), dev::eth::PrecompiledContract(600, 120, dev::eth::PrecompiledRegistrar::executor("ripemd160"))));
+		precompiled.insert(std::make_pair(dev::Address(4), dev::eth::PrecompiledContract(15, 3, dev::eth::PrecompiledRegistrar::executor("identity"))));
+		precompiled.insert(std::make_pair(dev::Address(5), dev::eth::PrecompiledContract(dev::eth::PrecompiledRegistrar::pricer("modexp"), dev::eth::PrecompiledRegistrar::executor("modexp"))));
+		precompiled.insert(std::make_pair(dev::Address(6), dev::eth::PrecompiledContract(500, 0, dev::eth::PrecompiledRegistrar::executor("alt_bn128_G1_add"))));
+		precompiled.insert(std::make_pair(dev::Address(7), dev::eth::PrecompiledContract(40000, 0, dev::eth::PrecompiledRegistrar::executor("alt_bn128_G1_mul"))));
+		precompiled.insert(std::make_pair(dev::Address(8), dev::eth::PrecompiledContract(dev::eth::PrecompiledRegistrar::pricer("alt_bn128_pairing_product"), dev::eth::PrecompiledRegistrar::executor("alt_bn128_pairing_product"))));
+	}
+
+	/*static*/ void init_block_param()
 	{
 		mcp::block_param b_param_v0;
 		b_param_v0.max_parent_size = 16;
@@ -80,30 +105,32 @@ private:
 		{
 			chain_id = (uint64_t)9900;
 			gas_price = (uint256_t)1e11;
-			ChainConfig->HalleyForkBlock = 100;
+			///*ChainConfig->*/HalleyForkBlock = 100;
 			break;
 		}
 		case mcp::mcp_networks::mcp_test_network:
 		{
 			chain_id = (uint64_t)9800;
 			gas_price = (uint256_t)1e11;
-			ChainConfig->HalleyForkBlock = 10000;
+			/*ChainConfig->*/HalleyForkBlock = 10000;
 			break;
 		}
 		case mcp::mcp_networks::mcp_beta_network:
 		{
 			chain_id = (uint64_t)9700;// Ascraeus 972; huygens 971; dev 9700
 			gas_price = (uint256_t)1e11;
-			ChainConfig->OIP4And5Block = 110000;
-			ChainConfig->HalleyForkBlock = 320000;
+			/*ChainConfig->*/OIP4And5Block = 110000;
+			/*ChainConfig->*/HalleyForkBlock = 320000;
+			OIP6Block = 0;////todo
 			break;
 		}
 		case mcp::mcp_networks::mcp_live_network:
 		{
 			chain_id = (uint64_t)970;
 			gas_price = (uint256_t)1e11;
-			ChainConfig->OIP4And5Block = 6000000;
-			ChainConfig->HalleyForkBlock = 24700000;
+			/*ChainConfig->*/OIP4And5Block = 6000000;
+			/*ChainConfig->*/HalleyForkBlock = 24700000;
+			OIP6Block = 0;////todo
 			break;
 		}
 		default:
@@ -111,7 +138,7 @@ private:
 		}
 	}
 
-	static void init_witness_param()
+	/*static*/ void init_witness_param()
 	{
 		std::vector<std::string> witness_str_list_v0;
 		switch (mcp::mcp_network)
@@ -221,12 +248,14 @@ private:
 
 		init_param.witness_count = witness_str_list_v0.size();
 		init_param.majority_of_witnesses = init_param.witness_count * 2 / 3 + 1;
-		init_param.witness_list = to_witness_list(witness_str_list_v0);
+		//init_param.witness_list = to_witness_list(witness_str_list_v0);
+		for (std::string w_str : witness_str_list_v0)
+			init_param.witness_list.insert(dev::Address(w_str));
 		assert_x(init_param.witness_list.size() == init_param.witness_count);
 	}
 
 	template<class T>
-	static T const & find_by_last_epoch(Epoch const & epoch_a, std::map<uint64_t, T> const & maps_a)
+	/*static*/ T const & find_by_last_epoch(Epoch const & epoch_a, std::map<uint64_t, T> const & maps_a)
 	{
 		for (auto it(maps_a.rbegin()); it != maps_a.rend(); it++)
 		{
@@ -240,7 +269,7 @@ private:
 		assert_x(false);
 	}
 
-	static mcp::witness_param find_param(mcp::db::db_transaction & transaction_a, Epoch const & epoch_a)
+	/*static*/ mcp::witness_param find_param(mcp::db::db_transaction & transaction_a, Epoch const & epoch_a)
 	{
 		if (epoch_a <= 1)
 			return init_param;
@@ -254,14 +283,15 @@ private:
 	}
 
 	//epoch -> block param
-	static std::map<uint64_t, mcp::block_param> block_param_map;
+	/*static*/ std::map<uint64_t, mcp::block_param> block_param_map;
 
 	//epoch -> witness param
-	static std::map<uint64_t, mcp::witness_param> witness_param_map;
-	static dev::SharedMutex m_mutex_witness;
-	static mcp::witness_param init_param;
+	/*static*/ std::map<uint64_t, mcp::witness_param> witness_param_map;
+	/*static*/ dev::SharedMutex m_mutex_witness;
+	/*static*/ mcp::witness_param init_param;
 
-	static std::shared_ptr<mcp::block_cache> cache;
+	static param* s_this;
+	/*static*/ std::shared_ptr<mcp::block_cache> cache;
 };
 
 }

@@ -9,7 +9,7 @@ namespace mcp
 	class genesis
 	{
 	public:
-		static std::pair<bool, Transactions> try_initialize(mcp::db::db_transaction & transaction_a, mcp::block_store & store_a);
+		static std::pair<mcp::block, Transactions> try_initialize(/*mcp::db::db_transaction & transaction_a, mcp::block_store & store_a*/);
 		
 		static std::pair<bool, dev::Address> isGenesisTransaction(mcp::block_hash const& _h);
 

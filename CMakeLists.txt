@@ -179,7 +179,9 @@ add_library (db
 	mcp/db/column.cpp
 	mcp/db/column.hpp
 	mcp/db/counter.cpp
-	mcp/db/counter.hpp)
+	mcp/db/counter.hpp
+	mcp/db/common.hpp
+	mcp/db/common.cpp)
 
 include_directories("${CMAKE_SOURCE_DIR}/mcp/p2p")
 include_directories("${CMAKE_SOURCE_DIR}/miniupnp")
@@ -233,11 +235,11 @@ add_library (common
 	mcp/common/stopwatch.hpp
 	mcp/common/stopwatch.cpp
 	mcp/common/lruc_cache.hpp
-    mcp/common/log.cpp
+	mcp/common/log.cpp
 	mcp/common/log.hpp
  	mcp/common/json.hpp
  	mcp/common/fifo_map.hpp    
-    mcp/common/mcp_json.hpp
+	mcp/common/mcp_json.hpp
 	mcp/common/assert.hpp
 	mcp/common/common.hpp
 	mcp/common/common.cpp
@@ -245,8 +247,6 @@ add_library (common
 
 	
 FILE(GLOB NODE_EVM_SOURCES
-    mcp/node/evm/Precompiled.cpp
-    mcp/node/evm/Precompiled.h
 	mcp/node/evm/Executive.hpp
 	mcp/node/evm/Executive.cpp
 	mcp/node/evm/ExtVM.h
@@ -254,8 +254,23 @@ FILE(GLOB NODE_EVM_SOURCES
 )
 SOURCE_GROUP(evm FILES ${NODE_EVM_SOURCES})
 
+FILE(GLOB NODE_TRACE_SOURCES
+	mcp/node/tracers/Tracer.hpp
+	mcp/node/tracers/Tracer.cpp
+	mcp/node/tracers/OpCode.hpp
+	mcp/node/tracers/OpCode.cpp
+	mcp/node/tracers/4byte.hpp
+	mcp/node/tracers/4byte.cpp
+	mcp/node/tracers/Call.hpp
+	mcp/node/tracers/Call.cpp
+	mcp/node/tracers/PreState.hpp
+	mcp/node/tracers/PreState.cpp
+)
+SOURCE_GROUP(tracers FILES ${NODE_TRACE_SOURCES})
+
 add_library (node
 	${NODE_EVM_SOURCES}
+	${NODE_TRACE_SOURCES}
 	mcp/node/chain.hpp
 	mcp/node/chain.cpp
 	mcp/node/chain_state.hpp
@@ -289,6 +304,11 @@ add_library (node
 	mcp/node/approve_queue.hpp
 	mcp/node/requesting.cpp
 	mcp/node/requesting.hpp
+	mcp/node/Block.hpp
+	mcp/node/Block.cpp
+	mcp/node/Client.hpp
+	mcp/node/Client.cpp
+	mcp/node/VerifiedBlock.hpp
     )
 
 add_library (p2p
@@ -388,6 +408,10 @@ add_library (core
 	mcp/core/approve.cpp
 	mcp/core/contract.hpp
 	mcp/core/contract.cpp
+	mcp/core/Precompiled.h
+	mcp/core/Precompiled.cpp
+	mcp/core/SealEngine.h
+	mcp/core/SealEngine.cpp
 	mcp/core/ChainOperationParams.hpp
 	mcp/core/ChainOperationParams.cpp
 	mcp/core/iapprove_queue.hpp

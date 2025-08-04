@@ -4,6 +4,8 @@
 #include <libdevcore/Common.h>
 #include <mcp/common/numbers.hpp>
 #include <mcp/node/chain_state.hpp>
+#include <mcp/core/SealEngine.h>
+#include <mcp/node/tracers/Tracer.hpp>
 
 namespace dev
 {
@@ -18,14 +20,26 @@ namespace mcp
     using namespace dev;
     using namespace dev::eth;
 
+    class Block;
+    class chain;
     class Executive
     {
     public:
         // Simple constructor; executive will operate on given state, with the given environment info.
-        Executive(chain_state& _s, EnvInfo const& _envInfo, std::list<std::shared_ptr<mcp::trace>> & _traces, unsigned _level = 0)
-      : m_s(_s),m_envInfo(_envInfo),m_traces(_traces), m_depth(_level)
+        Executive(chain_state& _s, EnvInfo const& _envInfo, SealEngineFace const& _sealEngine, /*std::list<std::shared_ptr<mcp::trace>> & _traces,*/ unsigned _level = 0, std::shared_ptr<EVMLogger> _tracer = nullptr)
+      : m_s(_s),m_envInfo(_envInfo),/*m_traces(_traces),*/ m_depth(_level), m_sealEngine(_sealEngine), m_tracer(_tracer)
         {
         };
+
+        /** Previous-state constructor.
+        * Creates executive to operate on the state of a particular transaction in the given block,
+        * populating environment info from the given Block and the LastHashes portion from the BlockChain.
+        * State is assigned the resultant value, but otherwise unused.
+        */
+        Executive(chain_state& io_s, Block const& _block, unsigned _txIndex, chain const& _bc, unsigned _level = 0, std::shared_ptr<EVMLogger> _tracer = nullptr);
+
+        Executive(chain_state& io_s, Block const& _block, unsigned _txIndex, chain const& _bc, std::shared_ptr<EVMLogger> _tracer) :
+            Executive(io_s, _block, _txIndex, _bc, 0, _tracer) {}
 
         /// Collect execution results in the result storage provided.
         void setResultRecipient(ExecutionResult& _res) { m_res = &_res; }
@@ -33,7 +47,7 @@ namespace mcp
         void initialize(Transaction const& _transaction);
         bool finalize();
         bool execute();
-        bool go(dev::eth::OnOpFunc const& _onOp = dev::eth::OnOpFunc());
+        bool go(/*dev::eth::OnOpFunc const& _onOp = dev::eth::OnOpFunc()*/);
         void revert();
 
         /// @returns the log entries created by this operation.
@@ -51,6 +65,7 @@ namespace mcp
         Address newAddress() const { return m_newAddress; }
 
         owning_bytes_ref takeOutput() { return std::move(m_output); }
+        dev::bytes Output() const { return m_output.toVector(); }
 
         /// @returns The exception that has happened during the execution if any.
         TransactionException getException() const noexcept { return m_excepted; }
@@ -58,7 +73,7 @@ namespace mcp
         bool createOpcode(Address const& _sender, u256 const& _endowment, u256 const& _gasPrice, u256 const& _gas, bytesConstRef _init, Address const& _origin);
         bool create2Opcode(Address const& _sender, u256 const& _endowment, u256 const& _gasPrice, u256 const& _gas, bytesConstRef _init, Address const& _origin, u256 const& _salt);
         bool executeCreate(Address const& _sender, u256 const& _endowment, u256 const& _gasPrice,
-			u256 const& _gas, bytesConstRef _init, Address const& _origin);
+			u256 const& _gas, bytesConstRef _init, Address const& _origin, Instruction _typ);
 
         bool create(Address const& _txSender, u256 const& _endowment, u256 const& _gasPrice, u256 const& _gas, bytesConstRef _init, Address const& _origin);
         bool call(Address const& _receiveAddress, Address const& _senderAddress, u256 const& _value, u256 const& _gasPrice, bytesConstRef _data, u256 const& _gas);
@@ -67,7 +82,7 @@ namespace mcp
         void accrueSubState(SubState& _parentContext);
 
     private:
-
+        bool topCall() { return m_depth == 0; }
         dev::eth::EnvInfo m_envInfo;        ///< Information on the runtime environment.
         std::shared_ptr<ExtVM> m_ext;      ///< The VM externality object for the VM execution or null if no VM is required. shared_ptr used only to allow ExtVM forward reference. This field does *NOT* survive this object.
         owning_bytes_ref m_output;			///< Execution output.
@@ -89,9 +104,10 @@ namespace mcp
         bool m_isCreation = false;
 		Address m_newAddress;
         size_t m_savepoint = 0;
-
-		std::list<std::shared_ptr<mcp::trace>> & m_traces;
-		std::shared_ptr<mcp::trace> m_current_trace;
+        SealEngineFace const& m_sealEngine;
+        std::shared_ptr<EVMLogger> m_tracer = nullptr;
+		//std::list<std::shared_ptr<mcp::trace>> & m_traces;
+		//std::shared_ptr<mcp::trace> m_current_trace;
 
 		static mcp::log m_log;
     };

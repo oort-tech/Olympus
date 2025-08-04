@@ -1,21 +1,24 @@
 #include "rpc.hpp"
 #include "connection.hpp"
 
-mcp::rpc::rpc(mcp::block_store &store_a, std::shared_ptr<mcp::chain> chain_a,
-			  std::shared_ptr<mcp::block_cache> cache_a, std::shared_ptr<mcp::key_manager> key_manager_a,
-			  std::shared_ptr<mcp::wallet> wallet_a, std::shared_ptr<mcp::p2p::host> host_a,
-			  std::shared_ptr<mcp::async_task> background_a, std::shared_ptr<mcp::composer> composer_a,
-			  boost::asio::io_service &service_a, mcp::rpc_config const &config_a) : m_store(store_a),
-																					 m_chain(chain_a),
-																					 m_cache(cache_a),
-																					 m_key_manager(key_manager_a),
-																					 m_wallet(wallet_a),
-																					 m_host(host_a),
-																					 m_background(background_a),
-																					 m_composer(composer_a),
-																					 io_service(service_a),
-																					 acceptor(service_a),
-																					 config(config_a)
+mcp::rpc::rpc(/*mcp::block_store &store_a, std::shared_ptr<mcp::chain> chain_a,
+			  std::shared_ptr<mcp::block_cache> cache_a,*/ std::shared_ptr<mcp::key_manager> key_manager_a,
+			  std::shared_ptr<mcp::wallet> wallet_a, /*std::shared_ptr<mcp::p2p::host> host_a,*/
+			  std::shared_ptr<mcp::async_task> background_a, /*std::shared_ptr<mcp::composer> composer_a,*/
+			  std::shared_ptr<mcp::Client> client_a,
+			  boost::asio::io_service &service_a, mcp::rpc_config const &config_a) : 
+	//m_store(store_a),
+	//m_chain(chain_a),
+	//m_cache(cache_a),
+	m_key_manager(key_manager_a),
+	m_wallet(wallet_a),
+	//m_host(host_a),
+	m_background(background_a),
+	m_client(client_a),
+	//m_composer(composer_a),
+	io_service(service_a),
+	acceptor(service_a),
+	config(config_a)
 {
 }
 
@@ -62,12 +65,12 @@ void mcp::rpc::stop()
 	acceptor.close();
 }
 
-std::shared_ptr<mcp::rpc> mcp::get_rpc(mcp::block_store &store_a, std::shared_ptr<mcp::chain> chain_a,
-									   std::shared_ptr<mcp::block_cache> cache_a, std::shared_ptr<mcp::key_manager> key_manager_a,
-									   std::shared_ptr<mcp::wallet> wallet_a, std::shared_ptr<mcp::p2p::host> host_a,
-									   std::shared_ptr<mcp::async_task> background_a, std::shared_ptr<mcp::composer> composer_a,
+std::shared_ptr<mcp::rpc> mcp::get_rpc(/*mcp::block_store &store_a, std::shared_ptr<mcp::chain> chain_a,
+									   std::shared_ptr<mcp::block_cache> cache_a,*/ std::shared_ptr<mcp::key_manager> key_manager_a,
+									   std::shared_ptr<mcp::wallet> wallet_a, /*std::shared_ptr<mcp::p2p::host> host_a,*/
+									   std::shared_ptr<mcp::async_task> background_a, std::shared_ptr<mcp::Client> client_a,/*std::shared_ptr<mcp::composer> composer_a,*/
 									   boost::asio::io_service &service_a, mcp::rpc_config const &config_a)
 {
-	std::shared_ptr<rpc> impl(new rpc(store_a, chain_a, cache_a, key_manager_a, wallet_a, host_a, background_a, composer_a, service_a, config_a));
+	std::shared_ptr<rpc> impl(new rpc(/*store_a, chain_a, cache_a,*/ key_manager_a, wallet_a, /*host_a,*/ background_a, client_a, /*composer_a,*/ service_a, config_a));
 	return impl;
 }

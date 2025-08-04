@@ -82,4 +82,7 @@ namespace mcp
 		mutable h256 m_outputs;			    ///< Cached output of proof.
 		mutable boost::optional<Address> m_sender;  ///< Cached sender, determined from signature.
 	};
+
+	/// Nice name for vector of approve.
+	using Approves = std::vector<approve>;
 }

@@ -50,6 +50,10 @@ public:
 
 	void streamRLP(dev::RLPStream & s) const;
 	bytes rlp() const { RLPStream s; streamRLP(s); return s.out(); }
+
+	virtual bool const isPlaceholder() const { return m_Placeholder; }
+	///just for Placeholder. do not streamRLP.
+	bool m_Placeholder = false;
 private:
 	uint8_t m_statusCode;
 	u256 m_gasUsed;

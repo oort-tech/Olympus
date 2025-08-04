@@ -2,6 +2,7 @@
 
 #include "rpc.hpp"
 #include "json.hpp"
+#include <mcp/node/tracers/Tracer.hpp>
 
 namespace mcp
 {
@@ -12,7 +13,7 @@ namespace mcp
 		using RPCMethodPointer = AbstractRPCMethodPointer<rpc_handler>;
 
 	public:
-		rpc_handler(mcp::rpc &, std::string const &, std::function<void(mcp::json const &)>const &, int m_cap);
+		rpc_handler(mcp::rpc &, std::string const &, std::function<void(mcp::json const &)>const &/*, int m_cap*/);
 		void process_request();
 
 		void account_remove(mcp::json & j_response, bool & async);
@@ -22,7 +23,7 @@ namespace mcp
 		void block(mcp::json & j_response, bool & async);
 		void block_state(mcp::json & j_response, bool & async);
 		void block_states(mcp::json & j_response, bool & async);
-		void block_traces(mcp::json & j_response, bool & async);
+		//void block_traces(mcp::json & j_response, bool & async);
 		void stable_blocks(mcp::json & j_response, bool & async);
 
 		void block_summary(mcp::json & j_response, bool & async);
@@ -33,8 +34,8 @@ namespace mcp
 		void nodes(mcp::json & j_response, bool & async);
 		void witness_list(mcp::json & j_response, bool & async);
 
-		void get_eth_signed_msg(dev::bytes & data, dev::h256 & hash);
-		bool try_get_mc_info(dev::eth::McInfo &mc_info_a, uint64_t &block_number);
+		dev::h256 get_eth_signed_msg(dev::bytes & data);
+		//bool try_get_mc_info(dev::eth::McInfo &mc_info_a, uint64_t &block_number);
 
 		void web3_clientVersion(mcp::json & j_response, bool & async);
 		void web3_sha3(mcp::json & j_response, bool & async);
@@ -70,7 +71,7 @@ namespace mcp
 		void eth_accounts(mcp::json & j_response, bool & async);
 		void eth_sign(mcp::json & j_response, bool & async);
 		void eth_signTransaction(mcp::json & j_response, bool & async);
-		//void debug_traceTransaction(mcp::json & j_response, bool & async);
+		void debug_traceTransaction(mcp::json & j_response, bool & async);
 		//void debug_storageRangeAt(mcp::json & j_response, bool & async);
 		// related to personal
 		void personal_importRawKey(mcp::json & j_response, bool & async);
@@ -94,17 +95,22 @@ namespace mcp
 		std::function<void(mcp::json const&)> response;
 
 	private:
+		BlockNumber toBlockNumber(BlockNumber _bn);
 		void handleBatch(mcp::jsonrpcMessages const& req);
 		void handleMsg(mcp::jsonrpcMessage const& req);
 		mcp::json handleCallMsg(mcp::jsonrpcMessage const& req, bool& async);
-		std::shared_ptr<mcp::chain> m_chain;
-		std::shared_ptr<mcp::block_cache> m_cache;
+		std::shared_ptr<mcp::Client> client() { return m_client; }
+		void traceTransaction(mcp::Executive& _e, mcp::Transaction const& _t);
+
+		//std::shared_ptr<mcp::chain> m_chain;
+		//std::shared_ptr<mcp::block_cache> m_cache;
 		std::shared_ptr<mcp::key_manager> m_key_manager;
 		std::shared_ptr<mcp::wallet> m_wallet;
-		std::shared_ptr<mcp::p2p::host> m_host;
-		std::shared_ptr<mcp::composer> m_composer;
-		std::shared_ptr<mcp::async_task> m_background;
-		mcp::block_store m_store;
+		//std::shared_ptr<mcp::p2p::host> m_host;
+		//std::shared_ptr<mcp::composer> m_composer;
+		//std::shared_ptr<mcp::async_task> m_background;
+		std::shared_ptr<mcp::Client> m_client;
+		//mcp::block_store m_store;
 
 		std::map<std::string, RPCMethodPointer> m_ethRpcMethods;
 

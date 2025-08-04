@@ -1,5 +1,6 @@
 #include "db_transaction.hpp"
 #include <boost/endian/conversion.hpp>
+#include <mcp/common/assert.hpp>
 
 mcp::db::db_transaction::db_transaction(mcp::db::database& m_db_a,
 	std::shared_ptr<rocksdb::WriteOptions> write_options_a,
@@ -42,25 +43,10 @@ std::shared_ptr<rocksdb::TransactionOptions> mcp::db::db_transaction::default_tr
 	return std::make_shared<rocksdb::TransactionOptions>(rocksdb::TransactionOptions());
 }
 
-void mcp::db::db_transaction::put(int const& index, dev::Slice const& _k, dev::Slice const& _v)
+void mcp::db::db_transaction::put(uint8_t const& _prefix, dev::Slice const& _k, dev::Slice const& _v)
 {
-	std::shared_ptr<mcp::db::index_info> info = std::make_shared<mcp::db::index_info>();
-	auto handle = m_db.get_column_family_handle(index, info);
-	dev::Slicebytes key;
-	if (info->shared)
-	{
-		key.resize(info->prefix.size() + _k.size());
-		dev::Slice(&info->prefix).copyTo(dev::SliceRef(&key));
-		_k.copyTo(dev::SliceRef(&key).cropped(info->prefix.size()));
-	}
-	else
-	{
-		key.resize(_k.size());
-		_k.copyTo(dev::SliceRef(&key));
-	}
-
+	dev::Slicebytes key = dev::Slicebytes(1, _prefix) + _k;
 	rocksdb::Status status = m_txn->Put(
-		handle,
 		rocksdb::Slice(key.data(), key.size()),
 		rocksdb::Slice(_v.data(), _v.size())
 	);
@@ -74,36 +60,17 @@ void mcp::db::db_transaction::put(int const& index, dev::Slice const& _k, dev::S
 *	true :	key exist , _v is data
 *  false:	key is not exist, _v is null
 */
-bool mcp::db::db_transaction::get(int const& index, dev::Slice const& _k, std::string& _v, 
-	std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a,
-	std::shared_ptr<rocksdb::ReadOptions> read_ops_a)
+bool mcp::db::db_transaction::get(uint8_t const& _prefix, dev::Slice const& _k, std::string& _v,
+	std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a)
 {
-	std::shared_ptr<mcp::db::index_info> info = std::make_shared<mcp::db::index_info>();
-	auto handle = m_db.get_column_family_handle(index, info);
-	
-	dev::Slicebytes key;
-	if (info->shared)
-	{
-		key.resize(info->prefix.size() + _k.size());
-		dev::Slice(&info->prefix).copyTo(dev::SliceRef(&key));
-		_k.copyTo(dev::SliceRef(&key).cropped(info->prefix.size()));
-	}
-	else
-	{
-		key.resize(_k.size());
-		_k.copyTo(dev::SliceRef(&key));
-	}
-
-	std::shared_ptr<rocksdb::ReadOptions> read_ops(read_ops_a);
-	if (nullptr == read_ops)
-		read_ops = mcp::db::database::default_read_options();
+	auto read_ops(mcp::db::database::default_read_options());
 
 	if (snapshot_a)
 		read_ops->snapshot = snapshot_a->snapshot();
 
+	dev::Slicebytes key = dev::Slicebytes(1, _prefix) + _k;
 	rocksdb::Status status = m_txn->Get(
 		*read_ops,
-		handle,
 		rocksdb::Slice(key.data(), key.size()),
 		&_v
 	);
@@ -118,26 +85,10 @@ bool mcp::db::db_transaction::get(int const& index, dev::Slice const& _k, std::s
 	return false;
 }
 
-void mcp::db::db_transaction::del(int const& index, dev::Slice const& _k)
+void mcp::db::db_transaction::del(uint8_t const& _prefix, dev::Slice const& _k)
 {
-	std::shared_ptr<mcp::db::index_info> info = std::make_shared<mcp::db::index_info>();
-	auto handle = m_db.get_column_family_handle(index, info);
-	
-	dev::Slicebytes key;
-	if (info->shared)
-	{
-		key.resize(info->prefix.size() + _k.size());
-		dev::Slice(&info->prefix).copyTo(dev::SliceRef(&key));
-		_k.copyTo(dev::SliceRef(&key).cropped(info->prefix.size()));
-	}
-	else
-	{
-		key.resize(_k.size());
-		_k.copyTo(dev::SliceRef(&key));
-	}
-
+	dev::Slicebytes key = dev::Slicebytes(1, _prefix) + _k;
 	rocksdb::Status status = m_txn->Delete(
-		handle,
 		rocksdb::Slice(key.data(), key.size())
 	);
 	m_read_only = false;
@@ -145,37 +96,17 @@ void mcp::db::db_transaction::del(int const& index, dev::Slice const& _k)
 	check_status(status);
 }
 
-bool mcp::db::db_transaction::exists(int const& index, dev::Slice const & _k, 
-	std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a,
-	std::shared_ptr<rocksdb::ReadOptions> read_ops_a)
+bool mcp::db::db_transaction::exists(uint8_t const& _prefix, dev::Slice const & _k,
+	std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a)
 {
-	std::shared_ptr<mcp::db::index_info> info = std::make_shared<mcp::db::index_info>();
-	auto handle = m_db.get_column_family_handle(index, info);
-	
-	dev::Slicebytes key;
-	if (info->shared)
-	{
-		key.resize(info->prefix.size() + _k.size());
-		dev::Slice(&info->prefix).copyTo(dev::SliceRef(&key));
-		_k.copyTo(dev::SliceRef(&key).cropped(info->prefix.size()));
-	}
-	else
-	{
-		key.resize(_k.size());
-		_k.copyTo(dev::SliceRef(&key));
-	}
-
-	std::shared_ptr<rocksdb::ReadOptions> read_ops(read_ops_a);
-	if (nullptr == read_ops)
-		read_ops = mcp::db::database::default_read_options();
-
+	auto read_ops(mcp::db::database::default_read_options());
 	if (snapshot_a)
 		read_ops->snapshot = snapshot_a->snapshot();
-
+	
+	dev::Slicebytes key = dev::Slicebytes(1, _prefix) + _k;
 	std::string value;
 	rocksdb::Status status = m_txn->Get(
 		*read_ops,
-		handle,
 		rocksdb::Slice(key.data(), key.size()),
 		&value
 	);
@@ -191,9 +122,7 @@ void mcp::db::db_transaction::count_add(std::string const& _k, uint32_t const& _
 	ori_value += _v;
 	uint64_t big_value = boost::endian::native_to_big(ori_value);
 
-	auto handle = m_db.get_column_family_handle(m_db.m_count);
 	rocksdb::Status status = m_txn->Put(
-		handle,
 		_k,
 		rocksdb::Slice((char*)&big_value, sizeof(big_value))
 	);
@@ -208,9 +137,7 @@ void mcp::db::db_transaction::count_reduce(std::string const& _k, uint32_t const
 	ori_value -= _v;
 	uint64_t big_value = boost::endian::native_to_big(ori_value);
 
-	auto handle = m_db.get_column_family_handle(m_db.m_count);
 	rocksdb::Status status = m_txn->Put(
-		handle,
 		_k,
 		rocksdb::Slice((char*)&big_value, sizeof(big_value))
 	);
@@ -220,9 +147,7 @@ void mcp::db::db_transaction::count_reduce(std::string const& _k, uint32_t const
 
 void mcp::db::db_transaction::count_del(std::string const& _k)
 {
-	auto handle = m_db.get_column_family_handle(m_db.m_count);
 	rocksdb::Status status = m_txn->Delete(
-		handle,
 		rocksdb::Slice(_k.data(), _k.size())
 	);
 	check_status(status);
@@ -231,7 +156,6 @@ void mcp::db::db_transaction::count_del(std::string const& _k)
 
 uint64_t mcp::db::db_transaction::count_get(std::string const& _k, std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a)
 {
-	auto handle = m_db.get_column_family_handle(m_db.m_count);
 	std::shared_ptr<rocksdb::ReadOptions> read_ops = mcp::db::database::default_read_options();
 	if (snapshot_a)
 		read_ops->snapshot = snapshot_a->snapshot();
@@ -239,7 +163,6 @@ uint64_t mcp::db::db_transaction::count_get(std::string const& _k, std::shared_p
 
 	rocksdb::Status status = m_txn->Get(
 		*read_ops,
-		handle,
 		rocksdb::Slice(_k.data(), _k.size()),
 		&value
 	);
@@ -281,135 +204,52 @@ void mcp::db::db_transaction::rollback()
 	check_status(status);
 }
 
-mcp::db::forward_iterator mcp::db::db_transaction::begin(int const& index, 
-	std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a,
-	std::shared_ptr<rocksdb::ReadOptions> read_ops_a)
+mcp::db::forward_iterator mcp::db::db_transaction::begin(uint8_t const& _prefix,
+	std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a)
 {
-	std::shared_ptr<mcp::db::index_info> info = std::make_shared<mcp::db::index_info>();
-	auto handle = m_db.get_column_family_handle(index, info);
-	if (info->shared)//prefix begin
-	{
-		return begin(index, dev::Slice(), snapshot_a, read_ops_a);
-	}
-
-	std::shared_ptr<rocksdb::ReadOptions> read_ops(read_ops_a);
-	if (nullptr == read_ops)
-		read_ops = mcp::db::database::default_read_options();
-
-	read_ops->fill_cache = false;
-	if (snapshot_a != nullptr)
-		read_ops->snapshot = snapshot_a->snapshot();
-
-	auto it = m_txn->GetIterator(*read_ops, handle);
-	return forward_iterator(it);
+	return begin(_prefix, dev::Slice(), snapshot_a);
 }
 
-mcp::db::forward_iterator mcp::db::db_transaction::begin(int const& index, 
+mcp::db::forward_iterator mcp::db::db_transaction::begin(uint8_t const& _prefix,
 	dev::Slice const & _k, 
-	std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a,
-	std::shared_ptr<rocksdb::ReadOptions> read_ops_a)
+	std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a)
 {
-	std::shared_ptr<mcp::db::index_info> info = std::make_shared<mcp::db::index_info>();
-	auto handle = m_db.get_column_family_handle(index, info);
-
-	std::shared_ptr<rocksdb::ReadOptions> read_ops(read_ops_a);
-	if (nullptr == read_ops)
-		read_ops = mcp::db::database::default_read_options();
-
+	auto read_ops(mcp::db::database::default_read_options());
 	read_ops->fill_cache = false;
+	read_ops->prefix_same_as_start = true;
 	if (snapshot_a != nullptr)
 		read_ops->snapshot = snapshot_a->snapshot();
 	
-	dev::Slicebytes key;
-	if (info->shared)
-	{
-		key.resize(info->prefix.size() + _k.size());
-		dev::Slice(&info->prefix).copyTo(dev::SliceRef(&key));
-		_k.copyTo(dev::SliceRef(&key).cropped(info->prefix.size()));
-		read_ops->prefix_same_as_start = true;
-	}
-	else
-	{
-		key.resize(_k.size());
-		_k.copyTo(dev::SliceRef(&key));
-	}
-
-	auto it = m_txn->GetIterator(*read_ops, handle);
-	return forward_iterator(it, rocksdb::Slice(key.data(),key.size()), info->prefix);
+	dev::Slicebytes sPrefix(1, _prefix);
+	dev::Slicebytes key = sPrefix + _k;
+	
+	auto it = m_txn->GetIterator(*read_ops);
+	return forward_iterator(it, rocksdb::Slice(key.data(),key.size()), rocksdb::Slice(sPrefix.data(), sPrefix.size()));
 }
 
-mcp::db::backward_iterator mcp::db::db_transaction::rbegin(int const& index, 
-	std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a,
-	std::shared_ptr<rocksdb::ReadOptions> read_ops_a)
+mcp::db::backward_iterator mcp::db::db_transaction::rbegin(uint8_t const& _prefix,
+	std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a)
 {
-	std::shared_ptr<mcp::db::index_info> info = std::make_shared<mcp::db::index_info>();
-	auto handle = m_db.get_column_family_handle(index, info);
-	if (info->shared)//prefix begin
-	{
-		//todo size depended on key size
-		dev::Slicebytes key(48,0xFF);
-		return rbegin(index, dev::Slice(key.data(), key.size()), snapshot_a, read_ops_a);
-	}
-
-	std::shared_ptr<rocksdb::ReadOptions> read_ops(read_ops_a);
-	if (nullptr == read_ops)
-		read_ops = mcp::db::database::default_read_options();
-
-	read_ops->fill_cache = false;
-	if (snapshot_a != nullptr)
-		read_ops->snapshot = snapshot_a->snapshot();
-
-	auto it = m_txn->GetIterator(*read_ops, handle);
-	return backward_iterator(it);
+	dev::Slicebytes key(48, 0xFF);
+	return rbegin(_prefix, dev::Slice(key.data(), key.size()), snapshot_a);
 }
 
-mcp::db::backward_iterator mcp::db::db_transaction::rbegin(int const& index, 
+mcp::db::backward_iterator mcp::db::db_transaction::rbegin(uint8_t const& _prefix,
 	dev::Slice const & _k, 
-	std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a,
-	std::shared_ptr<rocksdb::ReadOptions> read_ops_a)
+	std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a)
 {
-	std::shared_ptr<mcp::db::index_info> info = std::make_shared<mcp::db::index_info>();
-	auto handle = m_db.get_column_family_handle(index, info);
-
-	std::shared_ptr<rocksdb::ReadOptions> read_ops(read_ops_a);
-	if (nullptr == read_ops)
-		read_ops = mcp::db::database::default_read_options();
-
+	auto read_ops(mcp::db::database::default_read_options());
 	read_ops->fill_cache = false;
+	read_ops->prefix_same_as_start = true;
 	if (snapshot_a != nullptr)
 		read_ops->snapshot = snapshot_a->snapshot();
 
-	dev::Slicebytes key;
-	if (info->shared)
-	{
-		key.resize(info->prefix.size() + _k.size());
-		dev::Slice(&info->prefix).copyTo(dev::SliceRef(&key));
-		_k.copyTo(dev::SliceRef(&key).cropped(info->prefix.size()));
-		read_ops->prefix_same_as_start = true;
-	}
-	else
-	{
-		key.resize(_k.size());
-		_k.copyTo(dev::SliceRef(&key));
-	}
+	dev::Slicebytes sPrefix(1, _prefix);
+	dev::Slicebytes key = sPrefix + _k;
 
-	auto it = m_txn->GetIterator(*read_ops, handle);
-	return backward_iterator(it, rocksdb::Slice(key.data(), key.size()), info->prefix);
-}
+	auto it = m_txn->GetIterator(*read_ops);
+	return backward_iterator(it, rocksdb::Slice(key.data(), key.size()), rocksdb::Slice(sPrefix.data(), sPrefix.size()));
 
-bool mcp::db::db_transaction::merge(int const& index, std::string const& _k, dev::Slice const& _v)
-{
-	m_read_only = false;
-
-	auto handle = m_db.get_column_family_handle(index);
-	rocksdb::Status status = m_txn->Merge(
-		handle,
-		_k,
-		rocksdb::Slice(_v.data(), _v.size())
-	);
-	if (status.ok())
-		return true;
-	check_status(status);
 }
 
 mcp::db::db_transaction & mcp::db::db_transaction::operator= (mcp::db::db_transaction && other_a)

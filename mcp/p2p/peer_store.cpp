@@ -20,23 +20,17 @@ dev::Slice mcp::p2p::peers_content::val() const
 	return dev::Slice((char*)this, sizeof(*this));
 }
 
-mcp::p2p::peer_store::peer_store(bool & error_a, boost::filesystem::path const& _path) :
-	m_database(std::make_shared<mcp::db::database>(_path))
+mcp::p2p::peer_store::peer_store(bool & error_a, boost::filesystem::path const& _path)
 {
 	if (error_a)
 		return;
 
-	auto tbops = mcp::db::db_column::default_table_options(mcp::db::database::get_table_cache());
-	auto cfops = mcp::db::db_column::default_column_family_options(tbops);
-	cfops->OptimizeForSmallDb();
-	cfops->prefix_extractor.reset(rocksdb::NewFixedPrefixTransform(1));
-
-	int default_col = m_database->create_column_family(rocksdb::kDefaultColumnFamilyName, cfops);
-	m_peers = m_database->set_column_family(default_col, "p");
-	m_nodes = m_database->set_column_family(default_col, "n");
-	error_a = !m_database->open();
-	if (error_a)
-		std::cerr << "peer store db open error" << std::endl;
+	auto based = mcp::db::defaultBlockBasedTableOptions(256);
+	auto ops = mcp::db::defaultDBOptions(based);
+	ops->OptimizeForSmallDb();
+	m_peers = 'p';
+	m_nodes = 'n';
+	m_database = std::make_shared<mcp::db::database>(_path, ops);
 }
 
 bool mcp::p2p::peer_store::peer_get(mcp::db::db_transaction & transaction, node_id const & node_id_a, peers_content & content_a)

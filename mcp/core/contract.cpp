@@ -5,13 +5,13 @@
 
 namespace mcp
 {
-	DENContractCaller NewDENContractCaller(dev::ContractCaller const& _caller)
-	{
-		auto parsed = dev::JSON(DENContractABI);
-		return DENContractCaller(dev::NewBoundContract(DENContractAddress, parsed, _caller));
-	}
+	//DENContractCaller NewDENContractCaller(dev::ContractCaller const& _caller)
+	//{
+	//	auto parsed = dev::JSON(DENContractABI);
+	//	return DENContractCaller(dev::NewBoundContract(DENContractAddress, parsed, _caller));
+	//}
 
-	DENContractCaller DENCaller;
+	//DENContractCaller DENCaller;
 
 	///for main caller.
 	dev::bytes MainContractCaller::DistributeRewards(std::map<dev::Address, u256> const& _v)

@@ -22,7 +22,7 @@ namespace dev
 	struct FilterOpts {};
 
 	/// call contract needs from, to, data, result
-	using ContractCaller = std::function<void(dev::h160 const&, dev::h160 const&, dev::bytes const&, dev::bytes&)>;
+	using ContractCaller = std::function<dev::bytes(dev::h160 const&, dev::h160 const&, dev::bytes const&)>;
 	class BoundContract
 	{
 	public:
@@ -64,9 +64,10 @@ namespace dev
 		//if (opts == nullptr)
 		//	opts = new CallOpts;
 		dev::bytes input = abi.Pack(method, args...);
-		dev::bytes output;
-		caller(opts->From, address, input, output);
-		return output;
+		//dev::bytes output;
+		//caller(opts->From, address, input, output);
+		//return output;
+		return caller(opts->From, address, input);
 	}
 
 	template<typename ...Args>

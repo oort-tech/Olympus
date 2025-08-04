@@ -71,6 +71,18 @@ namespace mcp
 		return ret;
 	}
 
+	mcp::json toJson(Address const& _address)
+	{
+		return toJS(_address);
+	}
+
+	mcp::json toJson(bi::tcp::endpoint const& _ep)
+	{
+		std::stringstream _s;
+		_s << _ep;
+		return _s.str();
+	}
+
 	mcp::LogFilter toLogFilter(mcp::json const& _json)
 	{
 		mcp::LogFilter filter;
@@ -434,5 +446,34 @@ namespace mcp
 			err = err + ": " + reason;
 
 		return err;
+	}
+	
+	mcp::json toJson(WitnessList& _wl)
+	{
+		mcp::json res = mcp::json::array();
+		for (auto const& e : _wl)
+			res.push_back(toJson(e));
+		return res;
+	}
+	
+	mcp::json toJson(mcp::Approves const& _a)
+	{
+		mcp::json res = mcp::json::array();
+
+		for (auto const& r : _a)
+		{
+			res.push_back(toJson(r));
+		}
+
+		return res;
+	}
+	
+	mcp::json toJson(mcp::approve const& _a)
+	{
+		mcp::json res;
+		res["hash"] = toJS(_a.sha3());
+		res["from"] = toJS(_a.sender());
+		res["proof"] = toJS(_a.proof());
+		return res;
 	}
 }

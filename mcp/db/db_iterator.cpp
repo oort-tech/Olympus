@@ -1,6 +1,8 @@
 #include "db_iterator.hpp"
+#include "common.hpp"
+#include <mcp/common/assert.hpp>
 
-mcp::db::db_iterator::db_iterator(std::string const& prefix_a):
+mcp::db::db_iterator::db_iterator(rocksdb::Slice const& prefix_a):
 	m_it(nullptr),
 	m_prefix(prefix_a)
 {
@@ -63,15 +65,13 @@ mcp::db::forward_iterator::forward_iterator(rocksdb::Iterator * it_a)
 {
 	m_it = it_a;
 	m_it->SeekToFirst();
-	//LOG(m_log.info) << "test" << rocksdb::get_perf_context()->ToString();
 }
 
-mcp::db::forward_iterator::forward_iterator(rocksdb::Iterator * it_a, rocksdb::Slice const & k_a, std::string const& prefix_a):
+mcp::db::forward_iterator::forward_iterator(rocksdb::Iterator * it_a, rocksdb::Slice const & k_a, rocksdb::Slice const& prefix_a):
 	db_iterator(prefix_a)
 {
 	m_it = it_a;
 	m_it->Seek(k_a);
-	//LOG(m_log.info) << "test2" << rocksdb::get_perf_context()->ToString();
 }
 
 mcp::db::forward_iterator::forward_iterator(mcp::db::forward_iterator && other_a)
@@ -112,7 +112,7 @@ mcp::db::backward_iterator::backward_iterator(rocksdb::Iterator * it_a)
 	//LOG(m_log.info) << "test3" << rocksdb::get_perf_context()->ToString();
 }
 
-mcp::db::backward_iterator::backward_iterator(rocksdb::Iterator * it_a, rocksdb::Slice const & k_a, std::string const& prefix_a) :
+mcp::db::backward_iterator::backward_iterator(rocksdb::Iterator * it_a, rocksdb::Slice const & k_a, rocksdb::Slice const& prefix_a) :
 	db_iterator(prefix_a)
 {
 	m_it = it_a;

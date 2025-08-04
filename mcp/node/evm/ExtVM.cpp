@@ -52,7 +52,7 @@ static size_t const c_entryOverhead = 128 * 1024;
 /// On what depth execution should be offloaded to additional separated stack space.
 static unsigned const c_offloadPoint = (c_defaultStackSize - c_entryOverhead) / c_singleExecutionStackSize;
 
-void goOnOffloadedStack(Executive& _e, OnOpFunc const& _onOp)
+void goOnOffloadedStack(Executive& _e/*, OnOpFunc const& _onOp*/)
 {
     // Set new stack size enouth to handle the rest of the calls up to the limit.
     boost::thread::attributes attrs;
@@ -64,7 +64,7 @@ void goOnOffloadedStack(Executive& _e, OnOpFunc const& _onOp)
     boost::thread{attrs, [&]{
         try
         {
-            _e.go(_onOp);
+            _e.go(/*_onOp*/);
         }
         catch (...)
         {
@@ -75,20 +75,20 @@ void goOnOffloadedStack(Executive& _e, OnOpFunc const& _onOp)
         boost::rethrow_exception(exception);
 }
 
-void go(unsigned _depth, Executive& _e, OnOpFunc const& _onOp)
+void go(unsigned _depth, Executive& _e/*, OnOpFunc const& _onOp*/)
 {
     // If in the offloading point we need to switch to additional separated stack space.
     // Current stack is too small to handle more CALL/CREATE executions.
     // It needs to be done only once as newly allocated stack space it enough to handle
     // the rest of the calls up to the depth limit (c_depthLimit).
 
-    if (_depth == c_offloadPoint + 1)
+    if (_depth == c_offloadPoint)
     {
         cnote << "Stack offloading (depth: " << c_offloadPoint << ")";
-        goOnOffloadedStack(_e, _onOp);
+        goOnOffloadedStack(_e/*, _onOp*/);
     }
     else
-        _e.go(_onOp);
+        _e.go(/*_onOp*/);
 }
 
 evmc_status_code transactionExceptionToEvmcStatusCode(TransactionException ex) noexcept
@@ -126,12 +126,22 @@ evmc_status_code transactionExceptionToEvmcStatusCode(TransactionException ex) n
 
 CallResult ExtVM::call(CallParameters& _p)
 {   
-    Executive e(m_s, envInfo(), m_s.traces, depth);
-    if (!e.call(_p, 1, origin))
+    Executive e(m_s, envInfo(), m_sealEngine, /*m_s.traces,*/ depth + 1, _p.tracer);
+    if (_p.tracer)
     {
-        go(depth, e, _p.onOp);
+        std::shared_ptr<dev::u256> _pValue = nullptr;
+        if (*_p.op != Instruction::STATICCALL)
+            _pValue = std::make_shared<dev::u256>(_p.valueTransfer);
+        _p.tracer->CaptureEnter(*_p.op, _p.senderAddress, _p.codeAddress, _p.data.toBytes(), uint64_t(_p.gas), _pValue);
+    }
+
+    if (!e.call(_p, gasPrice, origin))
+    {
+        go(depth, e/*, _p.onOp*/);
         e.accrueSubState(sub);
     }
+    if (_p.tracer)
+        _p.tracer->CaptureExit(e.Output(), uint64_t(_p.gas - e.gas()), e.getException());
     _p.gas = e.gas();
 
     return {transactionExceptionToEvmcStatusCode(e.getException()), e.takeOutput()};
@@ -152,22 +162,27 @@ void ExtVM::setStore(u256 _n, u256 _v)
     m_s.setStorage(myAddress, _n, _v);
 }
 
-CreateResult ExtVM::create(u256 _endowment, u256& io_gas, bytesConstRef _code, Instruction _op, u256 _salt, OnOpFunc const& _onOp)
+CreateResult ExtVM::create(u256 _endowment, u256& io_gas, bytesConstRef _code, Instruction _op, u256 _salt, std::shared_ptr<EVMLogger> _tracer/*, OnOpFunc const& _onOp*/)
 {
-    Executive e(m_s, envInfo(), m_s.traces, depth);
+    Executive e(m_s, envInfo(), m_sealEngine, /*m_s.traces,*/ depth + 1, _tracer);
     bool result = false;
     if (_op == Instruction::CREATE)
-        result = e.createOpcode(myAddress, _endowment, 1, io_gas, _code, origin);
+        result = e.createOpcode(myAddress, _endowment, gasPrice, io_gas, _code, origin);
     else
     {
         assert_x(_op == Instruction::CREATE2);
-        result = e.create2Opcode(myAddress, _endowment, 1, io_gas, _code, origin, _salt);
+        result = e.create2Opcode(myAddress, _endowment, gasPrice, io_gas, _code, origin, _salt);
     }
 
     if (!result)
     {
-        go(depth, e, _onOp);
+        if (_tracer)
+            _tracer->CaptureEnter(_op, myAddress, e.newAddress(), _code.toBytes(), uint64_t(io_gas), std::make_shared<dev::u256>(_endowment));
+
+        go(depth, e/*, _onOp*/);
         e.accrueSubState(sub);
+        if (_tracer)
+            _tracer->CaptureExit(e.Output(), uint64_t(io_gas - e.gas()), e.getException());
     }
     io_gas = e.gas();
     return {transactionExceptionToEvmcStatusCode(e.getException()), e.takeOutput(), e.newAddress()};
@@ -179,23 +194,23 @@ bool ExtVM::selfdestruct(Address _a)
     // http://martin.swende.se/blog/Ethereum_quirks_and_vulns.html). There is one test case
     // witnessing the current consensus
     // 'GeneralStateTests/stSystemOperationsTest/suicideSendEtherPostDeath.json'.
-	mcp::uint256_t balance(m_s.balance(myAddress));
-    m_s.addBalance(_a, balance);
+	//mcp::uint256_t balance(m_s.balance(myAddress));
+    m_s.addBalance(_a, m_s.balance(myAddress));
     m_s.setBalance(myAddress, 0);
     ExtVMFace::selfdestruct(_a);
 
-	//suicide trace action
-	std::shared_ptr<mcp::suicide_trace_action> suicide_action(std::make_shared<mcp::suicide_trace_action>());
-	suicide_action->contract_account = myAddress;
-	suicide_action->refund_account = _a;
-	suicide_action->balance = balance;
+	////suicide trace action
+	//std::shared_ptr<mcp::suicide_trace_action> suicide_action(std::make_shared<mcp::suicide_trace_action>());
+	//suicide_action->contract_account = myAddress;
+	//suicide_action->refund_account = _a;
+	//suicide_action->balance = balance;
 
-	std::shared_ptr<mcp::trace> suicide_trace(std::make_shared<mcp::trace>());
-	suicide_trace->type = mcp::trace_type::suicide;
-	suicide_trace->action = suicide_action;
-	suicide_trace->depth = depth;
+	//std::shared_ptr<mcp::trace> suicide_trace(std::make_shared<mcp::trace>());
+	//suicide_trace->type = mcp::trace_type::suicide;
+	//suicide_trace->action = suicide_action;
+	//suicide_trace->depth = depth;
 
-	m_s.traces.push_back(suicide_trace);
+	//m_s.traces.push_back(suicide_trace);
     return true;
 }
 
@@ -205,9 +220,10 @@ h256 ExtVM::blockHash(u256 _number)
     if (_number >= currentNumber || _number < (std::max<u256>(256, currentNumber) - 256))
         return h256();
 
-    mcp::block_store& store(envInfo().store);
-    mcp::db::db_transaction& transaction(envInfo().transaction);
-    h256 _h(0);
-    store.stable_block_get(transaction, uint64_t(_number), _h);
-    return _h;
+    return m_s.blockHash(_number);
+    //mcp::block_store& store(envInfo().store);
+    //mcp::db::db_transaction& transaction(envInfo().transaction);
+    //h256 _h(0);
+    //store.stable_block_get(transaction, uint64_t(_number), _h);
+    //return _h;
 }

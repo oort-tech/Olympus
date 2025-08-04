@@ -723,7 +723,7 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 			config.writestring2file(dev::toHex(seed.ref()), nodekey_path);
 		}
 
-		mcp::db::database::init_table_cache(config.db.cache_size);
+		//mcp::db::database::init_table_cache(config.db.cache_size);
 
 		///chain store
 		mcp::block_store chain_store(error, data_path / "chaindb");
@@ -755,12 +755,24 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 		///chain
 		std::shared_ptr<mcp::chain> chain(std::make_shared<mcp::chain>(chain_store, cache));
 
-		///contract caller
-		mcp::DENCaller = NewDENContractCaller(std::bind(&mcp::chain::call, chain, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
-		mcp::MainCaller = NewMainContractCaller(std::bind(&mcp::chain::call, chain, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
+		///host
+		std::shared_ptr<mcp::p2p::host> host(std::make_shared<mcp::p2p::host>(error, config.p2p, io_service, seed, data_path));
+		if (error)
+		{
+			std::cerr << "host initializing error\n";
+			return;
+		}
 
+		///Client
+		std::shared_ptr<mcp::Client> client(std::make_shared<mcp::Client>(chain_store, chain, cache, host));
+
+		///contract caller
+		//mcp::DENCaller = NewDENContractCaller(std::bind(&mcp::chain::callSystem, chain, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
+		//mcp::MainCaller = NewMainContractCaller(std::bind(&mcp::chain::call, chain, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
+		mcp::MainCaller = NewMainContractCaller(std::bind(&mcp::Client::callSystem, client, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+		
 		/// transaction queue
-		std::shared_ptr<mcp::TransactionQueue> TQ(std::make_shared<mcp::TransactionQueue>(io_service, chain_store, cache, chain, sync_async));
+		std::shared_ptr<mcp::TransactionQueue> TQ(std::make_shared<mcp::TransactionQueue>(io_service, chain_store, cache, client/*chain*/, sync_async));
 		chain->set_TQ(TQ);
 		/// approve queue
 		std::shared_ptr<mcp::ApproveQueue> AQ(std::make_shared<mcp::ApproveQueue>(chain_store, cache, chain, sync_async));
@@ -787,14 +799,8 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 		sync->set_processor(processor);
 
 		///wallet
-		std::shared_ptr<mcp::wallet> wallet(std::make_shared<mcp::wallet>(chain_store, cache, key_manager, TQ));
-		///host
-		std::shared_ptr<mcp::p2p::host> host(std::make_shared<mcp::p2p::host>(error, config.p2p, io_service, seed, data_path));
-		if (error)
-		{
-			std::cerr << "host initializing error\n";
-			return;
-		}
+		std::shared_ptr<mcp::wallet> wallet(std::make_shared<mcp::wallet>(/*chain_store, */cache, key_manager, TQ));
+		
 		host->register_capability(capability);
 		host->start();
 
@@ -816,7 +822,7 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 		}
 
 		std::shared_ptr<mcp::rpc> rpc = get_rpc(
-			chain_store, chain, cache, key_manager, wallet, host, background, composer,
+			/*chain_store, chain, cache,*/ key_manager, wallet, /*host,*/ background, client, /*composer,*/
 			io_service, config.rpc
 		);
 		if (config.rpc.rpc_enable)
@@ -923,7 +929,7 @@ void mcp_daemon::ongoing_report(
 		<< ", transaction:" << store.transaction_count(transaction)
 		<< ", unstable approve:" << store.approve_unstable_count(transaction)
 		<< ", approve:" << store.approve_count(transaction)
-		<< ", dag free:" << store.dag_free_count(transaction)
+		//<< ", dag free:" << store.dag_free_count(transaction)
 		<< ", last_stable_mci:" << chain->last_stable_mci()
 		<< ", last_mci:" << chain->last_mci();
 
@@ -983,7 +989,10 @@ void mcp_daemon::ongoing_report(
 	if (witness)
 		LOG(log.info) << "witness:" << witness->getInfo();
 
-	LOG(log.info) << store.get_rocksdb_state(32 * 1024 * 1024);
+	static uint64_t count = 0;
+	if (count % 1440 == 0)
+		LOG(log.info) << store.get_rocksdb_state(32 * 1024 * 1024);
+	count++;
 
 	auto elapseds = mcp::stopwatch_manager::list_elapseds();
 	for (auto p : elapseds)
@@ -991,7 +1000,7 @@ void mcp_daemon::ongoing_report(
 		LOG(log.info) << p.first << ":" << p.second.count() / 1000 << "s";
 	}
 
-	alarm->add(std::chrono::steady_clock::now() + std::chrono::seconds(20), [&store, host, sync_async, background, cache,
+	alarm->add(std::chrono::steady_clock::now() + std::chrono::seconds(60), [&store, host, sync_async, background, cache,
 		sync, processor, capability, chain, alarm, tq, aq, witness, &log]() {
 		ongoing_report(store, host, sync_async, background, cache,
 			sync, processor, capability, chain, alarm, tq, aq, witness, log);

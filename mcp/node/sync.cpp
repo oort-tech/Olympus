@@ -1260,12 +1260,12 @@ void mcp::node_sync::read_hash_tree(mcp::hash_tree_request_message const& hash_t
 		}
 		all_approve_size += block_ptr->approves().size();
 
-		h256 receiptsRoot;
-		if (!m_store.GetBlockReceiptsRoot(transaction, bh, receiptsRoot))
-		{
-			LOG(log_sync.info) << "read_hash_tree: transaction receiptRoot have no summaries";
-			return;
-		}
+		//h256 receiptsRoot;
+		//if (!m_store.GetBlockReceiptsRoot(transaction, bh, receiptsRoot))
+		//{
+		//	LOG(log_sync.info) << "read_hash_tree: transaction receiptRoot have no summaries";
+		//	return;
+		//}
 
 		// check if all the blocks on skiplist have summaries
 		mcp::skiplist_info s_info;
@@ -1284,7 +1284,7 @@ void mcp::node_sync::read_hash_tree(mcp::hash_tree_request_message const& hash_t
 		}
 
 		// fill the summary items
-		mcp::hash_tree_response_message::summary_items s(bh, sh, previous_summary, p_summaries, receiptsRoot, s_summaries, bs->status, bs->stable_index, bs->mc_timestamp, bs->level, block_ptr, trannsactions, approves, *bs->main_chain_index, s_info.list);
+		mcp::hash_tree_response_message::summary_items s(bh, sh, previous_summary, p_summaries, /*receiptsRoot*/bs->m_receiptsRoot, s_summaries, bs->status, bs->stable_index, bs->mc_timestamp, bs->level, block_ptr, trannsactions, approves, *bs->main_chain_index, s_info.list);
 		hash_tree_response.arr_summaries.insert(s);
 
 		//dev::RLPStream rlp_stream;
