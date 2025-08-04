@@ -184,7 +184,8 @@ void mcp::rpc_handler::block(mcp::json &j_response, bool &)
 	//	BOOST_THROW_EXCEPTION(RPC_Error_NoResult());
 
 	//j_response["result"] = toJson(*block);
-	j_response["result"] = toJson(client()->blockInfo(jsToHash(params[0])));
+	auto _block = client()->blockInfo(jsToHash(params[0]));
+	j_response["result"] = toJson(_block);
 }
 
 void mcp::rpc_handler::block_state(mcp::json &j_response, bool &)
@@ -199,7 +200,8 @@ void mcp::rpc_handler::block_state(mcp::json &j_response, bool &)
 	//	BOOST_THROW_EXCEPTION(RPC_Error_NoResult());
 
 	//j_response["result"] = toJson(*state);
-	j_response["result"] = toJson(client()->blockState(jsToHash(params[0])));
+	auto _state = client()->blockState(jsToHash(params[0]));
+	j_response["result"] = toJson(_state);
 }
 
 void mcp::rpc_handler::block_states(mcp::json &j_response, bool &)
@@ -227,7 +229,8 @@ void mcp::rpc_handler::block_states(mcp::json &j_response, bool &)
 		mcp::json _tmp;
 		try
 		{
-			_tmp[_blockHash] = toJson(client()->blockState(jsToHash(_blockHash)));
+			auto _state = client()->blockState(jsToHash(_blockHash));
+			_tmp[_blockHash] = toJson(_state);
 		}
 		catch (dev::BlockNotFound)
 		{
@@ -317,7 +320,8 @@ void mcp::rpc_handler::stable_blocks(mcp::json &j_response, bool &)
 		//auto block = m_cache->block_get(transaction, stable_index);
 		//assert_x(block);
 		//block_list_l.push_back(toJson(*block));
-		block_list_l.push_back(toJson(client()->blockInfo(stable_index)));
+		auto _block = client()->blockInfo(stable_index);
+		block_list_l.push_back(toJson(_block));
 		blocks_count++;
 		if (blocks_count == limit_l)
 			break;
@@ -529,7 +533,8 @@ void mcp::rpc_handler::witness_list(mcp::json &j_response, bool &)
 	//	witness_list_l.push_back(i.hexPrefixed());
 	//}
 	//j_response["result"] = witness_list_l;
-	j_response["result"] = toJson(client()->witnessList(epoch));
+	auto _wl = client()->witnessList(epoch);
+	j_response["result"] = toJson(_wl);
 }
 
 void mcp::rpc_handler::process_request()
@@ -751,7 +756,8 @@ void mcp::rpc_handler::eth_getBlockByNumber(mcp::json &j_response, bool &)
 	//);
 
 	//j_response["result"] = toJson(lb, is_full);
-	j_response["result"] = toJson(client()->localisedBlock(block_number), _includeTransactions);
+	auto _block = client()->localisedBlock(block_number);
+	j_response["result"] = toJson(_block, _includeTransactions);
 }
 
 void mcp::rpc_handler::eth_getBlockByHash(mcp::json &j_response, bool &)
@@ -795,7 +801,8 @@ void mcp::rpc_handler::eth_getBlockByHash(mcp::json &j_response, bool &)
 	//);
 
 	//j_response["result"] = toJson(lb, is_full);
-	j_response["result"] = toJson(client()->localisedBlock(jsToHash(params[0])), _includeTransactions);
+	auto _block = client()->localisedBlock(jsToHash(params[0]));
+	j_response["result"] = toJson(_block, _includeTransactions);
 }
 
 void mcp::rpc_handler::eth_sendRawTransaction(mcp::json &j_response, bool &)
@@ -1632,7 +1639,7 @@ void mcp::rpc_handler::debug_traceTransaction(mcp::json &j_response, bool &)
 		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
 
 	LocalisedTransaction t = client()->localisedTransaction(jsToHash(params[0]));
-	Block block = client()->block(t.blockHash(),true);
+	Block block = client()->blockByHash(t.blockHash(),true);
 	chain_state s(chain_state::Null);
 	mcp::ExecutionResult er;
 	std::shared_ptr<Tracer> _tracer = NewTracer(params[1], er);

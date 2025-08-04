@@ -502,7 +502,7 @@ mcp::Epoch mcp::Client::lastEpoch() const
 	return m_chain->last_epoch();
 }
 
-Block mcp::Client::block(h256 const& _h, bool _debug) const
+Block mcp::Client::blockByHash(h256 const& _h, bool _debug) const
 {
 	mcp::db::db_transaction _t(m_store.create_transaction());
 	auto _currentState = m_cache->block_state_get(_t, _h);
@@ -537,7 +537,7 @@ Block mcp::Client::blockByNumber(BlockNumber _h) const
 {
 	if (_h == LatestBlock || _h == PendingBlock)
 		return m_chain->postSeal();
-	return block(bc().numberHash(_h));
+	return blockByHash(bc().numberHash(_h));
 }
 
 h256 mcp::Client::workTransactionHash(Epoch _epoch)

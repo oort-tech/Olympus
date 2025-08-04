@@ -5,9 +5,9 @@
 #include <mcp/core/common.hpp>
 #include <mcp/core/transaction_receipt.hpp>
 #include <mcp/core/approve_receipt.hpp>
+#include <mcp/core/LogFilter.hpp>
 #include <mcp/p2p/common.hpp>
 #include "exceptions.hpp"
-#include "LogFilter.hpp"
 #include "json.hpp"
 
 namespace mcp

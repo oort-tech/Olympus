@@ -1,7 +1,7 @@
 #pragma once
 #include <libdevcore/Address.h>
-#include <mcp/core/common.hpp>
-#include <mcp/core/transaction_receipt.hpp>
+#include "common.hpp"
+#include "transaction_receipt.hpp"
 
 namespace mcp
 {

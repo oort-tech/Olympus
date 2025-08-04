@@ -2,7 +2,7 @@
 
 #include "chain.hpp"
 #include <mcp/p2p/host.hpp>
-#include <mcp/rpc/LogFilter.hpp>
+#include <mcp/core/LogFilter.hpp>
 
 namespace mcp
 {
@@ -61,7 +61,7 @@ namespace mcp
 		uint64_t lastMci() const;
 		mcp::Epoch lastEpoch() const;
 
-		Block block(h256 const& _block, bool _debug=false) const;
+		Block blockByHash(h256 const& _block, bool _debug=false) const;
 
 		Block blockByNumber(BlockNumber _h) const;
 

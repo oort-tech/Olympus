@@ -353,8 +353,6 @@ add_library (rpc
 	mcp/rpc/jsonHelper.hpp
 	mcp/rpc/json.cpp
 	mcp/rpc/json.hpp
-	mcp/rpc/LogFilter.cpp
-	mcp/rpc/LogFilter.hpp
 	mcp/rpc/exceptions.hpp
 	)
 	
@@ -415,6 +413,8 @@ add_library (core
 	mcp/core/ChainOperationParams.hpp
 	mcp/core/ChainOperationParams.cpp
 	mcp/core/iapprove_queue.hpp
+	mcp/core/LogFilter.cpp
+	mcp/core/LogFilter.hpp
 	)
 	
 add_executable (mcp
