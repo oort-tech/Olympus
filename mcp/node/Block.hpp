@@ -116,7 +116,7 @@ namespace mcp
 		//	h256 const& dag_stable_block_hash,
 		//	chain const& _bc
 		//);
-		u256 mcp::Block::enactOn(dev::eth::McInfo const& _mc, VerifiedBlockRef const& _block, chain const& _bc);
+		u256 enactOn(dev::eth::McInfo const& _mc, VerifiedBlockRef const& _block, chain const& _bc);
 
 		/// Returns back to a pristine state after having done a playback.
 		void cleanup();
