@@ -2,9 +2,10 @@
 #include "common.hpp"
 #include <mcp/common/assert.hpp>
 
-mcp::db::db_iterator::db_iterator(rocksdb::Slice const& prefix_a):
+mcp::db::db_iterator::db_iterator(uint8_t prefix_a):
 	m_it(nullptr),
-	m_prefix(prefix_a)
+	m_bytePrefix(prefix_a),
+	m_prefix(rocksdb::Slice(reinterpret_cast<const char*>(&m_bytePrefix), 1))
 {
 }
 
@@ -27,13 +28,7 @@ bool mcp::db::db_iterator::valid()
 	else
 	{
 		// if used same column GetIterator does not honor ReadOptions before commit(prefix_same_as_start, iterate_upper_bound)
-		auto _key = m_it->key();
-		assert_x(_key.size() != 0);
-		auto _k = _key.data();
-		assert_x(_k != nullptr);
-		assert_x(m_prefix.size() < _key.size());
-
-		if (memcmp(m_prefix.data(), _k, m_prefix.size()) != 0)
+		if (!m_it->key().starts_with(m_prefix))
 			valid = false;
 	}
 	return valid;
@@ -42,11 +37,7 @@ bool mcp::db::db_iterator::valid()
 dev::Slice mcp::db::db_iterator::key()
 {
 	auto _k = m_it->key();
-	int prefix_len = m_prefix.size();
-	if (prefix_len == 0)
-		return dev::Slice(_k.data(), _k.size());
-	else
-		return dev::Slice(_k.data() + prefix_len, _k.size() - prefix_len);
+	return dev::Slice(_k.data() + 1, _k.size() - 1);
 }
 
 dev::Slice mcp::db::db_iterator::value()
@@ -67,7 +58,7 @@ mcp::db::forward_iterator::forward_iterator(rocksdb::Iterator * it_a)
 	m_it->SeekToFirst();
 }
 
-mcp::db::forward_iterator::forward_iterator(rocksdb::Iterator * it_a, rocksdb::Slice const & k_a, rocksdb::Slice const& prefix_a):
+mcp::db::forward_iterator::forward_iterator(rocksdb::Iterator * it_a, rocksdb::Slice const & k_a, uint8_t prefix_a):
 	db_iterator(prefix_a)
 {
 	m_it = it_a;
@@ -78,7 +69,8 @@ mcp::db::forward_iterator::forward_iterator(mcp::db::forward_iterator && other_a
 {
 	m_it = other_a.m_it;
 	other_a.m_it = nullptr;
-	m_prefix = other_a.m_prefix;
+	m_bytePrefix = other_a.m_bytePrefix;
+	m_prefix = rocksdb::Slice(reinterpret_cast<const char*>(&m_bytePrefix), 1);
 }
 
 mcp::db::forward_iterator & mcp::db::forward_iterator::operator++()
@@ -95,7 +87,8 @@ mcp::db::forward_iterator & mcp::db::forward_iterator::operator= (mcp::db::forwa
 	}
 	m_it = other_a.m_it;
 	other_a.m_it = nullptr;
-	m_prefix = other_a.m_prefix;
+	m_bytePrefix = other_a.m_bytePrefix;
+	m_prefix = rocksdb::Slice(reinterpret_cast<const char*>(&m_bytePrefix), 1);
 	return *this;
 }
 
@@ -109,22 +102,21 @@ mcp::db::backward_iterator::backward_iterator(rocksdb::Iterator * it_a)
 {
 	m_it = it_a;
 	m_it->SeekToLast();
-	//LOG(m_log.info) << "test3" << rocksdb::get_perf_context()->ToString();
 }
 
-mcp::db::backward_iterator::backward_iterator(rocksdb::Iterator * it_a, rocksdb::Slice const & k_a, rocksdb::Slice const& prefix_a) :
+mcp::db::backward_iterator::backward_iterator(rocksdb::Iterator * it_a, rocksdb::Slice const & k_a, uint8_t prefix_a):
 	db_iterator(prefix_a)
 {
 	m_it = it_a;
 	m_it->SeekForPrev(k_a);
-	//LOG(m_log.info) << "test4" << rocksdb::get_perf_context()->ToString();
 }
 
 mcp::db::backward_iterator::backward_iterator(mcp::db::backward_iterator && other_a)
 {
 	m_it = other_a.m_it;
 	other_a.m_it = nullptr;
-	m_prefix = other_a.m_prefix;
+	m_bytePrefix = other_a.m_bytePrefix;
+	m_prefix = rocksdb::Slice(reinterpret_cast<const char*>(&m_bytePrefix), 1);
 }
 
 mcp::db::backward_iterator & mcp::db::backward_iterator::operator++()
@@ -141,7 +133,8 @@ mcp::db::backward_iterator & mcp::db::backward_iterator::operator= (mcp::db::bac
 	}
 	m_it = other_a.m_it;
 	other_a.m_it = nullptr;
-	m_prefix = other_a.m_prefix;
+	m_bytePrefix = other_a.m_bytePrefix;
+	m_prefix = rocksdb::Slice(reinterpret_cast<const char*>(&m_bytePrefix), 1);
 	return *this;
 }
 

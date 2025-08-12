@@ -204,13 +204,13 @@ void mcp::db::db_transaction::rollback()
 	check_status(status);
 }
 
-mcp::db::forward_iterator mcp::db::db_transaction::begin(uint8_t const& _prefix,
+mcp::db::forward_iterator mcp::db::db_transaction::begin(uint8_t _prefix,
 	std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a)
 {
 	return begin(_prefix, dev::Slice(), snapshot_a);
 }
 
-mcp::db::forward_iterator mcp::db::db_transaction::begin(uint8_t const& _prefix,
+mcp::db::forward_iterator mcp::db::db_transaction::begin(uint8_t _prefix,
 	dev::Slice const & _k, 
 	std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a)
 {
@@ -220,21 +220,19 @@ mcp::db::forward_iterator mcp::db::db_transaction::begin(uint8_t const& _prefix,
 	if (snapshot_a != nullptr)
 		read_ops->snapshot = snapshot_a->snapshot();
 	
-	dev::Slicebytes sPrefix(1, _prefix);
-	dev::Slicebytes key = sPrefix + _k;
-	
+	dev::Slicebytes key = dev::Slicebytes(1, _prefix) + _k;
 	auto it = m_txn->GetIterator(*read_ops);
-	return forward_iterator(it, rocksdb::Slice(key.data(),key.size()), rocksdb::Slice(sPrefix.data(), sPrefix.size()));
+	return forward_iterator(it, rocksdb::Slice(key.data(),key.size()), _prefix);
 }
 
-mcp::db::backward_iterator mcp::db::db_transaction::rbegin(uint8_t const& _prefix,
+mcp::db::backward_iterator mcp::db::db_transaction::rbegin(uint8_t _prefix,
 	std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a)
 {
 	dev::Slicebytes key(48, 0xFF);
 	return rbegin(_prefix, dev::Slice(key.data(), key.size()), snapshot_a);
 }
 
-mcp::db::backward_iterator mcp::db::db_transaction::rbegin(uint8_t const& _prefix,
+mcp::db::backward_iterator mcp::db::db_transaction::rbegin(uint8_t _prefix,
 	dev::Slice const & _k, 
 	std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a)
 {
@@ -244,11 +242,10 @@ mcp::db::backward_iterator mcp::db::db_transaction::rbegin(uint8_t const& _prefi
 	if (snapshot_a != nullptr)
 		read_ops->snapshot = snapshot_a->snapshot();
 
-	dev::Slicebytes sPrefix(1, _prefix);
-	dev::Slicebytes key = sPrefix + _k;
+	dev::Slicebytes key = dev::Slicebytes(1, _prefix) + _k;
 
 	auto it = m_txn->GetIterator(*read_ops);
-	return backward_iterator(it, rocksdb::Slice(key.data(), key.size()), rocksdb::Slice(sPrefix.data(), sPrefix.size()));
+	return backward_iterator(it, rocksdb::Slice(key.data(), key.size()), _prefix);
 
 }
 

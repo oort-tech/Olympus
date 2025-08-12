@@ -10,7 +10,7 @@ namespace mcp
 		class db_iterator
 		{
 		public:
-			db_iterator(rocksdb::Slice const& prefix_a = rocksdb::Slice());
+			db_iterator(uint8_t prefix_a = 0xFF);
 			~db_iterator();
 			bool valid();
 
@@ -22,6 +22,7 @@ namespace mcp
 		protected:
 			rocksdb::Iterator* m_it;
 
+			uint8_t m_bytePrefix;
 			rocksdb::Slice m_prefix;
 		};
 
@@ -30,7 +31,7 @@ namespace mcp
 		public:
 			forward_iterator();
 			forward_iterator(rocksdb::Iterator* it_a);
-			forward_iterator(rocksdb::Iterator* it_a, rocksdb::Slice const& k_a, rocksdb::Slice const& prefix_a = rocksdb::Slice());
+			forward_iterator(rocksdb::Iterator* it_a, rocksdb::Slice const& k_a, uint8_t prefix_a);
 			forward_iterator(forward_iterator &&);
 			forward_iterator(forward_iterator const &) = delete;
 			forward_iterator& operator++();
@@ -43,7 +44,7 @@ namespace mcp
 		public:
 			backward_iterator();
 			backward_iterator(rocksdb::Iterator* it_a);
-			backward_iterator(rocksdb::Iterator* it_a, rocksdb::Slice const& k_a, rocksdb::Slice const& prefix_a = rocksdb::Slice());
+			backward_iterator(rocksdb::Iterator* it_a, rocksdb::Slice const& k_a, uint8_t prefix_a);
 			backward_iterator(backward_iterator && other_a);
 			backward_iterator(backward_iterator const &) = delete;
 			backward_iterator& operator++();

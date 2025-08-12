@@ -41,15 +41,15 @@ namespace mcp
 			void commit();
 			void rollback();
 
-			forward_iterator begin(uint8_t const& _prefix,
+			forward_iterator begin(uint8_t _prefix,
 				std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a = nullptr);
-			forward_iterator begin(uint8_t const& _prefix,
+			forward_iterator begin(uint8_t _prefix,
 				dev::Slice const& _k, 
 				std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a = nullptr);
 
-			backward_iterator rbegin(uint8_t const& _prefix,
+			backward_iterator rbegin(uint8_t _prefix,
 				std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a = nullptr);
-			backward_iterator rbegin(uint8_t const& _prefix,
+			backward_iterator rbegin(uint8_t _prefix,
 				dev::Slice const& _k, 
 				std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a = nullptr);
 

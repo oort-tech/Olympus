@@ -145,12 +145,16 @@ void mcp::composer::pick_parents_and_last_summary_and_wl_block(mcp::db::db_trans
 		if (rand_it.valid())
 			dag_free_it = std::move(rand_it);
 
-
+		bool reset_iterator = false;
 		std::unordered_set<mcp::block_hash> ordered_tmp;
 		while (ordered_parents.size() < b_param.max_parent_size)
 		{
 			if (!dag_free_it.valid())
 			{
+				if (reset_iterator)
+					break;
+				reset_iterator = true;
+
 				dag_free_it = m_store.dag_free_begin(transaction_a, snapshot);
 				assert_x_msg(dag_free_it.valid(), "dag free is null");
 			}
