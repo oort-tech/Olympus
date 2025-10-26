@@ -126,23 +126,7 @@ evmc_status_code transactionExceptionToEvmcStatusCode(TransactionException ex) n
 
 CallResult ExtVM::call(CallParameters& _p)
 {   
-    Executive e(m_s, envInfo(), m_sealEngine, /*m_s.traces,*/ depth + 1, _p.tracer);
-    if (_p.tracer)
-    {
-        std::shared_ptr<dev::u256> _pValue = nullptr;
-        if (*_p.op != Instruction::STATICCALL)
-            _pValue = std::make_shared<dev::u256>(_p.valueTransfer);
-        _p.tracer->CaptureEnter(*_p.op, _p.senderAddress, _p.codeAddress, _p.data.toBytes(), uint64_t(_p.gas), _pValue);
-    }
-
-    if (!e.call(_p, gasPrice, origin))
-    {
-        go(depth, e/*, _p.onOp*/);
-        e.accrueSubState(sub);
-    }
-    if (_p.tracer)
-        _p.tracer->CaptureExit(e.Output(), uint64_t(_p.gas - e.gas()), e.getException());
-    _p.gas = e.gas();
+    Executive e(m_s, envInfo(), m_sealEngine, /*m_s.traces,*/ depth + 1);
 
     return {transactionExceptionToEvmcStatusCode(e.getException()), e.takeOutput()};
 }
@@ -164,7 +148,8 @@ void ExtVM::setStore(u256 _n, u256 _v)
 
 CreateResult ExtVM::create(u256 _endowment, u256& io_gas, bytesConstRef _code, Instruction _op, u256 _salt, std::shared_ptr<EVMLogger> _tracer/*, OnOpFunc const& _onOp*/)
 {
-    Executive e(m_s, envInfo(), m_sealEngine, /*m_s.traces,*/ depth + 1, _tracer);
+    auto tracer = _tracer ? _tracer : m_tracer;
+    Executive e(m_s, envInfo(), m_sealEngine, /*m_s.traces,*/ depth + 1, tracer);
     bool result = false;
     if (_op == Instruction::CREATE)
         result = e.createOpcode(myAddress, _endowment, gasPrice, io_gas, _code, origin);
@@ -176,13 +161,13 @@ CreateResult ExtVM::create(u256 _endowment, u256& io_gas, bytesConstRef _code, I
 
     if (!result)
     {
-        if (_tracer)
-            _tracer->CaptureEnter(_op, myAddress, e.newAddress(), _code.toBytes(), uint64_t(io_gas), std::make_shared<dev::u256>(_endowment));
+        if (tracer)
+            tracer->CaptureEnter(_op, myAddress, e.newAddress(), _code.toBytes(), uint64_t(io_gas), std::make_shared<dev::u256>(_endowment));
 
         go(depth, e/*, _onOp*/);
         e.accrueSubState(sub);
-        if (_tracer)
-            _tracer->CaptureExit(e.Output(), uint64_t(io_gas - e.gas()), e.getException());
+        if (tracer)
+            tracer->CaptureExit(e.Output(), uint64_t(io_gas - e.gas()), e.getException());
     }
     io_gas = e.gas();
     return {transactionExceptionToEvmcStatusCode(e.getException()), e.takeOutput(), e.newAddress()};

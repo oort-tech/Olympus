@@ -1,44 +1,24 @@
 #include "Executive.hpp"
 #include "ExtVM.h"
 
-#include <libevm/LegacyVM.h>
 #include <libevm/VMFactory.h>
+#include <libinterpreter/VM.h>
+#include <libdevcore/system_usage.h>
 #include <mcp/common/Exceptions.h>
 #include <mcp/common/stopwatch.hpp>
 #include <mcp/core/param.hpp>
 #include <mcp/node/chain.hpp>
+#include <mcp/node/tracers/Tracer.hpp>
 #include <numeric>
+#include <iomanip>
+#include <limits>
+
+
 
 using namespace std;
 using namespace dev;
 using namespace dev::eth;
-
-namespace
-{
-	std::string dumpStackAndMemory(LegacyVM const& _vm)
-	{
-		ostringstream o;
-		o << "\n    STACK\n";
-		for (auto i : _vm.stack())
-			o << (h256)i << "\n";
-		o << "    MEMORY\n"
-			<< ((_vm.memory().size() > 1000) ? " mem size greater than 1000 bytes " :
-				memDump(_vm.memory()));
-		return o.str();
-	};
-
-	std::string dumpStorage(ExtVM const& _ext)
-	{
-		ostringstream o;
-		o << "    STORAGE\n";
-		for (auto const& i : _ext.state().storage(_ext.myAddress))
-			o << showbase << hex << i.second.first << ": " << i.second.second << "\n";
-		return o.str();
-	};
-
-}  // namespace
-
-
+using namespace dev::eth;
 
 mcp::Executive::Executive(chain_state& io_s, Block const& _block, unsigned _txIndex, chain const& _bc, unsigned _level, std::shared_ptr<EVMLogger> _tracer)
 	: m_s(createIntermediateState(io_s, _block, _txIndex, _bc)),
@@ -118,7 +98,7 @@ bool mcp::Executive::call(Address const& _receiveAddress, Address const& _sender
 	//if (m_tracer && topCall())
 	//	m_tracer->CaptureStart(_senderAddress, _receiveAddress, false, _data.toBytes(), uint64_t(m_gas), _value);
 
-    dev::eth::CallParameters params(_senderAddress, _receiveAddress, _receiveAddress, _value, _value, _gas, _data, nullptr/*, {}*/);
+	dev::eth::CallParameters params(_senderAddress, _receiveAddress, _receiveAddress, _value, _value, _gas, _data, m_tracer/*, {}*/);
     return call(params, _gasPrice, _senderAddress);
 }
 
@@ -163,7 +143,7 @@ bool mcp::Executive::call(dev::eth::CallParameters const& _p, u256 const& _gasPr
 			h256 codeHash = m_s.codeHash(_p.codeAddress);
 			m_ext = std::make_shared<ExtVM>(m_s, m_envInfo, m_sealEngine, _p.receiveAddress,
 				_p.senderAddress, _origin, _p.apparentValue, _gasPrice, _p.data, &c, codeHash,
-				0, m_depth, false, _p.staticCall);
+				0, m_depth, false, _p.staticCall, m_tracer);
 		}
 	}
 
@@ -294,7 +274,7 @@ bool mcp::Executive::executeCreate(Address const& _sender, u256 const& _endowmen
 	if (!_init.empty())
 	{
 		m_ext = std::make_shared<ExtVM>(m_s, m_envInfo, m_sealEngine, m_newAddress, _sender, _origin, _endowment, _gasPrice,
-			dev::bytesConstRef(), _init, sha3(_init), 0, m_depth, true, false);
+			dev::bytesConstRef(), _init, sha3(_init), 0, m_depth, true, false, m_tracer);
 	}
 
 	if (m_tracer && m_ext && topCall())
@@ -321,7 +301,7 @@ bool mcp::Executive::executeCreate(Address const& _sender, u256 const& _endowmen
     return !m_ext;
 }
 
-bool mcp::Executive::go(/*dev::eth::OnOpFunc const& _onOp*/)
+bool mcp::Executive::go()
 {
 	//mcp::stopwatch_guard sw("Executive:go");
     if (m_ext)
@@ -333,8 +313,52 @@ bool mcp::Executive::go(/*dev::eth::OnOpFunc const& _onOp*/)
 			//mcp::uint256_t start_gas_used = gasUsed();
 			//int64_t start_refunds = m_ext->sub.refunds;
 
-            // Create VM instance. Force Interpreter if tracing requested.
+            // Set up opcode logging callback for debugging with interpreter context
             auto vm = VMFactory::create();
+            dev::eth::VM const* interpreterVm = dynamic_cast<dev::eth::VM*>(vm.get());
+			//BOOST_LOG(m_log.trace) << interpreterVm->memory();
+
+			g_opcodeLogCallback = OpcodeLogCallback([this, interpreterVm](uint64_t pc, Instruction op, const std::string& opName) {
+                // Log to BOOST_LOG for debugging output
+                BOOST_LOG(m_log.trace) << "EVM Opcode: TxHash=" << m_t.sha3().hexPrefixed()
+                                      << " PC=" << pc << " OP=" << opName
+                                      << " (0x" << std::hex << static_cast<int>(op) << std::dec << ")";
+
+                auto tracerPtr = std::dynamic_pointer_cast<mcp::Tracer>(m_tracer);
+				dev::eth::VM const* activeVm = interpreterVm ? interpreterVm : dev::eth::g_activeVm;
+				
+				if (tracerPtr)
+					tracerPtr->SetCurrentVM(activeVm);
+
+				uint64_t gasCost = activeVm ? activeVm->currentGasCost() : 0;
+                uint64_t gasLeft = 0;
+				if (activeVm)
+				{
+					BOOST_LOG(m_log.trace) << "Active VM in context";
+					gasLeft = activeVm->gasLeft();
+				}
+                else
+                {
+                    static const u256 maxGas64 = u256(std::numeric_limits<uint64_t>::max());
+                    gasLeft = m_gas > maxGas64 ? std::numeric_limits<uint64_t>::max() : m_gas.convert_to<uint64_t>();
+                }
+
+                if (m_tracer && m_ext)
+                {
+                    try
+                    {
+						BOOST_LOG(m_log.trace) << "Capturing tracer state, PC=" << pc << " OP=" << opName << " GasLeft=" << gasLeft << " GasCost=" << gasCost;
+                        m_tracer->CaptureState(pc, op, gasCost, gasLeft, nullptr, m_ext.get());
+                    }
+                    catch (...)
+                    {
+                        BOOST_LOG(m_log.debug) << "Tracer CaptureState failed for PC=" << pc << " OP=" << opName;
+                    }
+                }
+
+                if (tracerPtr)
+                    tracerPtr->SetCurrentVM(nullptr);
+            });
             if (m_isCreation)
             {
 				m_output = vm->exec(m_gas, *m_ext, m_tracer/*, _onOp*/);
@@ -391,6 +415,9 @@ bool mcp::Executive::go(/*dev::eth::OnOpFunc const& _onOp*/)
 				//m_current_trace->result = call_result;
 				//m_current_trace = nullptr;
             //}
+			BOOST_LOG(m_log.trace) << "EVM Execution completed successfully.";
+			BOOST_LOG(m_log.trace) << " RAM Usage: " << getRAMUsage() << "KB";
+			BOOST_LOG(m_log.trace) << " CPU Usage: " << getCPUUsage();
         }
         catch (RevertInstruction& _e)
         {
@@ -448,6 +475,9 @@ bool mcp::Executive::go(/*dev::eth::OnOpFunc const& _onOp*/)
 #if ETH_TIMED_EXECUTIONS
         cnote << "VM took:" << t.elapsed() << "; gas used: " << (sgas - m_endGas);
 #endif
+        
+        // Clear the opcode logging callback
+        g_opcodeLogCallback = nullptr;
     }
     return true;
 }
@@ -494,6 +524,8 @@ bool mcp::Executive::finalize()
     }
 
 	if (m_tracer)
+		mcp::log m_log{"ExtVM"};
+		BOOST_LOG(m_log.trace) << "Capturing transaction end trace";
 		m_tracer->CaptureTxEnd(uint64_t(m_gas));
 
     return (m_excepted == TransactionException::None);

@@ -39,18 +39,23 @@ public:
     ExtVM(mcp::chain_state& _s, EnvInfo const& _envInfo, mcp::SealEngineFace const& _sealEngine, Address _myAddress,
         Address _caller, Address _origin, u256 _value, u256 _gasPrice, bytesConstRef _data,
         bytesConstRef _code, h256 const& _codeHash, u256 const& _version, unsigned _depth,
-        bool _isCreate, bool _staticCall)
+        bool _isCreate, bool _staticCall, 
+        std::shared_ptr<EVMLogger> _tracer = nullptr
+        )
       : ExtVMFace(_envInfo, _myAddress, _caller, _origin, _value, _gasPrice, _data, _code.toBytes(),
             _codeHash, _version, _depth, _isCreate, _staticCall),
         m_s(_s),
         m_sealEngine(_sealEngine),
-        m_evmSchedule(initEvmSchedule(envInfo().mci(), _version))
+        m_evmSchedule(initEvmSchedule(envInfo().mci(), _version)),
+        m_tracer(std::move(_tracer))
     {
         // Contract: processing account must exist. In case of CALL, the ExtVM
         // is created only if an account has code (so exist). In case of CREATE
         // the account must be created first.
         // assert_x(m_s.addressInUse(_envInfo.transaction, _myAddress));
     }
+
+    //std::shared_ptr<EVMLogger> tracer() const { return m_tracer; }
 
     /// Read storage location.
     u256 store(u256 _n) final 
@@ -119,6 +124,7 @@ private:
     mcp::chain_state & m_s;  ///< A reference to the base state.
     mcp::SealEngineFace const& m_sealEngine;
     EVMSchedule const& m_evmSchedule;
+    std::shared_ptr<EVMLogger> m_tracer;
 };
 
 }
