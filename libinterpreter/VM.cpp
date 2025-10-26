@@ -384,6 +384,16 @@ owning_bytes_ref VM::exec(const evmc_host_interface* _host, evmc_host_context* _
     return std::move(m_output);
 }
 
+std::vector<intx::uint256> VM::stackIntx() const
+{
+    std::vector<intx::uint256> values;
+    values.reserve(static_cast<size_t>(m_stackEnd - m_SP));
+    for (auto it = m_SP; it != m_stackEnd; ++it)
+        values.push_back(*it);
+    return values;
+}
+
+
 //
 // main interpreter loop and switch
 //
