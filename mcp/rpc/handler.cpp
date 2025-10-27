@@ -174,8 +174,8 @@ void mcp::rpc_handler::accounts_balances(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::block(mcp::json &j_response, bool &)
 {
-	if (!mcp::isH256(params[0]))
-		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
+        if (!mcp::isH256(params[0]))
+                BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
 
 	//dev::h256 block_hash = jsToHash(params[0]);
 	//mcp::db::db_transaction transaction(m_store.create_transaction());
@@ -1635,43 +1635,54 @@ void mcp::rpc_handler::approve_receipt(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::debug_traceTransaction(mcp::json &j_response, bool &)
 {
-	if (!mcp::isH256(params[0]))
-		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
+        if (!params.is_array() || params.empty())
+                BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid parameters"));
 
-	LocalisedTransaction t = client()->localisedTransaction(jsToHash(params[0]));
-	Block block = client()->blockByHash(t.blockHash(),true);
-	chain_state s(chain_state::Null);
-	mcp::ExecutionResult er;
-	std::shared_ptr<Tracer> _tracer = NewTracer(params[1], er);
-	Executive e(s, block, t.transactionIndex(), client()->blockChain(), _tracer);
-	e.setResultRecipient(er);
-	traceTransaction(e, t);
+        if (!mcp::isH256(params[0]))
+                BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
 
-	//mcp::json ret;
-	//ret["gas"] = t.gas().convert_to<uint64_t>()/*toJS(t.gas())*/;
-	//ret["failed"] = er.Failed();
-	//ret["returnValue"] = toHex(er.output);
-	//ret["structLogs"] = trace;
-	j_response["result"] = _tracer->GetResult();
+	try 
+	{
+		// Get the transaction and block information
+		h256 txHash = jsToHash(params[0]);
+		LocalisedTransaction t = client()->localisedTransaction(txHash);
+		Block block = client()->blockByHash(t.blockHash(), true);
+		
+		// Set up tracer options from params[1] (if provided)
+                mcp::json tracerOptions;
+                if (params.size() > 1 && params[1].is_object())
+                        tracerOptions = params[1];
+		
+		// Create execution result and tracer
+		mcp::ExecutionResult er;
+		std::shared_ptr<Tracer> tracer = NewTracer(tracerOptions, er);
+		
+		// Create state and executive - the Executive constructor will set up proper intermediate state
+		chain_state s(chain_state::Null);
+		Executive executive(s, block, t.transactionIndex(), client()->blockChain(), tracer);
+		executive.setResultRecipient(er);
+		
+		// Execute the transaction with tracing
+		traceTransaction(executive, t);
+		
+		// Return the structured trace results
+		j_response["result"] = tracer->GetResult();
+	}
+	catch (TransactionNotFound const&)
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_NoResult());
+	}
+	catch (dev::BlockNotFound const&)
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_NoResult());
+	}
 }
 
 void mcp::rpc_handler::traceTransaction(mcp::Executive& _e, mcp::Transaction const& _t)
 {
-	//mcp::json traceJson{ mcp::json::array() };
-	//StandardTrace st{ traceJson };
-	//st.setShowMnemonics();
-	//st.setOptions(debugOptions(_json));
-	//_e.initialize(_t);
-	//if (!_e.execute())
-	//	_e.go(/*st.onOp()*/);
-	//_e.finalize();
-
-	//auto _p = std::make_shared<OpCode>(traceJson);
-	//_p->setOptions(OpCode::debugOptions(_json));
-	//std::shared_ptr<Tracer> _pTracer(_p);
+	// Initialize, execute, and finalize the transaction with tracing enabled
 	_e.initialize(_t);
 	if (!_e.execute())
-		_e.go();
+		_e.go();  // This will trigger opcode logging via g_opcodeLogCallback and tracer->CaptureState
 	_e.finalize();
-	//return traceJson;
 }
