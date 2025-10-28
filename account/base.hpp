@@ -5,6 +5,7 @@
 /// This file defines contract abi.
 #pragma once
 #include "abi.hpp"
+#include <mcp/common/assert.hpp>
 
 namespace dev
 {
