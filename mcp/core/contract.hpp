@@ -62,22 +62,23 @@ namespace mcp
 		MainContractCaller(dev::BoundContract _contract) :contract(_contract) {}
 
 		/// write contract
-		dev::bytes DistributeRewards(std::map<dev::Address, u256> const& _v);
+		dev::bytes PackDistributeRewards(std::map<dev::Address, u256> const& _v);
 
 		/// write contract. just for initializer.
-		dev::bytes InitWitnesses(WitnessList const& _v);
+		dev::bytes PackInitWitnesses(WitnessList const& _v);
 
 		///read contract; staking list
-		std::pair<StakingList, int> GetWitnesses(int const& start = 0);
+		dev::bytes PackGetWitnesses(int const& start);
+		std::pair<StakingList, int> UnpackGetWitnesses(dev::bytes const& data);
 
 		///read contract; main info
-		MainInfo GetMainInfo();
+		dev::bytes PackGetMainInfo();
+		MainInfo UnpackGetMainInfo(dev::bytes const& data);
 	private:
-		dev::CallOpts DefaultOpts{ MainCallcAddress };
 		dev::BoundContract contract;
 	};
 
-	MainContractCaller NewMainContractCaller(dev::ContractCaller const& _caller);
+	MainContractCaller NewMainContractCaller();
 	///ContractCaller instance
 	extern MainContractCaller MainCaller;
 }

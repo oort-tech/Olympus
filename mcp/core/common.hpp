@@ -77,7 +77,7 @@ namespace mcp
 		u256 gasRefunded = 0;
 		unsigned depositSize = 0; 							///< Amount of code of the creation's attempted deposit.
 		u256 gasForDeposit;			 						///< Amount of gas remaining for the code deposit phase.
-		std::set<Address> modified_accounts;			///< The accounts that have been modified by the transaction.
+		//std::set<Address> modified_accounts;			///< The accounts that have been modified by the transaction.
 
 		bool Failed() const { return excepted != TransactionException::None; } /// Failed returns the indicator whether the execution is successful or not.
 
@@ -101,12 +101,12 @@ namespace mcp
 		}
 	};
 
-	enum class Permanence
+/*	enum class Permanence
 	{
     	Reverted,
     	Committed,
     	Uncommitted  ///< Uncommitted state for change log readings in tests.
-	};    
+	};   */ 
 
 	enum class block_status : uint8_t
     {
@@ -128,16 +128,16 @@ namespace mcp
 		mcp::block_hash child_hash;
 	};
 
-	class hash_tree_info
-	{
-	public:
-		hash_tree_info();
-		hash_tree_info(mcp::block_hash const &, mcp::summary_hash const &);
-		hash_tree_info(dev::Slice const &);
-		dev::Slice val() const;
-		mcp::block_hash b_hash;
-		mcp::summary_hash s_hash;
-	};
+	//class hash_tree_info
+	//{
+	//public:
+	//	hash_tree_info();
+	//	hash_tree_info(mcp::block_hash const &, mcp::summary_hash const &);
+	//	hash_tree_info(dev::Slice const &);
+	//	dev::Slice val() const;
+	//	mcp::block_hash b_hash;
+	//	mcp::summary_hash s_hash;
+	//};
 
 	class Executive;
 	class account_state
@@ -153,14 +153,14 @@ namespace mcp
     	};
 	
 		account_state() {}
-		account_state(Address const & _account, h256 const&ts, h256 const& _previous, u256 _nonce, u256 _balance, Changedness _c = Changed):
-			m_account(_account), 
-			m_ts(ts),
-			m_previous(_previous),
-			m_isAlive(true), 
-			m_isUnchanged(_c == Unchanged), 
-			m_nonce(_nonce), 
-			m_balance(_balance) {}
+		//account_state(Address const & _account, h256 const&ts, h256 const& _previous, u256 _nonce, u256 _balance, Changedness _c = Changed):
+		//	m_account(_account), 
+		//	m_ts(ts),
+		//	m_previous(_previous),
+		//	m_isAlive(true), 
+		//	m_isUnchanged(_c == Unchanged), 
+		//	m_nonce(_nonce), 
+		//	m_balance(_balance) {}
 		/// Construct an alive Account, with given endowment, for either a normal (non-contract) account
 		/// or for a contract account in the conception phase, where the code is not yet known.
 		account_state(u256 _nonce, u256 _balance, Changedness _c = Changed) : m_isAlive(true), m_isUnchanged(_c == Unchanged), m_nonce(_nonce), m_balance(_balance) {}
@@ -178,27 +178,27 @@ namespace mcp
 		{
 			assert(_contractRoot);
 		}
-		account_state(Address const & _account, h256 const&ts, h256 const& _previous, u256 const& _nonce, u256 const& _balance, h256 const& _contractRoot,
-			h256 const& _codeHash, Changedness _c)
-			:m_account(_account),
-			m_ts(ts),
-			m_previous(_previous),
-			m_isAlive(true),
-			m_isUnchanged(_c == Unchanged),
-			m_nonce(_nonce),
-			m_balance(_balance),
-			m_storageRoot(_contractRoot),
-			m_codeHash(_codeHash)
-		{
-			assert(_contractRoot);
-		}
-		account_state(bool & error_a, dev::RLP const & r, Changedness _c = Unchanged);
-		void stream_RLP(dev::RLPStream & s) const;
-		h256 hash();
+		//account_state(Address const & _account, h256 const&ts, h256 const& _previous, u256 const& _nonce, u256 const& _balance, h256 const& _contractRoot,
+		//	h256 const& _codeHash, Changedness _c)
+		//	:m_account(_account),
+		//	m_ts(ts),
+		//	m_previous(_previous),
+		//	m_isAlive(true),
+		//	m_isUnchanged(_c == Unchanged),
+		//	m_nonce(_nonce),
+		//	m_balance(_balance),
+		//	m_storageRoot(_contractRoot),
+		//	m_codeHash(_codeHash)
+		//{
+		//	assert(_contractRoot);
+		//}
+		//account_state(bool & error_a, dev::RLP const & r, Changedness _c = Unchanged);
+		//void stream_RLP(dev::RLPStream & s) const;
+		//h256 hash();
 
-		h256 init_hash = h256(0);
+		//h256 init_hash = h256(0);
 
-		void record_init_hash();
+		//void record_init_hash();
 
 		/// Kill this account. Useful for the suicide opcode. Following this call, isAlive() returns
     	/// false.
@@ -210,17 +210,19 @@ namespace mcp
 	    	m_codeHash = dev::EmptySHA3;
 	    	m_storageRoot = dev::EmptyTrie;
         	m_balance = 0;
+			m_nonce = 0;
+			m_version = 0;
             changed();
     	}
 
 		/// Sets the transaction of the account state
-		void setTs(h256 const& ts) { m_ts = ts; }
+		//void setTs(h256 const& ts) { m_ts = ts; }
 
 		/// Sets the transaction of the account state
-		void setPrevious() { m_previous = init_hash; }
+		//void setPrevious() { m_previous = init_hash; }
 
 		/// Sets the transaction of the account state
-		h256 previous() { return m_previous; }
+		//h256 previous() { return m_previous; }
 
 		/// @returns true iff this object represents an account in the state. Returns false if this object
     	/// represents an account that should no longer exist in the trie (an account that never existed or was
@@ -243,7 +245,7 @@ namespace mcp
 		void addBalance(u256 _value) { m_balance += _value; changed(); }
 
 		/// @returns the address of the account.
-		Address account() const { return m_account; }
+		//Address account() const { return m_account; }
 
 		/// @returns the nonce of the account.
 		u256 nonce() const { return m_nonce; }
@@ -252,11 +254,11 @@ namespace mcp
 		void incNonce() { ++m_nonce; changed(); }
 
 		/// original Nonce value  .
-		u256 oriNonce() const { return m_nonce - 1; }
+		//u256 oriNonce() const { return m_nonce - 1; }
 
 		/// Set nonce to a new value. This is used when reverting changes made to
 		/// the account.
-		void setNonce(u256 const& _nonce) { m_nonce = _nonce; }
+		void setNonce(u256 const& _nonce) { m_nonce = _nonce; changed(); }
 
 		/// @returns the root of the trie (whose nodes are stored in the state db externally to this class)
     	/// which encodes the base-state of the account's storage (upon which the storage is overlaid).
@@ -320,15 +322,17 @@ namespace mcp
 		/// @returns the account's code.
 		bytes const& code() const { return m_codeCache; }
 
-		//clear temp state to make it just like the state get from db
-		void clear_temp_state()
-		{
-			m_isUnchanged = true;
-			m_hasNewCode = false;
-			m_storageOverlay.clear();
-			m_storageOriginal.clear();
-			m_codeCache.clear();
-		}
+		u256 version() const { return m_version; }
+
+		////clear temp state to make it just like the state get from db
+		//void clear_temp_state()
+		//{
+		//	m_isUnchanged = true;
+		//	m_hasNewCode = false;
+		//	m_storageOverlay.clear();
+		//	m_storageOriginal.clear();
+		//	m_codeCache.clear();
+		//}
 
 	private:
 		/// Note that we've altered the account.
@@ -344,13 +348,13 @@ namespace mcp
     	bool m_hasNewCode = false;
 
 		/// Account
-		Address m_account;
+		//Address m_account;
 
 		/// transaction hash that causes the account state changed
-		h256 m_ts;
+		//h256 m_ts;
 
 		/// previous account state 
-		h256 m_previous;
+		//h256 m_previous;
 
 		/// Account's nonce.
 		u256 m_nonce;
@@ -416,7 +420,7 @@ namespace mcp
 
 		///OIP6
 		h256 m_stateRoot;
-		h256 m_transactionsRoot;
+		//h256 m_transactionsRoot;
 		h256 m_receiptsRoot;
 		log_bloom m_logBloom;
 	};
@@ -438,6 +442,11 @@ namespace mcp
         static mcp::summary_hash gen_summary_hash(mcp::block_hash const & block_hash, mcp::summary_hash const & previous_hash,
             std::list<mcp::summary_hash> const & parent_hashs, h256 const & receipts_root,
             std::set<mcp::summary_hash> const & skip_list, mcp::block_status const & status, uint64_t const& stable_index_a, uint64_t const& mc_timestamp_a);
+
+		static mcp::summary_hash gen_summary_hash(mcp::block_hash const& block_hash, mcp::summary_hash const& previous_hash,
+			std::list<mcp::summary_hash> const& parent_hashs, h256 const& receipts_root,
+			std::set<mcp::summary_hash> const& skip_list, mcp::block_status const& status, uint64_t const& stable_index_a, uint64_t const& mc_timestamp_a,
+			uint64_t const& mci_a, h256 const& stateRoot_a, log_bloom const& logBloom_a);
 	};
 
 	class advance_info
@@ -566,20 +575,6 @@ namespace mcp
 	//	uint32_t depth;
 	//};
 
-	/// processed transaction -> block info
-	struct TransactionAddress
-	{
-		TransactionAddress(mcp::block_hash const& block_hash_a, unsigned index_a):blockHash(block_hash_a), index(index_a) {}
-		TransactionAddress(RLP const& _rlp) { blockHash = (mcp::block_hash)_rlp[0]; index = _rlp[1].toInt<unsigned>();/* blockNum = (uint64_t)_rlp[2];*/}
-		bytes rlp() const { RLPStream s(2); s << blockHash << index /*<< blockNum*/; return s.out(); }
-
-		explicit operator bool() const { return blockHash != mcp::block_hash(0); }
-
-		mcp::block_hash blockHash;
-		unsigned index = 0;
-		//uint64_t blockNum = 0;
-	};
-
 	/// staking address -> staking balance
 	using StakingList = std::map<dev::Address, dev::u256>;
 
@@ -631,8 +626,8 @@ namespace mcp
 
 	// OS-specific way of finding a path to a home directory.
 	boost::filesystem::path working_path();
-	// Get a unique path within the home directory, used for testing
-	boost::filesystem::path unique_path();
+	//// Get a unique path within the home directory, used for testing
+	//boost::filesystem::path unique_path();
 	
 	class epoch_approves_key
 	{

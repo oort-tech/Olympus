@@ -137,7 +137,7 @@ namespace mcp
 			auto r = isPending_WITH_LOCK(_t);
 			if (NonceRange::TooSmall == r)///nonce too low, just request need insert.
 			{
-				if (_in == source::request)
+				if (_in == source::request || _in == source::sync)
 					return insertQueue_WITH_LOCK(_t, _in, false);
 				else
 					return ImportResult::InvalidNonce;

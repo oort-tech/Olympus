@@ -4,7 +4,6 @@ mcp::mcp_networks mcp::mcp_network = mcp::mcp_networks::mcp_live_network;
 
 dev::u256 mcp::gas_price;
 uint64_t mcp::chain_id;
-//mcp::ChainOperationParams* mcp::ChainConfig = new mcp::ChainOperationParams();
 
 mcp::uint256_t mcp::chainID()
 {
@@ -15,11 +14,6 @@ mcp::Epoch mcp::epoch(uint64_t last_summary_mci)
 {
 	return last_summary_mci / mcp::epoch_period;
 }
-
-//mcp::ChainOperationParams* mcp::chainParams()
-//{
-//	return ChainConfig;
-//}
 
 mcp::witness_param::witness_param(dev::RLP const & rlp)
 {

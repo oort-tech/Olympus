@@ -20,9 +20,7 @@ public:
 
 	static mcp::block_param const & block_param(uint64_t const & last_epoch_a)
 	{
-		mcp::block_param const & b_param
-			= get()->find_by_last_epoch<mcp::block_param>(last_epoch_a, get()->block_param_map);
-		return b_param;
+		return get()->m_block_param;
 	}
 
 	static mcp::witness_param witness_param(mcp::db::db_transaction & transaction_a, Epoch const & epoch_a)
@@ -36,37 +34,19 @@ public:
 	{
 		DEV_READ_GUARDED(get()->m_mutex_witness){
 			mcp::witness_param w_param = get()->find_param(transaction_a,epoch_a);
-			if (w_param.witness_list.count(account_a))
-				return true;
-			return false;
+			return w_param.witness_list.count(account_a);
 		}
 	}
-
-	//static WitnessList to_witness_list(std::vector<std::string> const & witness_strs)
-	//{
-	//	WitnessList witness_list;
-	//	for (std::string w_str : witness_strs)
-	//	{
-	//		dev::Address w_acc(w_str);
-	//		witness_list.insert(w_acc);
-	//	}
-	//	return witness_list;
-	//}
 
 	static void add_witness_param(mcp::db::db_transaction & transaction_a, Epoch const & epoch_a, mcp::witness_param &w_param){
 		DEV_WRITE_GUARDED(get()->m_mutex_witness){
 			get()->cache->epoch_param_put(transaction_a, epoch_a, std::make_shared<mcp::witness_param>(w_param));
-			get()->witness_param_map.insert({epoch_a, w_param });
-			if (get()->witness_param_map.size() > 3)
-			{
-				get()->witness_param_map.erase(get()->witness_param_map.begin());
-			}
 		}
 	}
 
 	static mcp::witness_param const & genesis_witness_param()
 	{
-		return get()->init_param;
+		return get()->genesisParam;
 	}
 
 	static SealEngineFace* createSealEngine()
@@ -92,44 +72,41 @@ private:
 		precompiled.insert(std::make_pair(dev::Address(8), dev::eth::PrecompiledContract(dev::eth::PrecompiledRegistrar::pricer("alt_bn128_pairing_product"), dev::eth::PrecompiledRegistrar::executor("alt_bn128_pairing_product"))));
 	}
 
-	/*static*/ void init_block_param()
+	void init_block_param()
 	{
-		mcp::block_param b_param_v0;
-		b_param_v0.max_parent_size = 16;
-		b_param_v0.max_link_size = 4096;
-		block_param_map.insert({ 0, b_param_v0 });
+		m_block_param.max_parent_size = 16;
+		m_block_param.max_link_size = 4096;
+		gas_price = (uint256_t)1e11;
 
 		switch (mcp::mcp_network)
 		{
 		case mcp::mcp_networks::mcp_mini_test_network:
 		{
 			chain_id = (uint64_t)9900;
-			gas_price = (uint256_t)1e11;
-			///*ChainConfig->*/HalleyForkBlock = 100;
+			HalleyForkBlock = 100000;
+			OIP6Block = 200000;////todo
 			break;
 		}
 		case mcp::mcp_networks::mcp_test_network:
 		{
 			chain_id = (uint64_t)9800;
-			gas_price = (uint256_t)1e11;
-			/*ChainConfig->*/HalleyForkBlock = 10000;
+			HalleyForkBlock = 100000;
+			OIP6Block = 200000;////todo
 			break;
 		}
 		case mcp::mcp_networks::mcp_beta_network:
 		{
 			chain_id = (uint64_t)9700;// Ascraeus 972; huygens 971; dev 9700
-			gas_price = (uint256_t)1e11;
-			/*ChainConfig->*/OIP4And5Block = 110000;
-			/*ChainConfig->*/HalleyForkBlock = 320000;
+			OIP4And5Block = 110000;
+			HalleyForkBlock = 320000;
 			OIP6Block = 0;////todo
 			break;
 		}
 		case mcp::mcp_networks::mcp_live_network:
 		{
 			chain_id = (uint64_t)970;
-			gas_price = (uint256_t)1e11;
-			/*ChainConfig->*/OIP4And5Block = 6000000;
-			/*ChainConfig->*/HalleyForkBlock = 24700000;
+			OIP4And5Block = 6000000;
+			HalleyForkBlock = 24700000;
 			OIP6Block = 0;////todo
 			break;
 		}
@@ -138,7 +115,7 @@ private:
 		}
 	}
 
-	/*static*/ void init_witness_param()
+	void init_witness_param()
 	{
 		std::vector<std::string> witness_str_list_v0;
 		switch (mcp::mcp_network)
@@ -172,38 +149,6 @@ private:
 		}
 		case mcp::mcp_networks::mcp_beta_network:
 		{
-			/*witness_str_list_v0 = { //for huygens
-				"0x6d76b7de9fa746bdfe2d5462ff46778a06bb2c35",
-				"0x7f4f900abde901c79c1fe91a81ccd876595eceac",
-				"0x94ab8f03fffc515d332894ea4be45df8aeacff4e",
-				"0x545c6ddf180635303a27d92954da916dde931006",
-				"0xa5356ce9415722e6c71a66c31cea172c2ccd7d90",
-				"0xac8720f7149e200b479cf0325d7d36e491c410c4",
-				"0xae8b58cc95649df86ed4583c57d136ee6c057f74",
-				"0xb3cb7476c6241a6a72809727ebe0cf2db5bec98d",
-				"0xb5bb1e0e692d8e7cfd2b17d220318dded1f34eb4",
-				"0xb62e7871da077799a5c834565d8c162da3ee334e",
-				"0xb75bfe4aa1e9aa99a1d87017d68d023e2cca48ae",
-				"0xc757c14c4e20d604227c27935cd9f37150d27626",
-				"0xd4c19e0c6a219e3a0e0b7249667cea21a69a6fdc",
-				"0xdf691895cf79f2ca139b3e5d0714280877971eea"
-			};
-			witness_str_list_v0 = { //for ascraeus
-				"0x0cefadfedc6b2d21b1a3c5b58b0ccc1d3cdff6f2",
-				"0x0ede6b6ca19f6bb7ce5be21546beae64c6762b6b",
-				"0x111a6899a9d63d4295e6de66f791acdaca6d07c6",
-				"0x234a808020b60abd2e85b68a57b19bc6aa7ac217",
-				"0x27821d50355795d2ce792553201a36afc232c4c1",
-				"0x2e2cb4884db9f2976a6b23e0544ea4d2d6f13c45",
-				"0x33d640ed625551c4ab29f81e2481f937c6cf24ee",
-				"0x3b9cf59b26286c0faf3f714ac17cc59284dae5fb",
-				"0x3ca4ded5891e7482f7ae34ff44ba86679bc3584d",
-				"0x4089240950b8a3118ddd647d14d53e77a61ff618",
-				"0x422ceefcce450aa293f81777c3fa4972349778ab",
-				"0x442f16643aeb9d466add91a464d9aa6acd63625d",
-				"0x49eb9d07b82dbdc6efd3ca14b71336a6a56d2962",
-				"0x4a625c5ddceb732a9e73d30e98f52e87bf53d8ee"
-			};*/
 			witness_str_list_v0 = { //for dev
 				"0x3a6a7279f855753642b70ba212732cd8f07a76a5",
 				"0x4b0a1c92d99eb6f14ad8bb1d44e39ed82e93607f",
@@ -246,52 +191,29 @@ private:
 			assert_x_msg(false, "Invalid network");
 		}
 
-		init_param.witness_count = witness_str_list_v0.size();
-		init_param.majority_of_witnesses = init_param.witness_count * 2 / 3 + 1;
-		//init_param.witness_list = to_witness_list(witness_str_list_v0);
+		genesisParam.witness_count = witness_str_list_v0.size();
+		genesisParam.majority_of_witnesses = genesisParam.witness_count * 2 / 3 + 1;
 		for (std::string w_str : witness_str_list_v0)
-			init_param.witness_list.insert(dev::Address(w_str));
-		assert_x(init_param.witness_list.size() == init_param.witness_count);
+			genesisParam.witness_list.insert(dev::Address(w_str));
+		assert_x(genesisParam.witness_list.size() == genesisParam.witness_count);
 	}
 
-	template<class T>
-	/*static*/ T const & find_by_last_epoch(Epoch const & epoch_a, std::map<uint64_t, T> const & maps_a)
-	{
-		for (auto it(maps_a.rbegin()); it != maps_a.rend(); it++)
-		{
-			uint64_t const & min_last_epoch(it->first);
-			if (epoch_a >= min_last_epoch)
-			{
-				T const & result(it->second);
-				return result;
-			}
-		}
-		assert_x(false);
-	}
-
-	/*static*/ mcp::witness_param find_param(mcp::db::db_transaction & transaction_a, Epoch const & epoch_a)
+	mcp::witness_param find_param(mcp::db::db_transaction & transaction_a, Epoch const & epoch_a)
 	{
 		if (epoch_a <= 1)
-			return init_param;
-		auto it = witness_param_map.find(epoch_a);
-		if (it != witness_param_map.end())
-			return it->second;
+			return genesisParam;
 		auto _p = cache->epoch_param_get(transaction_a, epoch_a);
 		if (_p)
 			return *_p;
 		return mcp::witness_param();
 	}
 
-	//epoch -> block param
-	/*static*/ std::map<uint64_t, mcp::block_param> block_param_map;
-
-	//epoch -> witness param
-	/*static*/ std::map<uint64_t, mcp::witness_param> witness_param_map;
-	/*static*/ dev::SharedMutex m_mutex_witness;
-	/*static*/ mcp::witness_param init_param;
+	mcp::block_param m_block_param;
+	dev::SharedMutex m_mutex_witness;
+	mcp::witness_param genesisParam;
 
 	static param* s_this;
-	/*static*/ std::shared_ptr<mcp::block_cache> cache;
+	std::shared_ptr<mcp::block_cache> cache;
 };
 
 }

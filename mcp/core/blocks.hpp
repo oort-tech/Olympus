@@ -11,6 +11,9 @@
 
 namespace mcp
 {
+	/**
+	* The entity of the block, including linked transactions, parent blocks, miners, consensus information, etc.
+	*/
 	class block
 	{
 	public:
@@ -24,15 +27,15 @@ namespace mcp
 		virtual ~block() = default;
 		mcp::block_hash & hash() const;
 
-		dev::Address const& from() { return m_from; }
-		mcp::block_hash const& previous() { return  m_previous; }
-		std::vector<mcp::block_hash> const& parents() { return  m_parents; }
-		h256s const& links() { return  m_links; }
-		h256s const& approves() { return  m_approves; }
-		mcp::block_hash const& last_summary() { return  m_last_summary; }
-		mcp::block_hash const& last_summary_block() { return  m_last_summary_block; }
-		mcp::block_hash const& last_stable_block() { return  m_last_stable_block; }
-		uint64_t const& exec_timestamp() { return  m_exec_timestamp; }
+		dev::Address const& from() const { return m_from; }
+		mcp::block_hash const& previous() const { return  m_previous; }
+		std::vector<mcp::block_hash> const& parents() const { return  m_parents; }
+		h256s const& links() const { return  m_links; }
+		h256s const& approves() const { return  m_approves; }
+		mcp::block_hash const& last_summary() const { return  m_last_summary; }
+		mcp::block_hash const& last_summary_block() const { return  m_last_summary_block; }
+		mcp::block_hash const& last_stable_block() const { return  m_last_stable_block; }
+		uint64_t const& exec_timestamp() const { return  m_exec_timestamp; }
 
 		/// @returns the signature of the transaction (the signature has the sender encoded in it)
 		/// @throws TransactionIsUnsigned if signature was not initialized
@@ -65,7 +68,8 @@ namespace mcp
 			mcp::Transactions const& _txs,
 			dev::h256 const& _stateRoot,
 			dev::h256 const& _receiptsRoot,
-			dev::h256 const& _parent
+			dev::h256 const& _parent,
+			log_bloom const& _bloom
 		) :
 			block(_b),
 			m_blockNumber(_blockNumber),
@@ -73,7 +77,8 @@ namespace mcp
 			m_stateRoot(_stateRoot),
 			m_receiptsRoot(_receiptsRoot),
 			m_parent(_parent),
-			m_sha3Uncles(dev::EmptyListSHA3)
+			m_sha3Uncles(dev::EmptyListSHA3),
+			m_bloom(_bloom)
 		{
 			std::vector<bytes> transactionsRoot;
 			for (size_t i = 0; i < _txs.size(); i++)

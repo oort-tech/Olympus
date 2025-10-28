@@ -769,7 +769,7 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 		///contract caller
 		//mcp::DENCaller = NewDENContractCaller(std::bind(&mcp::chain::callSystem, chain, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
 		//mcp::MainCaller = NewMainContractCaller(std::bind(&mcp::chain::call, chain, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
-		mcp::MainCaller = NewMainContractCaller(std::bind(&mcp::Client::callSystem, client, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+		mcp::MainCaller = mcp::NewMainContractCaller();
 		
 		/// transaction queue
 		std::shared_ptr<mcp::TransactionQueue> TQ(std::make_shared<mcp::TransactionQueue>(io_service, chain_store, cache, client/*chain*/, sync_async));

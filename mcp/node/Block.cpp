@@ -2,14 +2,15 @@
 #include "chain.hpp"
 #include <libdevcore/CommonJS.h>
 #include <mcp/core/genesis.hpp>
+#include <mcp/core/contract.hpp>
 #include <mcp/common/Exceptions.h>
 
 using namespace mcp;
 using namespace dev::eth;
 
-mcp::Block::Block(/*mcp::block_store& store_a, */chain const& _bc, OverlayDB const& _db, BaseState _bs):
-	//m_store(store_a),
-	m_state(Invalid256, _db, _bs)
+mcp::Block::Block(chain const& _bc, OverlayDB const& _db, dev::eth::McInfo const& _mc, BaseState _bs):
+	m_McInfo(_mc),
+	m_state(_db, _bs)
 {
 	m_sealEngine = _bc.sealEngine();
 }
@@ -22,10 +23,11 @@ mcp::Block::Block(Block const& _s):
 	//m_transactionSet(_s.m_transactionSet),
 	//m_precommit(_s.m_state),
 	m_previousBlockState(_s.m_previousBlockState),
-	m_currentBlockState(_s.m_currentBlockState),
-	m_currentBlock(_s.m_currentBlock),
+	//m_currentBlockState(_s.m_currentBlockState),
+	//m_currentBlock(_s.m_currentBlock),
 	//m_currentBytes(_s.m_currentBytes),
 	//m_author(_s.m_author),
+	m_McInfo(_s.m_McInfo),
 	m_sealEngine(_s.m_sealEngine)
 {
 }
@@ -41,10 +43,11 @@ mcp::Block& mcp::Block::operator=(Block const& _s)
 	m_receipts = _s.m_receipts;
 	//m_transactionSet = _s.m_transactionSet;
 	m_previousBlockState = _s.m_previousBlockState;
-	m_currentBlockState = _s.m_currentBlockState;
-	m_currentBlock = _s.m_currentBlock;
+	//m_currentBlockState = _s.m_currentBlockState;
+	//m_currentBlock = _s.m_currentBlock;
 	//m_currentBytes = _s.m_currentBytes;
 	//m_author = _s.m_author;
+	m_McInfo = _s.m_McInfo;
 	m_sealEngine = _s.m_sealEngine;
 
 	//m_precommit = m_state;
@@ -52,42 +55,54 @@ mcp::Block& mcp::Block::operator=(Block const& _s)
 	return *this;
 }
 
-mcp::Block::Block(/*mcp::block_store& store_a, */chain const& _bc, OverlayDB const& _db, h256 const& _root) :
-	//m_store(store_a),
-	m_state(Invalid256, _db, BaseState::PreExisting)
+mcp::Block::Block(chain const& _bc, OverlayDB const& _db, h256 const& _root, dev::eth::McInfo const& _mc) :
+	m_McInfo(_mc),
+	m_state(_db, BaseState::PreExisting)
 {
 	m_sealEngine = _bc.sealEngine();
 	m_state.setRoot(_root);
 }
 
+log_bloom mcp::Block::logBloom() const
+{
+	log_bloom ret;
+	for (TransactionReceipt const& i : m_receipts)
+		ret |= i.bloom();
+	return ret;
+}
+
 void mcp::Block::populateFromChain(std::shared_ptr<mcp::block_state> _cstate, std::shared_ptr<mcp::block> _cblock, std::shared_ptr<mcp::block_state> _pstate, Transactions& _txs)
 {
-	m_currentBlockState = _cstate;
-	m_currentBlock = _cblock;
+	//m_currentBlockState = _cstate;
+	//m_currentBlock = _cblock;
 	m_previousBlockState = _pstate;
 	m_transactions = std::move(_txs);
 
-	m_state.setRoot(m_currentBlockState->m_stateRoot);
+	if (_cstate && _cblock)
+	{
+		m_McInfo = dev::eth::McInfo(_cstate->stable_index,
+			*_cstate->main_chain_index,
+			_cstate->mc_timestamp,
+			_cblock->from()
+		);
+	}
+	
+	m_state.setRoot(_cstate->m_stateRoot);
 }
 
-mcp::ExecutionResult mcp::Block::execute(/*mcp::db::db_transaction& transaction_a, *//*chain const& _bc,*/ /*std::shared_ptr<mcp::iblock_cache> cache_a,*/ Transaction const& _t, dev::eth::McInfo const& mc_info_a, Permanence _p/*, dev::eth::OnOpFunc const& _onOp*/)
+mcp::ExecutionResult mcp::Block::execute(Transaction const& _t, Permanence _p)
 {
 	try
 	{
-		dev::eth::EnvInfo env(/*transaction_a, m_store, cache_a,*/ mc_info_a, mcp::chainID());
-		//auto chain_ptr(std::make_shared<chain>(_bc));
+		dev::eth::EnvInfo env(info(), mcp::chainID());
 
-		//dev::OverlayDB _db = dev::OverlayDB(std::make_unique<mcp::block_store>(m_store));
-		//chain_state c_state(/*transaction_a,*/ 0,/* m_store,*/ chain_ptr,/* cache_a,*/ _db);
 		std::pair<mcp::ExecutionResult, dev::eth::TransactionReceipt> resultReceipt =
-			m_state.execute(env, *m_sealEngine, _p, _t/*, _onOp*/);
+			m_state.execute(env, *m_sealEngine, _p, _t);
 
 		if (_p == Permanence::Committed)
 		{
 			// Add to the user-originated transactions that we've executed.
-			//m_transactions.push_back(_t);
 			m_receipts.push_back(resultReceipt.second);
-			//m_transactionSet.insert(_t.sha3());
 		}
 		return resultReceipt.first;
 	}
@@ -128,90 +143,88 @@ mcp::ExecutionResult mcp::Block::execute(/*mcp::db::db_transaction& transaction_
 	return mcp::ExecutionResult();
 }
 
-u256 mcp::Block::enactOn(dev::eth::McInfo const& _mc, VerifiedBlockRef const& _block, chain const& _bc)
+u256 mcp::Block::enactOn(VerifiedBlockRef const& _block, chain const& _bc)
 {
-    //resetCurrent();
-	//mcp::db::db_transaction& transaction_a(_param.timeout_tx.get_transaction());
-	std::vector<bytes> receipts;
 	{
 		unsigned index = 0;
 		for (auto const& it : _block.transactions)
 		{
-			if (nullptr == it)///processed
-			{
-				m_receipts.push_back(TransactionReceiptPlaceholder());
-				continue;
-			}
+			//cnote << "execute tx:" << it->sha3().hexPrefixed();
 
 			/// exec transactions
-			//dev::eth::McInfo mc_info(_param.blockNum, _param.mci, _param.mc_timestamp, _param.mc_last_summary_mci);
-			execute(/*transaction_a, *//*_bc,*/ /*_param.cache,*/ *it, _mc, Permanence::Committed/*, dev::eth::OnOpFunc()*/);
+			execute(*it, Permanence::Committed);
 		}
 	}
 
 	return 0;
-
-    //return enact(*_block, _bc);
 }
 
-dev::eth::McInfo mcp::Block::info() const
+dev::eth::McInfo mcp::Block::info(bool isPopulateFromParent) const
 {
-	return dev::eth::McInfo(m_currentBlockState->stable_index,
-		*m_currentBlockState->main_chain_index,
-		m_currentBlockState->mc_timestamp,
-		*m_currentBlockState->main_chain_index,
-		m_currentBlock->from()
-	);
+	if (isPopulateFromParent)
+	{
+		return dev::eth::McInfo(
+			m_McInfo.block_number + 1, m_McInfo.mci + 1,
+			mcp::seconds_since_epoch(), m_McInfo.author
+		);
+	}
+
+	return m_McInfo;
 }
 
-u256 mcp::Block::enact(mcp::block const& _block, chain const& _bc)
+std::pair<Transaction, dev::eth::TransactionReceipt> mcp::Block::ApplyWorkTransaction(dev::bytes const& _data)
 {
-    ////noteChain(_bc);
-    //DEV_TIMED_ABOVE("txExec", 500)
-    //    for (Transaction const& tr : _block.transactions)
-    //    {
-    //        try
-    //        {
-    //            //				cnote << "Enacting transaction: " << tr.nonce() << tr.from() << state().transactionsFrom(tr.from()) << tr.value();
-    //            execute(_bc.lastBlockHashes(), tr);
-    //            //				cnote << "Now: " << tr.from() << state().transactionsFrom(tr.from());
-    //            //				cnote << m_state;
-    //        }
-    //        catch (Exception& ex)
-    //        {
-    //            ex << errinfo_transactionIndex(i);
-    //            throw;
-    //        }
+	Transaction _t = systemTransaction(_data);
+	try
+	{
+		dev::eth::EnvInfo env(info(), mcp::chainID());
+		std::pair<mcp::ExecutionResult, dev::eth::TransactionReceipt> _result =
+			m_state.execute(env, *m_sealEngine, Permanence::Committed, _t);
 
-    //        RLPStream receiptRLP;
-    //        m_receipts.back().streamRLP(receiptRLP);
-    //        receipts.push_back(receiptRLP.out());
-    //        ++i;
+		assert_x(_result.second.statusCode());//for test
+		return std::make_pair(_t, _result.second);
+	}
+	catch (std::exception const& _e)
+	{
+		assert_x_msg(false, "earned rewards error.")
+	}
+}
 
-    //        h256 receiptsRoot;
-    //        DEV_TIMED_ABOVE(".receiptsRoot()", 500)
-    //            receiptsRoot = orderedTrieRoot(receipts);
+mcp::StakingList mcp::Block::getStakingList()
+{
+	mcp::StakingList _sl;
+	/// contract logic. Get up to 500 records each time. But may return less than 500.
+	auto _handler = [this](int _index)
+	{
+		auto _tx = systemTransaction(MainCaller.PackGetWitnesses(0));
+		auto _ex = execute(_tx, Permanence::Reverted);
+		assert_x(!_ex.Failed());
+		return MainCaller.UnpackGetWitnesses(_ex.output);
+	};
 
-    //        //// Initialise total difficulty calculation.
-    //        //u256 tdIncrease = m_currentBlock.difficulty();
-    //    }
+	static const int batchSize = 500;
+	auto _all = _handler(0);
+	_sl.insert(_all.first.begin(), _all.first.end());
+	int total = batchSize;
+	while (total < _all.second)
+	{
+		auto _tmp = _handler(total);
+		total += batchSize;
+		_sl.insert(_tmp.first.begin(), _tmp.first.end());
+	}
+	return _sl;
+}
 
-    //DEV_TIMED_ABOVE("applyRewards", 500)
-    //    applyRewards(rewarded, _bc.sealEngine()->blockReward(m_currentBlock.number()));
-
-    //DEV_TIMED_ABOVE("commit", 500)
-    //    m_state.commit(removeEmptyAccounts ? State::CommitBehaviour::RemoveEmptyAccounts : State::CommitBehaviour::KeepEmptyAccounts);
-
-    //return tdIncrease;
-    return 0;
+mcp::MainInfo mcp::Block::getMainInfo()
+{
+	auto _tx = systemTransaction(MainCaller.PackGetMainInfo());
+	auto _ex = execute(_tx, Permanence::Reverted);
+	assert_x(!_ex.Failed());
+	return MainCaller.UnpackGetMainInfo(_ex.output);
 }
 
 void mcp::Block::cleanup()
 {
-	// Commit the new trie to disk.
-	//LOG(m_log.debug) << "Committing to disk: stateRoot " << m_currentBlock.stateRoot() << " = "
-	//	<< rootHash() << " = " << toHex(asBytes(db().lookup(rootHash())));
-
 	try
 	{
 		EnforceRefs er(db(), true);
@@ -223,28 +236,18 @@ void mcp::Block::cleanup()
 		throw;
 	}
 
-	m_state.db().commit();	// TODO: State API for this?
-
-	//LOG(m_logger) << "Committed: stateRoot " << m_currentBlock.stateRoot() << " = " << rootHash()
-	//	<< " = " << toHex(asBytes(db().lookup(rootHash())));
-
-	//m_previousBlock = m_currentBlock;
-	//sealEngine()->populateFromParent(m_currentBlock, m_previousBlock);
-
-	//LOG(m_logger) << "finalising enactment. current -> previous, hash is "
-	//	<< m_previousBlock.hash();
-
-	//resetCurrent();
-	//m_transactions.clear();
+	m_state.db().commit();
+	m_transactions.clear();
 	m_receipts.clear();
-	//m_transactionSet.clear();
 }
 
-//void mcp::Block::resetCurrent()
-//{
-//	//m_transactions.clear();
-//	m_receipts.clear();
-//	//m_transactionSet.clear();
-//
-//	//m_state.setRoot(m_previousBlock.stateRoot());
-//}
+mcp::Transaction mcp::Block::systemTransaction(dev::bytes const& _data)
+{
+	u256 nonce = transactionsFrom(MainCallcAddress);
+	u256 gas = mcp::tx_max_gas;
+	u256 gasPrice = mcp::gas_price;
+	Transaction _t(0, gasPrice, gas, MainContractAddress, _data, nonce);
+	_t.forceSender(MainCallcAddress);
+	_t.setSignature(h256(0), h256(0), 0);
+	return _t;
+}

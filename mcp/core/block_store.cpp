@@ -158,26 +158,6 @@ void mcp::block_store::account_nonce_put(mcp::db::db_transaction & transaction_a
 	transaction_a.put(static_cast<uint8_t>(StorePrefix::account_nonce), mcp::account_to_slice(account_a), mcp::h256_to_slice(nonce_a));
 }
 
-std::shared_ptr<mcp::TransactionAddress> mcp::block_store::transaction_address_get(mcp::db::db_transaction & transaction_a, h256 const& hash_a)
-{
-	std::string value;
-	bool exists(transaction_a.get(static_cast<uint8_t>(StorePrefix::transaction_address), mcp::h256_to_slice(hash_a), value));
-	std::shared_ptr<mcp::TransactionAddress> result = nullptr;
-	if (exists)
-	{
-		dev::RLP r(value);
-		result = std::make_shared<mcp::TransactionAddress>(r);
-	}
-	return result;
-}
-
-void mcp::block_store::transaction_address_put(mcp::db::db_transaction & transaction_a, h256 const& hash_a, mcp::TransactionAddress const& _td)
-{
-	dev::bytes b_value = _td.rlp();
-	dev::Slice s_value((char *)b_value.data(), b_value.size());
-	transaction_a.put(static_cast<uint8_t>(StorePrefix::transaction_address), mcp::h256_to_slice(hash_a), s_value);
-}
-
 bool mcp::block_store::approve_exists(mcp::db::db_transaction & transaction_a, h256 const& hash_a)
 {
 	std::string result;
@@ -794,20 +774,20 @@ void mcp::block_store::catchup_max_index_del(mcp::db::db_transaction & transacti
 	transaction_a.del(static_cast<uint8_t>(StorePrefix::prop), mcp::h256_to_slice(catchup_max_index));
 }
 
-std::shared_ptr<dev::eth::TransactionReceipt> mcp::block_store::transaction_receipt_get(mcp::db::db_transaction & transaction_a, h256 const & hash_a)
+std::shared_ptr<dev::eth::LocalTransactionReceipt> mcp::block_store::transaction_receipt_get(mcp::db::db_transaction & transaction_a, h256 const & hash_a)
 {
 	std::string value;
 	bool exists(transaction_a.get(static_cast<uint8_t>(StorePrefix::transaction_receipt), mcp::h256_to_slice(hash_a), value));
-	std::shared_ptr<dev::eth::TransactionReceipt> result;
+	std::shared_ptr<dev::eth::LocalTransactionReceipt> result;
 	if (exists)
 	{
 		dev::RLP r(value);
-		result = std::make_shared<dev::eth::TransactionReceipt>(r);
+		result = std::make_shared<dev::eth::LocalTransactionReceipt>(r);
 	}
 	return result;
 }
 
-void mcp::block_store::transaction_receipt_put(mcp::db::db_transaction & transaction_a, h256 const& hash_a, dev::eth::TransactionReceipt const& receipt)
+void mcp::block_store::transaction_receipt_put(mcp::db::db_transaction & transaction_a, h256 const& hash_a, dev::eth::LocalTransactionReceipt const& receipt)
 {
 	dev::bytes b_value;
 	{

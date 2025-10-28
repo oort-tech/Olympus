@@ -43,7 +43,7 @@ Addresses mcp::key_manager::list()
 {
 	Addresses accounts;
 	std::lock_guard<std::mutex> lock(m_key_contents_mutex);
-	for (auto pair : m_key_contents)
+	for (auto const& pair : m_key_contents)
 		accounts.push_back(pair.first);
 	return accounts;
 }

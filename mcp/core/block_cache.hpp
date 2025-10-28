@@ -73,9 +73,6 @@ class block_cache : public mcp::iblock_cache
 	void mark_account_nonce_as_changing(std::unordered_set<Address> const & accounts_a);
 	void clear_account_nonce_changing();
 
-	std::shared_ptr<TransactionAddress> transaction_address_get(mcp::db::db_transaction & transaction_a, h256 const & hash);
-	void transaction_address_put(h256 const & hash, std::shared_ptr<mcp::TransactionAddress> const& td);
-
 	bool successor_get(mcp::db::db_transaction & transaction_a, mcp::block_hash const & root_a, mcp::block_hash & successor_a);
 	void successor_put(mcp::block_hash const & root_a, mcp::block_hash const & summary_a);
 	void successor_earse(std::unordered_set<mcp::block_hash> const & roots_a);
@@ -92,9 +89,8 @@ class block_cache : public mcp::iblock_cache
 	bool block_number_get(mcp::db::db_transaction & transaction_a, mcp::block_hash const & hash_a, uint64_t & index_a);
 	void block_number_put(uint64_t const & index_a, mcp::block_hash const & hash_a);
 
-	bool transaction_receipt_exists(mcp::db::db_transaction & transaction_a, h256 const & hash);
-	std::shared_ptr<dev::eth::TransactionReceipt> transaction_receipt_get(mcp::db::db_transaction & transaction_a, h256 const & hash);
-	void transaction_receipt_put(h256 const & hash, std::shared_ptr<dev::eth::TransactionReceipt> const& t);
+	std::shared_ptr<dev::eth::LocalTransactionReceipt> transaction_receipt_get(mcp::db::db_transaction & transaction_a, h256 const & hash);
+	void transaction_receipt_put(h256 const & hash, std::shared_ptr<dev::eth::LocalTransactionReceipt> const& t);
 	void transaction_receipt_earse(std::unordered_set<h256> const & hash);
 	void mark_transaction_receipt_as_changing(std::unordered_set<h256> const & hash);
 	void clear_transaction_receipt_changing();
@@ -134,9 +130,6 @@ private:
 	std::unordered_set<Address> m_account_nonce_changings;
 	mcp::Cache<Address, u256> m_account_nonces;
 
-	std::mutex m_transaction_address_mutex;
-	mcp::Cache<h256, std::shared_ptr<mcp::TransactionAddress>> m_transaction_address;
-
 	std::mutex m_successor_mutex;
 	std::unordered_set<mcp::block_hash> m_successor_changings;
 	mcp::Cache<mcp::block_hash, mcp::block_hash> m_successors;
@@ -151,7 +144,7 @@ private:
 
 	std::mutex m_transaction_receipt_mutex;
 	std::unordered_set<h256> m_transaction_receipt_changings;
-	mcp::Cache<h256, std::shared_ptr<dev::eth::TransactionReceipt>> m_transaction_receipts;
+	mcp::Cache<h256, std::shared_ptr<dev::eth::LocalTransactionReceipt>> m_transaction_receipts;
 
 	std::mutex m_approve_mutex;
 	mcp::Cache<h256, std::shared_ptr<mcp::approve>> m_approves;

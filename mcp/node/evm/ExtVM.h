@@ -49,7 +49,7 @@ public:
         // Contract: processing account must exist. In case of CALL, the ExtVM
         // is created only if an account has code (so exist). In case of CREATE
         // the account must be created first.
-        // assert_x(m_s.addressInUse(_envInfo.transaction, _myAddress));
+         assert_x(m_s.addressInUse(_myAddress));
     }
 
     /// Read storage location.

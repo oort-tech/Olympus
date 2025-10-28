@@ -14,12 +14,12 @@ namespace mcp
 	//DENContractCaller DENCaller;
 
 	///for main caller.
-	dev::bytes MainContractCaller::DistributeRewards(std::map<dev::Address, u256> const& _v)
+	dev::bytes MainContractCaller::PackDistributeRewards(std::map<dev::Address, u256> const& _v)
 	{
 		std::string method = "distributeRewards";
 		h160s address;
 		u256s values;
-		for (auto it : _v)
+		for (auto const& it : _v)
 		{
 			address.push_back(it.first);
 			values.push_back(it.second);
@@ -28,7 +28,7 @@ namespace mcp
 	}
 
 	///for initializer.
-	dev::bytes MainContractCaller::InitWitnesses(WitnessList const& _v)
+	dev::bytes MainContractCaller::PackInitWitnesses(WitnessList const& _v)
 	{
 		std::string method = "initWitnesses";
 		h160s _a;
@@ -36,16 +36,19 @@ namespace mcp
 		return contract.Pack(method, _a);
 	}
 
-	std::pair<StakingList, int> MainContractCaller::GetWitnesses(int const& start)
+	dev::bytes MainContractCaller::PackGetWitnesses(int const& start)
 	{
 		std::string method = "getWitnesses";
-		dev::CallOpts opts{ MainCallcAddress };
-		dev::bytes ret = contract.Call(&opts, method, start);
+		return contract.Pack(method, start);
+	}
 
+	std::pair<StakingList, int> MainContractCaller::UnpackGetWitnesses(dev::bytes const& data)
+	{
+		std::string method = "getWitnesses";
 		h160s _l;
 		u256s _b;
 		int _t;
-		contract.Unpack(method, ret, _l, _b, _t);
+		contract.Unpack(method, data, _l, _b, _t);
 
 		StakingList _r;
 		for (int i = 0; i < _l.size(); i++)
@@ -56,18 +59,21 @@ namespace mcp
 			_r.insert(std::make_pair(_l[i], temp));
 		}
 
-		return std::make_pair(_r,_t);
+		return std::make_pair(_r, _t);
 	}
 
-	MainInfo MainContractCaller::GetMainInfo()
+	dev::bytes MainContractCaller::PackGetMainInfo()
 	{
 		std::string method = "getInfo";
-		dev::CallOpts opts{ MainCallcAddress };
-		dev::bytes ret = contract.Call(&opts, method);
+		return contract.Pack(method);
+	}
 
+	MainInfo MainContractCaller::UnpackGetMainInfo(dev::bytes const& data)
+	{
+		std::string method = "getInfo";
 		MainInfo _r;
 		auto p = boost::make_tuple(boost::ref(_r.amount), boost::ref(_r.onMci), boost::ref(_r.notOnMci));
-		contract.Unpack(method, ret, p);
+		contract.Unpack(method, data, p);
 		return _r;
 	}
 
@@ -131,7 +137,7 @@ namespace mcp
 		TransactionSkeleton _tsStaking;
 		_tsStaking.from = MainCallcAddress;
 		_tsStaking.to = MainContractAddress;
-		_tsStaking.data = MainCaller.InitWitnesses(list);
+		_tsStaking.data = MainCaller.PackInitWitnesses(list);
 		_tsStaking.gasPrice = mcp::gas_price;
 		_tsStaking.value = _stakeAmount * count;
 		_tsStaking.gas = mcp::tx_max_gas;
@@ -155,10 +161,10 @@ namespace mcp
 		return _r;
 	}
 
-	MainContractCaller NewMainContractCaller(dev::ContractCaller const& _caller)
+	MainContractCaller NewMainContractCaller()
 	{
 		auto parsed = dev::JSON(MainContractABI);
-		return MainContractCaller(dev::NewBoundContract(MainContractAddress, parsed, _caller));
+		return MainContractCaller(dev::NewBoundContract(MainContractAddress, parsed));
 	}
 	MainContractCaller MainCaller;
 }

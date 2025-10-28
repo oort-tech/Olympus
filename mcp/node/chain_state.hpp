@@ -18,14 +18,17 @@
 
 namespace mcp
 {
-
-DEV_SIMPLE_EXCEPTION(InvalidAccountStartNonceInState);
-DEV_SIMPLE_EXCEPTION(IncorrectAccountStartNonceInState);
-
 enum class BaseState
 {
     PreExisting,
     Empty
+};
+
+enum class Permanence
+{
+    Reverted,
+    Committed,
+    Uncommitted  ///< Uncommitted state for change log readings in tests.
 };
 
 /// An atomic state changelog entry.
@@ -62,13 +65,12 @@ struct Change
 	Address address;  ///< Changed account address.
     uint256_t value;       ///< Change value, e.g. balance, storage and nonce.
     uint256_t key;         ///< Storage key. Last because used only in one case.
-    dev::bytes oldCode;    ///< Code overwritten by CREATE, empty except in case of address collision.
+    //dev::bytes oldCode;    ///< Code overwritten by CREATE, empty except in case of address collision.
 
     /// Helper constructor to make change log update more readable.
     Change(Kind _kind, Address const& _addr, uint256_t const& _value = 0):
             kind(_kind), address(_addr), value(_value)
     {
-        assert_x(_kind != Code); // For this the special constructor needs to be used.
     }
 
     /// Helper constructor especially for storage change log.
@@ -81,10 +83,10 @@ struct Change
             kind(Nonce), address(_addr), value(_value)
     {}
 
-    /// Helper constructor especially for new code change log.
-    Change(Address const& _addr, dev::bytes const& _oldCode):
-            kind(Code), address(_addr), oldCode(_oldCode)
-    {}
+    ///// Helper constructor especially for new code change log.
+    //Change(Address const& _addr, dev::bytes const& _oldCode):
+    //        kind(Code), address(_addr), oldCode(_oldCode)
+    //{}
 };
 
 using ChangeLog = std::vector<Change>;
@@ -96,16 +98,15 @@ class chain_state
 {
     friend class chain;
 public:
-
+    using AddressMap = std::map<h256, Address>;
     /// Basic state object from database.
     /// Use the default when you already have a database and you just want to make a State object
     /// which uses it. If you have no preexisting database then set BaseState to something other
     /// than BaseState::PreExisting in order to prepopulate the Trie.
-    explicit chain_state(/*mcp::db::db_transaction& transaction_a,*/ u256 const& _accountStartNonce, /*mcp::block_store& store_a,*/
-		/*std::shared_ptr<mcp::chain> chain_a,*/ /*std::shared_ptr<mcp::iblock_cache> cache_a,*/ OverlayDB const& _db, BaseState _bs = BaseState::PreExisting);
+    explicit chain_state(OverlayDB const& _db, BaseState _bs = BaseState::PreExisting);
     
     enum NullType { Null };
-    chain_state(NullType) : chain_state(Invalid256, OverlayDB(), BaseState::Empty) {}
+    chain_state(NullType) : chain_state(OverlayDB(), BaseState::Empty) {}
 
     /// Copy state object.
     chain_state(chain_state const& _s);
@@ -115,6 +116,15 @@ public:
 
     OverlayDB const& db() const { return m_db; }
     OverlayDB& db() { return m_db; }
+
+    /// @returns the set containing all addresses currently in use in Ethereum.
+    /// @warning This is slowslowslow. Don't use it unless you want to lock the object for seconds or minutes at a time.
+    /// @throws InterfaceNotSupported if compiled without ETH_FATDB.
+    std::unordered_map<Address, u256> addresses() const;
+
+    /// @returns the map with maximum _maxResults elements containing hash->addresses and the next
+    /// address hash. This method faster then addresses() const;
+    std::pair<AddressMap, h256> addresses(h256 const& _begin, size_t _maxResults) const;
 
     std::pair<ExecutionResult, dev::eth::TransactionReceipt> execute(dev::eth::EnvInfo const& _envInfo, SealEngineFace const& _sealEngine, Permanence _p, mcp::Transaction const& _t/*, dev::eth::OnOpFunc const& _onOp = dev::eth::OnOpFunc()*/);
 
@@ -156,6 +166,9 @@ public:
      * @param _value Amount to be transferred.
      */
     void transferBalance(Address const& _from, Address const& _to, uint256_t const& _value);
+
+    /// Get the root of the storage of an account.
+    h256 storageRoot(Address const& _contract) const;
 
     /// Get the value of a storage position of an account.
     /// @returns 0 if no account exists at that address.
@@ -217,10 +230,10 @@ public:
     /// Resets any uncommitted changes to the cache.
     void setRoot(h256 const& _root);
 
-    /// Get the account start nonce. May be required.
-    u256 const& accountStartNonce() const { return m_accountStartNonce; }
+    ///// Get the account start nonce. May be required.
+    //u256 const& accountStartNonce() const { return m_accountStartNonce; }
     u256 const& requireAccountStartNonce() const;
-    void noteAccountStartNonce(u256 const& _actual);
+    //void noteAccountStartNonce(u256 const& _actual);
 
 	/// Create a savepoint in the state changelog.
     /// @return The savepoint index that can be used in rollback() function.
@@ -288,8 +301,6 @@ private:
     mutable std::set<Address> m_nonExistingAccountsCache;
     /// Tracks all addresses touched so far.
 	AddressHash m_touched;
-
-    u256 m_accountStartNonce;
 
     ChangeLog m_changeLog;
     mcp::log m_log = { mcp::log("node") };

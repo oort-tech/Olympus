@@ -5,23 +5,14 @@
 #include <mcp/core/param.hpp>
 #include <mcp/common/pwd.hpp>
 #include <mcp/node/evm/Executive.hpp>
-//#include <mcp/node/debug.hpp>
-//#include <mcp/node/tracers/OpCode.hpp>
-
 
 mcp::rpc_handler::rpc_handler(mcp::rpc &rpc_a, std::string const &body_a, std::function<void(mcp::json const &)> const &response_a/*, int m_cap*/) : 
 	body(body_a),
 	rpc(rpc_a),
 	response(response_a),
-	//m_chain(rpc_a.m_chain),
-	//m_cache(rpc_a.m_cache),
 	m_key_manager(rpc_a.m_key_manager),
 	m_wallet(rpc_a.m_wallet),
-	//m_host(rpc_a.m_host),
-	//m_composer(rpc_a.m_composer),
-	//m_background(rpc_a.m_background),
-	m_client(rpc_a.m_client)/*,
-	m_store(rpc.m_store)*/
+	m_client(rpc_a.m_client)
 {
 	m_ethRpcMethods["account_remove"] = &mcp::rpc_handler::account_remove;
 	m_ethRpcMethods["account_import"] = &mcp::rpc_handler::account_import;
@@ -29,7 +20,6 @@ mcp::rpc_handler::rpc_handler(mcp::rpc &rpc_a, std::string const &body_a, std::f
 	m_ethRpcMethods["block"] = &mcp::rpc_handler::block;
 	m_ethRpcMethods["block_state"] = &mcp::rpc_handler::block_state;
 	m_ethRpcMethods["block_states"] = &mcp::rpc_handler::block_states;
-	//m_ethRpcMethods["block_traces"] = &mcp::rpc_handler::block_traces;
 	m_ethRpcMethods["stable_blocks"] = &mcp::rpc_handler::stable_blocks;
 	m_ethRpcMethods["block_summary"] = &mcp::rpc_handler::block_summary;
 	m_ethRpcMethods["version"] = &mcp::rpc_handler::version;
@@ -65,6 +55,7 @@ mcp::rpc_handler::rpc_handler(mcp::rpc &rpc_a, std::string const &body_a, std::f
 	m_ethRpcMethods["eth_getLogs"] = &mcp::rpc_handler::eth_getLogs;
 	m_ethRpcMethods["eth_getCode"] = &mcp::rpc_handler::eth_getCode;
 	m_ethRpcMethods["eth_getStorageAt"] = &mcp::rpc_handler::eth_getStorageAt;
+	m_ethRpcMethods["eth_getStorageRoot"] = &mcp::rpc_handler::eth_getStorageRoot;
 	m_ethRpcMethods["eth_getTransactionByHash"] = &mcp::rpc_handler::eth_getTransactionByHash;
 	m_ethRpcMethods["eth_getTransactionByBlockHashAndIndex"] = &mcp::rpc_handler::eth_getTransactionByBlockHashAndIndex;
 	m_ethRpcMethods["eth_getTransactionByBlockNumberAndIndex"] = &mcp::rpc_handler::eth_getTransactionByBlockNumberAndIndex;
@@ -75,7 +66,7 @@ mcp::rpc_handler::rpc_handler(mcp::rpc &rpc_a, std::string const &body_a, std::f
 	m_ethRpcMethods["eth_sign"] = &mcp::rpc_handler::eth_sign;
 	m_ethRpcMethods["eth_signTransaction"] = &mcp::rpc_handler::eth_signTransaction;
 	m_ethRpcMethods["debug_traceTransaction"] = &mcp::rpc_handler::debug_traceTransaction;
-	//m_ethRpcMethods["debug_storageRangeAt"] = &mcp::rpc_handler::debug_storageRangeAt;
+	m_ethRpcMethods["debug_accountRange"] = &mcp::rpc_handler::debug_accountRange;
 
 	m_ethRpcMethods["personal_importRawKey"] = &mcp::rpc_handler::personal_importRawKey;
 	m_ethRpcMethods["personal_listAccounts"] = &mcp::rpc_handler::personal_listAccounts;
@@ -88,39 +79,6 @@ mcp::rpc_handler::rpc_handler(mcp::rpc &rpc_a, std::string const &body_a, std::f
 
 	m_ethRpcMethods["eth_requestAccounts"] = &mcp::rpc_handler::eth_accounts;
 }
-
-
-//bool mcp::rpc_handler::try_get_mc_info(dev::eth::McInfo &mc_info_a, uint64_t &block_number)
-//{
-//	mcp::db::db_transaction transaction(m_store.create_transaction());
-//	mcp::block_hash block_hash;
-//	bool exists(!m_cache->block_number_get(transaction, block_number, block_hash));
-//	if (!exists)
-//		return false;
-//
-//	std::shared_ptr<mcp::block_state> mc_state(m_cache->block_state_get(transaction, block_hash));
-//	assert_x(mc_state);
-//	assert_x(mc_state->is_stable);
-//	assert_x(mc_state->main_chain_index);
-//	assert_x(mc_state->mc_timestamp > 0);
-//
-//	uint64_t last_summary_mci(0);
-//	if (block_hash != mcp::genesis::block_hash)
-//	{
-//		std::shared_ptr<mcp::block> mc_block(m_cache->block_get(transaction, block_hash));
-//		assert_x(mc_block);
-//		std::shared_ptr<mcp::block_state> last_summary_state(m_cache->block_state_get(transaction, mc_block->last_summary_block()));
-//		assert_x(last_summary_state);
-//		assert_x(last_summary_state->is_stable);
-//		assert_x(last_summary_state->is_on_main_chain);
-//		assert_x(last_summary_state->main_chain_index);
-//		last_summary_mci = *last_summary_state->main_chain_index;
-//	}
-//
-//	mc_info_a = dev::eth::McInfo(mc_state->stable_index, *mc_state->main_chain_index, mc_state->mc_timestamp, last_summary_mci);
-//
-//	return true;
-//}
 
 void mcp::rpc_handler::account_remove(mcp::json &j_response, bool &)
 {
@@ -177,15 +135,11 @@ void mcp::rpc_handler::block(mcp::json &j_response, bool &)
 	if (!mcp::isH256(params[0]))
 		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
 
-	//dev::h256 block_hash = jsToHash(params[0]);
-	//mcp::db::db_transaction transaction(m_store.create_transaction());
-	//auto block(m_cache->block_get(transaction, block_hash));
-	//if (block == nullptr)
-	//	BOOST_THROW_EXCEPTION(RPC_Error_NoResult());
-
-	//j_response["result"] = toJson(*block);
 	auto _block = client()->blockInfo(jsToHash(params[0]));
-	j_response["result"] = toJson(_block);
+	if (_block == nullptr)
+		BOOST_THROW_EXCEPTION(RPC_Error_NoResult());
+
+	j_response["result"] = toJson(*_block);
 }
 
 void mcp::rpc_handler::block_state(mcp::json &j_response, bool &)
@@ -193,15 +147,11 @@ void mcp::rpc_handler::block_state(mcp::json &j_response, bool &)
 	if (!mcp::isH256(params[0]))
 		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
 
-	//dev::h256 block_hash = jsToHash(params[0]);
-	//mcp::db::db_transaction transaction(m_store.create_transaction());
-	//std::shared_ptr<mcp::block_state> state(m_store.block_state_get(transaction, block_hash));
-	//if (state == nullptr)
-	//	BOOST_THROW_EXCEPTION(RPC_Error_NoResult());
-
-	//j_response["result"] = toJson(*state);
 	auto _state = client()->blockState(jsToHash(params[0]));
-	j_response["result"] = toJson(_state);
+	if (_state == nullptr)
+		BOOST_THROW_EXCEPTION(RPC_Error_NoResult());
+
+	j_response["result"] = toJson(*_state);
 }
 
 void mcp::rpc_handler::block_states(mcp::json &j_response, bool &)
@@ -210,91 +160,22 @@ void mcp::rpc_handler::block_states(mcp::json &j_response, bool &)
 		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError("Cannot wrap string value as a json-rpc type; not array type or incorrect number of arguments."));
 
 	mcp::json states_l = mcp::json::array();
-	//mcp::db::db_transaction transaction(m_store.create_transaction());
-
 	for (mcp::json const &_p : params)
 	{
 		std::string _blockHash = _p;
 		if (!mcp::isH256(_blockHash))
 			BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
 
-		//dev::h256 block_hash = jsToHash(_blockHash);
-		//std::shared_ptr<mcp::block_state> state(m_store.block_state_get(transaction, block_hash));
-		//mcp::json _tmp;
-		//if (state == nullptr)
-		//	_tmp[_blockHash] = nullptr;
-		//else
-		//	_tmp[_blockHash] = toJson(*state);
-
+		auto _state = client()->blockState(jsToHash(_blockHash));
 		mcp::json _tmp;
-		try
-		{
-			auto _state = client()->blockState(jsToHash(_blockHash));
-			_tmp[_blockHash] = toJson(_state);
-		}
-		catch (dev::BlockNotFound)
-		{
+		if (_state == nullptr)
 			_tmp[_blockHash] = nullptr;
-		}
+		else
+			_tmp[_blockHash] = toJson(*_state);
 		states_l.push_back(_tmp);
 	}
 	j_response["result"] = states_l;
 }
-
-//void mcp::rpc_handler::block_traces(mcp::json &j_response, bool &)
-//{
-//	if (!mcp::isH256(params[0]))
-//		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
-//
-//	dev::h256 block_hash = jsToHash(params[0]);
-//	mcp::db::db_transaction transaction(m_store.create_transaction());
-//	std::list<std::shared_ptr<mcp::trace>> traces;
-//	m_store.traces_get(transaction, block_hash, traces);
-//
-//	mcp::json traces_l = mcp::json::array();
-//	std::deque<uint32_t> trace_address;
-//	for (auto it(traces.begin()); it != traces.end(); it++)
-//	{
-//		std::shared_ptr<mcp::trace> trace(*it);
-//		mcp::json trace_l;
-//		trace->serialize_json(trace_l);
-//
-//		uint32_t const &depth(trace->depth);
-//
-//		uint32_t sub_traces(0);
-//		auto it_temp = it;
-//		while (++it_temp != traces.end())
-//		{
-//			std::shared_ptr<mcp::trace> t(*it_temp);
-//			if (t->depth <= depth)
-//				break;
-//
-//			if (t->depth == depth + 1)
-//				sub_traces++;
-//		}
-//		trace_l["subtraces"] = sub_traces;
-//
-//		if (depth > 0)
-//		{
-//			if (trace_address.size() < depth)
-//			{
-//				assert_x(trace_address.size() == depth - 1);
-//				trace_address.push_back(0);
-//			}
-//			else
-//			{
-//				trace_address[depth - 1] += 1;
-//				while (trace_address.size() > depth)
-//					trace_address.pop_back();
-//			}
-//		}
-//		trace_l["trace_address"] = trace_address;
-//
-//		traces_l.push_back(trace_l);
-//	}
-//
-//	j_response["result"] = traces_l;
-//}
 
 void mcp::rpc_handler::stable_blocks(mcp::json &j_response, bool &)
 {
@@ -304,24 +185,16 @@ void mcp::rpc_handler::stable_blocks(mcp::json &j_response, bool &)
 	if (limit_l > list_max_limit || !limit_l)///too big or zero.
 		BOOST_THROW_EXCEPTION(RPC_Error_TooLargeSearchRange("query returned more than 100 results or limit zero."));
 
-	//uint64_t last_stable_index(m_chain->last_stable_index());
 	uint64_t last_stable_index(client()->number());
 	if (index > last_stable_index)///invalid index,bigger than stable index.
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("index bigger than max block number."));
 
-	//mcp::db::db_transaction transaction(m_store.create_transaction());
 	mcp::json block_list_l = mcp::json::array();
 	int blocks_count(0);
 	for (uint64_t stable_index = index; stable_index <= last_stable_index; stable_index++)
 	{
-		//mcp::block_hash block_hash_l;
-		//assert_x(!m_store.stable_block_get(transaction, stable_index, block_hash_l));
-
-		//auto block = m_cache->block_get(transaction, stable_index);
-		//assert_x(block);
-		//block_list_l.push_back(toJson(*block));
 		auto _block = client()->blockInfo(stable_index);
-		block_list_l.push_back(toJson(_block));
+		block_list_l.push_back(toJson(*_block));
 		blocks_count++;
 		if (blocks_count == limit_l)
 			break;
@@ -343,96 +216,66 @@ void mcp::rpc_handler::block_summary(mcp::json &j_response, bool &)
 	if (!mcp::isH256(params[0]))
 		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
 	dev::h256 hash = jsToHash(params[0]);
-	//mcp::db::db_transaction transaction(m_store.create_transaction());
-	//mcp::summary_hash summary;
-	//if (m_cache->block_summary_get(transaction, hash, summary))
-	//	BOOST_THROW_EXCEPTION(RPC_Error_NoResult());
-	
+	auto _summary = client()->blockSummary(hash);
+	if (!_summary)
+		BOOST_THROW_EXCEPTION(RPC_Error_NoResult());
+
 	json result;
-	result["summeries"] = toJS(client()->blockSummary(hash));
-	//auto block(m_cache->block_get(transaction, hash));
-	//assert_x(block);
-	//auto block_state(m_cache->block_state_get(transaction, hash));
-	//assert_x(block_state);
+	result["summeries"] = toJS(*_summary);
 	auto block(client()->blockInfo(hash));
+	assert_x(block);
 	auto block_state(client()->blockState(hash));
+	assert_x(block_state);
 
 	// previous summary hash
 	mcp::summary_hash previous_summary_hash(0);
-	if (block.previous() != dev::h256(0))
+	if (block->previous() != dev::h256(0))
 	{
-		//bool previous_summary_hash_error(m_cache->block_summary_get(transaction, block->previous(), previous_summary_hash));
-		//assert_x(!previous_summary_hash_error);
-		previous_summary_hash = client()->blockSummary(block.previous());
+		auto tmp = client()->blockSummary(block->previous());
+		assert_x(tmp);
+		previous_summary_hash = *tmp;
 	}
 	result["previous_summary"] = toJS(previous_summary_hash);
 
 	// parent summary hashs
 	mcp::json parent_summaries_l = mcp::json::array();
-	for (mcp::block_hash const &pblock_hash : block.parents())
+	for (mcp::block_hash const &pblock_hash : block->parents())
 	{
-		//mcp::summary_hash p_summary_hash;
-		//bool p_summary_hash_error(m_cache->block_summary_get(transaction, pblock_hash, p_summary_hash));
-		//assert_x(!p_summary_hash_error);
-
-		//parent_summaries_l.push_back(toJS(p_summary_hash));
-		parent_summaries_l.push_back(toJS(client()->blockSummary(pblock_hash)));
+		auto tmp = client()->blockSummary(pblock_hash);
+		assert_x(tmp);
+		parent_summaries_l.push_back(toJS(*tmp));
 	}
 	result["parent_summaries"] = parent_summaries_l;
 
-	///High performance overhead.
-	/*/// receiptsRoot hash
-	std::vector<bytes> receipts;
-	for (auto _h : block->links())
-	{
-	auto receipt = m_cache->transaction_receipt_get(transaction, _h);
-	if (receipt)/// transaction maybe processed yet,but summary need used receipt even if it has been processed.
-	{
-	RLPStream receiptRLP;
-	receipt->streamRLP(receiptRLP);
-	receipts.push_back(receiptRLP.out());
-	}
-	}
-	for (auto _h : block->links())
-	{
-	auto receipt = m_cache->approve_receipt_get(transaction, _h);
-	if (receipt)
-	{
-	RLPStream receiptRLP;
-	receipt->streamRLP(receiptRLP);
-	receipts.push_back(receiptRLP.out());
-	}
-	}
-	h256 receiptsRoot = dev::orderedTrieRoot(receipts);
-	j_response["receiptsRoot"] = receiptsRoot.hexPrefixed();*/
-
 	// skip list
 	mcp::json skiplist_summaries_l = mcp::json::array();
-	if (block_state.is_on_main_chain)
+	if (block_state->is_on_main_chain)
 	{
 		std::set<mcp::summary_hash> summary_skiplist;
-		//std::vector<uint64_t> skip_list_mcis = m_chain->cal_skip_list_mcis(*block_state.main_chain_index);
-		std::vector<uint64_t> skip_list_mcis = mcp::cal_skip_list_mcis(*block_state.main_chain_index);
+		std::vector<uint64_t> skip_list_mcis = mcp::cal_skip_list_mcis(*block_state->main_chain_index);
 		for (uint64_t &mci : skip_list_mcis)
 		{
-			//mcp::block_hash sl_block_hash;
-			//bool sl_block_hash_error(m_store.main_chain_get(transaction, mci, sl_block_hash));
-			//assert_x(!sl_block_hash_error);
-			mcp::block_hash sl_block_hash = client()->mciHash(mci);
+			auto _mciHash = client()->mciHash(mci);
+			assert_x(_mciHash);
+			mcp::block_hash sl_block_hash = *_mciHash;
 
-			//mcp::summary_hash sl_summary_hash;
-			//bool sl_summary_hash_error(m_cache->block_summary_get(transaction, sl_block_hash, sl_summary_hash));
-			//assert_x(!sl_summary_hash_error);
-			//summary_skiplist.insert(sl_summary_hash);
-			summary_skiplist.insert(client()->blockSummary(sl_block_hash));
+			auto tmp = client()->blockSummary(sl_block_hash);
+			assert_x(tmp);
+			summary_skiplist.insert(*tmp);
 		}
 
-		for (mcp::summary_hash s : summary_skiplist)
+		for (mcp::summary_hash const& s : summary_skiplist)
 			skiplist_summaries_l.push_back(toJS(s));
 	}
 	result["skiplist_summaries"] = skiplist_summaries_l;
 
-	result["status"] = (uint64_t)block_state.status;
+	result["receiptsRoot"] = block_state->m_receiptsRoot.hexPrefixed();
+	result["stateRoot"] = block_state->m_stateRoot.hexPrefixed();
+	result["logBloom"] = block_state->m_logBloom.hexPrefixed();
+	result["stableIndex"] = block_state->stable_index;
+	result["mcTimestamp"] = block_state->mc_timestamp;
+	result["mci"] = *block_state->main_chain_index;
+	result["status"] = (uint64_t)block_state->status;
 	j_response["result"] = result;
 }
 
@@ -441,18 +284,12 @@ void mcp::rpc_handler::version(mcp::json &j_response, bool &)
 	json result;
 	result["version"] = STR(MCP_VERSION);
 	result["rpc_version"] = "1";
-	//result["store_version"] = std::to_string(m_store.version_get());
 	result["store_version"] = std::to_string(client()->storeVersion());
 	j_response["result"] = result;
 }
 
 void mcp::rpc_handler::status(mcp::json &j_response, bool &)
 {
-	//// stable_mci
-	//uint64_t last_stable_mci(m_chain->last_stable_mci());
-	//uint64_t last_mci(m_chain->last_mci());
-	//uint64_t last_stable_index(m_chain->last_stable_index());
-
 	json result;
 	result["syncing"] = mcp::node_sync::is_syncing() ? 1 : 0;
 	result["last_stable_mci"] = client()->lastStableMci();
@@ -465,24 +302,9 @@ void mcp::rpc_handler::status(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::peers(mcp::json &j_response, bool &)
 {
-	//mcp::json peers_l = mcp::json::array();
-	//std::unordered_map<p2p::node_id, bi::tcp::endpoint> peers(m_host->peers());
-	//for (auto i : peers)
-	//{
-	//	p2p::node_id id(i.first);
-	//	bi::tcp::endpoint endpoint(i.second);
-
-	//	mcp::json peer_l;
-	//	peer_l["id"] = toJS(id);
-	//	std::stringstream ss_endpoint;
-	//	ss_endpoint << endpoint;
-	//	peer_l["endpoint"] = ss_endpoint.str();
-	//	peers_l.push_back(peer_l);
-	//}
-	//j_response["result"] = peers_l;
 	mcp::json peers_l = mcp::json::array();
 	auto peers = client()->peers();
-	for (auto i : peers)
+	for (auto const& i : peers)
 	{
 		mcp::json peer_l;
 		peer_l["id"] = toJS(i.first);
@@ -494,21 +316,9 @@ void mcp::rpc_handler::peers(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::nodes(mcp::json &j_response, bool &)
 {
-	//mcp::json nodes_l = mcp::json::array();
-	//std::list<p2p::node_info> nodes(m_host->nodes());
-	//for (p2p::node_info node : nodes)
-	//{
-	//	mcp::json node_l;
-	//	node_l["id"] = toJS(node.id);
-	//	std::stringstream ss_endpoint;
-	//	ss_endpoint << (bi::tcp::endpoint)node.endpoint;
-	//	node_l["endpoint"] = ss_endpoint.str();
-	//	nodes_l.push_back(node_l);
-	//}
-	//j_response["result"] = nodes_l;
 	mcp::json nodes_l = mcp::json::array();
 	auto nodes(client()->nodes());
-	for (p2p::node_info node : nodes)
+	for (auto const& node : nodes)
 	{
 		mcp::json node_l;
 		node_l["id"] = toJS(node.id);
@@ -522,17 +332,9 @@ void mcp::rpc_handler::witness_list(mcp::json &j_response, bool &)
 {
 	Epoch epoch = (uint64_t)jsToULl(params[0],"epoch");
 
-	//if (epoch > m_chain->last_epoch())
-	//	BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("The epoch has not yet completed."));
-
-	//mcp::db::db_transaction transaction(m_store.create_transaction());
-	//mcp::witness_param const &w_param(mcp::param::witness_param(transaction, epoch));
-	//mcp::json witness_list_l = mcp::json::array();
-	//for (auto i : w_param.witness_list)
-	//{
-	//	witness_list_l.push_back(i.hexPrefixed());
-	//}
-	//j_response["result"] = witness_list_l;
+	if (epoch > client()->lastEpoch())
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("The epoch has not yet completed."));
+	
 	auto _wl = client()->witnessList(epoch);
 	j_response["result"] = toJson(_wl);
 }
@@ -559,13 +361,6 @@ void mcp::rpc_handler::process_request()
 		RPC_Error_JsonParseError("parse error").toJson(j_response);
 		response(j_response);
     }
-}
-
-mcp::BlockNumber mcp::rpc_handler::toBlockNumber(BlockNumber _bn)
-{
-	if (_bn == LatestBlock || _bn == PendingBlock)
-		return client()->number();
-	return _bn;
 }
 
 // handleBatch executes all messages in a batch and returns the responses.
@@ -651,7 +446,6 @@ mcp::json mcp::rpc_handler::handleCallMsg(mcp::jsonrpcMessage const& req, bool& 
 
 void mcp::rpc_handler::eth_blockNumber(mcp::json &j_response, bool &)
 {
-	//j_response["result"] = toJS(m_chain->last_stable_index());
 	j_response["result"] = toJS(client()->number());
 }
 
@@ -660,12 +454,11 @@ void mcp::rpc_handler::eth_getTransactionCount(mcp::json &j_response, bool &)
 	if(!isAddress(params[0]))
 		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
 
-	//BlockNumber blockTag = LatestBlock;
-	//if (params.size() >= 2)
-	//	blockTag = jsToBlockNumber(params[1]);
-
-	//j_response["result"] = toJS(m_wallet->getTransactionCount(jsToAddress(params[0]), blockTag));
-	j_response["result"] = toJS(client()->countAt(jsToAddress(params[0]), jsToBlockNumber(params[1])));
+	BlockNumber blockTag = jsToBlockNumber(params[1]);
+	if (blockTag == PendingBlock || blockTag == LatestBlock)
+		j_response["result"] = toJS(m_wallet->getTransactionCount(jsToAddress(params[0]), blockTag));
+	else
+		j_response["result"] = toJS(client()->countAt(jsToAddress(params[0]), blockTag));
 }
 
 void mcp::rpc_handler::eth_chainId(mcp::json &j_response, bool &)
@@ -682,24 +475,7 @@ void mcp::rpc_handler::eth_estimateGas(mcp::json &j_response, bool &)
 {
 	TransactionSkeleton ts = mcp::toTransactionSkeletonForEth(params[0]);
 
-	//dev::eth::McInfo mc_info;
-	//uint64_t block_number = m_chain->last_stable_index();
-	//if (!try_get_mc_info(mc_info, block_number))
-	//	BOOST_THROW_EXCEPTION(RPC_Error_InternalError("internal error: block number not stable."));
-	//mc_info.mc_timestamp = mcp::seconds_since_epoch();
-	//mcp::db::db_transaction transaction(m_store.create_transaction());
-	//std::pair<u256, mcp::ExecutionResult> result = m_chain->estimate_gas(
-	//	transaction,
-	//	m_cache,
-	//	ts.from,
-	//	ts.value,
-	//	ts.to,
-	//	ts.data,
-	//	static_cast<int64_t>(ts.gas),
-	//	ts.gasPrice,
-	//	mc_info);
 	std::pair<u256, mcp::ExecutionResult> result = client()->estimateGas(ts.from,ts.value,ts.to,ts.data, static_cast<int64_t>(ts.gas),ts.gasPrice, PendingBlock);
-	//mcp::ExecutionResult executionResult = result.second;
 	if (result.second.Failed())///execution failed
 	{
 		if (result.second.Revert().size())///revert
@@ -716,93 +492,22 @@ void mcp::rpc_handler::eth_estimateGas(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::eth_getBlockByNumber(mcp::json &j_response, bool &)
 {
-	//BlockNumber block_number = jsToBlockNumber(params[0]);
-	//if (block_number == LatestBlock || block_number == PendingBlock)
-	//	block_number = client()->number();
-
-	BlockNumber block_number = toBlockNumber(jsToBlockNumber(params[0]));
-
 	bool _includeTransactions = params[1].is_null() ? false : (bool)params[1];
-	//mcp::db::db_transaction transaction(m_store.create_transaction());
-	//auto block(m_cache->block_get(transaction, block_number));
-	//if (block == nullptr)
-	//	BOOST_THROW_EXCEPTION(RPC_Error_NoResult());
-
-	//dev::h256 _parentHash(0);///genesis block have no parent
-	//if (block_number && m_cache->block_number_get(transaction, block_number - 1, _parentHash))
-	//	BOOST_THROW_EXCEPTION(RPC_Error_NoResult());
-
-	//mcp::Transactions txs;
-	//for (auto& th : block->links())
-	//{
-	//	auto td = m_cache->transaction_address_get(transaction, th);
-	//	if (td == nullptr || td->blockHash != block->hash())///not first linked, ignore.
-	//		continue;
-	//	auto t = m_cache->transaction_get(transaction, th);
-	//	txs.push_back(*t);
-	//}
-
-	//mcp::summary_hash stateRoot;/// stateRoot
-	//m_cache->block_summary_get(transaction, block->hash(), stateRoot);
-	//dev::h256 receiptsRoot;/// receiptsRoot
-	//m_store.GetBlockReceiptsRoot(transaction, block->hash(), receiptsRoot);
-
-	//mcp::LocalisedBlock lb = mcp::LocalisedBlock(*block,
-	//	block_number,
-	//	txs,
-	//	stateRoot,
-	//	receiptsRoot,
-	//	_parentHash
-	//);
-
-	//j_response["result"] = toJson(lb, is_full);
-	auto _block = client()->localisedBlock(block_number);
-	j_response["result"] = toJson(_block, _includeTransactions);
+	auto _block = client()->localisedBlock(jsToBlockNumber(params[0]));
+	if (_block == nullptr)
+		BOOST_THROW_EXCEPTION(RPC_Error_NoResult());
+	j_response["result"] = toJson(*_block, _includeTransactions);
 }
 
 void mcp::rpc_handler::eth_getBlockByHash(mcp::json &j_response, bool &)
 {
 	if(!mcp::isH256(params[0]))
 		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
-	//mcp::block_hash block_hash = jsToHash(params[0]);
 	bool _includeTransactions = params[1].is_null() ? false : (bool)params[1];
-
-	//mcp::db::db_transaction transaction(m_store.create_transaction());
-	//auto block = m_cache->block_get(transaction, block_hash);
-	//auto state = m_cache->block_state_get(transaction, block_hash);
-	//if (block == nullptr || state == nullptr || !state->is_stable)
-	//	BOOST_THROW_EXCEPTION(RPC_Error_NoResult());
-
-	//dev::h256 _parentHash(0);///genesis block have no parent
-	//if (state->stable_index && m_cache->block_number_get(transaction, state->stable_index - 1, _parentHash))
-	//	BOOST_THROW_EXCEPTION(RPC_Error_NoResult());
-
-	//mcp::Transactions txs;
-	//for (auto& th : block->links())
-	//{
-	//	auto td = m_cache->transaction_address_get(transaction, th);
-	//	if (td == nullptr || td->blockHash != block_hash)///not first linked, ignore.
-	//		continue;
-	//	auto t = m_cache->transaction_get(transaction, th);
-	//	txs.push_back(*t);
-	//}
-
-	//mcp::summary_hash stateRoot;/// stateRoot
-	//m_cache->block_summary_get(transaction, block->hash(), stateRoot);
-	//dev::h256 receiptsRoot;/// receiptsRoot
-	////m_store.GetBlockReceiptsRoot(transaction, block->hash(), receiptsRoot);
-
-	//mcp::LocalisedBlock lb = mcp::LocalisedBlock(*block, 
-	//	state->stable_index,
-	//	txs,
-	//	stateRoot,
-	//	receiptsRoot,
-	//	_parentHash
-	//);
-
-	//j_response["result"] = toJson(lb, is_full);
 	auto _block = client()->localisedBlock(jsToHash(params[0]));
-	j_response["result"] = toJson(_block, _includeTransactions);
+	if (_block == nullptr)
+		BOOST_THROW_EXCEPTION(RPC_Error_NoResult());
+	j_response["result"] = toJson(*_block, _includeTransactions);
 }
 
 void mcp::rpc_handler::eth_sendRawTransaction(mcp::json &j_response, bool &)
@@ -856,52 +561,28 @@ void mcp::rpc_handler::eth_sendTransaction(mcp::json &j_response, bool &async)
 void mcp::rpc_handler::eth_call(mcp::json &j_response, bool &)
 {
 	TransactionSkeleton ts = mcp::toTransactionSkeletonForEth(params[0]);
-	//ts.gasPrice = 0;
-	//ts.gas = mcp::tx_max_gas;
-	//if (ts.nonce == Invalid256)
-	//	ts.nonce = m_wallet->getTransactionCount(ts.from);
-
-	//Transaction t(ts);
-	//t.setSignature(h256(0), h256(0), 0);
-
 	BlockNumberOrHash _b = toBlockNumberOrHash(params[1]);
-	BlockNumber block_number;
-	//mcp::db::db_transaction transaction(m_store.create_transaction());
+	if (!_b.Number() && !_b.Hash())
+		BOOST_THROW_EXCEPTION(RPC_Error_RequestDenied("invalid arguments; neither block nor hash specified"));
+	
+	BlockNumber _bn;
 	if (_b.Number())
 	{
-		//BlockNumber _last = m_chain->last_stable_index();
-		//if (*_b.Number() == LatestBlock || *_b.Number() == PendingBlock)
-		//	_b._blockNumber = _last;
-		_b._blockNumber = toBlockNumber(*_b.Number());
-		if (*_b.Number() > client()->number())
+		_bn = *_b.Number();
+		if (_bn != LatestBlock
+			&& _bn != PendingBlock
+			&& _bn > client()->number())
 			BOOST_THROW_EXCEPTION(RPC_Error_RequestDenied("header not found"));
-		block_number = *_b.Number();
-	}
-	else if (_b.Hash())
-	{
-		//auto state = m_cache->block_state_get(transaction, *_b.Hash());
-		//if (state == nullptr)
-		//	BOOST_THROW_EXCEPTION(RPC_Error_RequestDenied("header for hash not found"));
-		//block_number = state->stable_index;
-		block_number = client()->blockState(*_b.Hash()).stable_index;
 	}
 	else
-		BOOST_THROW_EXCEPTION(RPC_Error_RequestDenied("invalid arguments; neither block nor hash specified"));
-
-	//dev::eth::McInfo mc_info;
-	//if (!try_get_mc_info(mc_info, block_number))
-	//	BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("block not found."));
+	{
+		auto _bs = client()->blockState(*_b.Hash());
+		if (_bs == nullptr)
+			BOOST_THROW_EXCEPTION(RPC_Error_RequestDenied("header for hash not found"));
+		_bn = _bs->stable_index;
+	}
 	
-	//std::pair<mcp::ExecutionResult, dev::eth::TransactionReceipt> result = m_chain->execute(
-	//	transaction,
-	//	m_cache,
-	//	t,
-	//	mc_info,
-	//	Permanence::Uncommitted,
-	//	dev::eth::OnOpFunc());
-	mcp::ExecutionResult const& er = client()->call(ts.from, ts.value, ts.to, ts.data, ts.gas, ts.gasPrice, block_number);
-
-	//mcp::ExecutionResult er = result.first;
+	mcp::ExecutionResult const& er = client()->call(ts.from, ts.value, ts.to, ts.data, ts.gas, ts.gasPrice, _bn);
 	if (er.Failed())///execution failed
 	{
 		if (er.Revert().size())///revert
@@ -923,13 +604,11 @@ void mcp::rpc_handler::net_version(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::net_listening(mcp::json &j_response, bool &)
 {
-	//j_response["result"] = m_host->is_started();
 	j_response["result"] = client()->netListening();
 }
 
 void mcp::rpc_handler::net_peerCount(mcp::json &j_response, bool &)
 {
-	//j_response["result"] = toJS(m_host->get_peers_count());
 	j_response["result"] = toJS(client()->peersCount());
 }
 
@@ -955,10 +634,6 @@ void mcp::rpc_handler::eth_getCode(mcp::json &j_response, bool &)
 		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
 
 	j_response["result"] = toJS(client()->codeAt(jsToAddress(params[0]), jsToBlockNumber(params[1])));
-
-	//dev::OverlayDB _db = dev::OverlayDB(std::make_unique<mcp::block_store>(m_store));
-	//chain_state c_state(/*transaction,*/ 0, /*m_store,*/ /*m_chain,*/ /*m_cache,*/ _db);
-	//j_response["result"] = toJS(c_state.code(jsToAddress(params[0])));
 }
 
 void mcp::rpc_handler::eth_getStorageAt(mcp::json &j_response, bool &)
@@ -967,42 +642,21 @@ void mcp::rpc_handler::eth_getStorageAt(mcp::json &j_response, bool &)
 		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
 
 	j_response["result"] = toJS(toCompactBigEndian(client()->stateAt(jsToAddress(params[0]), jsToU256(params[1]), jsToBlockNumber(params[2])), 32));
+}
 
-	//dev::Address account = jsToAddress(params[0]);
-	//uint256_t position = jsToU256(params[1]);
+void mcp::rpc_handler::eth_getStorageRoot(mcp::json& j_response, bool& async)
+{
+	if (!mcp::isAddress(params[0]))
+		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
 
-	//mcp::db::db_transaction transaction(m_store.create_transaction());
-	//dev::OverlayDB _db = dev::OverlayDB(std::make_unique<mcp::block_store>(m_store));
-	//chain_state c_state(/*transaction,*/ 0,/* m_store,*/ /*m_chain,*/ /*m_cache,*/ _db);
-	//j_response["result"] = toJS(toCompactBigEndian(c_state.storage(account, position), 32));
+	j_response["result"] = toJS(client()->stateRootAt(jsToAddress(params[0]), jsToBlockNumber(params[1])));
+
 }
 
 void mcp::rpc_handler::eth_getTransactionByHash(mcp::json &j_response, bool &)
 {
 	if(!mcp::isH256(params[0]))
 		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
-	//h256 hash = jsToHash(params[0]);
-
-	//auto transaction = m_store.create_transaction();
-	//auto t = m_cache->transaction_get(transaction, hash);
-	//if (t == nullptr)
-	//	BOOST_THROW_EXCEPTION(RPC_Error_NoResult());
-
-	//auto lt = LocalisedTransaction(*t, mcp::block_hash(0), 0, 0);
-	//mcp::json j_transaction = toJson(lt);
-
-	//auto td = m_cache->transaction_address_get(transaction, hash);
-	//if (td == nullptr)
-	//	BOOST_THROW_EXCEPTION(RPC_Error_NoResult());
-
-	//j_transaction["blockHash"] = toJS(td->blockHash);
-	//j_transaction["transactionIndex"] = toJS(td->index);
-
-	//uint64_t block_number = 0;
-	//if (!m_cache->block_number_get(transaction, td->blockHash, block_number))
-	//	j_transaction["blockNumber"] = toJS(block_number);
-
-	//j_response["result"] = j_transaction;
 
 	try
 	{
@@ -1018,117 +672,58 @@ void mcp::rpc_handler::eth_getTransactionByBlockHashAndIndex(mcp::json &j_respon
 {
 	if(!mcp::isH256(params[0]))
 		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
-	//mcp::block_hash block_hash = jsToHash(params[0]);
 	uint64_t index = jsToULl(params[1], "index");
 
-	//auto transaction = m_store.create_transaction();
-	//auto block(m_cache->block_get(transaction, block_hash));
-	//uint64_t block_number;
-	//if (block == nullptr ||
-	//	m_cache->block_number_get(transaction, block_hash, block_number) ||
-	//	index >= block->links().size())
-	//	BOOST_THROW_EXCEPTION(RPC_Error_NoResult());
-
-	//dev::h256 hash = block->links().at(index);
-	//auto t = m_cache->transaction_get(transaction, hash);
-	//if (t == nullptr)
-	//	BOOST_THROW_EXCEPTION(RPC_Error_NoResult());
-
-	//auto lt = LocalisedTransaction(*t, block->hash(), index, block_number);
-	//j_response["result"] = toJson(lt);
-	j_response["result"] = toJson(client()->localisedTransaction(jsToHash(params[0]), index));
+	try
+	{
+		j_response["result"] = toJson(client()->localisedTransaction(jsToHash(params[0]), index));
+	}
+	catch (TransactionNotFound)
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_NoResult());
+	}
 }
 
 void mcp::rpc_handler::eth_getTransactionByBlockNumberAndIndex(mcp::json &j_response, bool &)
 {
-	//BlockNumber block_number = jsToBlockNumber(params[0]);
-	//if (block_number == LatestBlock || block_number == PendingBlock)
-	//	block_number = m_chain->last_stable_index();
-	BlockNumber block_number = toBlockNumber(jsToBlockNumber(params[0]));
-
 	uint64_t index = jsToULl(params[1], "index");
-	//mcp::db::db_transaction transaction(m_store.create_transaction());
-	//mcp::block_hash block_hash;
-	//if (m_cache->block_number_get(transaction, block_number, block_hash))
-	//	BOOST_THROW_EXCEPTION(RPC_Error_NoResult());
 
-	//auto block(m_cache->block_get(transaction, block_hash));
-	//if (block == nullptr || index >= block->links().size())
-	//	BOOST_THROW_EXCEPTION(RPC_Error_NoResult());
-
-	//dev::h256 hash = block->links().at(index);
-	//auto t = m_cache->transaction_get(transaction, hash);
-	//if (t == nullptr)
-	//	BOOST_THROW_EXCEPTION(RPC_Error_NoResult());
-
-	//auto lt = LocalisedTransaction(*t, block_hash, index, block_number);
-	//j_response["result"] = toJson(lt);
-	j_response["result"] = toJson(client()->localisedTransaction(block_number, index));
+	try
+	{
+		j_response["result"] = toJson(client()->localisedTransaction(jsToBlockNumber(params[0]), index));
+	}
+	catch (TransactionNotFound)
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_NoResult());
+	}
 }
 
 void mcp::rpc_handler::eth_getTransactionReceipt(mcp::json &j_response, bool &)
 {
 	if(!mcp::isH256(params[0]))
 		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
-	//h256 hash = jsToHash(params[0]);
-	//auto transaction = m_store.create_transaction();
-	//auto t = m_cache->transaction_get(transaction, hash);
-	//auto tr = m_store.transaction_receipt_get(transaction, hash);
-	//auto td = m_cache->transaction_address_get(transaction, hash);
 
-	//if (t == nullptr || tr == nullptr || td == nullptr)
-	//	BOOST_THROW_EXCEPTION(RPC_Error_NoResult());
-
-	//uint64_t block_number = 0;
-	//if (m_cache->block_number_get(transaction, td->blockHash, block_number))
-	//	BOOST_THROW_EXCEPTION(RPC_Error_NoResult());
-
-	//auto lt = dev::eth::LocalisedTransactionReceipt(
-	//	*tr,
-	//	t->sha3(),
-	//	td->blockHash,
-	//	block_number,
-	//	t->from(),
-	//	t->to(),
-	//	td->index,
-	//	toAddress(t->from(), t->nonce()));
-
-	//j_response["result"] = toJson(lt);
-	j_response["result"] = toJson(client()->localisedTransactionReceipt(jsToHash(params[0])));
+	try
+	{
+		j_response["result"] = toJson(client()->localisedTransactionReceipt(jsToHash(params[0])));
+	}
+	catch (TransactionNotFound)
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_NoResult());
+	}
 }
 
 void mcp::rpc_handler::eth_getBlockTransactionCountByHash(mcp::json &j_response, bool &)
 {
 	if(!mcp::isH256(params[0]))
 		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
-	//mcp::block_hash block_hash = jsToHash(params[0]);
 
-	//mcp::db::db_transaction transaction(m_store.create_transaction());
-	//auto block(m_cache->block_get(transaction, block_hash));
-	//if (block == nullptr)
-	//	BOOST_THROW_EXCEPTION(RPC_Error_NoResult());
-
-	//j_response["result"] = toJS(block->links().size());
 	j_response["result"] = toJS(client()->transactionCount(jsToHash(params[0])));
 }
 
 void mcp::rpc_handler::eth_getBlockTransactionCountByNumber(mcp::json &j_response, bool &)
 {
-	//BlockNumber block_number = jsToBlockNumber(params[0]);
-	//if (block_number == LatestBlock || block_number == PendingBlock)
-	//	block_number = m_chain->last_stable_index();
-	BlockNumber block_number = toBlockNumber(jsToBlockNumber(params[0]));
-
-	//mcp::db::db_transaction transaction(m_store.create_transaction());
-	//mcp::block_hash block_hash;
-	//if (m_cache->block_number_get(transaction, block_number, block_hash))
-	//	BOOST_THROW_EXCEPTION(RPC_Error_NoResult());
-
-	//auto block(m_cache->block_get(transaction, block_hash));
-	//if (block == nullptr)
-	//	BOOST_THROW_EXCEPTION(RPC_Error_NoResult());
-	//j_response["result"] = toJS(block->links().size());
-	j_response["result"] = toJS(client()->transactionCount(block_number));
+	j_response["result"] = toJS(client()->transactionCount(jsToBlockNumber(params[0])));
 }
 
 void mcp::rpc_handler::eth_getBalance(mcp::json &j_response, bool &)
@@ -1141,12 +736,6 @@ void mcp::rpc_handler::eth_getBalance(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::eth_accounts(mcp::json &j_response, bool &)
 {
-	//mcp::json j_accounts = mcp::json::array();
-	//Addresses account_list(m_key_manager->list());
-	//for (auto account : account_list)
-	//	j_accounts.push_back(toJS(account));
-
-	//j_response["result"] = j_accounts;
 	j_response["result"] = toJson(m_key_manager->list());
 }
 
@@ -1154,9 +743,6 @@ void mcp::rpc_handler::eth_sign(mcp::json &j_response, bool &)
 {
 	if (!mcp::isAddress(params[0]))
 		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
-	//dev::Address account = jsToAddress(params[0]);
-	//if (!m_key_manager->exists(account))
-	//	BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(AddressNotExist));
 
 	dev::bytes data = jsToBytes(params[1]);
 	if (data.size() > mcp::max_data_size)
@@ -1164,19 +750,12 @@ void mcp::rpc_handler::eth_sign(mcp::json &j_response, bool &)
 
 	/// throw exception if locked or unknown.
 	std::pair<bool, Secret> ar = m_key_manager->authenticate(jsToAddress(params[0]));
-
-	//dev::h256 hash;
-	//get_eth_signed_msg(data);
-
-	//dev::Signature signature = dev::sign(ar.second, hash);
 	j_response["result"] = toJS(dev::sign(ar.second, get_eth_signed_msg(data)));
 }
 
 void mcp::rpc_handler::eth_signTransaction(mcp::json &j_response, bool &)
 {
 	TransactionSkeleton ts = mcp::toTransactionSkeletonForEth(params[0]);
-	//if (!m_key_manager->exists(ts.from))
-	//	BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams(AddressNotExist));
 	/// throw exception if locked or unknown.
 	std::pair<bool, Secret> ar = m_key_manager->authenticate(ts.from);
 	m_wallet->populateTransactionWithDefaults(ts);
@@ -1198,10 +777,6 @@ void mcp::rpc_handler::eth_syncing(mcp::json &j_response, bool &)
 		return;
 	}
 
-	//uint64_t last_stable_mci(m_chain->last_stable_mci());
-	//uint64_t last_mci(m_chain->last_mci());
-	//uint64_t last_stable_index(m_chain->last_stable_index());
-
 	mcp::json result;
 	result["startingBlock"] = toJS(client()->lastStableMci());
 	result["currentBlock"] = toJS(client()->lastMci());
@@ -1212,204 +787,16 @@ void mcp::rpc_handler::eth_syncing(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::eth_getLogs(mcp::json &j_response, bool &)
 {
-	//LogFilter filter = toLogFilter(params[0]);
-	//mcp::db::db_transaction transaction(m_store.create_transaction());
-
-	//auto _handler = [this, &transaction, &filter](std::shared_ptr<mcp::block> _block, std::shared_ptr<mcp::block_state> _state, localised_log_entries& io_logs)
-	//{
-	//	for (size_t i = 0; i < _block->links().size(); i++)
-	//	{
-	//		dev::h256 th = _block->links().at(i);
-	//		auto td = m_cache->transaction_address_get(transaction, th);
-	//		if (td == nullptr || td->blockHash != _block->hash())///not first linked, ignore.
-	//			continue;
-
-	//		auto receipt = m_cache->transaction_receipt_get(transaction, th);
-	//		assert_x(receipt);
-	//		log_entries le = filter.matches(*receipt, *_state->main_chain_index);
-	//		for (unsigned j = 0; j < le.size(); ++j)
-	//			io_logs.push_back(localised_log_entry(le[j], _block->hash(), _state->stable_index, th, i, j));
-	//	}
-	//};
-
-	//mcp::localised_log_entries ret;
-	///// Block filter requested
-	//if (filter.blockHash())
-	//{
-	//	auto state = m_cache->block_state_get(transaction, filter.blockHash());
-	//	if (!state || !state->is_stable)
-	//		BOOST_THROW_EXCEPTION(RPC_Error_RequestDenied("unknown block"));
-	//	auto _block = m_cache->block_get(transaction, filter.blockHash());
-	//	if (!_block)
-	//		BOOST_THROW_EXCEPTION(RPC_Error_RequestDenied("unknown block"));
-
-	//	_handler(_block, state, ret);
-	//	j_response["result"] = toJson(ret);
-	//	return;
-	//}
-
-	//mcp::BlockNumber _lastStable = m_chain->last_stable_index();
-	//if (filter.fromBlock() == LatestBlock || filter.fromBlock() == PendingBlock)
-	//	filter.withFrom(_lastStable);
-	//if (filter.toBlock() == LatestBlock || filter.toBlock() == PendingBlock)
-	//	filter.withTo(_lastStable);
-
-	//if (filter.toBlock() - filter.fromBlock() >= 2000)///max 2000
-	//	BOOST_THROW_EXCEPTION(RPC_Error_TooLargeSearchRange("Query Returned More Than 2000 Results"));//-32005 query returned more than 10000 results
-	//for (uint64_t i(filter.fromBlock()); i <= filter.toBlock(); i++)
-	//{
-	//	auto _block = m_cache->block_get(transaction, i);
-	//	if (!_block)
-	//		break;
-	//	if (!_block->links().size())///have no logs
-	//		continue;
-	//	auto state = m_cache->block_state_get(transaction, _block->hash());
-	//	if (!state || !state->is_stable)
-	//		break;
-
-	//	_handler(_block, state, ret);
-	//}
-
-	//j_response["result"] = toJson(ret);
-	j_response["result"] = toJson(client()->logs(toLogFilter(params[0])));
+	try
+	{
+		j_response["result"] = toJson(client()->logs(toLogFilter(params[0])));
+	}
+	catch (QueryRangeTooLarge)
+	{
+		//-32005 query returned more than 10000 results
+		BOOST_THROW_EXCEPTION(RPC_Error_TooLargeSearchRange("Query Returned More Than 2000 Results"));
+	}
 }
-
-//void mcp::rpc_handler::debug_traceTransaction(mcp::json &j_response, bool &)
-//{
-//	
-//	std::string hash_text = params[0];
-//	dev::h256 hash;
-//	hash = jsToHash(hash_text);
-//
-//	mcp::db::db_transaction transaction(m_store.create_transaction());
-//	auto _t = m_cache->transaction_get(transaction, hash);
-//	auto td = m_cache->transaction_address_get(transaction, hash);
-//
-//	if (_t == nullptr || td == nullptr)
-//	{
-//		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Hash"));
-//	}
-//
-//	dev::eth::McInfo mc_info;
-//	if (!m_chain->get_mc_info_from_block_hash(transaction, m_cache, td->blockHash, mc_info))
-//	{
-//		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Mci"));
-//	}
-//	mcp::json options;
-//	options["disableStorage"] = true;
-//	options["disableMemory"] = false;
-//	options["disableStack"] = false;
-//	options["full_storage"] = false;
-//
-//	mcp::json options_json = params[1];
-//	if (options_json.count("disableStorage"))
-//		options["disableStorage"] = options_json["disableStorage"];
-//	if (options_json.count("disableMemory"))
-//		options["disableMemory"] = options_json["disableMemory"];
-//	if (options_json.count("disableStack"))
-//		options["disableStack"] = options_json["disableStack"];
-//	if (options_json.count("full_storage"))
-//		options["full_storage"] = options_json["full_storage"];
-//
-//	try
-//	{
-//		dev::eth::EnvInfo env(transaction, m_store, m_cache, mc_info, mcp::chain_id);
-//		auto block(m_cache->block_get(transaction, td->blockHash));
-//		assert_x(block);
-//		chain_state c_state(transaction, 0, m_store, m_chain, m_cache);
-//		std::vector<h256> accout_state_hashs;
-//		if(!m_store.transaction_previous_account_state_get(transaction, hash, accout_state_hashs))
-//		{
-//			BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Hash"));
-//		}
-//		c_state.ts = *_t;
-//		c_state.set_defalut_account_state(accout_state_hashs);
-//
-//		//c_state should be used after set_defalut_account_state. Otherwise, account_state will be abnormal.
-//		if (!_t->isCreation() && !c_state.addressHasCode(_t->receiveAddress()))
-//		{
-//			j_response["return_value"] = "Only contract transcation can debug.";
-//			return;
-//		}
-//		mcp::ExecutionResult er;
-//		std::list<std::shared_ptr<mcp::trace>> traces;
-//		mcp::Executive e(c_state, env, traces);
-//		e.setResultRecipient(er);
-//
-//		mcp::json trace = m_chain->traceTransaction(e, *_t, options);
-//		j_response["return_value"] = toHexPrefixed(er.output);
-//		j_response["struct_logs"] = trace;
-//	}
-//	catch (Exception const &_e)
-//	{
-//		BOOST_THROW_EXCEPTION(RPC_Error_InternalError("Unexpected exception in VM. There may be a bug in this implementation."));
-//	}
-//	catch (std::exception const &_e)
-//	{
-//		BOOST_THROW_EXCEPTION(RPC_Error_InternalError("Unknown Error"));
-//	}
-//}
-
-//void mcp::rpc_handler::debug_storageRangeAt(mcp::json &j_response, bool &)
-//{
-//	//this should be a json object, not an array
-//	dev::Address acct(0);
-//	if (!params.count("account") || !params["account"].is_string())
-//	{
-//		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Account"));
-//	}
-//	std::string account_text = params["account"];
-//	if (!mcp::isAddress(params["account"]))
-//	{
-//		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Account"));
-//	}
-//	acct = dev::Address(account_text);
-//
-//	h256 begin;
-//	begin = jsToHash(params["begin"]);
-//	BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Begin"));
-//
-//	uint64_t max_results(0);
-//	if (!params.count("max_results"))
-//	{
-//		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Begin"));
-//	}
-//	max_results = jsToULl(params["max_results"]);
-//
-//	j_response["result"] = mcp::json::object();
-//
-//	try
-//	{
-//		mcp::db::db_transaction transaction(m_store.create_transaction());
-//		chain_state c_state(transaction, 0, m_store, m_chain, m_cache);
-//
-//		std::map<h256, std::pair<u256, u256>> const storage(c_state.storage(acct));
-//
-//		// begin is inclusive
-//		auto itBegin = storage.lower_bound(begin);
-//		for (auto it = itBegin; it != storage.end(); ++it)
-//		{
-//			if (j_response["result"].size() == static_cast<unsigned>(max_results))
-//			{
-//				j_response["next_key"] = toCompactHexPrefixed(it->first, 32);
-//				break;
-//			}
-//
-//			mcp::json keyValue = mcp::json::object();
-//			std::string hashedKey = toCompactHexPrefixed(it->first, 32);
-//			keyValue["key"] = toCompactHexPrefixed(it->second.first, 32);
-//			keyValue["value"] = toCompactHexPrefixed(it->second.second, 32);
-//
-//			j_response["result"][hashedKey] = keyValue;
-//		}
-//	}
-//	catch (Exception const &_e)
-//	{
-//		cerror << "Unexpected exception in VM. There may be a bug in this implementation. "
-//			<< diagnostic_information(_e);
-//		exit(1);
-//	}
-//}
 
 void mcp::rpc_handler::personal_importRawKey(mcp::json &j_response, bool &)
 {
@@ -1431,12 +818,6 @@ void mcp::rpc_handler::personal_importRawKey(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::personal_listAccounts(mcp::json &j_response, bool &)
 {
-	//mcp::json j_accounts = mcp::json::array();
-	//Addresses account_list(m_key_manager->list());
-	//for (auto account : account_list)
-	//	j_accounts.push_back(toJS(account));
-
-	//j_response["result"] = j_accounts;
 	j_response["result"] = toJson(m_key_manager->list());
 }
 
@@ -1519,16 +900,10 @@ void mcp::rpc_handler::personal_sign(mcp::json &j_response, bool &)
 
 	if (!mcp::isAddress(params[1]))
 		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
-	//dev::Address account = jsToAddress(params[1]);
-	//if (!m_key_manager->exists(account))
-	//	BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams(AddressNotExist));
 
 	std::pair<bool, Secret> _k = m_key_manager->DecryptKey(jsToAddress(params[1]), params[2]);
 	if (!_k.first)
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("authentication needed: passphrase or unlock."));
-
-	//dev::h256 hash;
-	//get_eth_signed_msg(data);
 
 	dev::Signature signature = dev::sign(_k.second, get_eth_signed_msg(data));
 	j_response["result"] = toJS(signature);
@@ -1549,9 +924,6 @@ void mcp::rpc_handler::personal_ecRecover(mcp::json &j_response, bool &)
 	{
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Signiture"));
 	}
-
-	//dev::h256 hash;
-	//get_eth_signed_msg(data, hash);
 
 	dev::Address from = dev::toAddress(dev::recover(sig, get_eth_signed_msg(data)));
 	j_response["result"] = toJS(from);
@@ -1574,28 +946,9 @@ void mcp::rpc_handler::epoch_approves(mcp::json &j_response, bool &)
 {
 	Epoch epoch = (uint64_t)jsToULl(params[0], "epoch");
 
-	//if (epoch > m_chain->last_epoch())
-	//	BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("The epoch has not yet completed."));
 	if (epoch > client()->lastEpoch())
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("The epoch has not yet completed."));
 
-	//mcp::json approves_l = mcp::json::array();
-	//mcp::db::db_transaction transaction(m_store.create_transaction());
-	//std::list<h256> hashs;
-	//m_store.epoch_approves_get(transaction, epoch, hashs);
-
-	//for (auto hash : hashs)
-	//{
-	//	auto approve = m_cache->approve_get(transaction, hash);
-	//	if (approve) {
-	//		mcp::json approve_l;
-	//		approve_l["hash"] = toJS(approve->sha3());
-	//		approve_l["from"] = toJS(approve->sender());
-	//		approve_l["proof"] = toJS(approve->proof());
-	//		approves_l.push_back(approve_l);
-	//	}
-	//}
-	//j_response["result"] = approves_l;
 	j_response["result"] = toJson(client()->epochApproves(epoch));
 }
 
@@ -1603,17 +956,13 @@ void mcp::rpc_handler::epoch_work_transaction(mcp::json &j_response, bool &)
 {
 	Epoch epoch = (uint64_t)jsToULl(params[0], "epoch");
 
-	//if (epoch >= m_chain->last_epoch())
-	//	BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("The epoch has not yet completed."));
-	if (epoch >= client()->lastEpoch())
+	auto _h = client()->workTransactionHash(epoch);
+	if (_h)
+		j_response["result"] = toJS(*_h);
+	else
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("The epoch has not yet completed."));
 
-	//mcp::db::db_transaction transaction(m_store.create_transaction());
-	//h256 _h;
-	//m_store.epoch_work_transaction_get(transaction, epoch, _h);
-
-	//j_response["result"] = toJS(_h);
-	j_response["result"] = toJS(client()->workTransactionHash(epoch));
+	
 }
 
 void mcp::rpc_handler::approve_receipt(mcp::json &j_response, bool &)
@@ -1621,15 +970,11 @@ void mcp::rpc_handler::approve_receipt(mcp::json &j_response, bool &)
 	if (!mcp::isH256(params[0]))
 		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
 
-	//dev::h256 hash = jsToHash(params[0]);
+	auto _ar = client()->approveReceipt(jsToHash(params[0]));
+	if (nullptr == _ar)
+		BOOST_THROW_EXCEPTION(RPC_Error_NoResult());
 
-	//mcp::db::db_transaction transaction(m_store.create_transaction());
-	//auto _a = m_cache->approve_receipt_get(transaction, hash);
-	//if (_a == nullptr)
-	//	BOOST_THROW_EXCEPTION(RPC_Error_NoResult());
-	//j_response["result"] = toJson(*_a);
-
-	j_response["result"] = toJson(client()->approveReceipt(jsToHash(params[0])));
+	j_response["result"] = toJson(*_ar);
 }
 
 
@@ -1637,41 +982,84 @@ void mcp::rpc_handler::debug_traceTransaction(mcp::json &j_response, bool &)
 {
 	if (!mcp::isH256(params[0]))
 		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
+	dev::h256 _hash(jsToHash(params[0]));
 
-	LocalisedTransaction t = client()->localisedTransaction(jsToHash(params[0]));
-	Block block = client()->blockByHash(t.blockHash(),true);
-	chain_state s(chain_state::Null);
-	mcp::ExecutionResult er;
-	std::shared_ptr<Tracer> _tracer = NewTracer(params[1], er);
-	Executive e(s, block, t.transactionIndex(), client()->blockChain(), _tracer);
-	e.setResultRecipient(er);
-	traceTransaction(e, t);
+	try
+	{
+		LocalisedTransaction t = client()->localisedTransaction(_hash);
+		if (t.blockHash() == dev::h256())
+			BOOST_THROW_EXCEPTION(RPC_Error_RequestDenied("transaction not found"));
 
-	//mcp::json ret;
-	//ret["gas"] = t.gas().convert_to<uint64_t>()/*toJS(t.gas())*/;
-	//ret["failed"] = er.Failed();
-	//ret["returnValue"] = toHex(er.output);
-	//ret["structLogs"] = trace;
-	j_response["result"] = _tracer->GetResult();
+		Block block = client()->blockByHash(t.blockHash(), true);
+		chain_state s(chain_state::Null);
+		mcp::ExecutionResult er;
+		std::shared_ptr<Tracer> _tracer = NewTracer(params[1], er);
+		//cnote << "index:" << t.transactionExecIndex();
+		Executive e(s, block, t.transactionExecIndex(), client()->blockChain(), _tracer);
+		e.setResultRecipient(er);
+		traceTransaction(e, t);
+
+		j_response["result"] = _tracer->GetResult();
+	}
+	catch (TransactionNotFound)
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_RequestDenied("transaction not found"));
+	}
 }
 
 void mcp::rpc_handler::traceTransaction(mcp::Executive& _e, mcp::Transaction const& _t)
 {
-	//mcp::json traceJson{ mcp::json::array() };
-	//StandardTrace st{ traceJson };
-	//st.setShowMnemonics();
-	//st.setOptions(debugOptions(_json));
-	//_e.initialize(_t);
-	//if (!_e.execute())
-	//	_e.go(/*st.onOp()*/);
-	//_e.finalize();
-
-	//auto _p = std::make_shared<OpCode>(traceJson);
-	//_p->setOptions(OpCode::debugOptions(_json));
-	//std::shared_ptr<Tracer> _pTracer(_p);
 	_e.initialize(_t);
 	if (!_e.execute())
 		_e.go();
 	_e.finalize();
-	//return traceJson;
+}
+
+mcp::chain_state mcp::rpc_handler::stateAt(std::string const& _blockHashOrNumber, int _txIndex) const
+{
+	if (_txIndex > 4096)
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidRequest("Negative index"));
+
+	mcp::Block _block;
+	if (mcp::isH256(_blockHashOrNumber))
+		_block = m_client->blockByHash(h256(_blockHashOrNumber), true);
+	else
+		_block = m_client->blockByNumber(jsToBlockNumber(_blockHashOrNumber), true);
+
+	auto const txCount = _block.pending().size();
+	mcp::chain_state state(mcp::chain_state::Null);
+
+	if (static_cast<size_t>(_txIndex) < txCount)
+		createIntermediateState(state, _block, _txIndex, m_client->blockChain());
+	else if (static_cast<size_t>(_txIndex) == txCount)
+		// the final state of block (after applying rewards)
+		state = _block.state();
+	else
+	{
+		auto msg = "Transaction index " + toString(_txIndex) + " out of range (" + toString(txCount) + ") for block " + _blockHashOrNumber;
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidRequest(msg.c_str()));
+	}
+
+	return state;
+}
+
+void mcp::rpc_handler::debug_accountRange(mcp::json& j_response, bool& async)
+{
+	auto ret = mcp::json::object();
+
+	//auto _maxResults = jsToULl(params[3]);
+	//if (_maxResults <= 0)
+	//	BOOST_THROW_EXCEPTION(RPC_Error_TooLargeSearchRange("Nonpositive maxResults"));
+
+	mcp::chain_state const state = stateAt(params[0], jsToULl(params[1]));
+	auto const addressMap = state.addresses(jsToHash(params[2]), jsToULl(params[3]));
+
+	auto addressList = mcp::json::object();
+	for (auto const& record : addressMap.first)
+		addressList[toHexPrefixed(record.first)] = toHexPrefixed(record.second);
+
+	ret["addressMap"] = addressList;
+	ret["nextKey"] = toHexPrefixed(addressMap.second);
+
+	j_response["result"] = ret;
 }

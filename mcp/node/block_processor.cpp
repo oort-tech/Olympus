@@ -516,7 +516,7 @@ void mcp::block_processor::do_process_one(std::shared_ptr<mcp::block_processor_i
 	std::shared_ptr<mcp::block> block(joint.block);
 	mcp::block_hash const & block_hash(block->hash());
 
-	if (unhandle->exists(block_hash))
+	if (!item->is_sync() && unhandle->exists(block_hash))
 	{
 		process_existing_missing(item->remote_node_id());
 		return;

@@ -20,8 +20,6 @@
  */
 
 #include "transaction_receipt.hpp"
-//#include "config.hpp"
-#include "param.hpp"
 #include <mcp/common/Exceptions.h>
 
 #include <boost/variant/get.hpp>
@@ -30,37 +28,24 @@ using namespace std;
 using namespace dev;
 using namespace dev::eth;
 
-TransactionReceipt::TransactionReceipt(RLP r)
-{
-	if (!r.isList() || r.itemCount() != 4)
-		BOOST_THROW_EXCEPTION(InvalidTransactionReceiptFormat());
-
-	m_statusCode = (uint8_t)r[0];
-	m_gasUsed = (u256)r[1];
-	m_bloom = (log_bloom)r[2];
-	for (auto const& i : r[3])
-		m_log.emplace_back(i);
-
-}
-
-TransactionReceipt::TransactionReceipt(uint8_t _status, u256 const& _gasUsed, mcp::log_entries const& _log, uint64_t const& _mci):
+TransactionReceipt::TransactionReceipt(uint8_t _status, u256 const& _gasUsed, mcp::log_entries const& _log, bool _createBloom):
 	m_statusCode(_status),
 	m_gasUsed(_gasUsed),
 	m_log(_log)
 {
-	if (mcp::param::get()->IsOIP5(_mci))
-	{
+	if (_createBloom)
 		m_bloom = mcp::bloom(_log);
-	}
 }
 
-void TransactionReceipt::streamRLP(RLPStream& _s) const
+bytes dev::eth::TransactionReceipt::rlp() const
 {
+	RLPStream _s; 
 	_s.appendList(4);
 	_s << statusCode() << m_gasUsed << m_bloom;
 	_s.appendList(m_log.size());
 	for (mcp::log_entry const& l : m_log)
 		l.streamRLP(_s);
+	return _s.out();
 }
 
 std::ostream& dev::eth::operator<<(std::ostream& _out, TransactionReceipt const& _r)
@@ -77,4 +62,29 @@ std::ostream& dev::eth::operator<<(std::ostream& _out, TransactionReceipt const&
 	}
 	_out << "Bloom: " << _r.bloom() << std::endl;
 	return _out;
+}
+
+dev::eth::LocalTransactionReceipt::LocalTransactionReceipt(RLP r)
+{
+	if (!r.isList() || r.itemCount() != 7)
+		BOOST_THROW_EXCEPTION(InvalidTransactionReceiptFormat());
+
+	m_blockHash = (h256)r[0];
+	m_transactionIndex = (unsigned)r[1];
+	m_transactionExecIndex = (unsigned)r[2];
+	m_statusCode = (uint8_t)r[3];
+	m_gasUsed = (u256)r[4];
+	m_bloom = (log_bloom)r[5];
+	for (auto const& i : r[6])
+		m_log.emplace_back(i);
+}
+
+void dev::eth::LocalTransactionReceipt::streamRLP(dev::RLPStream& _s) const
+{
+	_s.appendList(7);
+	_s << m_blockHash << m_transactionIndex << m_transactionExecIndex << statusCode() << m_gasUsed << m_bloom;
+
+	_s.appendList(m_log.size());
+	for (mcp::log_entry const& l : m_log)
+		l.streamRLP(_s);
 }

@@ -5,17 +5,6 @@
 
 namespace mcp
 {
-	//struct ChainEnv
-	//{
-	//	//mcp::timeout_db_transaction& timeout_tx;
-	//	//std::shared_ptr<mcp::process_block_cache> cache;
-	//	uint64_t mci;
-	//	uint64_t blockNum;
-	//	uint64_t mc_timestamp;
-	//	//uint64_t stable_timestamp;
-	//	uint64_t mc_last_summary_mci;
-	//};
-
 	/// @brief Verified block info, does not hold block data, but a reference instead
 	struct VerifiedBlockRef
 	{
@@ -23,27 +12,26 @@ namespace mcp
 		std::vector< std::shared_ptr<Transaction> > transactions;	///< Verified list of block transactions
 	};
 
-	class TransactionReceiptPlaceholder :public dev::eth::TransactionReceipt
-	{
-	public:
-		TransactionReceiptPlaceholder():TransactionReceipt(0,0, mcp::log_entries()){m_Placeholder = true;}
-	};
-
 	class chain;
 
+	/**
+	* @brief Active model of a block within the block chain.
+	* Keeps track of all transactions, receipts and state for a particular.
+	* Model for processing transactions and completing the call of system contracts.
+	*/
 	class Block
 	{
 	public:
 		/// Default constructor; creates with a blank database prepopulated with the genesis block.
-		Block(u256 const& _accountStartNonce) : m_state(_accountStartNonce, OverlayDB(), BaseState::Empty) {}
+		Block() : m_state(OverlayDB(), BaseState::Empty) {}
 
-		Block(/*mcp::block_store& store_a, */chain const& _bc, OverlayDB const& _db, BaseState _bs = BaseState::PreExisting);
+		Block(chain const& _bc, OverlayDB const& _db, dev::eth::McInfo const& _mc = dev::eth::McInfo(), BaseState _bs = BaseState::PreExisting);
 
 		/// Basic state object from database.
 		/// Use the default when you already have a database and you just want to make a Block object
 		/// which uses it.
 		/// Will throw InvalidRoot if the root passed is not in the database.
-		Block(/*mcp::block_store& store_a, */chain const& _bc, OverlayDB const& _db, h256 const& _root);
+		Block(chain const& _bc, OverlayDB const& _db, h256 const& _root, dev::eth::McInfo const& _mc);
 
 		/// Copy state object.
 		Block(Block const& _s);
@@ -58,6 +46,9 @@ namespace mcp
 		/// Get the number of transactions a particular address has sent (used for the transaction nonce).
 		/// @returns 0 if the address has never been used.
 		u256 transactionsFrom(Address const& _address) const { return m_state.getNonce(_address); }
+
+		/// Get the root of the storage of an account.
+		h256 storageRoot(Address const& _contract) const { return m_state.storageRoot(_contract); }
 
 		/// Get the value of a storage position of an account.
 		/// @returns 0 if no account exists at that address.
@@ -93,6 +84,9 @@ namespace mcp
 		/// normal sealable block, don't expect things to work right.
 		chain_state& mutableState() { return m_state; }
 
+		/// Get the bloom filter of all logs that happened in the block.
+		log_bloom logBloom() const;
+
 		/// Get the transaction receipt for the transaction of the given index.
 		dev::eth::TransactionReceipt const& receipt(unsigned _i) const { return m_receipts.at(_i); }
 
@@ -106,17 +100,11 @@ namespace mcp
 		/// This will append @a _t to the transaction list and change the state accordingly.
 		//ExecutionResult execute(LastBlockHashesFace const& _lh, Transaction const& _t, Permanence _p = Permanence::Committed, dev::eth::OnOpFunc const& _onOp = dev::eth::OnOpFunc());
 		//ExecutionResult execute(dev::eth::EnvInfo const& _envInfo, mcp::Transaction const& _t, Permanence _p, dev::eth::OnOpFunc const& _onOp = dev::eth::OnOpFunc());
-		mcp::ExecutionResult execute(/*mcp::db::db_transaction& transaction_a, *//*chain const& _bc,*/ /*std::shared_ptr<mcp::iblock_cache> cache_a,*/ Transaction const& _t, dev::eth::McInfo const& mc_info_a, Permanence _p/*, dev::eth::OnOpFunc const& _onOp*/);
+		mcp::ExecutionResult execute(Transaction const& _t, Permanence _p);
 
 		/// Execute all transactions within a given block.
 		/// @returns the additional total difficulty.
-		//u256 mcp::Block::enactOn(mcp::timeout_db_transaction& timeout_tx_a,
-		//	std::shared_ptr<mcp::process_block_cache> cache_a,
-		//	uint64_t const& mci, uint64_t const& _blockNum, uint64_t const& mc_timestamp, uint64_t const& stable_timestamp, uint64_t const& mc_last_summary_mci,
-		//	h256 const& dag_stable_block_hash,
-		//	chain const& _bc
-		//);
-		u256 enactOn(dev::eth::McInfo const& _mc, VerifiedBlockRef const& _block, chain const& _bc);
+		u256 enactOn(VerifiedBlockRef const& _block, chain const& _bc);
 
 		/// Returns back to a pristine state after having done a playback.
 		void cleanup();
@@ -125,23 +113,26 @@ namespace mcp
 		//void resetCurrent();
 
 		/// Get the header information on the present block.
-		dev::eth::McInfo info() const;
+		dev::eth::McInfo info(bool isPopulateFromParent = false) const;
+
+		std::pair<Transaction, dev::eth::TransactionReceipt> ApplyWorkTransaction(dev::bytes const& _data);
+		StakingList getStakingList();
+		MainInfo getMainInfo();
 	private:
 		/// Execute the given block, assuming it corresponds to m_currentBlock.
 		/// Throws on failure.
-		u256 enact(mcp::block const& _block, chain const& _bc);
-		//void set_block_stable(mcp::timeout_db_transaction& timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a, mcp::block_hash const& stable_block_hash, uint64_t const& mci, uint64_t const& mc_timestamp, uint64_t const& mc_last_summary_mci, uint64_t const& stable_timestamp, uint64_t const& stable_index, h256 receiptsRoot);
+		Transaction systemTransaction(dev::bytes const& _data);
 
 		chain_state m_state;						///< Our state tree, as an OverlayDB DB.
 		Transactions m_transactions;				///< The current list of transactions that we've included in the state.
 		dev::eth::TransactionReceipts m_receipts;	///< The corresponding list of transaction receipts.
-		//h256Hash m_transactionSet;				///< The set of transaction hashes that we've included in the state.
+		//h256s m_transactionSet;				///< The set of transaction hashes that we've included in the state.
 		std::shared_ptr<mcp::block_state> m_previousBlockState;
-		std::shared_ptr<mcp::block_state> m_currentBlockState;
-		std::shared_ptr<mcp::block> m_currentBlock;
+		//std::shared_ptr<mcp::block_state> m_currentBlockState;
+		//std::shared_ptr<mcp::block> m_currentBlock;
+		dev::eth::McInfo m_McInfo;
 
 		SealEngineFace* m_sealEngine = nullptr;		///< The chain's seal engine.
-		//mcp::block_store m_store;
 		mcp::log m_log = { mcp::log("node") };
 	};
 }

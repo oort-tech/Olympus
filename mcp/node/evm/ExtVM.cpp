@@ -135,7 +135,8 @@ CallResult ExtVM::call(CallParameters& _p)
         _p.tracer->CaptureEnter(*_p.op, _p.senderAddress, _p.codeAddress, _p.data.toBytes(), uint64_t(_p.gas), _pValue);
     }
 
-    if (!e.call(_p, gasPrice, origin))
+    u256 _gasPrice = mcp::param::get()->IsOIP6(envInfo().mci()) ? gasPrice : 1;
+    if (!e.call(_p, _gasPrice, origin))
     {
         go(depth, e/*, _p.onOp*/);
         e.accrueSubState(sub);
@@ -166,12 +167,13 @@ CreateResult ExtVM::create(u256 _endowment, u256& io_gas, bytesConstRef _code, I
 {
     Executive e(m_s, envInfo(), m_sealEngine, /*m_s.traces,*/ depth + 1, _tracer);
     bool result = false;
+    u256 _gasPrice = mcp::param::get()->IsOIP6(envInfo().mci()) ? gasPrice : 1;
     if (_op == Instruction::CREATE)
-        result = e.createOpcode(myAddress, _endowment, gasPrice, io_gas, _code, origin);
+        result = e.createOpcode(myAddress, _endowment, _gasPrice, io_gas, _code, origin);
     else
     {
         assert_x(_op == Instruction::CREATE2);
-        result = e.create2Opcode(myAddress, _endowment, gasPrice, io_gas, _code, origin, _salt);
+        result = e.create2Opcode(myAddress, _endowment, _gasPrice, io_gas, _code, origin, _salt);
     }
 
     if (!result)
@@ -221,9 +223,4 @@ h256 ExtVM::blockHash(u256 _number)
         return h256();
 
     return m_s.blockHash(_number);
-    //mcp::block_store& store(envInfo().store);
-    //mcp::db::db_transaction& transaction(envInfo().transaction);
-    //h256 _h(0);
-    //store.stable_block_get(transaction, uint64_t(_number), _h);
-    //return _h;
 }

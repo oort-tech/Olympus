@@ -254,7 +254,7 @@ namespace mcp
 	{
 		mcp::json res;
 		res["transactionHash"] = toJS(_t.hash());
-		res["transactionIndex"] = toJS(_t.transactionIndex());
+		res["transactionIndex"] = toJS(_t.transactionExecIndex());
 		res["blockHash"] = toJS(_t.blockHash());
 		res["blockNumber"] = toJS(_t.blockNumber());
 		res["from"] = toJS(_t.from());
@@ -314,7 +314,7 @@ namespace mcp
 		return res;
 	}
 
-	mcp::json toJson(mcp::block & _b)
+	mcp::json toJson(mcp::block const& _b)
 	{
 		mcp::json res;
 
@@ -349,7 +349,7 @@ namespace mcp
 		return res;
 	}
 
-	mcp::json toJson(mcp::LocalisedBlock& _b, bool is_full)
+	mcp::json toJson(mcp::LocalisedBlock const& _b, bool is_full)
 	{
 		mcp::json res;
 
@@ -371,7 +371,7 @@ namespace mcp
 		{
 			if (is_full)
 			{
-				res["transactions"].push_back(toJson(LocalisedTransaction(_ts[i], _b.hash(), i, _b.blockNumber())));
+				res["transactions"].push_back(toJson(LocalisedTransaction(_ts[i], _b.hash(), i, i, _b.blockNumber())));
 			}
 			else
 				res["transactions"].push_back(toJS(_ts[i].sha3()));
@@ -391,7 +391,7 @@ namespace mcp
 		return res;
 	}
 
-	mcp::json toJson(mcp::block_state & _b)
+	mcp::json toJson(mcp::block_state const& _b)
 	{
 		mcp::json res;
 
@@ -448,7 +448,7 @@ namespace mcp
 		return err;
 	}
 	
-	mcp::json toJson(WitnessList& _wl)
+	mcp::json toJson(WitnessList const& _wl)
 	{
 		mcp::json res = mcp::json::array();
 		for (auto const& e : _wl)

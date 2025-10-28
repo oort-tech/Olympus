@@ -109,6 +109,9 @@ namespace mcp
 		else if (instanceof<dev::ErrMaxInitCodeSizeExceeded>(&e)) {
 			RPC_Error_RequestDenied("max initcode size exceeded.").toJson(j_response);
 		}
+		else if (instanceof<dev::BlockNotFound>(&e)) {
+			RPC_Error_RequestDenied("header not found").toJson(j_response);
+		}
 		else if(instanceof<mcp::json::exception>(&e)){
 			RPC_Error_JsonParseError(e.what()).toJson(j_response);
 		}

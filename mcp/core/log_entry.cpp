@@ -6,6 +6,7 @@
 
 namespace mcp
 {
+log_bloom const ZeroLogBloom;
 
 log_entry::log_entry(RLP const& _r)
 {

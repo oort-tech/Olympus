@@ -56,7 +56,7 @@ namespace dev
 
 	/// NewBoundContract creates a low level contract interface through which calls
 	/// and transactions may be made through.
-	BoundContract NewBoundContract(dev::h160 const& _address, ABI const& _abi, ContractCaller const& _caller);
+	BoundContract NewBoundContract(dev::h160 const& _address, ABI const& _abi, ContractCaller const& _caller = dev::ContractCaller());
 	
 	template<typename ...Args>
 	inline dev::bytes BoundContract::Call(CallOpts * opts, std::string const & method, Args const & ...args)
@@ -64,9 +64,7 @@ namespace dev
 		//if (opts == nullptr)
 		//	opts = new CallOpts;
 		dev::bytes input = abi.Pack(method, args...);
-		//dev::bytes output;
-		//caller(opts->From, address, input, output);
-		//return output;
+		assert_x_msg(caller, "caller not exist.");
 		return caller(opts->From, address, input);
 	}
 

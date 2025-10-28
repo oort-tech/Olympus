@@ -273,14 +273,6 @@ void mcp::process_block_cache::account_nonce_put(mcp::db::db_transaction & trans
 	}
 }
 
-
-void mcp::process_block_cache::transaction_address_put(mcp::db::db_transaction & transaction_a, h256 const & hash, std::shared_ptr<mcp::TransactionAddress> const& td)
-{
-	m_store.transaction_address_put(transaction_a, hash, *td);
-	m_cache->transaction_address_put(hash, td);
-}
-
-
 bool mcp::process_block_cache::successor_get(mcp::db::db_transaction & transaction_a, mcp::block_hash const & root_a, mcp::block_hash & successor_a)
 {
 	bool exists;
@@ -385,15 +377,9 @@ void mcp::process_block_cache::block_number_put(mcp::db::db_transaction & transa
 	m_cache->block_number_put(index_a, hash_a);
 }
 
-bool mcp::process_block_cache::transaction_receipt_exists(mcp::db::db_transaction & transaction_a, h256 const& _hash)
+std::shared_ptr<dev::eth::LocalTransactionReceipt> mcp::process_block_cache::transaction_receipt_get(mcp::db::db_transaction & transaction_a, h256 const& _hash)
 {
-	auto t = transaction_receipt_get(transaction_a, _hash);
-	return t != nullptr;
-}
-
-std::shared_ptr<dev::eth::TransactionReceipt> mcp::process_block_cache::transaction_receipt_get(mcp::db::db_transaction & transaction_a, h256 const& _hash)
-{
-	std::shared_ptr<dev::eth::TransactionReceipt> t = nullptr;
+	std::shared_ptr<dev::eth::LocalTransactionReceipt> t = nullptr;
 
 	auto it(m_transaction_receipt_puts.get<1>().find(_hash));
 	if (it != m_transaction_receipt_puts.get<1>().end())
@@ -410,17 +396,17 @@ std::shared_ptr<dev::eth::TransactionReceipt> mcp::process_block_cache::transact
 	return t;
 }
 
-void mcp::process_block_cache::transaction_receipt_put(mcp::db::db_transaction & transaction_a, h256 const& _hash, std::shared_ptr<dev::eth::TransactionReceipt> _t)
+void mcp::process_block_cache::transaction_receipt_put(mcp::db::db_transaction & transaction_a, h256 const& _hash, std::shared_ptr<dev::eth::LocalTransactionReceipt> _t)
 {
 	m_store.transaction_receipt_put(transaction_a, _hash, *_t);
-	auto r = m_transaction_receipt_puts.push_back(put_item<h256, std::shared_ptr<dev::eth::TransactionReceipt>>(_hash, _t));
+	auto r = m_transaction_receipt_puts.push_back(put_item<h256, std::shared_ptr<dev::eth::LocalTransactionReceipt>>(_hash, _t));
 	assert_x(r.second);
 
 	if (m_transaction_receipt_puts.size() >= m_max_transaction_receipt_puts_size)
 	{
 		while (m_transaction_receipt_puts.size() >= m_max_transaction_receipt_puts_size / 2)
 		{
-			put_item<h256, std::shared_ptr<dev::eth::TransactionReceipt>> const & item(m_transaction_receipt_puts.front());
+			put_item<h256, std::shared_ptr<dev::eth::LocalTransactionReceipt>> const & item(m_transaction_receipt_puts.front());
 			m_transaction_receipt_puts_flushed.insert(std::move(item.key));
 			m_transaction_receipt_puts.pop_front();
 		}
@@ -494,7 +480,7 @@ void mcp::process_block_cache::mark_as_changing()
 
 	//transaction receipt
 	std::unordered_set<h256> receipt_changings(m_transaction_receipt_puts_flushed);
-	for (put_item<h256, std::shared_ptr<dev::eth::TransactionReceipt>> const & item : m_transaction_receipt_puts)
+	for (put_item<h256, std::shared_ptr<dev::eth::LocalTransactionReceipt>> const & item : m_transaction_receipt_puts)
 		receipt_changings.insert(item.key);
 	m_cache->mark_transaction_receipt_as_changing(receipt_changings);
 }
@@ -562,7 +548,7 @@ void mcp::process_block_cache::commit_and_clear_changing()
 
 	//modify transaction receipt cache
 	m_cache->transaction_receipt_earse(m_transaction_receipt_puts_flushed);
-	for (put_item<h256, std::shared_ptr<dev::eth::TransactionReceipt>> const & item : m_transaction_receipt_puts)
+	for (put_item<h256, std::shared_ptr<dev::eth::LocalTransactionReceipt>> const & item : m_transaction_receipt_puts)
 		m_cache->transaction_receipt_put(item.key, item.value);
 	m_transaction_receipt_puts.clear();
 	m_transaction_receipt_puts_flushed.clear();

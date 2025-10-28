@@ -7,7 +7,6 @@ mcp::block_cache::block_cache(mcp::block_store &store_a) :
 	//m_latest_account_states(10000),
 	m_transactions(50000),
 	m_account_nonces(10000),
-	m_transaction_address(10000),
 	m_successors(300),
 	m_block_summarys(500),
 	m_block_numbers(1000),
@@ -322,28 +321,6 @@ void mcp::block_cache::clear_account_nonce_changing()
 	m_account_nonce_changings.clear();
 }
 
-
-std::shared_ptr<mcp::TransactionAddress> mcp::block_cache::transaction_address_get(mcp::db::db_transaction & transaction_a, h256 const & hash)
-{
-	std::shared_ptr<mcp::TransactionAddress> td = nullptr;
-	std::lock_guard<std::mutex> lock(m_transaction_address_mutex);
-	bool exists = m_transaction_address.tryGet(hash, td);
-	if (!exists)
-	{
-		td = m_store.transaction_address_get(transaction_a, hash);
-		if (td)
-			m_transaction_address.insert(hash, td);
-	}
-	return td;
-}
-
-void mcp::block_cache::transaction_address_put(h256 const & hash, std::shared_ptr<mcp::TransactionAddress> const& td)
-{
-	std::lock_guard<std::mutex> lock(m_transaction_address_mutex);
-	m_transaction_address.insert(hash, td);
-}
-
-
 bool mcp::block_cache::successor_get(mcp::db::db_transaction & transaction_a, mcp::block_hash const & root_a, mcp::block_hash & successor_a)
 {
 	bool exists;
@@ -468,15 +445,9 @@ void mcp::block_cache::block_number_put(uint64_t const & index_a, mcp::block_has
 	m_number_blocks.insert(hash_a, index_a);
 }
 
-bool mcp::block_cache::transaction_receipt_exists(mcp::db::db_transaction & transaction_a, h256 const & hash)
+std::shared_ptr<dev::eth::LocalTransactionReceipt> mcp::block_cache::transaction_receipt_get(mcp::db::db_transaction &transaction_a, h256 const &hash)
 {
-	auto t = transaction_receipt_get(transaction_a, hash);
-	return t != nullptr;
-}
-
-std::shared_ptr<dev::eth::TransactionReceipt> mcp::block_cache::transaction_receipt_get(mcp::db::db_transaction &transaction_a, h256 const &hash)
-{
-	std::shared_ptr<dev::eth::TransactionReceipt> t = nullptr;
+	std::shared_ptr<dev::eth::LocalTransactionReceipt> t = nullptr;
 	std::lock_guard<std::mutex> lock(m_transaction_receipt_mutex);
 	if (!m_transaction_receipt_changings.count(hash))
 	{
@@ -494,7 +465,7 @@ std::shared_ptr<dev::eth::TransactionReceipt> mcp::block_cache::transaction_rece
 	return t;
 }
 
-void mcp::block_cache::transaction_receipt_put(h256 const &hash, std::shared_ptr<dev::eth::TransactionReceipt> const & t)
+void mcp::block_cache::transaction_receipt_put(h256 const &hash, std::shared_ptr<dev::eth::LocalTransactionReceipt> const & t)
 {
 	std::lock_guard<std::mutex> lock(m_transaction_receipt_mutex);
 	m_transaction_receipts.insert(hash, t);

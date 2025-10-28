@@ -3,18 +3,14 @@
 #include "chain.hpp"
 #include <mcp/node/evm/Executive.hpp>
 #include <mcp/common/Exceptions.h>
-//#include <mcp/common/stopwatch.hpp>
+#include <mcp/core/param.hpp>
 using namespace std;
 
-mcp::chain_state::chain_state(/*mcp::db::db_transaction& transaction_a, */u256 const& _accountStartNonce, /*mcp::block_store& store_a,*/
-	/*std::shared_ptr<mcp::chain> chain_a,*/ /*std::shared_ptr<mcp::iblock_cache> cache_a,*/ OverlayDB const& _db, BaseState _bs):
-    //transaction(transaction_a),
-    //store(store_a),
-	//chain(chain_a),
-    //block_cache(cache_a),
+u256 const c_accountStartNonce = 0;
+
+mcp::chain_state::chain_state(OverlayDB const& _db, BaseState _bs):
     m_db(_db),
-    m_state(&m_db),
-    m_accountStartNonce(/*_accountStartNonce*/0)
+    m_state(&m_db)
 {
     if (_bs != BaseState::PreExisting)
         // Initialise to the state entailed by the genesis block; this guarantees the trie is built correctly.
@@ -27,9 +23,7 @@ mcp::chain_state::chain_state(chain_state const& _s) :
     m_cache(_s.m_cache),
     m_unchangedCacheEntries(_s.m_unchangedCacheEntries),
     m_nonExistingAccountsCache(_s.m_nonExistingAccountsCache),
-    m_touched(_s.m_touched),
-    //m_unrevertablyTouched(_s.m_unrevertablyTouched),
-    m_accountStartNonce(_s.m_accountStartNonce)
+    m_touched(_s.m_touched)
 {
 }
 
@@ -44,8 +38,6 @@ mcp::chain_state& mcp::chain_state::operator=(chain_state const& _s)
     m_unchangedCacheEntries = _s.m_unchangedCacheEntries;
     m_nonExistingAccountsCache = _s.m_nonExistingAccountsCache;
     m_touched = _s.m_touched;
-    //m_unrevertablyTouched = _s.m_unrevertablyTouched;
-    m_accountStartNonce = _s.m_accountStartNonce;
     return *this;
 }
 
@@ -59,7 +51,6 @@ void mcp::chain_state::incNonce(Address const& _addr)
     }
     else
         // This is possible if a transaction has gas price 0.
-        //createAccount(_addr, std::make_shared<mcp::account_state>(_addr, ts.sha3(), h256(0), requireAccountStartNonce() + 1, 0));
         createAccount(_addr, std::make_shared<mcp::account_state>(requireAccountStartNonce() + 1, 0));
 }
 
@@ -73,7 +64,6 @@ void mcp::chain_state::setNonce(Address const& _addr, mcp::uint256_t const& _new
     }
     else
         // This is possible when a contract is being created.
-        //createAccount(_addr, std::make_shared<mcp::account_state>(_addr, ts.sha3(), h256(0), _newNonce, 0));
         createAccount(_addr, std::make_shared<mcp::account_state>(_newNonce, 0));
 }
 
@@ -82,22 +72,12 @@ mcp::uint256_t mcp::chain_state::getNonce(Address const& _addr) const
     if (std::shared_ptr<mcp::account_state> a = account(_addr))
         return a->nonce();
     else
-        return m_accountStartNonce;
+        return c_accountStartNonce;
 }
 
 u256 const& mcp::chain_state::requireAccountStartNonce() const
 {
-    if (m_accountStartNonce == Invalid256)
-        BOOST_THROW_EXCEPTION(InvalidAccountStartNonceInState());
-    return m_accountStartNonce;
-}
-
-void mcp::chain_state::noteAccountStartNonce(u256 const& _actual)
-{
-    if (m_accountStartNonce == Invalid256)
-        m_accountStartNonce = _actual;
-    else if (m_accountStartNonce != _actual)
-        BOOST_THROW_EXCEPTION(IncorrectAccountStartNonceInState());
+    return c_accountStartNonce;
 }
 
 std::shared_ptr<mcp::account_state> mcp::chain_state::account(Address const& _addr) const
@@ -150,6 +130,91 @@ std::shared_ptr<mcp::account_state> mcp::chain_state::account(Address const& _ad
 
 void mcp::chain_state::clearCacheIfTooLarge() const
 {
+    // TODO: Find a good magic number
+    while (m_unchangedCacheEntries.size() > 1000)
+    {
+        // Remove a random element
+        // FIXME: Do not use random device as the engine. The random device should be only used to seed other engine.
+        size_t const randomIndex = std::uniform_int_distribution<size_t>(0, m_unchangedCacheEntries.size() - 1)(dev::s_fixedHashEngine);
+
+        Address const addr = m_unchangedCacheEntries[randomIndex];
+        swap(m_unchangedCacheEntries[randomIndex], m_unchangedCacheEntries.back());
+        m_unchangedCacheEntries.pop_back();
+
+        auto cacheEntry = m_cache.find(addr);
+        if (cacheEntry != m_cache.end() && !cacheEntry->second->isDirty())
+            m_cache.erase(cacheEntry);
+    }
+}
+
+std::unordered_map<Address, u256> mcp::chain_state::addresses() const
+{
+#if ETH_FATDB
+    unordered_map<Address, u256> ret;
+    for (auto& i : m_cache)
+        if (i.second->isAlive())
+            ret[i.first] = i.second->balance();
+    for (auto const& i : m_state)
+        if (m_cache.find(i.first) == m_cache.end())
+            ret[i.first] = RLP(i.second)[1].toInt<u256>();
+    return ret;
+#else
+    BOOST_THROW_EXCEPTION(InterfaceNotSupported() << errinfo_interface("State::addresses()"));
+#endif
+}
+
+std::pair<mcp::chain_state::AddressMap, h256> mcp::chain_state::addresses(h256 const& _beginHash, size_t _maxResults) const
+{
+    AddressMap addresses;
+    h256 nextKey;
+
+#if ETH_FATDB
+    for (auto it = m_state.hashedLowerBound(_beginHash); it != m_state.hashedEnd(); ++it)
+    {
+        auto const address = Address(it.key());
+        auto const itCachedAddress = m_cache.find(address);
+
+        // skip if deleted in cache
+        if (itCachedAddress != m_cache.end() && itCachedAddress->second->isDirty() &&
+            !itCachedAddress->second->isAlive())
+            continue;
+
+        // break when _maxResults fetched
+        if (addresses.size() == _maxResults)
+        {
+            nextKey = h256((*it).first);
+            break;
+        }
+
+        h256 const hashedAddress((*it).first);
+        addresses[hashedAddress] = address;
+    }
+#endif
+
+    // get addresses from cache with hash >= _beginHash (both new and old touched, we can't
+    // distinguish them) and order by hash
+    AddressMap cacheAddresses;
+    for (auto const& addressAndAccount : m_cache)
+    {
+        auto const& address = addressAndAccount.first;
+        auto const addressHash = sha3(address);
+        auto const& account = addressAndAccount.second;
+        if (account->isDirty() && account->isAlive() && addressHash >= _beginHash)
+            cacheAddresses.emplace(addressHash, address);
+    }
+
+    // merge addresses from DB and addresses from cache
+    addresses.insert(cacheAddresses.begin(), cacheAddresses.end());
+
+    // if some new accounts were created in cache we need to return fewer results
+    if (addresses.size() > _maxResults)
+    {
+        auto itEnd = std::next(addresses.begin(), _maxResults);
+        nextKey = itEnd->first;
+        addresses.erase(itEnd, addresses.end());
+    }
+
+    return { addresses, nextKey };
 }
 
 std::pair<mcp::ExecutionResult, dev::eth::TransactionReceipt> mcp::chain_state::execute(dev::eth::EnvInfo const& _envInfo, SealEngineFace const& _sealEngine, Permanence _p, mcp::Transaction const& _t/*, dev::eth::OnOpFunc const& _onOp*/)
@@ -157,8 +222,6 @@ std::pair<mcp::ExecutionResult, dev::eth::TransactionReceipt> mcp::chain_state::
 	Executive e(*this, _envInfo, _sealEngine/*, traces*/);
     ExecutionResult res;
     e.setResultRecipient(res);
-
-	//ts = _t;
 
     //auto onOp = _onOp;
 //#if ETH_VMTRACE
@@ -176,29 +239,38 @@ std::pair<mcp::ExecutionResult, dev::eth::TransactionReceipt> mcp::chain_state::
 		m_cache.clear();
 		break;
 	case Permanence::Committed:
-		for (auto const& i : m_cache)
-		{
-			res.modified_accounts.insert(i.first);
-		}
+		//for (auto const& i : m_cache)
+		//{
+		//	res.modified_accounts.insert(i.first);
+		//}
 		commit(); // Remove empty accounts
 		break;
 	case Permanence::Uncommitted:
 		break;
 	}
 
-	TransactionReceipt const receipt = TransactionReceipt(statusCode, startGasUsed + e.gasUsed(), e.logs(), _envInfo.mci());
-	return std::make_pair(res, receipt);
+	TransactionReceipt const receipt = TransactionReceipt(statusCode, startGasUsed + e.gasUsed(), e.logs(), mcp::param::get()->IsOIP5(_envInfo.mci()));
+    //if (_p == Permanence::Committed)
+    //    cnote << "receipt " << _t.sha3().hexPrefixed() << " : " << dev::toHex(receipt.rlp());
+    //cnote << "receipt status:" << int(receipt.statusCode())
+    //    << " ,gasUsed:" << receipt.gasUsed()
+    //    << " ,bloom:" << dev::toHex(receipt.bloom());
+    //for (auto const& it : receipt.log())
+    //{
+    //    RLPStream s; it.streamRLP(s); 
+    //    cnote << "receipt log rlp:" << dev::toHex(s.out());
+    //}
+    return std::make_pair(res, receipt);
 }
 
 void mcp::chain_state::executeBlockTransactions(Block const& _block, unsigned _txCount, SealEngineFace const& _sealEngine)
 {
-    u256 gasUsed = 0;
     for (unsigned i = 0; i < _txCount; ++i)
     {
+        //cnote << "executeBlockTransactions:" << _block.pending()[i].sha3().hexPrefixed();
         EnvInfo envInfo(_block.info(), mcp::chainID());
         Executive e(*this, envInfo, _sealEngine);
         executeTransaction(e, _block.pending()[i]/*, OnOpFunc()*/);
-        gasUsed += e.gasUsed();
     }
 }
 
@@ -268,7 +340,7 @@ void mcp::chain_state::rollback(size_t _savepoint)
             m_cache.erase(change.address);
             break;
         case Change::Code:
-            account->setCode(std::move(change.oldCode));
+            account->resetCode();
             break;
         case Change::Touch:
             account->untouch();
@@ -291,21 +363,11 @@ h256 mcp::chain_state::blockHash(u256 _number)
 
 void mcp::chain_state::commit()
 {
-    //if (ts.isCreation() || addressHasCode(ts.receiveAddress()))
-    //{
-    //    save_previous_account_state();
-    //}
     removeEmptyAccounts();
-	//std::shared_ptr<mcp::process_block_cache> process_block_cache = std::dynamic_pointer_cast<mcp::process_block_cache>(block_cache);
-    //m_touched += mcp::commit(transaction, m_cache, &m_db, process_block_cache, store, ts.sha3());
     m_touched += mcp::commit(m_cache, m_state);
     m_changeLog.clear();
     m_cache.clear();
     m_unchangedCacheEntries.clear();
-
-	//save traces
-	//store.traces_put(transaction, ts.sha3(), traces);
-	//traces.clear();
 }
 
 void mcp::chain_state::setRoot(h256 const& _root)
@@ -313,7 +375,6 @@ void mcp::chain_state::setRoot(h256 const& _root)
     m_cache.clear();
     m_unchangedCacheEntries.clear();
     m_nonExistingAccountsCache.clear();
-    //  m_touched.clear();
     m_state.setRoot(_root);
 }
 
@@ -323,21 +384,6 @@ void mcp::chain_state::removeEmptyAccounts()
         if (i.second->isDirty() && i.second->isEmpty())
             i.second->kill();
 }
-
-//void mcp::chain_state::save_previous_account_state()
-//{
-//    std::vector<h256> hs;
-//    for(auto& address : m_unchangedCacheEntries)
-//    {
-//        h256 hash;
-//        bool exists = !store.latest_account_state_get(transaction, address, hash);
-//        if (exists)
-//        {
-//            hs.emplace_back(hash);
-//        }
-//    }
-//    store.transaction_previous_account_state_put(transaction, ts.sha3(), hs);
-//}
 
 bool mcp::chain_state::addressHasCode(Address const& _id) const
 {
@@ -459,6 +505,17 @@ void mcp::chain_state::clearStorage(Address const& _contract)
     m_cache[_contract]->clearStorage();
 }
 
+h256 mcp::chain_state::storageRoot(Address const& _id) const
+{
+    string s = m_state.at(_id);
+    if (s.size())
+    {
+        RLP r(s);
+        return r[2].toHash<h256>();
+    }
+    return EmptyTrie;
+}
+
 std::map<h256, std::pair<u256, u256>> mcp::chain_state::storage(Address const& _id) const
 {
 #if ETH_FATDB
@@ -509,13 +566,6 @@ dev::bytes const& mcp::chain_state::code(Address const& _addr) const
         // Load the code from the backend.
 		std::shared_ptr<mcp::account_state> mutableAccount = a;
         mutableAccount->noteCode(m_db.lookup(a->codeHash()));
-        
-        ////test
-        //auto _code = m_db.lookup(a->codeHash());
-        //std::cout << "address:" << _addr.hexPrefixed() << ",codeHash:" << a->codeHash().hexPrefixed() << ",code:" << _code.size() << std::endl;
-        //mutableAccount->noteCode(_code);
-
-
         CodeSizeCache::instance().store(a->codeHash(), a->code().size());
     }
 
@@ -524,7 +574,10 @@ dev::bytes const& mcp::chain_state::code(Address const& _addr) const
 
 void mcp::chain_state::setCode(Address const& _address, dev::bytes&& _code)
 {
-    m_changeLog.emplace_back(_address, code(_address));
+    // rollback assumes that overwriting of the code never happens
+    // (not allowed in contract creation logic in Executive)
+    assert(!addressHasCode(_address));
+    m_changeLog.emplace_back(Change::Code, _address);
     m_cache[_address]->setCode(std::move(_code));
 }
 
@@ -557,33 +610,6 @@ size_t mcp::chain_state::codeSize(Address const& _a) const
         return 0;
 }
 
-
-//bool mcp::chain_state::is_precompiled(Address const& account_a, uint64_t const& last_summary_mci_a) const
-//{
-//	return chain->is_precompiled(account_a, last_summary_mci_a);
-//}
-//bigint mcp::chain_state::cost_of_precompiled(Address const& account_a, bytesConstRef in_a) const
-//{
-//	return chain->cost_of_precompiled(account_a, in_a);
-//}
-//std::pair<bool, bytes> mcp::chain_state::execute_precompiled(Address const& account_a, bytesConstRef in_a) const
-//{
-//	return chain->execute_precompiled(account_a, in_a);
-//}
-
-//void mcp::chain_state::set_defalut_account_state(std::vector<h256>& accout_state_hashs)
-//{
-//    for(auto hash : accout_state_hashs)
-//    {
-//        std::shared_ptr<mcp::account_state> acc_state(store.account_state_get(transaction, hash));
-//        if (acc_state)
-//        {
-//            LOG(m_log.debug) << "[set_defalut_account_state] "<<toHexPrefixed(acc_state->account());
-//            m_cache.insert(std::make_pair(acc_state->account(), acc_state));
-//        }
-//    }
-//}
-
 // Diff from commit in aleth, here we
 // 1. insert code into db if it's available
 // 2. commit storageDB to DB
@@ -598,56 +624,64 @@ AddressHash mcp::commit(AccountMap const& _cache, dev::eth::SecureTrieDB<Address
     {
         if (i.second->isDirty())
         {
-            RLPStream s(4);
-            s << i.second->nonce() << i.second->balance();
-
-            std::shared_ptr<mcp::account_state> state(i.second);
-            if (i.second->storageOverlay().empty())
-            {
-                assert_x(i.second->baseRoot());
-                s.append(i.second->baseRoot());
-            }
+            if (!i.second->isAlive())
+                _state.remove(i.first);
             else
             {
-                dev::eth::SecureTrieDB<h256, DB> storageDB(_state.db(), i.second->baseRoot());
-                for (auto const& j : i.second->storageOverlay())
-                    if (j.second)
-                    {
-                        storageDB.insert(j.first, rlp(j.second));
-                        //cnote << j.first << ":" << j.second;
+                RLPStream s(4);
+                s << i.second->nonce() << i.second->balance();
 
-                        //auto _kk = bytesConstRef(storageDB.at(j.first));
-                        //cnote << j.first << " get:" << RLP(_kk).toInt<u256>();
-                    }
-                    else
-                        storageDB.remove(j.first);
-                assert_x(storageDB.root());
-                s.append(storageDB.root());
-                //cnote << "storage commit root:" << storageDB.root().hex();
-            }
+                std::shared_ptr<mcp::account_state> state(i.second);
+                if (i.second->storageOverlay().empty())
+                {
+                    assert_x(i.second->baseRoot());
+                    s.append(i.second->baseRoot());
+                    //cnote << "baseRoot:" << i.first.hexPrefixed() << ":" << i.second->baseRoot().hexPrefixed();
+                }
+                else
+                {
+                    dev::eth::SecureTrieDB<h256, DB> storageDB(_state.db(), i.second->baseRoot());
+                    for (auto const& j : i.second->storageOverlay())
+                        if (j.second)
+                        {
+                            storageDB.insert(j.first, rlp(j.second));
+                            //cnote << j.first << ":" << j.second;
 
-            if (i.second->hasNewCode())
-            {
-                h256 ch = i.second->codeHash();
+                            //auto _kk = bytesConstRef(storageDB.at(j.first));
+                            //cnote << j.first << " get:" << RLP(_kk).toInt<u256>();
+                        }
+                        else
+                            storageDB.remove(j.first);
+                    assert_x(storageDB.root());
+                    s.append(storageDB.root());
 
-                /////test
-                //std::cout << i.first.hexPrefixed() << ",codeHash:" << ch.hexPrefixed() << ",code:" << i.second->code().size() << std::endl;
+                    //cnote << "storage root:" << i.first.hexPrefixed() << ":" << storageDB.root().hexPrefixed();
+                }
 
-                // Store the size of the code
-                dev::eth::CodeSizeCache::instance().store(ch, i.second->code().size());
-                _state.db()->insert(ch, &i.second->code());
-                s << ch;
-            }
-            else
-                s << i.second->codeHash();
+                if (i.second->hasNewCode())
+                {
+                    h256 ch = i.second->codeHash();
 
-            {
+                    /////test
+                    //std::cout << i.first.hexPrefixed() << ",codeHash:" << ch.hexPrefixed() << ",code:" << i.second->code().size() << std::endl;
+
+                    // Store the size of the code
+                    dev::eth::CodeSizeCache::instance().store(ch, i.second->code().size());
+                    _state.db()->insert(ch, &i.second->code());
+                    s << ch;
+                }
+                else
+                    s << i.second->codeHash();
+
                 //mcp::stopwatch_guard sw("chain state:commit2");
                 _state.insert(i.first, &s.out());
-
+                //cnote << "account:" << i.second->nonce() 
+                //    << ":" << i.second->balance()
+                //    << ":" << i.second->codeHash().hex()
+                //    << ":" << i.second->code().size();
+                //cnote << "account rlp:" << i.first.hex() << ":" << toHex(s.out());
                 //auto _kk = bytesConstRef(_state.at(i.first));
                 //cnote << i.first.hex() << " account:" << toHex(_kk);
-
                //db->commit();
             }
 
@@ -662,6 +696,37 @@ mcp::chain_state& mcp::createIntermediateState(mcp::chain_state& o_s, mcp::Block
 {
     o_s = _block.state();
     o_s.setRoot(_block.stateRootBeforeTx());
+    //cnote << "createIntermediateState set Root:" << _block.stateRootBeforeTx().hexPrefixed();
+    //dev::Address _addr("0x2a3f10b9fcf6fC7885Dae49C12917A917ef8d6D1");
+    //auto _b(o_s.balance(_addr));
+
+    //dev::Address _c("0xd165359e576e7a5334441E8149923fbf0b97E8f1");
+    //{
+    //    auto ret = o_s.storage(_c);
+    //    if (ret.size() == 0)
+    //        cnote << "createIntermediateState storage size 0";
+    //    for (auto const& _m : ret)
+    //    {
+    //        cnote << _c.hexPrefixed() << ":" << _m.first.hexPrefixed()
+    //            << ":" << _m.second.first
+    //            << ":" << _m.second.second;
+    //    }
+    //}
     o_s.executeBlockTransactions(_block, _txIndex,  *_bc.sealEngine());
+    //cnote << "createIntermediateState 0x2a3f10b9fcf6fC7885Dae49C12917A917ef8d6D1 balance:" 
+    //    << _b << ":" << o_s.balance(_addr);
+
+    //{
+    //    auto ret = o_s.storage(_c);
+    //    if (ret.size() == 0)
+    //        cnote << "createIntermediateState hou storage size 0";
+    //    for (auto const& _m : ret)
+    //    {
+    //        cnote << _c.hexPrefixed() << ":" << _m.first.hexPrefixed()
+    //            << ":" << _m.second.first
+    //            << ":" << _m.second.second;
+    //    }
+    //}
+    
     return o_s;
 }

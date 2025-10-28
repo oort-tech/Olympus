@@ -10,6 +10,9 @@ using namespace dev;
 
 namespace mcp
 {
+/// The zero address.
+extern log_bloom const ZeroLogBloom;
+
 struct log_entry
 {
 	log_entry() = default;

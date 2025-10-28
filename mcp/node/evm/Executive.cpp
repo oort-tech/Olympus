@@ -130,7 +130,7 @@ bool mcp::Executive::call(dev::eth::CallParameters const& _p, u256 const& _gasPr
 
     m_savepoint = m_s.savepoint();
 
-	if (m_sealEngine.isPrecompiled(_p.codeAddress, m_envInfo.mc_last_summary_mci()))
+	if (m_sealEngine.isPrecompiled(_p.codeAddress, m_envInfo.mci()))
 	{
 		bigint g = m_sealEngine.costOfPrecompiled(_p.codeAddress, _p.data);
 		if (_p.gas < g)

@@ -151,7 +151,7 @@ mcp::block_state::block_state(bool & error_a, dev::RLP const & r)
 	if (error_a)
 		return;
 
-	error_a = (r.itemCount() != 16 && r.itemCount() != 20);
+	error_a = (r.itemCount() != 18 && r.itemCount() != 19);
 	if (error_a)
 		return;
 
@@ -242,15 +242,21 @@ mcp::block_state::block_state(bool & error_a, dev::RLP const & r)
 
 	if (r.itemCount() == 16)
 		return;
+
 	m_stateRoot = (h256)r[16];
-	m_transactionsRoot = (h256)r[17];
-	m_receiptsRoot = (h256)r[18];
-	m_logBloom = (log_bloom)r[19];
+	//m_transactionsRoot = (h256)r[17];
+	m_receiptsRoot = (h256)r[17];
+	if (r.itemCount() == 18)
+		return;
+	m_logBloom = (log_bloom)r[18];
 }
 
 void mcp::block_state::stream_RLP(dev::RLPStream & s) const
 {
-	s.appendList(20);
+	if (ZeroLogBloom == m_logBloom)
+		s.appendList(18);
+	else
+		s.appendList(19);
 
 	s << (uint8_t)status << is_free << is_stable;
 
@@ -317,7 +323,9 @@ void mcp::block_state::stream_RLP(dev::RLPStream & s) const
 		s.appendList(0);
 	}
 
-	s << stable_index << m_stateRoot << m_transactionsRoot << m_receiptsRoot << m_logBloom;
+	s << stable_index << m_stateRoot << m_receiptsRoot;
+	if (ZeroLogBloom != m_logBloom)
+		s << m_logBloom;
 }
 
 mcp::free_key::free_key(uint64_t const & witnessed_level_a, uint64_t const & level_a, mcp::block_hash const & hash_a) :
@@ -365,25 +373,25 @@ void mcp::free_key::deserialize(mcp::stream & stream_a)
 }
 
 
-mcp::hash_tree_info::hash_tree_info()
-{
-}
-
-mcp::hash_tree_info::hash_tree_info(mcp::block_hash const & b_hash_a, mcp::summary_hash const & s_hash_a) :
-    b_hash(b_hash_a), s_hash(s_hash_a)
-{
-}
-
-mcp::hash_tree_info::hash_tree_info(dev::Slice const & val_a)
-{
-    assert_x(val_a.size() == sizeof(*this));
-    std::copy(reinterpret_cast<uint8_t const *> (val_a.data()), reinterpret_cast<uint8_t const *> (val_a.data()) + sizeof(*this), reinterpret_cast<uint8_t *> (this));
-}
-
-dev::Slice mcp::hash_tree_info::val() const
-{
-    return dev::Slice((char *)this, sizeof(*this));
-}
+//mcp::hash_tree_info::hash_tree_info()
+//{
+//}
+//
+//mcp::hash_tree_info::hash_tree_info(mcp::block_hash const & b_hash_a, mcp::summary_hash const & s_hash_a) :
+//    b_hash(b_hash_a), s_hash(s_hash_a)
+//{
+//}
+//
+//mcp::hash_tree_info::hash_tree_info(dev::Slice const & val_a)
+//{
+//    assert_x(val_a.size() == sizeof(*this));
+//    std::copy(reinterpret_cast<uint8_t const *> (val_a.data()), reinterpret_cast<uint8_t const *> (val_a.data()) + sizeof(*this), reinterpret_cast<uint8_t *> (this));
+//}
+//
+//dev::Slice mcp::hash_tree_info::val() const
+//{
+//    return dev::Slice((char *)this, sizeof(*this));
+//}
 
 mcp::block_child_key::block_child_key(mcp::block_hash const & hash_a, mcp::block_hash const & child_hash_a) :
     hash(hash_a), child_hash(child_hash_a)
@@ -406,40 +414,40 @@ dev::Slice mcp::block_child_key::val() const
     return dev::Slice((char *)this, sizeof(*this));
 }
 
-mcp::account_state::account_state(bool & error_a, dev::RLP const & r, Changedness _c) :
-	m_isUnchanged(_c == Unchanged)
-{
-	error_a = r.itemCount() != 8;
-	m_account = (Address)r[0];
-	m_ts = (h256)r[1];
-	m_previous = (h256)r[2];
-	m_nonce = (u256)r[3];
-	m_balance = (u256)r[4];
-	m_storageRoot = (h256)r[5];
-	m_codeHash = (h256)r[6];
-	m_isAlive = r[7].toInt();
+//mcp::account_state::account_state(bool & error_a, dev::RLP const & r, Changedness _c) :
+//	m_isUnchanged(_c == Unchanged)
+//{
+//	error_a = r.itemCount() != 8;
+//	m_account = (Address)r[0];
+//	m_ts = (h256)r[1];
+//	m_previous = (h256)r[2];
+//	m_nonce = (u256)r[3];
+//	m_balance = (u256)r[4];
+//	m_storageRoot = (h256)r[5];
+//	m_codeHash = (h256)r[6];
+//	m_isAlive = r[7].toInt();
+//
+//	record_init_hash();
+//}
 
-	record_init_hash();
-}
+//void mcp::account_state::record_init_hash()
+//{
+//	init_hash = hash();
+//}
 
-void mcp::account_state::record_init_hash()
-{
-	init_hash = hash();
-}
+//void mcp::account_state::stream_RLP(dev::RLPStream & s) const
+//{
+//	s.appendList(8);
+//	s << m_account  << m_ts  << m_previous << m_nonce << m_balance << m_storageRoot << m_codeHash << m_isAlive;
+//}
 
-void mcp::account_state::stream_RLP(dev::RLPStream & s) const
-{
-	s.appendList(8);
-	s << m_account  << m_ts  << m_previous << m_nonce << m_balance << m_storageRoot << m_codeHash << m_isAlive;
-}
-
-h256 mcp::account_state::hash()
-{
-	RLPStream s;
-	stream_RLP(s);
-
-	return dev::sha3(s.out());
-}
+//h256 mcp::account_state::hash()
+//{
+//	RLPStream s;
+//	stream_RLP(s);
+//
+//	return dev::sha3(s.out());
+//}
 
 void mcp::account_state::setCode(dev::bytes&& _code)
 {
@@ -514,6 +522,29 @@ mcp::summary_hash mcp::summary::gen_summary_hash(mcp::block_hash const & block_h
 	for (auto & sk : skiplist)
 		s << sk;
 	s << (uint8_t)status_a << stable_index_a << mc_timestamp_a;
+
+	return dev::sha3(s.out());
+}
+
+mcp::summary_hash mcp::summary::gen_summary_hash(mcp::block_hash const& block_hash, mcp::summary_hash const& previous_hash,
+	std::list<mcp::summary_hash> const& parent_hashs, h256 const& receipts_root, std::set<mcp::summary_hash> const& skiplist,
+	mcp::block_status const& status_a, uint64_t const& stable_index_a, uint64_t const& mc_timestamp_a,
+	uint64_t const& mci_a, h256 const& stateRoot_a, log_bloom const& logBloom_a)
+{
+	dev::RLPStream s;
+	s.appendList(11);
+	s << block_hash << previous_hash;
+
+	s.appendList(parent_hashs.size());
+	for (auto& parent : parent_hashs)
+		s << parent;
+
+	s << receipts_root;
+	s.appendList(skiplist.size());
+	for (auto& sk : skiplist)
+		s << sk;
+	s << (uint8_t)status_a << stable_index_a << mc_timestamp_a
+		<< mci_a << stateRoot_a << logBloom_a;
 
 	return dev::sha3(s.out());
 }
@@ -836,11 +867,11 @@ boost::filesystem::path mcp::working_path()
 	return result;
 }
 
-boost::filesystem::path mcp::unique_path()
-{
-	auto result(working_path() / boost::filesystem::unique_path());
-	return result;
-}
+//boost::filesystem::path mcp::unique_path()
+//{
+//	auto result(working_path() / boost::filesystem::unique_path());
+//	return result;
+//}
 
 mcp::epoch_approves_key::epoch_approves_key(dev::Slice const & val_a)
 {

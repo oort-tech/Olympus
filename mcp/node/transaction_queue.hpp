@@ -5,7 +5,7 @@
 #include <mcp/core/transaction_queue.hpp>
 #include <libdevcore/Guards.h>
 #include <libdevcore/LruCache.h>
-#include <mcp/node/chain.hpp>
+//#include <mcp/node/chain.hpp>
 #include <mcp/common/Exceptions.h>
 #include <mcp/common/async_task.hpp>
 #include <mcp/node/node_capability.hpp>

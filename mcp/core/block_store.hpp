@@ -14,7 +14,6 @@ namespace mcp
 		//account_info,
 		blocks,
 		transactions,
-		transaction_address,
 		account_nonce,
 		block_state,
 		successor,
@@ -74,10 +73,6 @@ namespace mcp
 		bool account_nonce_get(mcp::db::db_transaction & transaction_a, Address const & account_a, u256& nonce_a);
 		void account_nonce_put(mcp::db::db_transaction & transaction_a, Address const & account_a, u256 const& nonce_a);
 
-		/// transaction -> block
-		std::shared_ptr<mcp::TransactionAddress> transaction_address_get(mcp::db::db_transaction &, h256 const &);
-		void transaction_address_put(mcp::db::db_transaction &, h256 const &, mcp::TransactionAddress const &);
-		
 		/// approves
 		bool approve_exists(mcp::db::db_transaction &, h256 const &);
 		std::shared_ptr<mcp::approve> approve_get(mcp::db::db_transaction &, h256 const &);
@@ -178,8 +173,8 @@ namespace mcp
 		void catchup_max_index_put(mcp::db::db_transaction & transaction_a, uint64_t const& _v);
 		void catchup_max_index_del(mcp::db::db_transaction & transaction_a);
 
-		std::shared_ptr<dev::eth::TransactionReceipt> transaction_receipt_get(mcp::db::db_transaction & transaction_a, h256 const& hash_a);
-		void transaction_receipt_put(mcp::db::db_transaction &, h256 const& hash_a, dev::eth::TransactionReceipt const& receipt);
+		std::shared_ptr<dev::eth::LocalTransactionReceipt> transaction_receipt_get(mcp::db::db_transaction & transaction_a, h256 const& hash_a);
+		void transaction_receipt_put(mcp::db::db_transaction &, h256 const& hash_a, dev::eth::LocalTransactionReceipt const& receipt);
 
 		std::shared_ptr<dev::ApproveReceipt> approve_receipt_get(mcp::db::db_transaction & transaction_a, h256 const& hash_a);
 		void approve_receipt_put(mcp::db::db_transaction &, h256 const& hash_a, dev::ApproveReceipt const& receipt);

@@ -92,18 +92,18 @@ namespace mcp
 
 	mcp::json toJson(mcp::log_entry const& _e);
 
-	mcp::json toJson(mcp::block & _b);
+	mcp::json toJson(mcp::block const& _b);
 
-	mcp::json toJson(mcp::LocalisedBlock& _b, bool is_full = false);
+	mcp::json toJson(mcp::LocalisedBlock const& _b, bool is_full = false);
 
 
-	mcp::json toJson(mcp::block_state & _b);
+	mcp::json toJson(mcp::block_state const& _b);
 
 	mcp::json toJson(dev::ApproveReceipt const& _a);
 
 	std::string newRevertError(mcp::ExecutionResult const& result);
 
-	mcp::json toJson(WitnessList& _wl);
+	mcp::json toJson(WitnessList const& _wl);
 
 	mcp::json toJson(mcp::Approves const& _a);
 

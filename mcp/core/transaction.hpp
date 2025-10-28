@@ -192,21 +192,25 @@ namespace mcp
 			Transaction const& _t,
 			mcp::block_hash const& _blockHash,
 			unsigned _transactionIndex,
-			uint64_t _blockNumber = 0
+			unsigned _transactionExecIndex,
+			uint64_t _blockNumber
 		) :
 			Transaction(_t),
 			m_blockHash(_blockHash),
 			m_transactionIndex(_transactionIndex),
+			m_transactionExecIndex(_transactionExecIndex),
 			m_blockNumber(_blockNumber)
 		{}
 
 		mcp::block_hash const& blockHash() const { return m_blockHash; }
 		unsigned transactionIndex() const { return m_transactionIndex; }
+		unsigned transactionExecIndex() const { return m_transactionExecIndex; }
 		uint64_t blockNumber() const { return m_blockNumber; }
 
 	private:
 		mcp::block_hash m_blockHash;
 		unsigned m_transactionIndex;
+		unsigned m_transactionExecIndex;
 		uint64_t m_blockNumber;
 	};
 }
