@@ -1,5 +1,6 @@
 // Aleth: Ethereum C++ client, tools and libraries.
 // Copyright 2014-2019 Aleth Authors.
+// Copyright 2025-2026 The Olympus Developers.
 // Licensed under the GNU General Public License, Version 3.
 #pragma once
 
@@ -7,10 +8,13 @@
 
 #include <libevm/VMFace.h>
 #include <intx/intx.hpp>
-
+#include <libevm/Logger.h>
+#include <functional>
+#include <string>
+#include <vector>
 #include <evmc/evmc.h>
 #include <evmc/instructions.h>
-
+#include <libevm/Instruction.h>
 #include <boost/optional.hpp>
 
 namespace dev
@@ -46,6 +50,12 @@ struct VMSchedule
     static constexpr int64_t callSelfGas = 40;
 };
 
+using OpcodeLogCallback = std::function<void(uint64_t pc, Instruction op, const std::string& opName)>;
+
+extern OpcodeLogCallback g_opcodeLogCallback;
+class VM;
+extern thread_local VM* g_activeVm;
+
 class VM
 {
 public:
@@ -54,10 +64,23 @@ public:
     VM() = default;
 
     owning_bytes_ref exec(const evmc_host_interface* _host, evmc_host_context* _context,
-        evmc_revision _rev, const evmc_message* _msg, uint8_t const* _code, size_t _codeSize);
+        evmc_revision _rev, const evmc_message* _msg, uint8_t const* _code, size_t _codeSize, 
+        std::shared_ptr<EVMLogger> _tracer = nullptr);
 
     uint64_t m_io_gas = 0;
+public:
+    //sbytes const& getMemory() const { return m_newMemSize; }
+    size_t stackSize() { return m_stackEnd - m_SP; }
+    intx::uint256 const* getStackPointer() const { return m_SP; }
+    intx::uint256 const* getStackEnd() const { return m_stackEnd; }
+    const uint64_t memory() const { return m_newMemSize; }
+    std::vector<intx::uint256> stackIntx() const;
+    uint64_t gasLeft() const { return m_io_gas; }
+    uint64_t currentGasCost() const { return m_runGas; }
+    // space for memory
+    bytes m_mem;
 private:
+    std::shared_ptr<EVMLogger> m_tracer = nullptr;
     const evmc_host_interface* m_host = nullptr;
     evmc_host_context* m_context = nullptr;
     evmc_revision m_rev = EVMC_FRONTIER;
@@ -73,9 +96,6 @@ private:
     // return bytes
     owning_bytes_ref m_output;
 
-    // space for memory
-    bytes m_mem;
-
     uint8_t const* m_pCode = nullptr;
     size_t m_codeSize = 0;
     // space for code
@@ -87,7 +107,6 @@ private:
     // space for data stack, grows towards smaller addresses from the end
     intx::uint256 m_stack[VMSchedule::stackLimit];
     intx::uint256 *m_stackEnd = &m_stack[VMSchedule::stackLimit];
-    size_t stackSize() { return m_stackEnd - m_SP; }
     
     // constant pool
     std::vector<intx::uint256> m_pool;
@@ -133,7 +152,25 @@ private:
     std::vector<uint64_t> m_jumpDests;
     int64_t verifyJumpDest(intx::uint256 const& _dest, bool _throw = true);
 
-    void onOperation() {}
+    // Debug
+    // Set opcode logging callback for debugging
+    void setOpcodeLogCallback(const OpcodeLogCallback& callback) { m_opcodeLogCallback = callback; }
+    // Opcode logging callback
+    OpcodeLogCallback m_opcodeLogCallback;
+
+    //void onOperation() { onOperation(m_OP); };
+    void onOperation(Instruction _instr);
+    void onOperation() {
+        // Try instance callback first, then global callback
+        if (m_opcodeLogCallback) {
+            std::string opName = getInstructionName(m_OP);
+            m_opcodeLogCallback(m_PC, m_OP, opName);
+        } else if (g_opcodeLogCallback) {
+            std::string opName = getInstructionName(m_OP);
+            g_opcodeLogCallback(m_PC, m_OP, opName);
+        }
+    }
+    std::string getInstructionName(Instruction inst) const;
     void adjustStack(int _removed, int _added);
     uint64_t gasForMem(intx::uint512 const& _size);
     void updateIOGas();
