@@ -4,10 +4,12 @@
 #include <libevm/LegacyVM.h>
 #include <libevm/VMFactory.h>
 #include <mcp/common/Exceptions.h>
+#include <libinterpreter/VM.h>
 #include <mcp/common/stopwatch.hpp>
 #include <mcp/core/param.hpp>
 #include <mcp/node/chain.hpp>
 #include <numeric>
+#include <optional>
 
 using namespace std;
 using namespace dev;
@@ -15,25 +17,21 @@ using namespace dev::eth;
 
 namespace
 {
-	std::string dumpStackAndMemory(LegacyVM const& _vm)
+	struct OpcodeLogGuard
 	{
-		ostringstream o;
-		o << "\n    STACK\n";
-		for (auto i : _vm.stack())
-			o << (h256)i << "\n";
-		o << "    MEMORY\n"
-			<< ((_vm.memory().size() > 1000) ? " mem size greater than 1000 bytes " :
-				memDump(_vm.memory()));
-		return o.str();
-	};
+		explicit OpcodeLogGuard(dev::eth::OpcodeLogCallback cb)
+			: previous(dev::eth::g_opcodeLogCallback)
+		{
+			dev::eth::g_opcodeLogCallback = std::move(cb);
+		}
 
-	std::string dumpStorage(ExtVM const& _ext)
-	{
-		ostringstream o;
-		o << "    STORAGE\n";
-		for (auto const& i : _ext.state().storage(_ext.myAddress))
-			o << showbase << hex << i.second.first << ": " << i.second.second << "\n";
-		return o.str();
+		~OpcodeLogGuard()
+		{
+			dev::eth::g_opcodeLogCallback = previous;
+		}
+
+	private:
+		dev::eth::OpcodeLogCallback previous;
 	};
 
 }  // namespace
@@ -321,7 +319,7 @@ bool mcp::Executive::executeCreate(Address const& _sender, u256 const& _endowmen
     return !m_ext;
 }
 
-bool mcp::Executive::go(/*dev::eth::OnOpFunc const& _onOp*/)
+bool mcp::Executive::go()
 {
 	//mcp::stopwatch_guard sw("Executive:go");
     if (m_ext)
@@ -335,6 +333,53 @@ bool mcp::Executive::go(/*dev::eth::OnOpFunc const& _onOp*/)
 
             // Create VM instance. Force Interpreter if tracing requested.
             auto vm = VMFactory::create();
+			auto* interpreterVm = dynamic_cast<dev::eth::VM*>(vm.get());
+			std::unique_ptr<OpcodeLogGuard> opcodeLogGuard;
+			std::string txHashHex = m_t ? m_t.sha3().hexPrefixed() : "Tx Hash N/A";
+    		opcodeLogGuard = std::make_unique<OpcodeLogGuard>(
+				dev::eth::OpcodeLogCallback(
+					[this, interpreterVm, txHashHex](uint64_t pc, Instruction op, const std::string& opName) {
+						(void)interpreterVm;
+						BOOST_LOG(m_log.trace) << "EVM Opcode: TxHash=" << txHashHex
+                                       << " PC=" << pc
+                                       << " OP=" << opName
+                                       << " (0x" << std::hex << static_cast<int>(op) << std::dec << ")";
+									   auto tracerPtr = std::dynamic_pointer_cast<mcp::Tracer>(m_tracer);
+				dev::eth::VM const* activeVm = interpreterVm ? interpreterVm : dev::eth::g_activeVm;
+
+				if (tracerPtr)
+					tracerPtr->SetCurrentVM(activeVm);
+
+				uint64_t gasCost = activeVm ? activeVm->currentGasCost() : 0;
+                uint64_t gasLeft = 0;
+				if (activeVm)
+				{
+					BOOST_LOG(m_log.trace) << "Active VM in context";
+					gasLeft = activeVm->gasLeft();
+				}
+                else
+                {
+                    static const u256 maxGas64 = u256(std::numeric_limits<uint64_t>::max());
+                    gasLeft = m_gas > maxGas64 ? std::numeric_limits<uint64_t>::max() : m_gas.convert_to<uint64_t>();
+                }
+
+                if (m_tracer && m_ext)
+                {
+                    try
+                    {
+						BOOST_LOG(m_log.trace) << "Capturing tracer state, PC=" << pc << " OP=" << opName << " GasLeft=" << gasLeft << " GasCost=" << gasCost;
+                        m_tracer->CaptureState(pc, op, gasCost, gasLeft, nullptr, m_ext.get());
+                    }
+                    catch (...)
+                    {
+                        BOOST_LOG(m_log.debug) << "Tracer CaptureState failed for PC=" << pc << " OP=" << opName;
+                    }
+                }
+
+                if (tracerPtr)
+                    tracerPtr->SetCurrentVM(nullptr);
+            }));
+			
             if (m_isCreation)
             {
 				m_output = vm->exec(m_gas, *m_ext, m_tracer/*, _onOp*/);
@@ -448,7 +493,7 @@ bool mcp::Executive::go(/*dev::eth::OnOpFunc const& _onOp*/)
 #if ETH_TIMED_EXECUTIONS
         cnote << "VM took:" << t.elapsed() << "; gas used: " << (sgas - m_endGas);
 #endif
-    }
+		}
     return true;
 }
 

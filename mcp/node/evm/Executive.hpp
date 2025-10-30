@@ -47,7 +47,7 @@ namespace mcp
         void initialize(Transaction const& _transaction);
         bool finalize();
         bool execute();
-        bool go(/*dev::eth::OnOpFunc const& _onOp = dev::eth::OnOpFunc()*/);
+        bool go();
         void revert();
 
         /// @returns the log entries created by this operation.

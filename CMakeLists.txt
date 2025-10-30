@@ -257,14 +257,12 @@ SOURCE_GROUP(evm FILES ${NODE_EVM_SOURCES})
 FILE(GLOB NODE_TRACE_SOURCES
 	mcp/node/tracers/Tracer.hpp
 	mcp/node/tracers/Tracer.cpp
-	mcp/node/tracers/OpCode.hpp
-	mcp/node/tracers/OpCode.cpp
-	mcp/node/tracers/4byte.hpp
-	mcp/node/tracers/4byte.cpp
-	mcp/node/tracers/Call.hpp
-	mcp/node/tracers/Call.cpp
-	mcp/node/tracers/PreState.hpp
-	mcp/node/tracers/PreState.cpp
+	mcp/node/tracers/OpcodeTracer.hpp
+	mcp/node/tracers/OpcodeTracer.cpp
+	mcp/node/tracers/CallTracer.hpp
+	mcp/node/tracers/CallTracer.cpp
+	mcp/node/tracers/4ByteTracer.hpp
+	mcp/node/tracers/4ByteTracer.cpp
 )
 SOURCE_GROUP(tracers FILES ${NODE_TRACE_SOURCES})
 
@@ -294,8 +292,6 @@ add_library (node
 	mcp/node/arrival.cpp
 	mcp/node/arrival.hpp
 	mcp/node/arrival.hpp
-	mcp/node/debug.cpp
-	mcp/node/debug.hpp
 	mcp/node/transaction_queue.cpp
 	mcp/node/transaction_queue.hpp
 	mcp/node/common.cpp

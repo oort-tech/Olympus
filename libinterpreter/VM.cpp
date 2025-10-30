@@ -1,5 +1,6 @@
 // Aleth: Ethereum C++ client, tools and libraries.
 // Copyright 2014-2019 Aleth Authors.
+// Olympus: 2025-2026 mcp C++ client, tools and libraries.
 // Licensed under the GNU General Public License, Version 3.
 #include "interpreter.h"
 #include "VM.h"
@@ -33,6 +34,18 @@ evmc_result execute(evmc_vm* _instance, const evmc_host_interface* _host,
 
     evmc_result result = {};
     dev::eth::owning_bytes_ref output;
+
+    struct ActiveVmGuard
+    {
+        explicit ActiveVmGuard(dev::eth::VM* vm) : previous(dev::eth::g_activeVm)
+        {
+            dev::eth::g_activeVm = vm;
+        }
+
+        ~ActiveVmGuard() { dev::eth::g_activeVm = previous; }
+
+        dev::eth::VM* previous;
+    } guard(vm.get());
 
     try
     {
@@ -121,9 +134,115 @@ namespace dev
 {
 namespace eth
 {
+OpcodeLogCallback g_opcodeLogCallback;
+thread_local VM* g_activeVm = nullptr;
 uint64_t VM::memNeed(intx::uint256 const& _offset, intx::uint256 const& _size)
 {
     return toInt63(_size ? intx::uint512(_offset) + _size : intx::uint512(0));
+}
+
+void VM::onOperation(Instruction _instr)
+{
+    if (m_tracer)
+        m_tracer->CaptureState(m_PC, _instr, m_runGas, m_io_gas, nullptr, nullptr);
+}
+
+std::string VM::getInstructionName(Instruction inst) const
+{
+    // Simple mapping of common opcodes to their names
+    // For debugging purposes, we include the most important ones
+    switch (inst) {
+        case Instruction::STOP: return "STOP";
+        case Instruction::ADD: return "ADD";
+        case Instruction::MUL: return "MUL";
+        case Instruction::SUB: return "SUB";
+        case Instruction::DIV: return "DIV";
+        case Instruction::SDIV: return "SDIV";
+        case Instruction::MOD: return "MOD";
+        case Instruction::SMOD: return "SMOD";
+        case Instruction::ADDMOD: return "ADDMOD";
+        case Instruction::MULMOD: return "MULMOD";
+        case Instruction::EXP: return "EXP";
+        case Instruction::SIGNEXTEND: return "SIGNEXTEND";
+        case Instruction::LT: return "LT";
+        case Instruction::GT: return "GT";
+        case Instruction::SLT: return "SLT";
+        case Instruction::SGT: return "SGT";
+        case Instruction::EQ: return "EQ";
+        case Instruction::ISZERO: return "ISZERO";
+        case Instruction::AND: return "AND";
+        case Instruction::OR: return "OR";
+        case Instruction::XOR: return "XOR";
+        case Instruction::NOT: return "NOT";
+        case Instruction::BYTE: return "BYTE";
+        case Instruction::SHL: return "SHL";
+        case Instruction::SHR: return "SHR";
+        case Instruction::SAR: return "SAR";
+        //case Instruction::KECCAK256: return "KECCAK256";
+        case Instruction::ADDRESS: return "ADDRESS";
+        case Instruction::BALANCE: return "BALANCE";
+        case Instruction::ORIGIN: return "ORIGIN";
+        case Instruction::CALLER: return "CALLER";
+        case Instruction::CALLVALUE: return "CALLVALUE";
+        case Instruction::CALLDATALOAD: return "CALLDATALOAD";
+        case Instruction::CALLDATASIZE: return "CALLDATASIZE";
+        case Instruction::CALLDATACOPY: return "CALLDATACOPY";
+        case Instruction::CODECOPY: return "CODECOPY";
+        case Instruction::CODESIZE: return "CODESIZE";
+        case Instruction::GASPRICE: return "GASPRICE";
+        case Instruction::EXTCODESIZE: return "EXTCODESIZE";
+        case Instruction::EXTCODECOPY: return "EXTCODECOPY";
+        case Instruction::RETURNDATASIZE: return "RETURNDATASIZE";
+        case Instruction::RETURNDATACOPY: return "RETURNDATACOPY";
+        case Instruction::EXTCODEHASH: return "EXTCODEHASH";
+        case Instruction::BLOCKHASH: return "BLOCKHASH";
+        case Instruction::COINBASE: return "COINBASE";
+        case Instruction::TIMESTAMP: return "TIMESTAMP";
+        case Instruction::NUMBER: return "NUMBER";
+        case Instruction::DIFFICULTY: return "DIFFICULTY";
+        case Instruction::GASLIMIT: return "GASLIMIT";
+        case Instruction::CHAINID: return "CHAINID";
+        case Instruction::SELFBALANCE: return "SELFBALANCE";
+        //case Instruction::BASEFEE: return "BASEFEE";
+        case Instruction::POP: return "POP";
+        case Instruction::MLOAD: return "MLOAD";
+        case Instruction::MSTORE: return "MSTORE";
+        case Instruction::MSTORE8: return "MSTORE8";
+        case Instruction::SLOAD: return "SLOAD";
+        case Instruction::SSTORE: return "SSTORE";
+        case Instruction::JUMP: return "JUMP";
+        case Instruction::JUMPI: return "JUMPI";
+        case Instruction::PC: return "PC";
+        case Instruction::MSIZE: return "MSIZE";
+        case Instruction::GAS: return "GAS";
+        case Instruction::JUMPDEST: return "JUMPDEST";
+        case Instruction::PUSH0: return "PUSH0";
+        case Instruction::LOG0: return "LOG0";
+        case Instruction::LOG1: return "LOG1";
+        case Instruction::LOG2: return "LOG2";
+        case Instruction::LOG3: return "LOG3";
+        case Instruction::LOG4: return "LOG4";
+        case Instruction::CREATE: return "CREATE";
+        case Instruction::CALL: return "CALL";
+        case Instruction::CALLCODE: return "CALLCODE";
+        case Instruction::RETURN: return "RETURN";
+        case Instruction::DELEGATECALL: return "DELEGATECALL";
+        case Instruction::CREATE2: return "CREATE2";
+        case Instruction::STATICCALL: return "STATICCALL";
+        case Instruction::REVERT: return "REVERT";
+        case Instruction::SELFDESTRUCT: return "SELFDESTRUCT";
+        default:
+            // For PUSH1-PUSH32 and DUP1-DUP16, SWAP1-SWAP16
+            int opcode = static_cast<int>(inst);
+            if (opcode >= 0x60 && opcode <= 0x7f) {
+                return "PUSH" + std::to_string(opcode - 0x5f);
+            } else if (opcode >= 0x80 && opcode <= 0x8f) {
+                return "DUP" + std::to_string(opcode - 0x7f);
+            } else if (opcode >= 0x90 && opcode <= 0x9f) {
+                return "SWAP" + std::to_string(opcode - 0x8f);
+            }
+            return "OPCODE_" + std::to_string(opcode);
+    }
 }
 
 //
@@ -238,7 +357,7 @@ evmc_tx_context const& VM::getTxContext()
 // interpreter entry point
 
 owning_bytes_ref VM::exec(const evmc_host_interface* _host, evmc_host_context* _context,
-    evmc_revision _rev, const evmc_message* _msg, uint8_t const* _code, size_t _codeSize)
+    evmc_revision _rev, const evmc_message* _msg, uint8_t const* _code, size_t _codeSize, std::shared_ptr<EVMLogger> _tracer)
 {
     m_host = _host;
     m_context = _context;
@@ -249,6 +368,7 @@ owning_bytes_ref VM::exec(const evmc_host_interface* _host, evmc_host_context* _
     m_PC = 0;
     m_pCode = _code;
     m_codeSize = _codeSize;
+    m_tracer = _tracer;
 
     // trampoline to minimize depth of call stack when calling out
     m_bounce = &VM::initEntry;
@@ -257,6 +377,15 @@ owning_bytes_ref VM::exec(const evmc_host_interface* _host, evmc_host_context* _
     while (m_bounce);
 
     return std::move(m_output);
+}
+
+std::vector<intx::uint256> VM::stackIntx() const
+{
+    std::vector<intx::uint256> values;
+    values.reserve(static_cast<size_t>(m_stackEnd - m_SP));
+    for (auto it = m_SP; it != m_stackEnd; ++it)
+        values.push_back(*it);
+    return values;
 }
 
 //
