@@ -340,11 +340,13 @@ bool mcp::Executive::go()
 				dev::eth::OpcodeLogCallback(
 					[this, interpreterVm, txHashHex](uint64_t pc, Instruction op, const std::string& opName) {
 						(void)interpreterVm;
-						BOOST_LOG(m_log.trace) << "EVM Opcode: TxHash=" << txHashHex
-                                       << " PC=" << pc
-                                       << " OP=" << opName
-                                       << " (0x" << std::hex << static_cast<int>(op) << std::dec << ")";
-									   auto tracerPtr = std::dynamic_pointer_cast<mcp::Tracer>(m_tracer);
+						
+						// TODO: For debug logging of opcodes only not recommend for production use
+						//BOOST_LOG(m_log.trace) << "EVM Opcode: TxHash=" << txHashHex
+                        //               << " PC=" << pc
+                        //               << " OP=" << opName
+                        //               << " (0x" << std::hex << static_cast<int>(op) << std::dec << ")";
+				auto tracerPtr = std::dynamic_pointer_cast<mcp::Tracer>(m_tracer);
 				dev::eth::VM const* activeVm = interpreterVm ? interpreterVm : dev::eth::g_activeVm;
 
 				if (tracerPtr)
@@ -354,7 +356,7 @@ bool mcp::Executive::go()
                 uint64_t gasLeft = 0;
 				if (activeVm)
 				{
-					BOOST_LOG(m_log.trace) << "Active VM in context";
+					//BOOST_LOG(m_log.trace) << "Active VM in context";
 					gasLeft = activeVm->gasLeft();
 				}
                 else
@@ -379,7 +381,7 @@ bool mcp::Executive::go()
                 if (tracerPtr)
                     tracerPtr->SetCurrentVM(nullptr);
             }));
-			
+
             if (m_isCreation)
             {
 				m_output = vm->exec(m_gas, *m_ext, m_tracer/*, _onOp*/);
