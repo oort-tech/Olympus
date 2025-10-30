@@ -83,14 +83,14 @@ private:
 		case mcp::mcp_networks::mcp_mini_test_network:
 		{
 			chain_id = (uint64_t)9900;
-			HalleyForkBlock = 100000;
+			HalleyForkBlock = 100;
 			OIP6Block = 200000;////todo
 			break;
 		}
 		case mcp::mcp_networks::mcp_test_network:
 		{
 			chain_id = (uint64_t)9800;
-			HalleyForkBlock = 100000;
+			HalleyForkBlock = 10000;
 			OIP6Block = 200000;////todo
 			break;
 		}
