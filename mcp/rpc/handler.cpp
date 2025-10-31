@@ -980,30 +980,46 @@ void mcp::rpc_handler::approve_receipt(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::debug_traceTransaction(mcp::json &j_response, bool &)
 {
-	if (!mcp::isH256(params[0]))
-		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
-	dev::h256 _hash(jsToHash(params[0]));
+	if (!params.is_array() || params.empty())
+                BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid parameters"));
 
-	try
+        if (!mcp::isH256(params[0]))
+                BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
+
+	try 
 	{
-		LocalisedTransaction t = client()->localisedTransaction(_hash);
-		if (t.blockHash() == dev::h256())
-			BOOST_THROW_EXCEPTION(RPC_Error_RequestDenied("transaction not found"));
-
+		// Get the transaction and block information
+		h256 txHash = jsToHash(params[0]);
+		LocalisedTransaction t = client()->localisedTransaction(txHash);
 		Block block = client()->blockByHash(t.blockHash(), true);
-		chain_state s(chain_state::Null);
-		mcp::ExecutionResult er;
-		std::shared_ptr<Tracer> _tracer = NewTracer(params[1], er);
-		//cnote << "index:" << t.transactionExecIndex();
-		Executive e(s, block, t.transactionExecIndex(), client()->blockChain(), _tracer);
-		e.setResultRecipient(er);
-		traceTransaction(e, t);
 
-		j_response["result"] = _tracer->GetResult();
+		// Set up tracer options from params[1] (if provided)
+                mcp::json tracerOptions;
+                if (params.size() > 1 && params[1].is_object())
+                        tracerOptions = params[1];
+
+		// Create execution result and tracer
+		mcp::ExecutionResult er;
+		std::shared_ptr<Tracer> tracer = NewTracer(tracerOptions, er);
+
+		// Create state and executive - the Executive constructor will set up proper intermediate state
+		chain_state s(chain_state::Null);
+		Executive executive(s, block, t.transactionIndex(), client()->blockChain(), tracer);
+		executive.setResultRecipient(er);
+
+		// Execute the transaction with tracing
+		traceTransaction(executive, t);
+
+		// Return the structured trace results
+		j_response["result"] = tracer->GetResult();
 	}
-	catch (TransactionNotFound)
+	catch (TransactionNotFound const&)
 	{
-		BOOST_THROW_EXCEPTION(RPC_Error_RequestDenied("transaction not found"));
+		BOOST_THROW_EXCEPTION(RPC_Error_NoResult());
+	}
+	catch (dev::BlockNotFound const&)
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_NoResult());
 	}
 }
 
