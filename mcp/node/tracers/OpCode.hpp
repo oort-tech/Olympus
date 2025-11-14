@@ -27,7 +27,7 @@ namespace mcp
 	private:
 		OpCode::DebugOptions debugOptions(mcp::json const& _json);
 		DebugOptions m_options;
-		mcp::json m_outValue{ mcp::json::array() };
+		mcp::json m_outValue = mcp::json::array();
 		ExecutionResult* m_res = nullptr;
 		std::unordered_map<dev::Address, std::map<u256, u256>> m_storage;
 	};
