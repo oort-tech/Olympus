@@ -173,7 +173,7 @@ void mcp::PreStateTracer::CaptureState(uint64_t PC, dev::eth::Instruction inst, 
 
 mcp::json toJson(std::map<dev::u256, dev::u256>const& _storage)
 {
-    mcp::json ret{ mcp::json::object() };
+    mcp::json ret = mcp::json::object();
     for (auto const& it : _storage)
         ret[toCompactHexPrefixed(it.first, 32)] = toCompactHexPrefixed(it.second, 32);
 
@@ -181,7 +181,7 @@ mcp::json toJson(std::map<dev::u256, dev::u256>const& _storage)
 }
 mcp::json toJson(mcp::PreStateTracer::account const& _account)
 {
-    mcp::json ret{ mcp::json::object() };
+    mcp::json ret = mcp::json::object();
     if (_account.Balance)
         ret["balance"] = dev::toJS(*_account.Balance);
     if (_account.Code.size())
@@ -194,7 +194,7 @@ mcp::json toJson(mcp::PreStateTracer::account const& _account)
 }
 mcp::json toJson(mcp::PreStateTracer::state const& _state)
 {
-    mcp::json ret{ mcp::json::object() };
+    mcp::json ret = mcp::json::object();
     for (auto const& it : _state)
     {
         Address addr = it.first;
@@ -205,7 +205,7 @@ mcp::json toJson(mcp::PreStateTracer::state const& _state)
 
 mcp::json mcp::PreStateTracer::GetResult()
 {
-    mcp::json ret{ mcp::json::object() };
+    mcp::json ret = mcp::json::object();
     if (m_options.DiffMode)
     {
         ret["post"] = toJson(post);

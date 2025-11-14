@@ -28,7 +28,7 @@ void mcp::FourByteTracer::CaptureEnter(dev::eth::Instruction _inst, dev::Address
 
 mcp::json mcp::FourByteTracer::GetResult()
 {
-    mcp::json ret{ mcp::json::object() };
+    mcp::json ret = mcp::json::object();
     for (auto const& it : ids)
         ret[it.first] = it.second;
 

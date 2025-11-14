@@ -171,7 +171,7 @@ mcp::CallTracer::DebugOptions mcp::CallTracer::debugOptions(mcp::json const& _js
 
 mcp::json mcp::CallTracer::toJson(callFrame const& _call)
 {
-    mcp::json ret{ mcp::json::object() };
+    mcp::json ret = mcp::json::object();
 
     ret["from"] = dev::toJS(_call.From);
     ret["gas"] = dev::toJS(_call.Gas);
@@ -187,7 +187,7 @@ mcp::json mcp::CallTracer::toJson(callFrame const& _call)
         ret["revertReason"] = _call.RevertReason;
     if (_call.Calls.size())
     {
-        mcp::json callArray{ mcp::json::array() };
+        mcp::json callArray = mcp::json::array();
         for (auto const& it : _call.Calls) 
         {
             callArray.push_back(toJson(it));
@@ -196,14 +196,14 @@ mcp::json mcp::CallTracer::toJson(callFrame const& _call)
     }
     if (_call.Logs.size())
     {
-        mcp::json logsArray{ mcp::json::array() };
+        mcp::json logsArray = mcp::json::array();
         for (auto const& it : _call.Logs)
         {
             mcp::json topics = mcp::json::array();
             for (auto const& _topic : it.Topics)
                 topics.push_back(dev::toJS(_topic));
 
-            mcp::json logsObj{ mcp::json::object() };
+            mcp::json logsObj = mcp::json::object();
             logsObj["address"] = dev::toJS(it.Address);
             logsObj["topics"] = topics;
             logsObj["data"] = dev::toJS(it.Data);
