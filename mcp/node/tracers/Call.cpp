@@ -1,5 +1,5 @@
 #include "Call.hpp"
-#include <libevm/LegacyVM.h>
+#include <libinterpreter/VM.h>
 #include <mcp/node/evm/ExtVM.h>
 #include <libdevcore/CommonJS.h>
 #include <account/abi.hpp>
@@ -105,17 +105,17 @@ void mcp::CallTracer::CaptureState(uint64_t PC, dev::eth::Instruction inst, uint
         inst != Instruction::LOG4)
         return;
 
-    auto vm = dynamic_cast<LegacyVM const*>(_vm);
+    auto vm = dynamic_cast<VM const*>(_vm);
     int size = (uint8_t)inst - (uint8_t)Instruction::LOG0;
-    u256s stackData = vm->stack();
-    int64_t mStart = stackData[stackData.size() - 1].convert_to<int64_t>();
-    int64_t mSize = stackData[stackData.size() - 2].convert_to<int64_t>();
+    auto stackData = vm->stack();
+    int64_t mStart = int64_t(stackData[stackData.size() - 1]);
+    int64_t mSize = int64_t(stackData[stackData.size() - 2]);
 
     h256s topics(size);
     for (size_t i = 0; i < size; i++)
     {
-        h256 topic = stackData[stackData.size() - 2 - (i + 1)];
-        topics[i] = topic;
+        intx::uint256 tmp = stackData[stackData.size() - 2 - (i + 1)];
+        topics[i] = h256(dev::eth::fromEvmC(intx::be::store<evmc_uint256be>(tmp)));
     }
 
     if (mStart < 0 || mSize < 0)

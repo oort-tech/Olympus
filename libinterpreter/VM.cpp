@@ -4,8 +4,6 @@
 #include "interpreter.h"
 #include "VM.h"
 
-//#include <aleth/version.h>
-
 namespace
 {
 void destroy(evmc_vm* _instance)
@@ -156,6 +154,11 @@ uint64_t VM::decodeJumpvDest(const byte* const _code, uint64_t& _pc, byte _voff)
     return dest;
 }
 
+void VM::onOperation(Instruction _instr)
+{
+    if (m_tracer)
+        m_tracer->CaptureState(m_PC, _instr, m_runGas, m_io_gas, this, m_ext);
+}
 
 //
 // set current SP to SP', adjust SP' per _removed and _added items
@@ -249,6 +252,13 @@ owning_bytes_ref VM::exec(const evmc_host_interface* _host, evmc_host_context* _
     m_PC = 0;
     m_pCode = _code;
     m_codeSize = _codeSize;
+
+    EvmCHost* _evmcHost = dynamic_cast<EvmCHost*>(evmc::Host::from_context(_context));
+    if (_evmcHost->getExtVM().getTracer())
+    {
+        m_ext = &_evmcHost->getExtVM();
+        m_tracer = m_ext->getTracer();
+    }
 
     // trampoline to minimize depth of call stack when calling out
     m_bounce = &VM::initEntry;

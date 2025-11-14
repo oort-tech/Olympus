@@ -76,7 +76,7 @@ std::pair<u256, ExecutionResult> mcp::Client::estimateGas(Address const& _from, 
 			Transaction t = _T(upperBound);
 			chain_state tempState(bk.state());
 			tempState.addBalance(_from, upperBound * gasPrice + _value);
-			er = tempState.execute(env, *bc().sealEngine(), Permanence::Reverted, t/*, dev::eth::OnOpFunc()*/).first;
+			er = tempState.execute(env, *bc().sealEngine(), Permanence::Reverted, t).first;
 
 			/// If the error is not nil(consensus error), it means the provided message
 			/// call or transaction will never be accepted no matter how much gas it is
@@ -92,7 +92,7 @@ std::pair<u256, ExecutionResult> mcp::Client::estimateGas(Address const& _from, 
 			Transaction t = _T(mid);
 			chain_state tempState(bk.state());
 			tempState.addBalance(_from, upperBound * gasPrice + _value);
-			ExecutionResult result = tempState.execute(env, *bc().sealEngine(), Permanence::Reverted, t/*, dev::eth::OnOpFunc()*/).first;
+			ExecutionResult result = tempState.execute(env, *bc().sealEngine(), Permanence::Reverted, t).first;
 
 			if (result.excepted != TransactionException::None
 				/*|| result.codeDeposit == CodeDeposit::Failed*/ /// throw exception if failed. not used yet?
@@ -214,7 +214,7 @@ ExecutionResult mcp::Client::call(Address const& _from, u256 _value, Address _de
 	Transaction _t(_value, gasPrice, gas, _dest, _data, nonce);
 	_t.forceSender(_from);
 	_t.setSignature(h256(0), h256(0), 0);
-	ExecutionResult const& ret = temp.execute(_t, Permanence::Reverted/*, dev::eth::OnOpFunc()*/);
+	ExecutionResult const& ret = temp.execute(_t, Permanence::Reverted);
 	return ret;
 }
 

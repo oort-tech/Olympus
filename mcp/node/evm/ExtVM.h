@@ -39,9 +39,9 @@ public:
     ExtVM(mcp::chain_state& _s, EnvInfo const& _envInfo, mcp::SealEngineFace const& _sealEngine, Address _myAddress,
         Address _caller, Address _origin, u256 _value, u256 _gasPrice, bytesConstRef _data,
         bytesConstRef _code, h256 const& _codeHash, u256 const& _version, unsigned _depth,
-        bool _isCreate, bool _staticCall)
+        bool _isCreate, bool _staticCall, std::shared_ptr<EVMLogger> _tracer)
       : ExtVMFace(_envInfo, _myAddress, _caller, _origin, _value, _gasPrice, _data, _code.toBytes(),
-            _codeHash, _version, _depth, _isCreate, _staticCall),
+            _codeHash, _version, _depth, _isCreate, _staticCall, _tracer),
         m_s(_s),
         m_sealEngine(_sealEngine),
         m_evmSchedule(initEvmSchedule(envInfo().mci(), _version))
@@ -56,6 +56,12 @@ public:
     u256 store(u256 _n) final 
     { 
         return m_s.storage(myAddress, _n);
+    }
+
+    /// Read storage location at the given address.
+    u256 store(Address _a, u256 _n) final
+    {
+        return m_s.storage(_a, _n);
     }
 
     /// Write a value in storage.
@@ -77,7 +83,7 @@ public:
     h256 codeHashAt(dev::Address _a) final;
 
     /// Create a new contract.
-    CreateResult create(u256 _endowment, u256& io_gas, bytesConstRef _code, Instruction _op, u256 _salt, std::shared_ptr<EVMLogger> _tracer = nullptr/*, OnOpFunc const& _onOp = {}*/) final;
+    CreateResult create(u256 _endowment, u256& io_gas, bytesConstRef _code, Instruction _op, u256 _salt, std::shared_ptr<EVMLogger> _tracer = nullptr) final;
 
     /// Create a new message call.
     CallResult call(CallParameters& _params) final;

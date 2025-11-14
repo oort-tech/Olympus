@@ -47,7 +47,7 @@ namespace mcp
         void initialize(Transaction const& _transaction);
         bool finalize();
         bool execute();
-        bool go(/*dev::eth::OnOpFunc const& _onOp = dev::eth::OnOpFunc()*/);
+        bool go();
         void revert();
 
         /// @returns the log entries created by this operation.
@@ -106,8 +106,6 @@ namespace mcp
         size_t m_savepoint = 0;
         SealEngineFace const& m_sealEngine;
         std::shared_ptr<EVMLogger> m_tracer = nullptr;
-		//std::list<std::shared_ptr<mcp::trace>> & m_traces;
-		//std::shared_ptr<mcp::trace> m_current_trace;
 
 		static mcp::log m_log;
     };

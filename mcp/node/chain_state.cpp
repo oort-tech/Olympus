@@ -217,21 +217,15 @@ std::pair<mcp::chain_state::AddressMap, h256> mcp::chain_state::addresses(h256 c
     return { addresses, nextKey };
 }
 
-std::pair<mcp::ExecutionResult, dev::eth::TransactionReceipt> mcp::chain_state::execute(dev::eth::EnvInfo const& _envInfo, SealEngineFace const& _sealEngine, Permanence _p, mcp::Transaction const& _t/*, dev::eth::OnOpFunc const& _onOp*/)
+std::pair<mcp::ExecutionResult, dev::eth::TransactionReceipt> mcp::chain_state::execute(dev::eth::EnvInfo const& _envInfo, SealEngineFace const& _sealEngine, Permanence _p, mcp::Transaction const& _t)
 {
 	Executive e(*this, _envInfo, _sealEngine/*, traces*/);
     ExecutionResult res;
     e.setResultRecipient(res);
-
-    //auto onOp = _onOp;
-//#if ETH_VMTRACE
-//    if (!onOp)
-//        onOp = e.simpleTrace();
-//#endif
 	
 	uint256_t const startGasUsed = 0; // Only one transaction in a block, start gas is always zero 
 	
-	bool statusCode = executeTransaction(e, _t/*, onOp*/);
+	bool statusCode = executeTransaction(e, _t);
 
 	switch (_p)
 	{
@@ -270,7 +264,7 @@ void mcp::chain_state::executeBlockTransactions(Block const& _block, unsigned _t
         //cnote << "executeBlockTransactions:" << _block.pending()[i].sha3().hexPrefixed();
         EnvInfo envInfo(_block.info(), mcp::chainID());
         Executive e(*this, envInfo, _sealEngine);
-        executeTransaction(e, _block.pending()[i]/*, OnOpFunc()*/);
+        executeTransaction(e, _block.pending()[i]);
     }
 }
 
@@ -281,7 +275,7 @@ bool mcp::chain_state::addressInUse(Address const& _address) const
 
 /// @returns true when normally halted; false when exceptionally halted; throws when internal VM
 /// exception occurred.
-bool mcp::chain_state::executeTransaction(Executive& _e, mcp::Transaction const& _t/*, dev::eth::OnOpFunc const& _onOp*/)
+bool mcp::chain_state::executeTransaction(Executive& _e, mcp::Transaction const& _t)
 {
 	size_t const savept = savepoint();
 	try
@@ -289,7 +283,7 @@ bool mcp::chain_state::executeTransaction(Executive& _e, mcp::Transaction const&
 		_e.initialize(_t);
 
 		if (!_e.execute())
-			_e.go(/*_onOp*/);
+			_e.go();
 		return _e.finalize();
 	}
     catch (dev::eth::NotEnoughCash const&)

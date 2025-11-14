@@ -126,7 +126,7 @@ public:
     /// address hash. This method faster then addresses() const;
     std::pair<AddressMap, h256> addresses(h256 const& _begin, size_t _maxResults) const;
 
-    std::pair<ExecutionResult, dev::eth::TransactionReceipt> execute(dev::eth::EnvInfo const& _envInfo, SealEngineFace const& _sealEngine, Permanence _p, mcp::Transaction const& _t/*, dev::eth::OnOpFunc const& _onOp = dev::eth::OnOpFunc()*/);
+    std::pair<ExecutionResult, dev::eth::TransactionReceipt> execute(dev::eth::EnvInfo const& _envInfo, SealEngineFace const& _sealEngine, Permanence _p, mcp::Transaction const& _t);
 
     /// @returns the account at the given address or a null pointer if it does not exist.
     /// The pointer is valid until the next access to the state or account.
@@ -281,7 +281,7 @@ private:
 	
     /// @returns true when normally halted; false when exceptionally halted; throws when internal VM
     /// exception occurred.
-	bool executeTransaction(Executive& _e, mcp::Transaction const& _t/*, dev::eth::OnOpFunc const& _onOp*/);
+	bool executeTransaction(Executive& _e, mcp::Transaction const& _t);
 
     ////Save the account status before transaction execution for debug_traceTransaction
     //void save_previous_account_state();

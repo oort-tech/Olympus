@@ -294,8 +294,6 @@ add_library (node
 	mcp/node/arrival.cpp
 	mcp/node/arrival.hpp
 	mcp/node/arrival.hpp
-	mcp/node/debug.cpp
-	mcp/node/debug.hpp
 	mcp/node/transaction_queue.cpp
 	mcp/node/transaction_queue.hpp
 	mcp/node/common.cpp

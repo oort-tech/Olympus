@@ -35,41 +35,6 @@ void mcp::chain::init(bool & error_a, mcp::timeout_db_transaction & timeout_tx_a
 	try
 	{
 		genesisBlock(timeout_tx_a, cache_a);
-		/*
-		std::pair<bool, mcp::Transactions> ret = mcp::genesis::try_initialize(transaction, m_store);
-
-		/// Init precompiled contract account
-		if (ret.first)
-		{
-			AccountMap precompiled_accounts;
-			for (unsigned i = 1; i <= 8; ++i)
-			{
-				Address acc(i);
-				precompiled_accounts[acc] = std::make_shared<mcp::account_state>(acc, h256(0), h256(0), 0, 0);
-			}
-
-			//mcp::overlay_db db(transaction, m_store);
-			//mcp::commit(transaction, precompiled_accounts, &db, cache_a, m_store, h256(0));
-
-			///init system contract
-			auto gstate = m_store.block_state_get(transaction, mcp::genesis::block_hash);
-			dev::eth::McInfo mc_info(0, 0, gstate->stable_timestamp, 0);
-			///init staking
-			for (auto _t : ret.second)
-			{
-				std::pair<ExecutionResult, dev::eth::TransactionReceipt> result = execute(transaction, cache_a, _t, mc_info, Permanence::Committed, dev::eth::OnOpFunc());
-				assert_x(result.second.statusCode());
-				cache_a->transaction_put(transaction, std::make_shared<Transaction>(_t));
-				cache_a->account_nonce_put(transaction, _t.sender(), _t.nonce());
-				cache_a->transaction_receipt_put(transaction, _t.sha3(), std::make_shared<dev::eth::TransactionReceipt>(result.second));
-				cache_a->transaction_address_put(transaction, _t.sha3(), std::make_shared<mcp::TransactionAddress>(mcp::genesis::block_hash, 0));
-			}
-
-			/// set genesis epoch staking list
-			timeout_tx_a.commit_and_continue();
-			auto _all = MainCaller.GetWitnesses();
-			m_cache->PutStakingList(transaction, 0, _all.first);
-		}*/
 	}
 	catch (const std::exception & e)
 	{
@@ -577,7 +542,7 @@ void mcp::chain::genesisBlock(mcp::timeout_db_transaction& timeout_tx_a, std::sh
 	for (size_t i = 1; i < gnesis.second.size(); i++)
 	{
 		auto _t(gnesis.second[i]);
-		std::pair<ExecutionResult, dev::eth::TransactionReceipt> result = ret.mutableState().execute(env, *m_sealEngine, Permanence::Committed, _t/*, dev::eth::OnOpFunc()*/);
+		std::pair<ExecutionResult, dev::eth::TransactionReceipt> result = ret.mutableState().execute(env, *m_sealEngine, Permanence::Committed, _t);
 		assert_x(result.second.statusCode());
 		cache_a->transaction_put(transaction, std::make_shared<Transaction>(_t));
 		cache_a->account_nonce_put(transaction, _t.sender(), _t.nonce());
@@ -981,157 +946,6 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 			VerifiedBlockRef _block{ dag_stable_block };
 			dev::eth::McInfo mc_info(m_last_stable_index_internal, mci, mc_timestamp, dag_stable_block->from());
 			mcp::ImportBlockResult importRet = import(transaction_a, cache_a, _block, mc_info, tmpFinalized);
-			
-			/*std::vector<bytes> receipts;
-			{
-				//mcp::stopwatch_guard sw("advance_stable_mci2_1");
-
-				///handle dag stable block 
-				std::shared_ptr<mcp::block> dag_stable_block = cache_a->block_get(transaction_a, dag_stable_block_hash);
-				assert_x(dag_stable_block);
-
-				///handle light stable block 
-				///account A : b2, b3, b4, b5
-				///account B : b1, b2, b3
-				///account c : b2, b3
-				auto links(dag_stable_block->links());
-				unsigned index = 0;
-				for (auto i = 0; i < links.size(); i++)
-				{
-					h256 const& link_hash = links[i];
-					auto receipt = cache_a->transaction_receipt_get(transaction_a, link_hash);
-					if (receipt)/// transaction maybe processed yet,but summary need used receipt even if it has been processed.
-					{
-						RLPStream receiptRLP;
-						receipt->streamRLP(receiptRLP);
-						receipts.push_back(receiptRLP.out());
-
-						index++;
-						continue;
-					}
-					auto _t = cache_a->transaction_get(transaction_a, link_hash);
-					/// exec transactions
-					bool invalid = false;
-					try
-					{
-						dev::eth::McInfo mc_info(m_last_stable_index_internal, mci, mc_timestamp, mc_last_summary_mci);
-						//mcp::stopwatch_guard sw("set_block_stable2_1");
-						std::pair<ExecutionResult, dev::eth::TransactionReceipt> result = execute(transaction_a, cache_a, *_t, mc_info, Permanence::Committed, dev::eth::OnOpFunc());
-
-						/// commit transaction receipt
-						/// the account states were committed in Executive::go()
-						cache_a->transaction_receipt_put(transaction_a, link_hash, std::make_shared<dev::eth::TransactionReceipt>(result.second));
-						RLPStream receiptRLP;
-						result.second.streamRLP(receiptRLP);
-						receipts.push_back(receiptRLP.out());
-					}
-					catch (dev::eth::NotEnoughCash const& _e)
-					{
-						LOG(m_log.info) << "transaction exec not enough cash,hash: " << _t->sha3().hex()
-							<< ", from: " << dev::toJS(_t->sender())
-							<< ", to: " << dev::toJS(_t->to())
-							<< ", value: " << _t->value();
-						invalid = true;
-					}
-					catch (dev::eth::InvalidNonce const& _e)
-					{
-						LOG(m_log.info) << "transaction exec not expect nonce,hash: " << _t->sha3().hexPrefixed()
-							<< ", from: " << dev::toJS(_t->sender())
-							<< ", to: " << dev::toJS(_t->to())
-							<< ", value: " << _t->value();
-						invalid = true;
-					}
-					//catch (Exception const& _e)
-					//{
-					//	cerror << "Unexpected exception in VM. There may be a bug in this implementation. "
-					//		<< diagnostic_information(_e);
-					//	exit(1);
-					//}
-					catch (std::exception const& _e)
-					{
-						std::cerr << _e.what() << std::endl;
-						throw;
-					}
-
-					//LOG(m_log.info) << "exec transaction,hash: " << link_hash.hexPrefixed() << " ,nonce:" << _t->nonce();
-
-					if (invalid)
-					{
-						TransactionReceipt const receipt = TransactionReceipt(0, 0, mcp::log_entries());
-						cache_a->transaction_receipt_put(transaction_a, link_hash, std::make_shared<dev::eth::TransactionReceipt>(receipt));
-						RLPStream receiptRLP;
-						receipt.streamRLP(receiptRLP);
-						receipts.push_back(receiptRLP.out());
-					}
-
-					std::shared_ptr<mcp::TransactionAddress> td(std::make_shared<mcp::TransactionAddress>(dag_stable_block_hash, index));
-					cache_a->transaction_address_put(transaction_a, link_hash, td);
-					/// exec transaction can reduce, if two or more block linked a transaction,reduce once.
-					m_store.transaction_unstable_count_reduce(transaction_a);
-					index++;
-				}
-
-				///handle approve stable block 
-				auto approves(dag_stable_block->approves());
-				for (auto i = 0; i < approves.size(); i++)
-				{
-					h256 const& approve_hash = approves[i];
-					
-					auto receipt = cache_a->approve_receipt_get(transaction_a, approve_hash);
-					if (receipt)/// approve maybe processed yet,but summary need used receipt even if it has been processed.
-					{
-						RLPStream receiptRLP;
-						receipt->streamRLP(receiptRLP);
-						receipts.push_back(receiptRLP.out());
-						continue;
-					}
-
-					auto ap = cache_a->approve_get(transaction_a, approve_hash);
-					assert_x(ap);
-					/// exec approves
-					try{
-						/// exec approve can reduce, if two or more block linked a approve,reduce once.
-						m_store.approve_unstable_count_reduce(transaction_a);
-						//LOG(m_log.debug) << "approve_unstable: reduce " << m_store.approve_unstable_count(transaction_a);
-
-						if (ap->outputs() == h256(0))/// reboot system. approve read from db,but not cache outputs
-						{
-							mcp::block_hash hash;
-							if (ap->epoch() <= 1) {
-								hash = mcp::genesis::block_hash;
-							}
-							else {
-								bool exists(!m_store.main_chain_get(transaction_a, (ap->epoch() - 1)*epoch_period, hash));
-								assert_x(exists);
-							}
-							ap->vrf_verify(hash);///cached outputs.must successed.
-						}
-						bool apStatus = false;
-						if (IsStakingList(transaction_a, ap->epoch(), ap->sender()))///staking completed.
-							apStatus = true;
-						std::shared_ptr<dev::ApproveReceipt> preceipt = std::make_shared<dev::ApproveReceipt>(apStatus, ap->sender(), ap->outputs());
-						cache_a->approve_receipt_put(transaction_a, approve_hash, preceipt);
-					
-						///the approve which is smaller than the current epoch, is not eligible for election.
-						///Bigger than the present is problematic
-						//LOG(m_log.debug) << "[vrf_outputs] ap epoch:" << ap->epoch() <<",epoch:" << epoch(mci)
-						//	<< ",address:" << preceipt->from().hexPrefixed();
-						if (ap->epoch() == epoch(mci) && apStatus)
-						{
-							vrf_outputs[ap->epoch()].insert(std::make_pair(ap->outputs(), *preceipt));
-						}
-
-						RLPStream receiptRLP;
-						preceipt->streamRLP(receiptRLP);
-						receipts.push_back(receiptRLP.out());
-					}
-					catch (std::exception const& _e)
-					{
-						std::cerr << _e.what() << std::endl;
-						throw;
-					}
-				}
-			}*/
 
 			/// set block stable
 			{

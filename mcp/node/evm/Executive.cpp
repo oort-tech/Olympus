@@ -163,7 +163,7 @@ bool mcp::Executive::call(dev::eth::CallParameters const& _p, u256 const& _gasPr
 			h256 codeHash = m_s.codeHash(_p.codeAddress);
 			m_ext = std::make_shared<ExtVM>(m_s, m_envInfo, m_sealEngine, _p.receiveAddress,
 				_p.senderAddress, _origin, _p.apparentValue, _gasPrice, _p.data, &c, codeHash,
-				0, m_depth, false, _p.staticCall);
+				0, m_depth, false, _p.staticCall, m_tracer);
 		}
 	}
 
@@ -294,7 +294,7 @@ bool mcp::Executive::executeCreate(Address const& _sender, u256 const& _endowmen
 	if (!_init.empty())
 	{
 		m_ext = std::make_shared<ExtVM>(m_s, m_envInfo, m_sealEngine, m_newAddress, _sender, _origin, _endowment, _gasPrice,
-			dev::bytesConstRef(), _init, sha3(_init), 0, m_depth, true, false);
+			dev::bytesConstRef(), _init, sha3(_init), 0, m_depth, true, false, m_tracer);
 	}
 
 	if (m_tracer && m_ext && topCall())
@@ -321,7 +321,7 @@ bool mcp::Executive::executeCreate(Address const& _sender, u256 const& _endowmen
     return !m_ext;
 }
 
-bool mcp::Executive::go(/*dev::eth::OnOpFunc const& _onOp*/)
+bool mcp::Executive::go()
 {
 	//mcp::stopwatch_guard sw("Executive:go");
     if (m_ext)
@@ -337,7 +337,7 @@ bool mcp::Executive::go(/*dev::eth::OnOpFunc const& _onOp*/)
             auto vm = VMFactory::create();
             if (m_isCreation)
             {
-				m_output = vm->exec(m_gas, *m_ext, m_tracer/*, _onOp*/);
+				m_output = vm->exec(m_gas, *m_ext, m_tracer);
                 if (m_res)
                 {
                     m_res->gasForDeposit = m_gas;
@@ -379,7 +379,7 @@ bool mcp::Executive::go(/*dev::eth::OnOpFunc const& _onOp*/)
             }
             else
             //{
-                m_output = vm->exec(m_gas, *m_ext, m_tracer/*, _onOp*/);
+                m_output = vm->exec(m_gas, *m_ext, m_tracer);
 
 				////call trace result 
 				//std::shared_ptr<mcp::call_trace_result> call_result(std::make_shared<mcp::call_trace_result>());

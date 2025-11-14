@@ -52,7 +52,7 @@ static size_t const c_entryOverhead = 128 * 1024;
 /// On what depth execution should be offloaded to additional separated stack space.
 static unsigned const c_offloadPoint = (c_defaultStackSize - c_entryOverhead) / c_singleExecutionStackSize;
 
-void goOnOffloadedStack(Executive& _e/*, OnOpFunc const& _onOp*/)
+void goOnOffloadedStack(Executive& _e)
 {
     // Set new stack size enouth to handle the rest of the calls up to the limit.
     boost::thread::attributes attrs;
@@ -64,7 +64,7 @@ void goOnOffloadedStack(Executive& _e/*, OnOpFunc const& _onOp*/)
     boost::thread{attrs, [&]{
         try
         {
-            _e.go(/*_onOp*/);
+            _e.go();
         }
         catch (...)
         {
@@ -75,7 +75,7 @@ void goOnOffloadedStack(Executive& _e/*, OnOpFunc const& _onOp*/)
         boost::rethrow_exception(exception);
 }
 
-void go(unsigned _depth, Executive& _e/*, OnOpFunc const& _onOp*/)
+void go(unsigned _depth, Executive& _e)
 {
     // If in the offloading point we need to switch to additional separated stack space.
     // Current stack is too small to handle more CALL/CREATE executions.
@@ -85,10 +85,10 @@ void go(unsigned _depth, Executive& _e/*, OnOpFunc const& _onOp*/)
     if (_depth == c_offloadPoint)
     {
         cnote << "Stack offloading (depth: " << c_offloadPoint << ")";
-        goOnOffloadedStack(_e/*, _onOp*/);
+        goOnOffloadedStack(_e);
     }
     else
-        _e.go(/*_onOp*/);
+        _e.go();
 }
 
 evmc_status_code transactionExceptionToEvmcStatusCode(TransactionException ex) noexcept
@@ -130,15 +130,15 @@ CallResult ExtVM::call(CallParameters& _p)
     if (_p.tracer)
     {
         std::shared_ptr<dev::u256> _pValue = nullptr;
-        if (*_p.op != Instruction::STATICCALL)
+        if (_p.op != Instruction::STATICCALL)
             _pValue = std::make_shared<dev::u256>(_p.valueTransfer);
-        _p.tracer->CaptureEnter(*_p.op, _p.senderAddress, _p.codeAddress, _p.data.toBytes(), uint64_t(_p.gas), _pValue);
+        _p.tracer->CaptureEnter(_p.op, _p.senderAddress, _p.codeAddress, _p.data.toBytes(), uint64_t(_p.gas), _pValue);
     }
 
     u256 _gasPrice = mcp::param::get()->IsOIP6(envInfo().mci()) ? gasPrice : 1;
     if (!e.call(_p, _gasPrice, origin))
     {
-        go(depth, e/*, _p.onOp*/);
+        go(depth, e);
         e.accrueSubState(sub);
     }
     if (_p.tracer)
@@ -163,7 +163,7 @@ void ExtVM::setStore(u256 _n, u256 _v)
     m_s.setStorage(myAddress, _n, _v);
 }
 
-CreateResult ExtVM::create(u256 _endowment, u256& io_gas, bytesConstRef _code, Instruction _op, u256 _salt, std::shared_ptr<EVMLogger> _tracer/*, OnOpFunc const& _onOp*/)
+CreateResult ExtVM::create(u256 _endowment, u256& io_gas, bytesConstRef _code, Instruction _op, u256 _salt, std::shared_ptr<EVMLogger> _tracer)
 {
     Executive e(m_s, envInfo(), m_sealEngine, /*m_s.traces,*/ depth + 1, _tracer);
     bool result = false;
@@ -181,7 +181,7 @@ CreateResult ExtVM::create(u256 _endowment, u256& io_gas, bytesConstRef _code, I
         if (_tracer)
             _tracer->CaptureEnter(_op, myAddress, e.newAddress(), _code.toBytes(), uint64_t(io_gas), std::make_shared<dev::u256>(_endowment));
 
-        go(depth, e/*, _onOp*/);
+        go(depth, e);
         e.accrueSubState(sub);
         if (_tracer)
             _tracer->CaptureExit(e.Output(), uint64_t(io_gas - e.gas()), e.getException());

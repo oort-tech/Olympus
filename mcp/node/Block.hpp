@@ -98,8 +98,6 @@ namespace mcp
 
 		/// Execute a given transaction.
 		/// This will append @a _t to the transaction list and change the state accordingly.
-		//ExecutionResult execute(LastBlockHashesFace const& _lh, Transaction const& _t, Permanence _p = Permanence::Committed, dev::eth::OnOpFunc const& _onOp = dev::eth::OnOpFunc());
-		//ExecutionResult execute(dev::eth::EnvInfo const& _envInfo, mcp::Transaction const& _t, Permanence _p, dev::eth::OnOpFunc const& _onOp = dev::eth::OnOpFunc());
 		mcp::ExecutionResult execute(Transaction const& _t, Permanence _p);
 
 		/// Execute all transactions within a given block.

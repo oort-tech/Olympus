@@ -46,7 +46,7 @@ struct VMSchedule
     static constexpr int64_t callSelfGas = 40;
 };
 
-class VM
+class VM : public VMFace
 {
 public:
     static bool initMetrics();
@@ -56,8 +56,20 @@ public:
     owning_bytes_ref exec(const evmc_host_interface* _host, evmc_host_context* _context,
         evmc_revision _rev, const evmc_message* _msg, uint8_t const* _code, size_t _codeSize);
 
+    ///To dynamically convert ptr types
+    virtual owning_bytes_ref exec(u256& _io_gas, ExtVMFace& _ext, std::shared_ptr<EVMLogger> _tracer) override final { return owning_bytes_ref(); }
+
+    bytes const& memory() const { return m_mem; }
+    std::vector<intx::uint256> stack() const {
+        std::vector<intx::uint256> stack(m_SP, m_stackEnd);
+        reverse(stack.begin(), stack.end());
+        return stack;
+    };
+
     uint64_t m_io_gas = 0;
 private:
+    std::shared_ptr<EVMLogger> m_tracer;
+    ExtVMFace* m_ext = 0;
     const evmc_host_interface* m_host = nullptr;
     evmc_host_context* m_context = nullptr;
     evmc_revision m_rev = EVMC_FRONTIER;
@@ -133,7 +145,8 @@ private:
     std::vector<uint64_t> m_jumpDests;
     int64_t verifyJumpDest(intx::uint256 const& _dest, bool _throw = true);
 
-    void onOperation() {}
+    void onOperation() { onOperation(m_OP); }
+    void onOperation(Instruction _instr);
     void adjustStack(int _removed, int _added);
     uint64_t gasForMem(intx::uint512 const& _size);
     void updateIOGas();

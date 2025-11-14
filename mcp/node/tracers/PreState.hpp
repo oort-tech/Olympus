@@ -13,12 +13,12 @@ namespace mcp
 		};
 		struct account
 		{
-			dev::u256 Balance;
+			boost::optional<dev::u256> Balance = boost::none;
 			dev::bytes Code;
-			dev::u256 Nonce;
+			boost::optional<dev::u256> Nonce = boost::none;
 			std::map<u256, u256> Storage;
 			bool exists() {
-				return Nonce > 0 || Code.size() > 0 || Storage.size() > 0 || Balance > 0;
+				return (Nonce && *Nonce > 0) || Code.size() > 0 || Storage.size() > 0 || (Balance && *Balance > 0);
 			}
 		};
 		using state = std::map<dev::Address, account>;
