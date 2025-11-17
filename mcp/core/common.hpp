@@ -1,6 +1,5 @@
 #pragma once
 
-//#include "overlay_db.hpp"
 #include "log_entry.hpp"
 #include "blocks.hpp"
 #include "transaction.hpp"
@@ -77,7 +76,6 @@ namespace mcp
 		u256 gasRefunded = 0;
 		unsigned depositSize = 0; 							///< Amount of code of the creation's attempted deposit.
 		u256 gasForDeposit;			 						///< Amount of gas remaining for the code deposit phase.
-		//std::set<Address> modified_accounts;			///< The accounts that have been modified by the transaction.
 
 		bool Failed() const { return excepted != TransactionException::None; } /// Failed returns the indicator whether the execution is successful or not.
 
@@ -101,20 +99,11 @@ namespace mcp
 		}
 	};
 
-/*	enum class Permanence
-	{
-    	Reverted,
-    	Committed,
-    	Uncommitted  ///< Uncommitted state for change log readings in tests.
-	};   */ 
-
 	enum class block_status : uint8_t
     {
 		unknown = 255,
         ok = 0,
         fork = 1,
-        //invalid = 2,
-        //fail = 3,
     };
 
 	class block_child_key
@@ -127,17 +116,6 @@ namespace mcp
 		mcp::block_hash hash;
 		mcp::block_hash child_hash;
 	};
-
-	//class hash_tree_info
-	//{
-	//public:
-	//	hash_tree_info();
-	//	hash_tree_info(mcp::block_hash const &, mcp::summary_hash const &);
-	//	hash_tree_info(dev::Slice const &);
-	//	dev::Slice val() const;
-	//	mcp::block_hash b_hash;
-	//	mcp::summary_hash s_hash;
-	//};
 
 	class Executive;
 	class account_state
@@ -153,14 +131,6 @@ namespace mcp
     	};
 	
 		account_state() {}
-		//account_state(Address const & _account, h256 const&ts, h256 const& _previous, u256 _nonce, u256 _balance, Changedness _c = Changed):
-		//	m_account(_account), 
-		//	m_ts(ts),
-		//	m_previous(_previous),
-		//	m_isAlive(true), 
-		//	m_isUnchanged(_c == Unchanged), 
-		//	m_nonce(_nonce), 
-		//	m_balance(_balance) {}
 		/// Construct an alive Account, with given endowment, for either a normal (non-contract) account
 		/// or for a contract account in the conception phase, where the code is not yet known.
 		account_state(u256 _nonce, u256 _balance, Changedness _c = Changed) : m_isAlive(true), m_isUnchanged(_c == Unchanged), m_nonce(_nonce), m_balance(_balance) {}
@@ -178,28 +148,7 @@ namespace mcp
 		{
 			assert(_contractRoot);
 		}
-		//account_state(Address const & _account, h256 const&ts, h256 const& _previous, u256 const& _nonce, u256 const& _balance, h256 const& _contractRoot,
-		//	h256 const& _codeHash, Changedness _c)
-		//	:m_account(_account),
-		//	m_ts(ts),
-		//	m_previous(_previous),
-		//	m_isAlive(true),
-		//	m_isUnchanged(_c == Unchanged),
-		//	m_nonce(_nonce),
-		//	m_balance(_balance),
-		//	m_storageRoot(_contractRoot),
-		//	m_codeHash(_codeHash)
-		//{
-		//	assert(_contractRoot);
-		//}
-		//account_state(bool & error_a, dev::RLP const & r, Changedness _c = Unchanged);
-		//void stream_RLP(dev::RLPStream & s) const;
-		//h256 hash();
-
-		//h256 init_hash = h256(0);
-
-		//void record_init_hash();
-
+		
 		/// Kill this account. Useful for the suicide opcode. Following this call, isAlive() returns
     	/// false.
     	void kill()
@@ -214,15 +163,6 @@ namespace mcp
 			m_version = 0;
             changed();
     	}
-
-		/// Sets the transaction of the account state
-		//void setTs(h256 const& ts) { m_ts = ts; }
-
-		/// Sets the transaction of the account state
-		//void setPrevious() { m_previous = init_hash; }
-
-		/// Sets the transaction of the account state
-		//h256 previous() { return m_previous; }
 
 		/// @returns true iff this object represents an account in the state. Returns false if this object
     	/// represents an account that should no longer exist in the trie (an account that never existed or was
@@ -252,9 +192,6 @@ namespace mcp
 
 		/// Increment the nonce of the account by one.
 		void incNonce() { ++m_nonce; changed(); }
-
-		/// original Nonce value  .
-		//u256 oriNonce() const { return m_nonce - 1; }
 
 		/// Set nonce to a new value. This is used when reverting changes made to
 		/// the account.
@@ -324,16 +261,6 @@ namespace mcp
 
 		u256 version() const { return m_version; }
 
-		////clear temp state to make it just like the state get from db
-		//void clear_temp_state()
-		//{
-		//	m_isUnchanged = true;
-		//	m_hasNewCode = false;
-		//	m_storageOverlay.clear();
-		//	m_storageOriginal.clear();
-		//	m_codeCache.clear();
-		//}
-
 	private:
 		/// Note that we've altered the account.
     	void changed() { m_isUnchanged = false; }
@@ -346,15 +273,6 @@ namespace mcp
 
 		/// True if new code was deployed to the account
     	bool m_hasNewCode = false;
-
-		/// Account
-		//Address m_account;
-
-		/// transaction hash that causes the account state changed
-		//h256 m_ts;
-
-		/// previous account state 
-		//h256 m_previous;
 
 		/// Account's nonce.
 		u256 m_nonce;
@@ -420,7 +338,6 @@ namespace mcp
 
 		///OIP6
 		h256 m_stateRoot;
-		//h256 m_transactionsRoot;
 		h256 m_receiptsRoot;
 		log_bloom m_logBloom;
 	};
@@ -469,111 +386,6 @@ namespace mcp
 		// Updated to 512, Daniel
 		std::unordered_set<dev::Address> witnesses;
 	};
-
-	////trace
-	//class trace_action
-	//{
-	//public:
-	//	virtual void stream_RLP(dev::RLPStream & s) const = 0;
-	//	virtual void serialize_json(mcp::json & json_a) const = 0;
-	//};
-
-	//class trace_result
-	//{
-	//public:
-	//	virtual void stream_RLP(dev::RLPStream & s) const = 0;
-	//	virtual void serialize_json(mcp::json & json_a) const = 0;
-	//};
-
-	//class call_trace_action : public trace_action
-	//{
-	//public:
-	//	call_trace_action() = default;
-	//	call_trace_action(bool & error_a, dev::RLP const & r);
-	//	void stream_RLP(dev::RLPStream & s) const;
-	//	void serialize_json(mcp::json & json_a) const;
-
-	//	std::string call_type;
-	//	Address from;
-	//	u256 gas;
-	//	bytes data;
-	//	Address to;
-	//	u256 amount;
-	//};
-
-	//class call_trace_result : public trace_result
-	//{
-	//public:
-	//	call_trace_result() = default;
-	//	call_trace_result(bool & error_a, dev::RLP const & r);
-	//	void stream_RLP(dev::RLPStream & s) const;
-	//	void serialize_json(mcp::json & json_a) const;
-
-	//	u256 gas_used;
-	//	dev::bytes output;
-	//};
-
-	//class create_trace_action : public trace_action
-	//{
-	//public:
-	//	create_trace_action() = default;
-	//	create_trace_action(bool & error_a, dev::RLP const & r);
-	//	void stream_RLP(dev::RLPStream & s) const;
-	//	void serialize_json(mcp::json & json_a) const;
-
-	//	Address from;
-	//	u256 gas;
-	//	dev::bytes init;
-	//	mcp::uint256_t amount;
-	//};
-
-	//class create_trace_result : public trace_result
-	//{
-	//public:
-	//	create_trace_result() = default;
-	//	create_trace_result(bool & error_a, dev::RLP const & r);
-	//	void stream_RLP(dev::RLPStream & s) const;
-	//	void serialize_json(mcp::json & json_a) const;
-
-	//	u256 gas_used;
-	//	Address contract_account;
-	//	dev::bytes code;
-	//};
-
-	//class suicide_trace_action : public trace_action
-	//{
-	//public:
-	//	suicide_trace_action() = default;
-	//	suicide_trace_action(bool & error_a, dev::RLP const & r);
-	//	void stream_RLP(dev::RLPStream & s) const;
-	//	void serialize_json(mcp::json & json_a) const;
-
-	//	Address contract_account;
-	//	Address refund_account;
-	//	u256 balance;
-	//};
-
-	//enum class trace_type : uint8_t
-	//{
-	//	call = 0,
-	//	create = 1,
-	//	suicide = 2
-	//};
-
-	//class trace
-	//{
-	//public:
-	//	trace() = default;
-	//	trace(bool & error_a, dev::RLP const & r);
-	//	void stream_RLP(dev::RLPStream & s) const;
-	//	void serialize_json(mcp::json & json_a) const;
-
-	//	mcp::trace_type type;
-	//	std::shared_ptr<mcp::trace_action> action;
-	//	std::string error_message;
-	//	std::shared_ptr<mcp::trace_result> result;
-	//	uint32_t depth;
-	//};
 
 	/// staking address -> staking balance
 	using StakingList = std::map<dev::Address, dev::u256>;
@@ -626,8 +438,6 @@ namespace mcp
 
 	// OS-specific way of finding a path to a home directory.
 	boost::filesystem::path working_path();
-	//// Get a unique path within the home directory, used for testing
-	//boost::filesystem::path unique_path();
 	
 	class epoch_approves_key
 	{

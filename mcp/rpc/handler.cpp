@@ -513,18 +513,6 @@ void mcp::rpc_handler::eth_getBlockByHash(mcp::json &j_response, bool &)
 void mcp::rpc_handler::eth_sendRawTransaction(mcp::json &j_response, bool &)
 {
 	Transaction t(jsToBytes(params[0], OnFailed::Throw), CheckTransaction::None);
-
-	//LOG(m_log.info) << "m_nonce:" << t.nonce() 
-	//	<< " ,m_value:" << t.value() 
-	//	<< " ,m_receiveAddress:" << t.receiveAddress().hex()
-	//	<< " ,m_gasPrice:" << t.gasPrice()
-	//	<< " ,m_gas:" << t.gas()
-	//	<< " ,m_data:" << toHex(t.data())
-	//	<< " ,m_vrs v:" << (int)t.signature().v
-	//	<< " ,m_vrs r:" << t.signature().r.hex()
-	//	<< " ,m_vrs s:" << t.signature().s.hex()
-	//	<< " ,m_chainId:" << t.chainID();
-
 	j_response["result"] = toJS(m_wallet->importTransaction(t));
 }
 
@@ -961,8 +949,6 @@ void mcp::rpc_handler::epoch_work_transaction(mcp::json &j_response, bool &)
 		j_response["result"] = toJS(*_h);
 	else
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("The epoch has not yet completed."));
-
-	
 }
 
 void mcp::rpc_handler::approve_receipt(mcp::json &j_response, bool &)
@@ -994,7 +980,6 @@ void mcp::rpc_handler::debug_traceTransaction(mcp::json &j_response, bool &)
 		chain_state s(chain_state::Null);
 		mcp::ExecutionResult er;
 		std::shared_ptr<Tracer> _tracer = NewTracer(params[1], er);
-		//cnote << "index:" << t.transactionExecIndex();
 		Executive e(s, block, t.transactionExecIndex(), client()->blockChain(), _tracer);
 		e.setResultRecipient(er);
 		traceTransaction(e, t);

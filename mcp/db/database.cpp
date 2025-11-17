@@ -140,7 +140,6 @@ void mcp::db::database::kill(Slice _key)
 {
 	rocksdb::Slice const key(_key.data(), _key.size());
 	auto const status = m_db->Delete(*m_write_options, key);
-	//checkStatus(status);
 	mcp::db::check_status(status);
 }
 
@@ -160,7 +159,6 @@ void mcp::db::database::commit(std::unique_ptr<WriteBatchFace> _batch)
 		BOOST_THROW_EXCEPTION(DatabaseError() << dev::errinfo_comment("Invalid batch type passed to rocksdb::commit"));
 
 	auto const status = m_db->Write(*m_write_options, &batchPtr->writeBatch());
-	//checkStatus(status);
 	mcp::db::check_status(status);
 }
 

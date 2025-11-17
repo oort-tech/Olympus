@@ -5,7 +5,6 @@
 #include <mcp/core/transaction_queue.hpp>
 #include <libdevcore/Guards.h>
 #include <libdevcore/LruCache.h>
-//#include <mcp/node/chain.hpp>
 #include <mcp/common/Exceptions.h>
 #include <mcp/common/async_task.hpp>
 #include <mcp/node/node_capability.hpp>
@@ -27,7 +26,7 @@ namespace mcp
 	{
 	public:
 		TransactionQueue(
-			boost::asio::io_service& io_service_a, mcp::block_store& store_a, std::shared_ptr<mcp::block_cache> cache_a,/*std::shared_ptr<mcp::chain> chain_a,*/
+			boost::asio::io_service& io_service_a, mcp::block_store& store_a, std::shared_ptr<mcp::block_cache> cache_a,
 			std::shared_ptr<mcp::Client> client_a, std::shared_ptr<mcp::async_task> async_task_a
 		);
 		~TransactionQueue();
@@ -90,9 +89,6 @@ namespace mcp
 
 		/// Get transaction queue information
 		std::string getInfo();
-
-		void prinf();
-
 	private:
 		/// Verified and imported transaction
 		struct txList
@@ -187,7 +183,6 @@ namespace mcp
 
 		mcp::block_store & m_store;
 		std::shared_ptr<mcp::iblock_cache> m_cache;
-		//std::shared_ptr<mcp::chain> m_chain;
 		std::shared_ptr<mcp::async_task> m_async_task;
 		std::shared_ptr<mcp::node_capability> m_capability;
 		std::shared_ptr<mcp::Client> m_client;

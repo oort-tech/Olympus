@@ -16,17 +16,10 @@ mcp::Block::Block(chain const& _bc, OverlayDB const& _db, dev::eth::McInfo const
 }
 
 mcp::Block::Block(Block const& _s):
-	//m_store(_s.m_store),
 	m_state(_s.m_state),
 	m_transactions(_s.m_transactions),
 	m_receipts(_s.m_receipts),
-	//m_transactionSet(_s.m_transactionSet),
-	//m_precommit(_s.m_state),
 	m_previousBlockState(_s.m_previousBlockState),
-	//m_currentBlockState(_s.m_currentBlockState),
-	//m_currentBlock(_s.m_currentBlock),
-	//m_currentBytes(_s.m_currentBytes),
-	//m_author(_s.m_author),
 	m_McInfo(_s.m_McInfo),
 	m_sealEngine(_s.m_sealEngine)
 {
@@ -37,21 +30,13 @@ mcp::Block& mcp::Block::operator=(Block const& _s)
 	if (&_s == this)
 		return *this;
 
-	//m_store = _s.m_store;
 	m_state = _s.m_state;
 	m_transactions = _s.m_transactions;
 	m_receipts = _s.m_receipts;
-	//m_transactionSet = _s.m_transactionSet;
 	m_previousBlockState = _s.m_previousBlockState;
-	//m_currentBlockState = _s.m_currentBlockState;
-	//m_currentBlock = _s.m_currentBlock;
-	//m_currentBytes = _s.m_currentBytes;
-	//m_author = _s.m_author;
 	m_McInfo = _s.m_McInfo;
 	m_sealEngine = _s.m_sealEngine;
 
-	//m_precommit = m_state;
-	//m_committedToSeal = false;
 	return *this;
 }
 
@@ -73,8 +58,6 @@ log_bloom mcp::Block::logBloom() const
 
 void mcp::Block::populateFromChain(std::shared_ptr<mcp::block_state> _cstate, std::shared_ptr<mcp::block> _cblock, std::shared_ptr<mcp::block_state> _pstate, Transactions& _txs)
 {
-	//m_currentBlockState = _cstate;
-	//m_currentBlock = _cblock;
 	m_previousBlockState = _pstate;
 	m_transactions = std::move(_txs);
 
@@ -135,9 +118,7 @@ mcp::ExecutionResult mcp::Block::execute(Transaction const& _t, Permanence _p)
 	if (_p == Permanence::Committed)
 	{
 		TransactionReceipt const receipt = TransactionReceipt(0, 0, mcp::log_entries());
-		//m_transactions.push_back(_t);
 		m_receipts.push_back(receipt);
-		//m_transactionSet.insert(_t.sha3());
 	}
 
 	return mcp::ExecutionResult();
@@ -149,8 +130,6 @@ u256 mcp::Block::enactOn(VerifiedBlockRef const& _block, chain const& _bc)
 		unsigned index = 0;
 		for (auto const& it : _block.transactions)
 		{
-			//cnote << "execute tx:" << it->sha3().hexPrefixed();
-
 			/// exec transactions
 			execute(*it, Permanence::Committed);
 		}

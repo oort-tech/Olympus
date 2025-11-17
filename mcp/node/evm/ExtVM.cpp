@@ -20,7 +20,6 @@
  */
 
 #include "ExtVM.h"
-// #include "LastBlockHashesFace.h"
 #include <boost/thread.hpp>
 #include <exception>
 
@@ -126,7 +125,7 @@ evmc_status_code transactionExceptionToEvmcStatusCode(TransactionException ex) n
 
 CallResult ExtVM::call(CallParameters& _p)
 {   
-    Executive e(m_s, envInfo(), m_sealEngine, /*m_s.traces,*/ depth + 1, _p.tracer);
+    Executive e(m_s, envInfo(), m_sealEngine, depth + 1, _p.tracer);
     if (_p.tracer)
     {
         std::shared_ptr<dev::u256> _pValue = nullptr;
@@ -165,7 +164,7 @@ void ExtVM::setStore(u256 _n, u256 _v)
 
 CreateResult ExtVM::create(u256 _endowment, u256& io_gas, bytesConstRef _code, Instruction _op, u256 _salt, std::shared_ptr<EVMLogger> _tracer)
 {
-    Executive e(m_s, envInfo(), m_sealEngine, /*m_s.traces,*/ depth + 1, _tracer);
+    Executive e(m_s, envInfo(), m_sealEngine, depth + 1, _tracer);
     bool result = false;
     u256 _gasPrice = mcp::param::get()->IsOIP6(envInfo().mci()) ? gasPrice : 1;
     if (_op == Instruction::CREATE)
@@ -196,23 +195,9 @@ bool ExtVM::selfdestruct(Address _a)
     // http://martin.swende.se/blog/Ethereum_quirks_and_vulns.html). There is one test case
     // witnessing the current consensus
     // 'GeneralStateTests/stSystemOperationsTest/suicideSendEtherPostDeath.json'.
-	//mcp::uint256_t balance(m_s.balance(myAddress));
     m_s.addBalance(_a, m_s.balance(myAddress));
     m_s.setBalance(myAddress, 0);
     ExtVMFace::selfdestruct(_a);
-
-	////suicide trace action
-	//std::shared_ptr<mcp::suicide_trace_action> suicide_action(std::make_shared<mcp::suicide_trace_action>());
-	//suicide_action->contract_account = myAddress;
-	//suicide_action->refund_account = _a;
-	//suicide_action->balance = balance;
-
-	//std::shared_ptr<mcp::trace> suicide_trace(std::make_shared<mcp::trace>());
-	//suicide_trace->type = mcp::trace_type::suicide;
-	//suicide_trace->action = suicide_action;
-	//suicide_trace->depth = depth;
-
-	//m_s.traces.push_back(suicide_trace);
     return true;
 }
 

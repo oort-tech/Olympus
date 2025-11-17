@@ -1,14 +1,10 @@
 #pragma once
 
 #include <mcp/core/block_store.hpp>
-//#include <mcp/core/overlay_db.hpp>
 #include <mcp/core/transaction_receipt.hpp>
-//#include <mcp/node/process_block_cache.hpp>
 #include <mcp/common/SecureTrieDB.h>
 #include <libevm/ExtVMFace.h>
-//#include <mcp/node/chain.hpp>
 #include <mcp/core/transaction.hpp>
-//#include <mcp/core/approve.hpp>
 #include <mcp/core/SealEngine.h>
 #include <mcp/common/log.hpp>
 #include <mcp/common/CodeSizeCache.h>
@@ -65,7 +61,6 @@ struct Change
 	Address address;  ///< Changed account address.
     uint256_t value;       ///< Change value, e.g. balance, storage and nonce.
     uint256_t key;         ///< Storage key. Last because used only in one case.
-    //dev::bytes oldCode;    ///< Code overwritten by CREATE, empty except in case of address collision.
 
     /// Helper constructor to make change log update more readable.
     Change(Kind _kind, Address const& _addr, uint256_t const& _value = 0):
@@ -82,11 +77,6 @@ struct Change
     Change(Address const& _addr, uint256_t const& _value):
             kind(Nonce), address(_addr), value(_value)
     {}
-
-    ///// Helper constructor especially for new code change log.
-    //Change(Address const& _addr, dev::bytes const& _oldCode):
-    //        kind(Code), address(_addr), oldCode(_oldCode)
-    //{}
 };
 
 using ChangeLog = std::vector<Change>;
@@ -246,29 +236,6 @@ public:
 
     /// Hash of a block if within the last 256 blocks, or h256() otherwise.
     h256 blockHash(u256 _number);
-
-	//bool is_precompiled(Address const& account_a, uint64_t const& last_summary_mci_a) const;
-
-	//bigint cost_of_precompiled(Address const& account_a, bytesConstRef in_a) const;
-
-	//std::pair<bool, bytes> execute_precompiled(Address const& account_a, bytesConstRef in_a) const;
-
-    //void set_defalut_account_state(std::vector<h256>& accout_state_hashs);
-
-    /// transaction
-    //mcp::db::db_transaction & transaction;
-    /// store
-	//mcp::block_store store;
-	///chain
-	//std::shared_ptr<mcp::chain> chain;
-    /// database cache
-    //std::shared_ptr<mcp::iblock_cache> block_cache;
-
-	/// current block
-	//mcp::Transaction ts;
-
-	//std::list<std::shared_ptr<mcp::trace>> traces;
-
 private:
 
     /// Turns all "touched" empty accounts into non-alive accounts.
@@ -283,11 +250,7 @@ private:
     /// exception occurred.
 	bool executeTransaction(Executive& _e, mcp::Transaction const& _t);
 
-    ////Save the account status before transaction execution for debug_traceTransaction
-    //void save_previous_account_state();
-
     /// Our overlay for the state tree.
-    //mcp::overlay_db m_db;
     dev::OverlayDB m_db;
     /// Our state tree, as an OverlayDB DB.
     dev::eth::SecureTrieDB<Address, dev::OverlayDB> m_state;
@@ -306,74 +269,12 @@ private:
     mcp::log m_log = { mcp::log("node") };
 };
 
+chain_state& createIntermediateState(chain_state& o_s, Block const& _block, unsigned _txIndex, chain const& _bc);
+
 // Diff from commit in aleth, here we
 // 1. insert code into db if it's available
 // 2. commit storageDB to DB
 // 3. commit the cached account_state to DB
-
-//template <class DB>
-//AddressHash commit(mcp::db::db_transaction& transaction_a, AccountMap const& _cache, DB* db, std::shared_ptr<mcp::process_block_cache> block_cache, mcp::block_store& store, h256 const& ts)
-//{
-//    //mcp::stopwatch_guard sw("chain state:commit");
-//
-//    AddressHash ret;
-//    for (auto const& i : _cache)
-//    {
-//        if (i.second->isDirty())
-//        {
-//            if (i.second->hasNewCode())
-//            {
-//                h256 ch = i.second->codeHash();
-//                // sichaoy: why do we need CodeSizeCache?
-//                // Store the size of the code
-//                dev::eth::CodeSizeCache::instance().store(ch, i.second->code().size());
-//                db->insert(ch, &i.second->code());
-//            }
-//
-//            std::shared_ptr<mcp::account_state> state(i.second);
-//            if (i.second->storageOverlay().empty())
-//            {
-//                assert_x(i.second->baseRoot());
-//                state->setStorageRoot(i.second->baseRoot());
-//            }
-//            else
-//            {
-//                //mcp::stopwatch_guard sw("chain state:commit1");
-//
-//                dev::eth::SecureTrieDB<h256, DB> storageDB(db, i.second->baseRoot());
-//                for (auto const& j : i.second->storageOverlay())
-//                    if (j.second)
-//                        storageDB.insert(j.first, rlp(j.second));
-//                    else
-//                        storageDB.remove(j.first);
-//                assert_x(storageDB.root());
-//                state->setStorageRoot(storageDB.root());
-//            }
-//
-//            {
-//                //mcp::stopwatch_guard sw("chain state:commit2");
-//
-//                // commit the account_state to DB
-//                db->commit();
-//
-//                //// Update account_state  previous and block hash
-//                state->setPrevious();
-//                state->setTs(ts);
-//                state->record_init_hash();
-//                state->clear_temp_state();
-//
-//                block_cache->latest_account_state_put(transaction_a, i.first, state);
-//            }
-//
-//            ret.insert(i.first);
-//        }
-//    }
-//
-//    return ret;
-//}
-
-chain_state& createIntermediateState(chain_state& o_s, Block const& _block, unsigned _txIndex, chain const& _bc);
-
 template <class DB>
 AddressHash commit(AccountMap const& _cache, dev::eth::SecureTrieDB<Address, DB>& _state);
 

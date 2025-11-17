@@ -1,7 +1,6 @@
 #pragma once
 
 #include "common.hpp"
-#include "column.hpp"
 #include "db_transaction.hpp"
 #include <boost/filesystem.hpp> 
 #include <libdevcore/Common.h>

@@ -313,7 +313,6 @@ void mcp::block_store::dag_free_put(mcp::db::db_transaction & transaction_a, mcp
 	}
 	dev::Slice s_key((char*)b_key.data(), b_key.size());
 	transaction_a.put(static_cast<uint8_t>(StorePrefix::dag_free), s_key, dev::Slice());
-	//transaction_a.count_add("dag_free", 1);
 }
 
 void mcp::block_store::dag_free_del(mcp::db::db_transaction & transaction_a, mcp::free_key const & key_a)
@@ -336,14 +335,7 @@ void mcp::block_store::dag_free_del(mcp::db::db_transaction & transaction_a, mcp
 
 	transaction_a.del(static_cast<uint8_t>(StorePrefix::dag_free), s_key);
 
-	//transaction_a.count_reduce("dag_free", 1);
 }
-
-//size_t mcp::block_store::dag_free_count(mcp::db::db_transaction & transaction_a)
-//{
-//	return transaction_a.count_get("dag_free");
-//}
-
 
 bool mcp::block_store::main_chain_get(mcp::db::db_transaction & transaction_a, uint64_t const & mci_a, mcp::block_hash & hash_a, std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a)
 {

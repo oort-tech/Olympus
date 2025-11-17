@@ -723,8 +723,6 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 			config.writestring2file(dev::toHex(seed.ref()), nodekey_path);
 		}
 
-		//mcp::db::database::init_table_cache(config.db.cache_size);
-
 		///chain store
 		mcp::block_store chain_store(error, data_path / "chaindb");
 		if (error)
@@ -767,8 +765,6 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 		std::shared_ptr<mcp::Client> client(std::make_shared<mcp::Client>(chain_store, chain, cache, host));
 
 		///contract caller
-		//mcp::DENCaller = NewDENContractCaller(std::bind(&mcp::chain::callSystem, chain, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
-		//mcp::MainCaller = NewMainContractCaller(std::bind(&mcp::chain::call, chain, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
 		mcp::MainCaller = mcp::NewMainContractCaller();
 		
 		/// transaction queue
@@ -822,8 +818,7 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 		}
 
 		std::shared_ptr<mcp::rpc> rpc = get_rpc(
-			/*chain_store, chain, cache,*/ key_manager, wallet, /*host,*/ background, client, /*composer,*/
-			io_service, config.rpc
+			key_manager, wallet, background, client, io_service, config.rpc
 		);
 		if (config.rpc.rpc_enable)
 		{
@@ -929,7 +924,6 @@ void mcp_daemon::ongoing_report(
 		<< ", transaction:" << store.transaction_count(transaction)
 		<< ", unstable approve:" << store.approve_unstable_count(transaction)
 		<< ", approve:" << store.approve_count(transaction)
-		//<< ", dag free:" << store.dag_free_count(transaction)
 		<< ", last_stable_mci:" << chain->last_stable_mci()
 		<< ", last_mci:" << chain->last_mci();
 

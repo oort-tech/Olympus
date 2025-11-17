@@ -32,7 +32,5 @@ namespace mcp
 
 		/// Precompiled contracts as specified in the chain params.
 		std::unordered_map<dev::Address, dev::eth::PrecompiledContract> precompiled;
-
-		//EVMSchedule lastForkWithAdditionalEIPsSchedule;
 	};
 }

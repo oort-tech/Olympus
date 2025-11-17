@@ -107,9 +107,6 @@ namespace mcp
 		/// Returns back to a pristine state after having done a playback.
 		void cleanup();
 
-		///// Sets m_currentBlock to a clean state, (i.e. no change from m_previousBlock) 
-		//void resetCurrent();
-
 		/// Get the header information on the present block.
 		dev::eth::McInfo info(bool isPopulateFromParent = false) const;
 
@@ -124,10 +121,7 @@ namespace mcp
 		chain_state m_state;						///< Our state tree, as an OverlayDB DB.
 		Transactions m_transactions;				///< The current list of transactions that we've included in the state.
 		dev::eth::TransactionReceipts m_receipts;	///< The corresponding list of transaction receipts.
-		//h256s m_transactionSet;				///< The set of transaction hashes that we've included in the state.
 		std::shared_ptr<mcp::block_state> m_previousBlockState;
-		//std::shared_ptr<mcp::block_state> m_currentBlockState;
-		//std::shared_ptr<mcp::block> m_currentBlock;
 		dev::eth::McInfo m_McInfo;
 
 		SealEngineFace* m_sealEngine = nullptr;		///< The chain's seal engine.

@@ -76,7 +76,6 @@ void mcp::Executive::initialize(Transaction const& _transaction)
 			<< m_s.balance(m_t.sender()) << " for sender: " << m_t.sender().hexPrefixed();
 		m_excepted = TransactionException::NotEnoughCash;
 		m_s.incNonce(m_t.sender());
-		//if (mcp::chainParams()->IsOIP4(m_envInfo.mci()))
 		if (mcp::param::get()->IsOIP4(m_envInfo.mci()))
 			m_gas = m_t.gas();//OIP4
 
@@ -115,9 +114,6 @@ bool mcp::Executive::create(Address const& _txSender, u256 const& _endowment, u2
 
 bool mcp::Executive::call(Address const& _receiveAddress, Address const& _senderAddress, u256 const& _value, u256 const& _gasPrice, bytesConstRef _data, u256 const& _gas)
 {
-	//if (m_tracer && topCall())
-	//	m_tracer->CaptureStart(_senderAddress, _receiveAddress, false, _data.toBytes(), uint64_t(m_gas), _value);
-
     dev::eth::CallParameters params(_senderAddress, _receiveAddress, _receiveAddress, _value, _value, _gas, _data, nullptr/*, {}*/);
     return call(params, _gasPrice, _senderAddress);
 }
@@ -167,52 +163,6 @@ bool mcp::Executive::call(dev::eth::CallParameters const& _p, u256 const& _gasPr
 		}
 	}
 
-	////call trace action
-	//std::shared_ptr<mcp::call_trace_action> call_action(std::make_shared<mcp::call_trace_action>());
-	//std::string call_type;
-	//if (_p.op)
-	//{
-	//	Instruction op = *_p.op;
-	//	switch (op)
-	//	{
-	//	case Instruction::CALL:
-	//		call_type = "call";
-	//		break;
-	//	case Instruction::CALLCODE:
-	//		call_type = "callcode";
-	//		break;
-	//	case Instruction::DELEGATECALL:
-	//		call_type = "delegatecall";
-	//		break;
-	//	case Instruction::STATICCALL:
-	//		call_type = "staticcall";
-	//		break;
-	//	default:
-	//		call_type = std::to_string((uint8_t)op);
-	//		break;
-	//	}
-	//}
-	//else
-	//	call_type = "call";
-
-	//call_action->call_type = call_type;
-	//call_action->from = _p.senderAddress;
-	//call_action->to = _p.receiveAddress;
-	//call_action->amount = _p.valueTransfer;
-	//call_action->data = _p.data.toBytes();
-	//call_action->gas = _p.gas;
-	//if (m_depth == 0)
-	//	call_action->gas += m_baseGasRequired;
-
-	//std::shared_ptr<mcp::trace> call_trace(std::make_shared<mcp::trace>());
-	//call_trace->type = mcp::trace_type::call;
-	//call_trace->action = call_action;
-	//call_trace->depth = m_depth;
-
-	//m_traces.push_back(call_trace);
-	//assert_x(!m_current_trace);
-	//m_current_trace = call_trace;
-
 	mcp::uint256_t start_gas_used = gasUsed();
 
     /// Transfer balance
@@ -220,18 +170,6 @@ bool mcp::Executive::call(dev::eth::CallParameters const& _p, u256 const& _gasPr
 
 	if (m_tracer && m_ext && topCall())
 		m_tracer->CaptureStart(m_ext.get(), _p.senderAddress, _p.codeAddress, false, _p.data.toBytes(), uint64_t(m_gas), _p.valueTransfer);
-
-	//if (!m_ext)
-	//{
-	//	std::shared_ptr<mcp::call_trace_result> call_result(std::make_shared<mcp::call_trace_result>());
-	//	call_result->output = m_output.toVector();
-	//	call_result->gas_used = gasUsed() - start_gas_used;
-
-	//	assert_x(m_current_trace);
-	//	assert_x(m_current_trace->type == mcp::trace_type::call);
-	//	m_current_trace->result = call_result;
-	//	m_current_trace = nullptr;
-	//}
 
     return !m_ext;
 }
@@ -246,10 +184,6 @@ bool mcp::Executive::createOpcode(Address const& _sender, u256 const& _endowment
 {
     u256 nonce = m_s.getNonce(_sender);
 	m_newAddress = right160(sha3(rlpList(_sender, nonce)));
-
-	//if (m_tracer && topCall())
-	//	m_tracer->CaptureStart(_sender, m_newAddress, true, _init.toBytes(), uint64_t(m_gas), _endowment);
-    
 	return executeCreate(_sender, _endowment, _gasPrice, _gas, _init, _origin, Instruction::CREATE);
 }
 
@@ -300,24 +234,6 @@ bool mcp::Executive::executeCreate(Address const& _sender, u256 const& _endowmen
 	if (m_tracer && m_ext && topCall())
 		m_tracer->CaptureStart(m_ext.get(), _sender, m_newAddress, true, _init.toBytes(), uint64_t(m_gas), _endowment);
 
-	////create trace action
-	//std::shared_ptr<mcp::create_trace_action> create_action(std::make_shared<mcp::create_trace_action>());
-	//create_action->from = _sender;
-	//create_action->init = _init.toVector();
-	//create_action->amount = _endowment;
-	//create_action->gas = _gas;
-	//if (m_depth == 0)
-	//	create_action->gas += m_baseGasRequired;
-
-	//std::shared_ptr<mcp::trace> create_trace(std::make_shared<mcp::trace>());
-	//create_trace->type = mcp::trace_type::create;
-	//create_trace->action = create_action;
-	//create_trace->depth = m_depth;
-
-	//m_traces.push_back(create_trace);
-	//assert_x(!m_current_trace);
-	//m_current_trace = create_trace;
-
     return !m_ext;
 }
 
@@ -330,9 +246,6 @@ bool mcp::Executive::go()
         Timer t;
 #endif
         try{
-			//mcp::uint256_t start_gas_used = gasUsed();
-			//int64_t start_refunds = m_ext->sub.refunds;
-
             // Create VM instance. Force Interpreter if tracing requested.
             auto vm = VMFactory::create();
             if (m_isCreation)
@@ -365,32 +278,9 @@ bool mcp::Executive::go()
                 if (m_res)
                     m_res->output = m_output.toVector(); // copy output to execution result
                 m_s.setCode(m_ext->myAddress, m_output.toVector());
-
-				////create trace result 
-				//std::shared_ptr<mcp::create_trace_result> create_result(std::make_shared<mcp::create_trace_result>());
-				//create_result->contract_account = m_ext->myAddress;
-				//create_result->code = out.toVector();
-				//create_result->gas_used = gasUsed() - start_gas_used - mcp::uint256_t(m_ext->sub.refunds - start_refunds);
-
-				//assert_x(m_current_trace);
-				//assert_x(m_current_trace->type == mcp::trace_type::create);
-				//m_current_trace->result = create_result;
-				//m_current_trace = nullptr;
             }
             else
-            //{
                 m_output = vm->exec(m_gas, *m_ext, m_tracer);
-
-				////call trace result 
-				//std::shared_ptr<mcp::call_trace_result> call_result(std::make_shared<mcp::call_trace_result>());
-				//call_result->output = m_output.toVector();
-				//call_result->gas_used = gasUsed() - start_gas_used - mcp::uint256_t(m_ext->sub.refunds - start_refunds);
-
-				//assert_x(m_current_trace);
-				//assert_x(m_current_trace->type == mcp::trace_type::call);
-				//m_current_trace->result = call_result;
-				//m_current_trace = nullptr;
-            //}
         }
         catch (RevertInstruction& _e)
         {
@@ -434,16 +324,6 @@ bool mcp::Executive::go()
             m_res->output = m_output.toVector();
 		if (m_tracer && topCall())
 			m_tracer->CaptureEnd(m_output.toVector(), uint64_t(gasUsed()), getException());
-
-        //std::cout << m_res->output << std::endl;
-
-		////error trace result 
-		//if (m_excepted != mcp::TransactionException::None)
-		//{
-		//	assert_x(m_current_trace);
-		//	m_current_trace->error_message = to_transaction_exception_messge(m_excepted);
-		//	m_current_trace = nullptr;
-		//}
 
 #if ETH_TIMED_EXECUTIONS
         cnote << "VM took:" << t.elapsed() << "; gas used: " << (sgas - m_endGas);

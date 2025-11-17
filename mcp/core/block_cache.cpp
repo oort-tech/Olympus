@@ -4,7 +4,6 @@ mcp::block_cache::block_cache(mcp::block_store &store_a) :
 	m_store(store_a),
 	m_blocks(500),
 	m_block_states(500),
-	//m_latest_account_states(10000),
 	m_transactions(50000),
 	m_account_nonces(10000),
 	m_successors(300),
@@ -142,58 +141,6 @@ void mcp::block_cache::clear_block_state_changing()
 	std::lock_guard<std::mutex> lock(m_block_state_mutex);
 	m_block_state_changings.clear();
 }
-
-
-//std::shared_ptr<mcp::account_state> mcp::block_cache::latest_account_state_get(mcp::db::db_transaction &transaction_a, Address const &account_a)
-//{
-//	std::shared_ptr<mcp::account_state> state;
-//	std::lock_guard<std::mutex> lock(m_latest_account_state_mutex);
-//	if (!m_latest_account_state_changings.count(account_a))
-//	{
-//		bool exists = m_latest_account_states.tryGet(account_a, state);
-//		if (exists)
-//			return state;
-//	}
-//
-//	//get from db
-//	h256 hash;
-//	bool exists = !m_store.latest_account_state_get(transaction_a, account_a, hash);
-//	if (exists)
-//	{
-//		state = m_store.account_state_get(transaction_a, hash);
-//		assert_x(state);
-//		m_latest_account_states.insert(account_a, state);
-//	}
-//
-//	return state;
-//}
-//
-//void mcp::block_cache::latest_account_state_put(Address const &account_a, std::shared_ptr<mcp::account_state> account_state_a)
-//{
-//	std::lock_guard<std::mutex> lock(m_latest_account_state_mutex);
-//	m_latest_account_states.insert(account_a, account_state_a);
-//}
-//
-//void mcp::block_cache::latest_account_state_earse(std::unordered_set<Address> const & accounts_a)
-//{
-//	std::lock_guard<std::mutex> lock(m_latest_account_state_mutex);
-//	for (auto const & account : accounts_a)
-//		m_latest_account_states.remove(account);
-//}
-//
-//void mcp::block_cache::mark_latest_account_state_as_changing(std::unordered_set<Address> const & accounts_a)
-//{
-//	std::lock_guard<std::mutex> lock(m_latest_account_state_mutex);
-//	for (auto const & account : accounts_a)
-//		m_latest_account_state_changings.insert(account);
-//}
-//
-//void mcp::block_cache::clear_latest_account_state_changing()
-//{
-//	std::lock_guard<std::mutex> lock(m_latest_account_state_mutex);
-//	m_latest_account_state_changings.clear();
-//}
-//
 
 bool mcp::block_cache::transaction_exists(mcp::db::db_transaction & transaction_a, h256 const & hash)
 {
@@ -547,8 +494,6 @@ mcp::StakingList mcp::block_cache::GetStakingList(mcp::db::db_transaction & _tra
 	if (m_staking.tryGet(_epoch, sl))
 		return *sl;
 	return m_store.GetStakingList(_transaction, _epoch);
-	//if (param.size()) ///rarely
-	//	m_staking.insert(_epoch, std::make_shared<mcp::StakingList>(param));
 }
 
 void mcp::block_cache::PutStakingList(mcp::db::db_transaction & _transaction, Epoch const & _epoch, mcp::StakingList const & _sl)
@@ -563,7 +508,6 @@ std::string mcp::block_cache::report_cache_size()
 	std::stringstream s;
 	s << "m_blocks:" << m_blocks.size()
 		<< " , m_block_states:" << m_block_states.size()
-		//<< " , m_latest_account_states:" << m_latest_account_states.size()
 		<< " , m_successors:" << m_successors.size()
 		<< " , m_block_summarys:" << m_block_summarys.size()
 		<< " , m_transactions:" << m_transactions.size()

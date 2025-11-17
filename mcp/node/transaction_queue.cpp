@@ -3,8 +3,6 @@
 
 namespace mcp
 {
-	
-
 	using namespace std;
 	using namespace dev;
 
@@ -15,12 +13,11 @@ namespace mcp
 	constexpr size_t c_maxReadyTransactionCount = 100000;
 
 	TransactionQueue::TransactionQueue(
-		boost::asio::io_service& io_service_a, mcp::block_store& store_a, std::shared_ptr<mcp::block_cache> cache_a, /*std::shared_ptr<mcp::chain> chain_a,*/
+		boost::asio::io_service& io_service_a, mcp::block_store& store_a, std::shared_ptr<mcp::block_cache> cache_a,
 		std::shared_ptr<mcp::Client> client_a, std::shared_ptr<mcp::async_task> async_task_a
 	):
 		m_store(store_a),
 		m_cache(cache_a),
-		//m_chain(chain_a),
 		m_client(client_a),
 		m_async_task(async_task_a),
 		m_dropped(c_maxDroppedTransactionCount),
@@ -82,9 +79,6 @@ namespace mcp
 				checkTx(*_transaction); ///check balance and nonce
 			UpgradeGuard ul(l);
 			ret = manageImport_WITH_LOCK(_transaction, _in);
-
-			//LOG(m_log.debug) << "import.......";
-			//prinf();
 		}
 
 		if (ImportResult::Success == ret && _in != source::sync)/// first import && successed,broadcast it
@@ -309,10 +303,6 @@ namespace mcp
 		}
 		all.erase(_txHash);
 		m_known.erase(_txHash);
-
-		//LOG(m_log.debug) << "remove.......";
-		//prinf();
-		
 		return true;
 	}
 
@@ -479,21 +469,11 @@ namespace mcp
 			BOOST_THROW_EXCEPTION(OutOfGasPriceIntrinsic() << RequirementErrorComment(
 			(bigint)(mcp::tx_max_gas), (bigint)_t->gas(),
 				std::string("_gasUsed + (bigint)_t.gas() < lower.gasLimit()")));
-		
-		//if ((uint256_t)_t->gas()*(uint256_t)_t->gasPrice() > mcp::uint256_t(tx_max_gas_fee))
-		//	BOOST_THROW_EXCEPTION(BlockGasLimitReached() << RequirementErrorComment(
-		//	(bigint)(mcp::tx_max_gas), (bigint)_t->gas(),
-		//		std::string("_t->gas() * t->gasPrice() > tx_max_gas_fee")));
 	}
 
 	void TransactionQueue::checkTx(Transaction const& _t)
 	{
 		/// nonce great than last stable transaction nonce,It doesn't mean it's right,meybe exist pending transactions
-		//dev::OverlayDB _db = dev::OverlayDB(std::make_unique<mcp::block_store>(m_store));
-		//Block s(/*m_store,*/ *m_chain, _db, m_chain->lastStateRoot());
-		//mcp::chain_state c_state(/*transaction,*/ 0, /*m_store,*/ /*m_chain,*/ /*m_cache,*/ _db);
-		//auto nonce = s.state().getNonce(_t.sender());
-		
 		auto _block = client()->blockByNumber(LatestBlock);
 		auto nonce = _block.transactionsFrom(_t.sender());
 		if (nonce > _t.nonce())
@@ -534,8 +514,6 @@ namespace mcp
 					m_superfluous.erase(m_superfluous.begin(), ft);
 				}
 			}
-			//LOG(m_log.debug) << "processSuperfluous.......";
-			//prinf();
 		}
 
 		m_clearTimer->expires_from_now(boost::posix_time::seconds(180));
@@ -588,58 +566,6 @@ namespace mcp
 			;
 
 		return str;
-	}
-
-	void TransactionQueue::prinf()
-	{
-		LOG(m_log.debug) << getInfo();
-		LOG(m_log.debug) << "--------------all-------------";
-		for (auto it = all.begin(); it != all.end(); it++)
-		{
-			LOG(m_log.debug) << it->first.hex() << " ,nonce:" << it->second->nonce();
-		}
-		LOG(m_log.debug) << "--------------all end-------------";
-
-		LOG(m_log.debug) << "--------------queue-------------";
-		for (auto it = queue.begin(); it != queue.end(); it++)
-		{
-			LOG(m_log.debug) << "address:" << it->first.hex();
-			auto m = it->second;
-			for (auto at = m.txs.begin(); at != m.txs.end(); at++)
-			{
-				LOG(m_log.debug) << "--nonce:" << at->first << " ,hash:" << at->second->sha3().hex();
-			}
-		}
-		LOG(m_log.debug) << "--------------queue end-------------";
-
-		LOG(m_log.debug) << "--------------pending-------------";
-		for (auto it = pending.begin(); it != pending.end(); it++)
-		{
-			LOG(m_log.debug) << "address:" << it->first.hex();
-			auto m = it->second;
-			for (auto at = m.txs.begin(); at != m.txs.end(); at++)
-			{
-				LOG(m_log.debug) << "--nonce:" << at->first << " ,hash:" << at->second->sha3().hex();
-			}
-		}
-		LOG(m_log.debug) << "--------------pending end-------------";
-
-		LOG(m_log.debug) << "--------------known-------------";
-		for (auto it = m_known.begin(); it != m_known.end(); it++)
-		{
-			LOG(m_log.debug) << "hash:" << (*it).hex();
-		}
-		LOG(m_log.debug) << "--------------known end-------------";
-		LOG(m_log.debug) << "--------------superfluous-------------";
-		for (auto it = m_superfluous.begin(); it != m_superfluous.end(); it++)
-		{
-			for (auto h : it->second)
-			{
-				LOG(m_log.debug) << "hash:" << h.hex();
-			}
-		}
-		LOG(m_log.debug) << "--------------superfluous end-------------";
-		LOG(m_log.debug) << "-------------------------------------------------------";
 	}
 
 	std::pair<bool, std::shared_ptr<Transaction>> TransactionQueue::txList::add(std::shared_ptr<Transaction> _t)

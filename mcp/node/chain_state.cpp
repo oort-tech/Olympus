@@ -91,14 +91,6 @@ std::shared_ptr<mcp::account_state> mcp::chain_state::account(Address const& _ad
     if (m_nonExistingAccountsCache.count(_addr))
         return nullptr;
 
-    //// Populate basic info.
-    //std::shared_ptr<mcp::account_state> as(block_cache->latest_account_state_get(transaction, _addr));
-    //if (!as)
-    //{
-    //    m_nonExistingAccountsCache.insert(_addr);
-    //    return nullptr;
-    //}
-
     // Populate basic info.
     std::string stateBack = m_state.at(_addr);
     if (stateBack.empty())
@@ -119,11 +111,6 @@ std::shared_ptr<mcp::account_state> mcp::chain_state::account(Address const& _ad
 
     auto acco = std::make_shared<account_state>(nonce, balance, storageRoot, codeHash, version, account_state::Unchanged);
     auto i = m_cache.emplace(_addr, acco);
-    //auto i = m_cache.emplace(piecewise_construct, forward_as_tuple(_addr),
-    //    forward_as_tuple(nonce, balance, storageRoot, codeHash, version, account_state::Unchanged));
-     
-	//std::shared_ptr<mcp::account_state> as_copy(std::make_shared<mcp::account_state>(*as));
-    //auto i = m_cache.emplace(_addr, as_copy);
     m_unchangedCacheEntries.push_back(_addr);
     return i.first->second;
 }
@@ -219,7 +206,7 @@ std::pair<mcp::chain_state::AddressMap, h256> mcp::chain_state::addresses(h256 c
 
 std::pair<mcp::ExecutionResult, dev::eth::TransactionReceipt> mcp::chain_state::execute(dev::eth::EnvInfo const& _envInfo, SealEngineFace const& _sealEngine, Permanence _p, mcp::Transaction const& _t)
 {
-	Executive e(*this, _envInfo, _sealEngine/*, traces*/);
+	Executive e(*this, _envInfo, _sealEngine);
     ExecutionResult res;
     e.setResultRecipient(res);
 	
@@ -233,10 +220,6 @@ std::pair<mcp::ExecutionResult, dev::eth::TransactionReceipt> mcp::chain_state::
 		m_cache.clear();
 		break;
 	case Permanence::Committed:
-		//for (auto const& i : m_cache)
-		//{
-		//	res.modified_accounts.insert(i.first);
-		//}
 		commit(); // Remove empty accounts
 		break;
 	case Permanence::Uncommitted:
@@ -244,16 +227,6 @@ std::pair<mcp::ExecutionResult, dev::eth::TransactionReceipt> mcp::chain_state::
 	}
 
 	TransactionReceipt const receipt = TransactionReceipt(statusCode, startGasUsed + e.gasUsed(), e.logs(), mcp::param::get()->IsOIP5(_envInfo.mci()));
-    //if (_p == Permanence::Committed)
-    //    cnote << "receipt " << _t.sha3().hexPrefixed() << " : " << dev::toHex(receipt.rlp());
-    //cnote << "receipt status:" << int(receipt.statusCode())
-    //    << " ,gasUsed:" << receipt.gasUsed()
-    //    << " ,bloom:" << dev::toHex(receipt.bloom());
-    //for (auto const& it : receipt.log())
-    //{
-    //    RLPStream s; it.streamRLP(s); 
-    //    cnote << "receipt log rlp:" << dev::toHex(s.out());
-    //}
     return std::make_pair(res, receipt);
 }
 
@@ -261,7 +234,6 @@ void mcp::chain_state::executeBlockTransactions(Block const& _block, unsigned _t
 {
     for (unsigned i = 0; i < _txCount; ++i)
     {
-        //cnote << "executeBlockTransactions:" << _block.pending()[i].sha3().hexPrefixed();
         EnvInfo envInfo(_block.info(), mcp::chainID());
         Executive e(*this, envInfo, _sealEngine);
         executeTransaction(e, _block.pending()[i]);
@@ -418,7 +390,6 @@ void mcp::chain_state::addBalance(Address const& _id, uint256_t const& _amount)
         a->addBalance(_amount);
     }
     else					
-        //createAccount(_id, std::make_shared<mcp::account_state>(_id, ts.sha3(), h256(0), requireAccountStartNonce(), _amount));
         createAccount(_id, std::make_shared<mcp::account_state>(requireAccountStartNonce(), _amount));
 
     if (_amount)
@@ -630,7 +601,6 @@ AddressHash mcp::commit(AccountMap const& _cache, dev::eth::SecureTrieDB<Address
                 {
                     assert_x(i.second->baseRoot());
                     s.append(i.second->baseRoot());
-                    //cnote << "baseRoot:" << i.first.hexPrefixed() << ":" << i.second->baseRoot().hexPrefixed();
                 }
                 else
                 {
@@ -639,26 +609,16 @@ AddressHash mcp::commit(AccountMap const& _cache, dev::eth::SecureTrieDB<Address
                         if (j.second)
                         {
                             storageDB.insert(j.first, rlp(j.second));
-                            //cnote << j.first << ":" << j.second;
-
-                            //auto _kk = bytesConstRef(storageDB.at(j.first));
-                            //cnote << j.first << " get:" << RLP(_kk).toInt<u256>();
                         }
                         else
                             storageDB.remove(j.first);
                     assert_x(storageDB.root());
                     s.append(storageDB.root());
-
-                    //cnote << "storage root:" << i.first.hexPrefixed() << ":" << storageDB.root().hexPrefixed();
                 }
 
                 if (i.second->hasNewCode())
                 {
                     h256 ch = i.second->codeHash();
-
-                    /////test
-                    //std::cout << i.first.hexPrefixed() << ",codeHash:" << ch.hexPrefixed() << ",code:" << i.second->code().size() << std::endl;
-
                     // Store the size of the code
                     dev::eth::CodeSizeCache::instance().store(ch, i.second->code().size());
                     _state.db()->insert(ch, &i.second->code());
@@ -666,17 +626,7 @@ AddressHash mcp::commit(AccountMap const& _cache, dev::eth::SecureTrieDB<Address
                 }
                 else
                     s << i.second->codeHash();
-
-                //mcp::stopwatch_guard sw("chain state:commit2");
                 _state.insert(i.first, &s.out());
-                //cnote << "account:" << i.second->nonce() 
-                //    << ":" << i.second->balance()
-                //    << ":" << i.second->codeHash().hex()
-                //    << ":" << i.second->code().size();
-                //cnote << "account rlp:" << i.first.hex() << ":" << toHex(s.out());
-                //auto _kk = bytesConstRef(_state.at(i.first));
-                //cnote << i.first.hex() << " account:" << toHex(_kk);
-               //db->commit();
             }
 
             ret.insert(i.first);
@@ -690,37 +640,6 @@ mcp::chain_state& mcp::createIntermediateState(mcp::chain_state& o_s, mcp::Block
 {
     o_s = _block.state();
     o_s.setRoot(_block.stateRootBeforeTx());
-    //cnote << "createIntermediateState set Root:" << _block.stateRootBeforeTx().hexPrefixed();
-    //dev::Address _addr("0x2a3f10b9fcf6fC7885Dae49C12917A917ef8d6D1");
-    //auto _b(o_s.balance(_addr));
-
-    //dev::Address _c("0xd165359e576e7a5334441E8149923fbf0b97E8f1");
-    //{
-    //    auto ret = o_s.storage(_c);
-    //    if (ret.size() == 0)
-    //        cnote << "createIntermediateState storage size 0";
-    //    for (auto const& _m : ret)
-    //    {
-    //        cnote << _c.hexPrefixed() << ":" << _m.first.hexPrefixed()
-    //            << ":" << _m.second.first
-    //            << ":" << _m.second.second;
-    //    }
-    //}
     o_s.executeBlockTransactions(_block, _txIndex,  *_bc.sealEngine());
-    //cnote << "createIntermediateState 0x2a3f10b9fcf6fC7885Dae49C12917A917ef8d6D1 balance:" 
-    //    << _b << ":" << o_s.balance(_addr);
-
-    //{
-    //    auto ret = o_s.storage(_c);
-    //    if (ret.size() == 0)
-    //        cnote << "createIntermediateState hou storage size 0";
-    //    for (auto const& _m : ret)
-    //    {
-    //        cnote << _c.hexPrefixed() << ":" << _m.first.hexPrefixed()
-    //            << ":" << _m.second.first
-    //            << ":" << _m.second.second;
-    //    }
-    //}
-    
     return o_s;
 }

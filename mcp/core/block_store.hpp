@@ -11,7 +11,6 @@ namespace mcp
 	enum class StorePrefix : uint8_t
 	{
 		dag_account_info = 0x01,
-		//account_info,
 		blocks,
 		transactions,
 		account_nonce,
@@ -27,9 +26,6 @@ namespace mcp
 		catchup_chain_block_summary,
 		catchup_chain_summary_block,
 		hash_tree_summary,
-		//unlink_block,
-		//next_unlink,
-		//next_unlink_index,
 		transaction_receipt,
 		approves,
 		approve_receipt,
@@ -39,15 +35,13 @@ namespace mcp
 		stakingList,
 		dag_free = 0x65,
 		block_child,
-		//unlink_info,
-		//head_unlink,
 		prop = 0xF0
 	};
 
 	/**
 	* Manages block storage and iteration
 	*/
-	class block_store /*: public DatabaseFace*/
+	class block_store
 	{
 	public:
 		block_store(bool &, boost::filesystem::path const &);
@@ -59,7 +53,6 @@ namespace mcp
 		bool block_exists(mcp::db::db_transaction &, mcp::block_hash const &);
 		std::shared_ptr<mcp::block> block_get(mcp::db::db_transaction &, mcp::block_hash const &);
 		void block_put(mcp::db::db_transaction &, mcp::block_hash const &, mcp::block const &);
-		//mcp::db::forward_iterator block_begin(mcp::db::db_transaction & transaction_a, std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a = nullptr);
 
 		size_t block_count(mcp::db::db_transaction &);
 
@@ -92,7 +85,6 @@ namespace mcp
 		mcp::db::backward_iterator dag_free_rbegin(mcp::db::db_transaction & transaction_a, std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a = nullptr);
 		void dag_free_put(mcp::db::db_transaction & transaction_a, mcp::free_key const & key_a);
 		void dag_free_del(mcp::db::db_transaction & transaction_a, mcp::free_key const & key_a);
-		//size_t dag_free_count(mcp::db::db_transaction & transaction_a);
 
 		bool main_chain_get(mcp::db::db_transaction & transaction_a, uint64_t const & mci, mcp::block_hash & hash_a, std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a = nullptr);
 		void main_chain_put(mcp::db::db_transaction & transaction_a, uint64_t const & mci, mcp::block_hash const & hash_a);
@@ -206,7 +198,6 @@ namespace mcp
 		}
 
 		std::shared_ptr<rocksdb::ManagedSnapshot> create_snapshot() { return m_db->create_snapshot(); }
-		//void release_snapshot(std::shared_ptr<rocksdb::ManagedSnapshot> _snapshot) { m_db->release_snapshot(_snapshot); }
 		std::shared_ptr<mcp::db::database> db() { return m_db; }
 		std::shared_ptr<mcp::db::database> db() const { return m_db; }
 

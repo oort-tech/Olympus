@@ -174,11 +174,6 @@ add_library (db
 	mcp/db/db_iterator.hpp
 	mcp/db/db_transaction.cpp
 	mcp/db/db_transaction.hpp
-	mcp/db/write_batch.cpp
-	mcp/db/write_batch.hpp
-	mcp/db/column.cpp
-	mcp/db/column.hpp
-	mcp/db/counter.cpp
 	mcp/db/counter.hpp
 	mcp/db/common.hpp
 	mcp/db/common.cpp)
@@ -306,7 +301,6 @@ add_library (node
 	mcp/node/Block.cpp
 	mcp/node/Client.hpp
 	mcp/node/Client.cpp
-	mcp/node/VerifiedBlock.hpp
     )
 
 add_library (p2p
@@ -389,8 +383,6 @@ add_library (core
 	mcp/core/graph.hpp
 	mcp/core/timeout_db_transaction.hpp
 	mcp/core/timeout_db_transaction.cpp
-	mcp/core/overlay_db.hpp
-	mcp/core/overlay_db.cpp
 	mcp/core/log_entry.hpp
 	mcp/core/log_entry.cpp
 	mcp/core/transaction_receipt.hpp
@@ -407,7 +399,6 @@ add_library (core
 	mcp/core/Precompiled.h
 	mcp/core/Precompiled.cpp
 	mcp/core/SealEngine.h
-	mcp/core/SealEngine.cpp
 	mcp/core/ChainOperationParams.hpp
 	mcp/core/ChainOperationParams.cpp
 	mcp/core/iapprove_queue.hpp

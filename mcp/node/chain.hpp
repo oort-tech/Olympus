@@ -1,7 +1,6 @@
 #pragma once
 
 #include <mcp/node/message.hpp>
-//#include <mcp/core/timeout_db_transaction.hpp>
 #include <mcp/node/process_block_cache.hpp>
 #include <mcp/core/Precompiled.h>
 #include <mcp/core/SealEngine.h>
@@ -9,7 +8,6 @@
 #include <set>
 #include <queue>
 #include <mcp/node/chain_state.hpp>
-//#include <mcp/node/sync.hpp>
 #include <mcp/core/approve_receipt.hpp>
 #include "Block.hpp"
 

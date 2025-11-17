@@ -244,7 +244,6 @@ mcp::block_state::block_state(bool & error_a, dev::RLP const & r)
 		return;
 
 	m_stateRoot = (h256)r[16];
-	//m_transactionsRoot = (h256)r[17];
 	m_receiptsRoot = (h256)r[17];
 	if (r.itemCount() == 18)
 		return;
@@ -372,27 +371,6 @@ void mcp::free_key::deserialize(mcp::stream & stream_a)
     read(stream_a, hash_asc.asArray());
 }
 
-
-//mcp::hash_tree_info::hash_tree_info()
-//{
-//}
-//
-//mcp::hash_tree_info::hash_tree_info(mcp::block_hash const & b_hash_a, mcp::summary_hash const & s_hash_a) :
-//    b_hash(b_hash_a), s_hash(s_hash_a)
-//{
-//}
-//
-//mcp::hash_tree_info::hash_tree_info(dev::Slice const & val_a)
-//{
-//    assert_x(val_a.size() == sizeof(*this));
-//    std::copy(reinterpret_cast<uint8_t const *> (val_a.data()), reinterpret_cast<uint8_t const *> (val_a.data()) + sizeof(*this), reinterpret_cast<uint8_t *> (this));
-//}
-//
-//dev::Slice mcp::hash_tree_info::val() const
-//{
-//    return dev::Slice((char *)this, sizeof(*this));
-//}
-
 mcp::block_child_key::block_child_key(mcp::block_hash const & hash_a, mcp::block_hash const & child_hash_a) :
     hash(hash_a), child_hash(child_hash_a)
 {
@@ -413,41 +391,6 @@ dev::Slice mcp::block_child_key::val() const
 {
     return dev::Slice((char *)this, sizeof(*this));
 }
-
-//mcp::account_state::account_state(bool & error_a, dev::RLP const & r, Changedness _c) :
-//	m_isUnchanged(_c == Unchanged)
-//{
-//	error_a = r.itemCount() != 8;
-//	m_account = (Address)r[0];
-//	m_ts = (h256)r[1];
-//	m_previous = (h256)r[2];
-//	m_nonce = (u256)r[3];
-//	m_balance = (u256)r[4];
-//	m_storageRoot = (h256)r[5];
-//	m_codeHash = (h256)r[6];
-//	m_isAlive = r[7].toInt();
-//
-//	record_init_hash();
-//}
-
-//void mcp::account_state::record_init_hash()
-//{
-//	init_hash = hash();
-//}
-
-//void mcp::account_state::stream_RLP(dev::RLPStream & s) const
-//{
-//	s.appendList(8);
-//	s << m_account  << m_ts  << m_previous << m_nonce << m_balance << m_storageRoot << m_codeHash << m_isAlive;
-//}
-
-//h256 mcp::account_state::hash()
-//{
-//	RLPStream s;
-//	stream_RLP(s);
-//
-//	return dev::sha3(s.out());
-//}
 
 void mcp::account_state::setCode(dev::bytes&& _code)
 {
@@ -624,228 +567,6 @@ bool mcp::isH256(std::string const& _s)
 	return dev::isHex(_s);
 }
 
-//mcp::call_trace_action::call_trace_action(bool & error_a, dev::RLP const & r)
-//{
-//	error_a = r.itemCount() != 6;
-//	if (error_a)
-//		return;
-//
-//	call_type = (std::string)r[0];
-//	from = (Address)r[1];
-//	gas = (u256)r[2];
-//	data = (dev::bytes)r[3];
-//	to = (Address)r[4];
-//	amount = (u256)r[5];
-//}
-//
-//void mcp::call_trace_action::stream_RLP(dev::RLPStream & s) const
-//{
-//	s.appendList(6);
-//	s << call_type << from << gas << data << to << amount;
-//}
-//
-//void mcp::call_trace_action::serialize_json(mcp::json & json_a) const
-//{
-//	json_a["call_type"] = call_type;
-//	json_a["from"] = dev::toJS(from);
-//	json_a["gas"] = gas.str();
-//	json_a["data"] = dev::toJS(data);
-//	json_a["to"] = dev::toJS(to);
-//	json_a["amount"] = amount.str();
-//}
-//
-//mcp::call_trace_result::call_trace_result(bool & error_a, dev::RLP const & r)
-//{
-//	error_a = r.itemCount() != 2;
-//	if (error_a)
-//		return;
-//
-//	gas_used = (mcp::uint256_t)r[0];
-//	output = (dev::bytes)r[1];
-//}
-//
-//void mcp::call_trace_result::stream_RLP(dev::RLPStream & s) const
-//{
-//	s.appendList(2);
-//	s << gas_used << output;
-//}
-//
-//void mcp::call_trace_result::serialize_json(mcp::json & json_a) const
-//{
-//	json_a["gas_used"] = gas_used.str();
-//	json_a["output"] = dev::toJS(output);
-//}
-//
-//mcp::create_trace_action::create_trace_action(bool & error_a, dev::RLP const & r)
-//{
-//	error_a = r.itemCount() != 4;
-//	if (error_a)
-//		return;
-//
-//	from = (Address)r[0];
-//	gas = (u256)r[1];
-//	init = (dev::bytes)r[2];
-//	amount = (u256)r[3];
-//}
-//
-//void mcp::create_trace_action::stream_RLP(dev::RLPStream & s) const
-//{
-//	s.appendList(4);
-//	s << from << gas << init << amount;
-//}
-//
-//void mcp::create_trace_action::serialize_json(mcp::json & json_a) const
-//{
-//	json_a["from"] = dev::toJS(from);
-//	json_a["gas"] = gas.str();
-//	json_a["init"] = dev::toJS(init);
-//	json_a["amount"] = amount.str();
-//}
-//
-//mcp::create_trace_result::create_trace_result(bool & error_a, dev::RLP const & r)
-//{
-//	error_a = r.itemCount() != 3;
-//	if (error_a)
-//		return;
-//
-//	gas_used = (u256)r[0];
-//	contract_account = (Address)r[1];
-//	code = (dev::bytes)r[2];
-//}
-//
-//void mcp::create_trace_result::stream_RLP(dev::RLPStream & s) const
-//{
-//	s.appendList(3);
-//	s << gas_used << contract_account << code;
-//}
-//
-//void mcp::create_trace_result::serialize_json(mcp::json & json_a) const
-//{
-//	json_a["gas_used"] = gas_used.str();
-//	json_a["contract_account"] = dev::toJS(contract_account);
-//	json_a["code"] = dev::toJS(code);
-//}
-//
-//mcp::suicide_trace_action::suicide_trace_action(bool & error_a, dev::RLP const & r)
-//{
-//	error_a = r.itemCount() != 3;
-//	if (error_a)
-//		return;
-//
-//	contract_account = (Address)r[0];
-//	refund_account = (Address)r[1];
-//	balance = (u256)r[2];
-//}
-//
-//void mcp::suicide_trace_action::stream_RLP(dev::RLPStream & s) const
-//{
-//	s.appendList(3);
-//	s << contract_account << refund_account << balance;
-//}
-//
-//void mcp::suicide_trace_action::serialize_json(mcp::json & json_a) const
-//{
-//	json_a["contract_account"] = dev::toJS(contract_account);
-//	json_a["refund_account"] = dev::toJS(refund_account);
-//	json_a["balance"] = balance.str();
-//}
-//
-//mcp::trace::trace(bool & error_a, dev::RLP const & r)
-//{
-//	error_a = r.itemCount() != 5;
-//	if (error_a)
-//		return;
-//
-//	type = (mcp::trace_type)r[0].toInt<uint8_t>();
-//	switch (type)
-//	{
-//	case mcp::trace_type::call:
-//		action = std::make_shared<mcp::call_trace_action>(error_a, r[1]);
-//		break;
-//	case  mcp::trace_type::create:
-//		action = std::make_shared<mcp::create_trace_action>(error_a, r[1]);
-//		break;
-//	case  mcp::trace_type::suicide:
-//		action = std::make_shared<mcp::suicide_trace_action>(error_a, r[1]);
-//		break;
-//	default:
-//		assert_x_msg(false, "Invalid trace type");
-//	}
-//	if (error_a)
-//		return;
-//
-//	error_message = (std::string)r[2];
-//	
-//	dev::RLP const & result_rlp = r[3];
-//	if (result_rlp.itemCount() > 0)
-//	{
-//		assert_x(error_message.empty());
-//		error_a = result_rlp.itemCount() != 1;
-//		if (error_a)
-//			return;
-//
-//		switch (type)
-//		{
-//		case mcp::trace_type::call:
-//			result = std::make_shared<mcp::call_trace_result>(error_a, result_rlp[0]);
-//			break;
-//		case  mcp::trace_type::create:
-//			result = std::make_shared<mcp::create_trace_result>(error_a, result_rlp[0]);
-//			break;
-//		case  mcp::trace_type::suicide:
-//			result = nullptr;
-//			break;
-//		default:
-//			assert_x_msg(false, "Invalid trace type");
-//		}
-//	}
-//	else
-//		result = nullptr;
-//
-//	depth = r[4].toInt<uint32_t>();
-//
-//}
-//
-//void mcp::trace::stream_RLP(dev::RLPStream & s) const
-//{
-//	s.appendList(5);
-//
-//	s << (uint8_t)type;
-//	action->stream_RLP(s);
-//	s << error_message;
-//	if (result)
-//	{
-//		s.appendList(1);
-//		result->stream_RLP(s);
-//	}
-//	else
-//		s.appendList(0);
-//	s << depth;
-//}
-//
-//void mcp::trace::serialize_json(mcp::json & json_a) const
-//{
-//	json_a["type"] = (uint8_t)type;
-//
-//	mcp::json action_l = mcp::json::object();
-//	action->serialize_json(action_l);
-//	json_a["action"] = action_l;
-//
-//	if (!error_message.empty())
-//		json_a["error"] = error_message;
-//	else
-//	{
-//		if (result)
-//		{
-//			mcp::json result_l = mcp::json::object();
-//			result->serialize_json(result_l);
-//			json_a["result"] = result_l;
-//		}
-//		else
-//			json_a["result"] = nullptr;
-//	}
-//}
-
 boost::filesystem::path mcp::working_path()
 {
 	auto result(mcp::app_path());
@@ -866,12 +587,6 @@ boost::filesystem::path mcp::working_path()
 	}
 	return result;
 }
-
-//boost::filesystem::path mcp::unique_path()
-//{
-//	auto result(working_path() / boost::filesystem::unique_path());
-//	return result;
-//}
 
 mcp::epoch_approves_key::epoch_approves_key(dev::Slice const & val_a)
 {

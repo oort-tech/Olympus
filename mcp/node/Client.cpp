@@ -95,7 +95,7 @@ std::pair<u256, ExecutionResult> mcp::Client::estimateGas(Address const& _from, 
 			ExecutionResult result = tempState.execute(env, *bc().sealEngine(), Permanence::Reverted, t).first;
 
 			if (result.excepted != TransactionException::None
-				/*|| result.codeDeposit == CodeDeposit::Failed*/ /// throw exception if failed. not used yet?
+				/*|| result.codeDeposit == CodeDeposit::Failed*/ /// throw exception if failed.
 				)
 			{
 				lowerBound = mid;
