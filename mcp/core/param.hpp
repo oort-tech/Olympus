@@ -99,7 +99,7 @@ private:
 			chain_id = (uint64_t)9700;// Ascraeus 972; huygens 971; dev 9700
 			OIP4And5Block = 110000;
 			HalleyForkBlock = 320000;
-			OIP6Block = 0;////todo
+			OIP6Block = 1200000;
 			break;
 		}
 		case mcp::mcp_networks::mcp_live_network:
@@ -107,7 +107,7 @@ private:
 			chain_id = (uint64_t)970;
 			OIP4And5Block = 6000000;
 			HalleyForkBlock = 24700000;
-			OIP6Block = 0;////todo
+			OIP6Block = 41000000;
 			break;
 		}
 		default:
