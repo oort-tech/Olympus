@@ -896,7 +896,6 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 		for (auto iter(hashs.begin()); iter != hashs.end(); iter++)
 		{
 			_hashsCount++;
-			///
 			bool tmpFinalized = finalized && _dagCount == dag_stable_block_hashs.size() && _hashsCount == hashs.size();
 			
 			mcp::block_hash const & dag_stable_block_hash(*iter);
@@ -906,25 +905,26 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 			assert_x(dag_stable_block);
 			VerifiedBlockRef _block{ dag_stable_block };
 			dev::eth::McInfo mc_info(m_last_stable_index_internal, mci, mc_timestamp, dag_stable_block->from());
-			mcp::ImportBlockResult importRet = import(transaction_a, cache_a, _block, mc_info, tmpFinalized);
-
+			Block s(*this, m_stateDB, m_lastStateRoot, mc_info);
+			auto _receiptRoot = import(s, transaction_a, cache_a, _block, mci, tmpFinalized);
 			/// set block stable
-			{
-				//mcp::stopwatch_guard sw("advance_stable_mci2_2");
-				set_block_stable(timeout_tx_a, cache_a, dag_stable_block_hash, mci, mc_timestamp, mc_last_summary_mci, stable_timestamp, m_last_stable_index_internal, importRet);
-			}
+			set_block_stable(timeout_tx_a, cache_a, dag_stable_block_hash, mci, mc_timestamp, mc_last_summary_mci, stable_timestamp, m_last_stable_index_internal,
+				_receiptRoot, s.rootHash(), s.logBloom());
+			m_lastStateRoot = s.rootHash();
+			s.cleanup();
+			m_postSeal = s;
 		}
 	}
+	if (finalized)
+		EpochFinalize(transaction_a, mcp::epoch(mci));
 }
 
-mcp::ImportBlockResult mcp::chain::import(mcp::db::db_transaction& transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a, VerifiedBlockRef& _block, dev::eth::McInfo const& _mc, bool _epochFinalized)
+dev::h256 mcp::chain::import(Block& _s, mcp::db::db_transaction& transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a, VerifiedBlockRef& _block, uint64_t const& _mci, bool _epochFinalized)
 {
 	///handle light stable block 
 	///account A : b2, b3, b4, b5
 	///account B : b1, b2, b3
 	///account c : b2, b3
-
-	//cnote << "execute block txs start:" << _block.info->hash().hexPrefixed();
 	std::vector<std::shared_ptr<dev::eth::TransactionReceipt>> _local;
 	h256s const& _links = _block.info->links();
 	for (h256 const& _th : _links)
@@ -938,9 +938,7 @@ mcp::ImportBlockResult mcp::chain::import(mcp::db::db_transaction& transaction_a
 		_block.transactions.push_back(_t);
 	}
 	
-	Block s(*this, m_stateDB, m_lastStateRoot, _mc);
-	auto tdIncrease = s.enactOn(_block, *this);
-
+	auto tdIncrease = _s.enactOn(_block, *this);
 	std::vector<bytes> receipts;
 	unsigned _execIndex = 0;
 	for (unsigned i = 0; i < _links.size(); ++i)
@@ -949,7 +947,7 @@ mcp::ImportBlockResult mcp::chain::import(mcp::db::db_transaction& transaction_a
 			receipts.push_back(_local[i]->rlp());
 		else
 		{
-			auto _lre = std::make_shared<dev::eth::LocalTransactionReceipt>(s.receipt(_execIndex),
+			auto _lre = std::make_shared<dev::eth::LocalTransactionReceipt>(_s.receipt(_execIndex),
 				_block.info->hash(), i, _execIndex);
 			_execIndex++;
 			/// commit transaction receipt
@@ -964,13 +962,13 @@ mcp::ImportBlockResult mcp::chain::import(mcp::db::db_transaction& transaction_a
 	/// applying the earned rewards transaction.
 	if (_epochFinalized)
 	{
-		Epoch _epoch = mcp::epoch(_mc.mci);
-		StakingList _sl = s.getStakingList();
+		Epoch _epoch = mcp::epoch(_mci);
+		StakingList _sl = _s.getStakingList();
 		m_cache->PutStakingList(transaction_a, _epoch, _sl);
-
-		mcp::MainInfo _mi = s.getMainInfo();
+		mcp::MainInfo _mi = _s.getMainInfo();
+		m_statistics.Insert(_block.info->from(), true);
 		dev::bytes _data = epochRewardsData(transaction_a, _epoch, _mi);
-		auto ret = s.ApplyWorkTransaction(_data);
+		auto ret = _s.ApplyWorkTransaction(_data);
 		cache_a->transaction_put(transaction_a, std::make_shared<Transaction>(ret.first));
 		cache_a->account_nonce_put(transaction_a, ret.first.sender(), ret.first.nonce());
 		///receipt
@@ -978,13 +976,12 @@ mcp::ImportBlockResult mcp::chain::import(mcp::db::db_transaction& transaction_a
 			_block.info->hash(), _links.size(), _execIndex);
 		cache_a->transaction_receipt_put(transaction_a, ret.first.sha3(), _lre);
 		m_store.epoch_work_transaction_put(transaction_a, _epoch - 1, ret.first.sha3());
-		m_tq->makeQueue(std::make_shared<Transaction>(ret.first));///may be transactions 
+		m_tq->makeQueue(std::make_shared<Transaction>(ret.first));///may be transactions
 
-		if (mcp::param::get()->IsOIP6(_mc.mci))
+		if (mcp::param::get()->IsOIP6(_mci))
 		{
 			receipts.push_back(ret.second.rlp());
 		}
-		EpochFinalize(transaction_a, _epoch);
 	}
 
 	///handle approve stable block 
@@ -1025,7 +1022,7 @@ mcp::ImportBlockResult mcp::chain::import(mcp::db::db_transaction& transaction_a
 
 			///the approve which is smaller than the current epoch, is not eligible for election.
 			///Bigger than the present is problematic
-			if (ap->epoch() == epoch(_mc.mci) && apStatus)
+			if (ap->epoch() == epoch(_mci) && apStatus)
 			{
 				vrf_outputs[ap->epoch()].insert(std::make_pair(ap->outputs(), *preceipt));
 			}
@@ -1039,15 +1036,13 @@ mcp::ImportBlockResult mcp::chain::import(mcp::db::db_transaction& transaction_a
 		}
 	}
 
-	ImportBlockResult ret{ dev::orderedTrieRoot(receipts), s.rootHash(), s.logBloom() };
-	s.cleanup();
-	m_postSeal = s;
-	return ret;
+	return dev::orderedTrieRoot(receipts);
 }
 
 void mcp::chain::set_block_stable(mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a, mcp::block_hash const & stable_block_hash, 
 	uint64_t const & mci, uint64_t const & mc_timestamp, uint64_t const & mc_last_summary_mci, 
-	uint64_t const & stable_timestamp, uint64_t const & stable_index, mcp::ImportBlockResult const& importResult)
+	uint64_t const & stable_timestamp, uint64_t const & stable_index, 
+	h256 const& _receiptsRoot, h256 const& _stateRoot, log_bloom const& _logBloom)
 {
 	mcp::db::db_transaction & transaction_a(timeout_tx_a.get_transaction());
 	try
@@ -1117,11 +1112,9 @@ void mcp::chain::set_block_stable(mcp::timeout_db_transaction & timeout_tx_a, st
 			stable_block_state_copy->stable_timestamp = stable_timestamp;
 			stable_block_state_copy->is_stable = true;
 			stable_block_state_copy->stable_index = stable_index;
-			stable_block_state_copy->m_receiptsRoot = importResult.receiptsRoot;
-			stable_block_state_copy->m_stateRoot = importResult.stateRoot;
-			stable_block_state_copy->m_logBloom = importResult.logBloom;
-			
-			m_lastStateRoot = importResult.stateRoot;
+			stable_block_state_copy->m_receiptsRoot = _receiptsRoot;
+			stable_block_state_copy->m_stateRoot = _stateRoot;
+			stable_block_state_copy->m_logBloom = _logBloom;
 			cache_a->block_state_put(transaction_a, stable_block_hash, stable_block_state_copy);
 
 			//m_store.stable_block_put(transaction_a, stable_index, stable_block_hash);
@@ -1175,11 +1168,11 @@ void mcp::chain::set_block_stable(mcp::timeout_db_transaction & timeout_tx_a, st
 
 			mcp::summary_hash summary_hash;
 			if (mcp::param::get()->IsOIP6(mci))
-				summary_hash = mcp::summary::gen_summary_hash(stable_block_hash, previous_summary_hash, p_summary_hashs, importResult.receiptsRoot, summary_skiplist,
+				summary_hash = mcp::summary::gen_summary_hash(stable_block_hash, previous_summary_hash, p_summary_hashs, _receiptsRoot, summary_skiplist,
 					stable_block_state_copy->status, stable_block_state_copy->stable_index, stable_block_state_copy->mc_timestamp,
-					mci, importResult.stateRoot, importResult.logBloom);
+					mci, _stateRoot, _logBloom);
 			else
-				summary_hash = mcp::summary::gen_summary_hash(stable_block_hash, previous_summary_hash, p_summary_hashs, importResult.receiptsRoot, summary_skiplist,
+				summary_hash = mcp::summary::gen_summary_hash(stable_block_hash, previous_summary_hash, p_summary_hashs, _receiptsRoot, summary_skiplist,
 					stable_block_state_copy->status, stable_block_state_copy->stable_index, stable_block_state_copy->mc_timestamp);
 
 			cache_a->block_summary_put(transaction_a, stable_block_hash, summary_hash);

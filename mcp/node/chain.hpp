@@ -46,13 +46,6 @@ namespace mcp
 		std::map<dev::Address, Details> m;
 	};
 
-	struct ImportBlockResult
-	{
-		h256	receiptsRoot;
-		h256	stateRoot;
-		log_bloom	logBloom;
-	};
-
 	class witness;
 	class ApproveQueue;
 	class chain : public std::enable_shared_from_this<mcp::chain>
@@ -102,9 +95,10 @@ namespace mcp
 		void update_latest_included_mci(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a, std::shared_ptr<mcp::block> block_a, bool const &is_mci_retreat, uint64_t const & retreat_mci, uint64_t const &retreat_level);
 		void advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a, uint64_t const & mci, mcp::block_hash const & block_hash_a);
 		dev::bytes epochRewardsData(mcp::db::db_transaction& transaction_a, Epoch const& epoch, MainInfo const& _mInfo) const;
-		ImportBlockResult import(mcp::db::db_transaction& transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a, VerifiedBlockRef& _block, dev::eth::McInfo const& _mc, bool _epochFinalized);
+		dev::h256 import(Block& _s, mcp::db::db_transaction& transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a, VerifiedBlockRef& _block, uint64_t const& _mci, bool _epochFinalized);
 		
-		void set_block_stable(mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a, mcp::block_hash const & stable_block_hash, uint64_t const & mci, uint64_t const & mc_timestamp, uint64_t const & mc_last_summary_mci, uint64_t const & stable_timestamp, uint64_t const & stable_index, ImportBlockResult const& importResult);
+		void set_block_stable(mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a, mcp::block_hash const & stable_block_hash, uint64_t const & mci, uint64_t const & mc_timestamp, uint64_t const & mc_last_summary_mci, uint64_t const & stable_timestamp, uint64_t const & stable_index, 
+			h256 const& _receiptsRoot, h256 const& _stateRoot, log_bloom const& _logBloom);
 		void search_stable_block(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a, mcp::block_hash const & block_hash, uint64_t const & mci, std::map<uint64_t, std::set<mcp::block_hash>>& stable_block_hashs);
 		void UpdateCommittee(mcp::db::db_transaction& transaction_a, Epoch const& epoch);
 		void init_vrf_outputs(mcp::db::db_transaction & transaction_a);

@@ -16,7 +16,7 @@ h160s GenesisDatas
 	Address("0x1144B522F45265C2DFDBAEE8E324719E63A1694C")
 };
 
-std::pair<mcp::block, mcp::Transactions> mcp::genesis::try_initialize(/*mcp::db::db_transaction & transaction_a, mcp::block_store & store_a*/)
+std::pair<mcp::block, mcp::Transactions> mcp::genesis::try_initialize()
 {
 	GenesisAddress = GenesisDatas[(int)mcp::mcp_network - 1];
 	TransactionSkeleton _t{ 
