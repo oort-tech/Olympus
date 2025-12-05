@@ -50,6 +50,8 @@ void mcp::rpc::accept()
 		else
 		{
             LOG(this->m_log.error) << "Error accepting HTTP RPC connections:" << ec.message();
+			// Retry accepting to prevent service stoppage
+			accept();
 		} 
 	});
 }

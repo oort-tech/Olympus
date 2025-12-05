@@ -607,13 +607,8 @@ void mcp::rpc_handler::web3_clientVersion(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::web3_sha3(mcp::json &j_response, bool &)
 {
-	try {
-		dev::bytes msg = jsToBytes(params[0], OnFailed::Throw);
-		j_response["result"] = toJS(dev::sha3(msg));
-	}
-	catch (const std::exception&) {
-		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError("cannot wrap string value as a json-rpc type; the \"input\" contains invalid hex character."));
-	}
+	dev::bytes msg = jsToBytes(params[0], OnFailed::Throw);
+	j_response["result"] = toJS(dev::sha3(msg));
 }
 
 void mcp::rpc_handler::eth_getCode(mcp::json &j_response, bool &)
@@ -732,7 +727,7 @@ void mcp::rpc_handler::eth_sign(mcp::json &j_response, bool &)
 	if (!mcp::isAddress(params[0]))
 		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError(BadHexFormat));
 
-	dev::bytes data = jsToBytes(params[1]);
+	dev::bytes data = jsToBytes(params[1], OnFailed::Throw);
 	if (data.size() > mcp::max_data_size)
 		BOOST_THROW_EXCEPTION(RPC_Error_JsonParseError("exceeds block data limit."));
 
@@ -882,7 +877,7 @@ void mcp::rpc_handler::personal_sendTransaction(mcp::json &j_response, bool &asy
 
 void mcp::rpc_handler::personal_sign(mcp::json &j_response, bool &)
 {
-	dev::bytes data = jsToBytes(params[0]);
+	dev::bytes data = jsToBytes(params[0], OnFailed::Throw);
 	if (data.size() > mcp::max_data_size)
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("exceeds block data limit."));
 
@@ -899,7 +894,7 @@ void mcp::rpc_handler::personal_sign(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::personal_ecRecover(mcp::json &j_response, bool &)
 {
-	dev::bytes data = jsToBytes(params[0]);
+	dev::bytes data = jsToBytes(params[0], OnFailed::Throw);
 	if (data.size() > mcp::max_data_size)
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidParams("Invalid Data"));
 

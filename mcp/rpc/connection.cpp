@@ -58,7 +58,6 @@ void mcp::rpc_connection::read()
 					catch (std::exception const & e)
 					{
                         LOG(this_l->m_log.error) << "rpc http write error:" << e.what() << "," << boost::stacktrace::stacktrace();
-						throw "";
 					}
 				});
 
@@ -102,7 +101,6 @@ void mcp::rpc_connection::response(std::string const & body, unsigned version, b
 	catch (std::exception const & e)
 	{
 		LOG(m_log.error) << "rpc http write error:" << e.what() << "," << boost::stacktrace::stacktrace();
-		throw "";
 	}
 
 	

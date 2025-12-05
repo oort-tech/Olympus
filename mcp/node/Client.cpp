@@ -214,6 +214,7 @@ ExecutionResult mcp::Client::call(Address const& _from, u256 _value, Address _de
 	Transaction _t(_value, gasPrice, gas, _dest, _data, nonce);
 	_t.forceSender(_from);
 	_t.setSignature(h256(0), h256(0), 0);
+	temp.mutableState().addBalance(_from, (u256)(_t.gas() * _t.gasPrice() + _t.value()));
 	ExecutionResult const& ret = temp.execute(_t, Permanence::Reverted);
 	return ret;
 }
