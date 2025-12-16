@@ -33,7 +33,7 @@ std::pair<u256, ExecutionResult> mcp::Client::estimateGas(Address const& _from, 
 		if (upperBound < lowerBound)
 		{
 			er.excepted = TransactionException::OutOfGas;
-			return std::make_pair(u256(), er);;
+			return std::make_pair(u256(), er);
 		}
 
 		/// Avoid transactions that are less than the lower gas price limit.
@@ -207,10 +207,17 @@ localised_log_entries mcp::Client::logs(LogFilter const& _filter) const
 
 ExecutionResult mcp::Client::call(Address const& _from, u256 _value, Address _dest, bytes const& _data, u256 _gas, u256 _gasPrice, BlockNumber _bn)
 {
-	Block temp = blockByNumber(_bn);
+	Block temp = blockByNumber(_bn, true);
 	u256 nonce = temp.transactionsFrom(_from);
 	u256 gas = _gas == Invalid256 ? mcp::tx_max_gas : _gas;
 	u256 gasPrice = _gasPrice == Invalid256 ? mcp::gas_price: _gasPrice;
+	/// Pre calculate the gas needed for execution
+	if (gas < Transaction::baseGasRequired(!_dest, &_data, dev::eth::EVMSchedule()))
+	{
+		ExecutionResult er;
+		er.excepted = TransactionException::OutOfGas;
+		return er;
+	}
 	Transaction _t(_value, gasPrice, gas, _dest, _data, nonce);
 	_t.forceSender(_from);
 	_t.setSignature(h256(0), h256(0), 0);

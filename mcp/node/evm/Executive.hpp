@@ -26,8 +26,8 @@ namespace mcp
     {
     public:
         // Simple constructor; executive will operate on given state, with the given environment info.
-        Executive(chain_state& _s, EnvInfo const& _envInfo, SealEngineFace const& _sealEngine, /*std::list<std::shared_ptr<mcp::trace>> & _traces,*/ unsigned _level = 0, std::shared_ptr<EVMLogger> _tracer = nullptr)
-      : m_s(_s),m_envInfo(_envInfo),/*m_traces(_traces),*/ m_depth(_level), m_sealEngine(_sealEngine), m_tracer(_tracer)
+        Executive(chain_state& _s, EnvInfo const& _envInfo, SealEngineFace const& _sealEngine, unsigned _level = 0, std::shared_ptr<EVMLogger> _tracer = nullptr)
+      : m_s(_s),m_envInfo(_envInfo), m_depth(_level), m_sealEngine(_sealEngine), m_tracer(_tracer)
         {
         };
 

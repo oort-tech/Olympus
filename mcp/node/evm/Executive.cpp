@@ -114,7 +114,7 @@ bool mcp::Executive::create(Address const& _txSender, u256 const& _endowment, u2
 
 bool mcp::Executive::call(Address const& _receiveAddress, Address const& _senderAddress, u256 const& _value, u256 const& _gasPrice, bytesConstRef _data, u256 const& _gas)
 {
-    dev::eth::CallParameters params(_senderAddress, _receiveAddress, _receiveAddress, _value, _value, _gas, _data, nullptr/*, {}*/);
+    dev::eth::CallParameters params(_senderAddress, _receiveAddress, _receiveAddress, _value, _value, _gas, _data, nullptr);
     return call(params, _gasPrice, _senderAddress);
 }
 
