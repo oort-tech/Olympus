@@ -970,6 +970,8 @@ void mcp::rpc_handler::debug_traceTransaction(mcp::json &j_response, bool &)
 		LocalisedTransaction t = client()->localisedTransaction(_hash);
 		if (t.blockHash() == dev::h256())
 			BOOST_THROW_EXCEPTION(RPC_Error_RequestDenied("transaction not found"));
+		if (!t.blockNumber())//genesis
+			BOOST_THROW_EXCEPTION(RPC_Error_RequestDenied("genesis is not traceable"));
 
 		Block block = client()->blockByHash(t.blockHash(), true);
 		chain_state s(chain_state::Null);
