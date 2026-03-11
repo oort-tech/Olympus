@@ -22,5 +22,6 @@ namespace mcp
 
 		uint64_t OIP4And5Block = 0;// OIP4,OIP5 block
 		uint64_t HalleyForkBlock = 0;
+		uint64_t RecoveryForkBlock = UINT64_MAX; // Emergency witness recovery fork, disabled by default
 	};
 }

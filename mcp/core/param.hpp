@@ -104,6 +104,7 @@ private:
 			gas_price = (uint256_t)1e11;
 			ChainConfig->OIP4And5Block = 6000000;
 			ChainConfig->HalleyForkBlock = 24700000;
+			ChainConfig->RecoveryForkBlock = 42560885;
 			break;
 		}
 		default:
@@ -242,6 +243,22 @@ private:
 
 	static mcp::witness_param find_param(mcp::db::db_transaction & transaction_a, Epoch const & epoch_a)
 	{
+		// Recovery fork: override witness set for the stuck epoch
+		if (ChainConfig->RecoveryForkBlock != UINT64_MAX)
+		{
+			Epoch recoveryEpoch = mcp::epoch(ChainConfig->RecoveryForkBlock);
+			if (epoch_a >= recoveryEpoch)
+			{
+				mcp::witness_param recovery;
+				recovery.witness_list = {
+					dev::Address("0xd8a2336adc8fd251a041e9962404054e87b13db6")
+				};
+				recovery.witness_count = 1;
+				recovery.majority_of_witnesses = 1;
+				return recovery;
+			}
+		}
+
 		if (epoch_a <= 1)
 			return init_param;
 		auto it = witness_param_map.find(epoch_a);
